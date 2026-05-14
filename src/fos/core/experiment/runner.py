@@ -26,6 +26,7 @@ from fos.core.experiment.controller import ExperimentController, ActionResult
 from fos.core.experiment.round_context import RoundContextManager
 from fos.core.experiment.prompt_builder import build_prompt, build_reprompt
 from fos.core.experiment.action_handler import ActionHandler
+from fos.i18n import T
 from fos.core.experiment.payoff.engine import PayoffEngine
 from fos.core.experiment.feedback.builder import CoordinationFeedbackBuilder
 from fos.core.experiment.debug_log import get_debug_file, write_debug, reset_debug_file
@@ -1021,7 +1022,7 @@ class ExperimentRunner:
             if self.game_config.action_followup_modes:
                 for action_name, mode in self.game_config.action_followup_modes.items():
                     action_schemas[action_name] = {
-                        "schema": {"message": {"type": "string", "description": f"Content for {action_name}"}},
+                        "schema": {"message": {"type": "string", "description": T("Content for {action_name}", action_name=action_name)}},
                         "mode": mode,
                     }
                     logger.debug(f"[RUNNER] Added action_schema for '{action_name}': mode={mode}")
