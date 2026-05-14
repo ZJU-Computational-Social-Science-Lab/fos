@@ -143,7 +143,6 @@ def deduplicate_events(events: list[dict]) -> list[dict]:
         # Distinct branch events may have identical semantic content, so we must
         # include the originating node and payload in the identity key.
         key = (
-            event.get("tree_node_id"),
             event.get("event_type"),
             event.get("created_at"),
             json.dumps(event.get("payload", {}), sort_keys=True, default=str),

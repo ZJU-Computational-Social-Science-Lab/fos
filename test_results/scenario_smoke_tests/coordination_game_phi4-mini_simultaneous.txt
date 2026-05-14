@@ -17,16 +17,16 @@ ROUND 1
 ================================================================================
   NodeA: choose_color
   NodeB: choose_color
-  NodeC: choose_color
+  NodeC: choose_color({'color': 'red'})
 ================================================================================
 ROUND 2
 ================================================================================
   NodeA: choose_color
-  NodeB: choose_color({'color': 'red'})
-  NodeC: choose_color
+  NodeB: choose_color
+  NodeC: choose_color({'color': 'red'})
 ================================================================================
 SUMMARY
 ================================================================================
 Final scores: {'NodeA': 0, 'NodeB': 0, 'NodeC': 0}
 Errors: None
-Timestamp: 2026-05-14T14:06:26.808132
+Timestamp: 2026-05-14T23:19:09.646938

@@ -46,7 +46,7 @@ def test_debug_log_sequential_format_per_agent():
         )
 
         # Patch the global _debug_file to use our temp file
-        with patch('fos.core.experiment.runner._debug_file', debug_file):
+        with patch('fos.core.experiment.debug_log._session_debug_file', debug_file):
             run(runner.run(max_rounds=1))
 
         # Read the debug log
@@ -98,7 +98,7 @@ def test_debug_log_atomic_writes_no_interleaving():
         )
 
         # Patch the global _debug_file to use our temp file
-        with patch('fos.core.experiment.runner._debug_file', debug_file):
+        with patch('fos.core.experiment.debug_log._session_debug_file', debug_file):
             run(runner.run(max_rounds=1))
 
         # Read the debug log
@@ -151,7 +151,7 @@ def test_debug_log_includes_all_components():
         )
 
         # Patch the global _debug_file to use our temp file
-        with patch('fos.core.experiment.runner._debug_file', debug_file):
+        with patch('fos.core.experiment.debug_log._session_debug_file', debug_file):
             run(runner.run(max_rounds=1))
 
         # Read the debug log
