@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Literal, Optional
 from dataclasses import dataclass
 
 from fos.core.experiment.actions.registry import ACTION_REGISTRY
+from fos.i18n import T
 
 
 class ExperimentAction(ABC):
@@ -97,7 +98,7 @@ class SpeakAction(ExperimentAction):
         return {
             "message": {
                 "type": "string",
-                "description": "What you want to say"
+                "description": T("What you want to say")
             }
         }
 
@@ -126,7 +127,7 @@ class VoteAction(ExperimentAction):
         return {
             "target": {
                 "type": "string",
-                "description": "Who or what you're voting for"
+                "description": T("Who or what you're voting for")
             }
         }
 
@@ -151,7 +152,7 @@ class NumericalAction(ExperimentAction):
         return {
             "value": {
                 "type": "integer",
-                "description": "Your numerical choice"
+                "description": T("Your numerical choice")
             }
         }
 
