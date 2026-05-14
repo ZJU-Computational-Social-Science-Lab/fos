@@ -1,0 +1,25 @@
+================================================================================
+SCENARIO: policy_erosion
+MODEL: phi4-mini
+TEST: sequential
+================================================================================
+
+CONFIGURATION:
+  grouping_mode: individual
+  payoff_type: none
+  interaction_mode: sequential
+  agents: ['Executive', 'Manager', 'Worker']
+  actions: ['transmit_faithfully', 'reinterpret_downward', 'comply_directive', 'resist_quietly']
+
+================================================================================
+ROUND 1
+================================================================================
+  Executive: transmit_faithfully
+  Manager: transmit_faithfully
+  Worker: transmit_faithfully
+================================================================================
+SUMMARY
+================================================================================
+Final scores: {'Executive': 0, 'Manager': 0, 'Worker': 0}
+Errors: None
+Timestamp: 2026-05-14T14:07:01.213164

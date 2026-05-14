@@ -1,0 +1,6 @@
+pyproject.toml
+src/fos/__init__.py
+src/fos.egg-info/PKG-INFO
+src/fos.egg-info/SOURCES.txt
+src/fos.egg-info/dependency_links.txt
+src/fos.egg-info/top_level.txt

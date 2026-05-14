@@ -1,0 +1,25 @@
+================================================================================
+SCENARIO: social_norm_disruption
+MODEL: phi4-mini
+TEST: basic
+================================================================================
+
+CONFIGURATION:
+  grouping_mode: group
+  payoff_type: none
+  agents: ['HighStatus1', 'HighStatus2', 'LowStatus1', 'LowStatus2']
+  actions: ['comply_publicly', 'comply_covertly_resist', 'resist_openly', 'persuade_others']
+
+================================================================================
+ROUND 1
+================================================================================
+  HighStatus1: comply_publicly
+  HighStatus2: persistiveOthers
+  LowStatus1: comply_publicly
+  LowStatus2: comply_covertly_resist
+================================================================================
+SUMMARY
+================================================================================
+Final scores: {'HighStatus1': 0, 'HighStatus2': 0, 'LowStatus1': 0, 'LowStatus2': 0}
+Errors: ['Action not in allowed set']
+Timestamp: 2026-05-14T14:06:56.200488

@@ -1,0 +1,879 @@
+from __future__ import annotations
+
+import asyncio
+import logging
+import sys
+from typing import Dict
+
+from fos.core.agent import Agent
+from fos.core.event import PublicEvent
+from fos.core.registry import get_information_model
+from fos.core.ordering import ControlledOrdering, CycledOrdering, SequentialOrdering
+from fos.core.registry import ACTION_SPACE_MAP, SCENE_ACTIONS, SCENE_MAP, get_scene_class
+from fos.core.simtree import SimTree
+from fos.core.simulator import Simulator
+from fos.core.environment_config import EnvironmentConfig
+from fos.scenarios.basic import make_clients_from_env
+from fos.core.experiment.config import ExperimentConfig
+from fos.core.experiment.scene import ExperimentScene
+from fos.core.experiment.game_configs import create_council_config
+from fos.core.experiment.scenes.council_experiment import CouncilExperimentScene
+from fos.i18n import T, get_request_locale
+
+
+logger = logging.getLogger(__name__)
+_logging_handler = logging.StreamHandler(sys.stdout)
+_logging_handler.setLevel(logging.DEBUG)
+_logging_handler.setFormatter(logging.Formatter('[SIMTREE RUNTIME] %(message)s'))
+logger.addHandler(_logging_handler)
+
+def _normalize_language(value: str | None) -> str:
+    lang = str(value or "").strip()
+    return lang or "en"
+
+def _resolve_initial_event(cfg: dict, fallback: str = "") -> str:
+    """Pick initial event content from scene_config with simple fallbacks."""
+    val = str(cfg.get("initial_event") or "").strip()
+    if not val:
+        events = cfg.get("initial_events") or []
+        if isinstance(events, list) and events:
+            first = str(events[0] or "").strip()
+            if first:
+                val = first
+    if not val:
+        desc = str(cfg.get("description") or "").strip()
+        if desc:
+            val = desc
+    return val or fallback
+
+def _is_english_language(lang: str) -> bool:
+    lower = lang.lower()
+    return lower.startswith("en") or "english" in lower
+
+
+class SimTreeRecord:
+    def __init__(self, tree: SimTree):
+        self.tree = tree
+        # 用于"一棵树所有节点事件"的广播订阅（DevUI 左侧总线）
+        self.subs: list[asyncio.Queue] = []
+        # 正在运行的节点 ID 集合（用于只转发 running 节点的事件）
+        self.running: set[int] = set()
+        # Track which suggestion intervals have been viewed (to avoid re-showing)
+        self._suggestions_viewed_intervals: set[int] = set()
+        # Prevents two concurrent advance_chain operations on the same simulation
+        self._advance_lock: asyncio.Lock = asyncio.Lock()
+
+    def replace_tree(self, tree: SimTree) -> None:
+        self.tree = tree
+
+
+def _quiet_logger(event_type: str, data: dict) -> None:
+    return
+
+
+class ExperimentRunnerAdapter:
+    """Minimal adapter so ExperimentScene works with SimTree.
+
+    Provides the interface SimTree expects (.run(), .agents, .clients)
+    without requiring a full Simulator with legacy Agents.
+    """
+
+    def __init__(self, scene: ExperimentScene, clients: dict):
+        self.scene = scene
+        self.clients = clients
+        self.agents = {}  # Empty dict - no legacy agents
+        self.events: list[dict] = []
+        self._llm_client = clients.get("chat") or clients.get("default")
+        self._provider_clients: dict = clients.get("providers", {}) if clients else {}
+        self.log_event = None  # Will be set by SimTree._attach_log_handler
+
+        # Pre-initialize to populate scene.agents so UI can render agent cards without running a round
+        if self._llm_client is not None and not self.scene.agents:
+            self.scene.initialize(self._llm_client, provider_clients=self._provider_clients)
+
+    def run(self, max_turns: int = 1) -> None:
+        """Run experiment rounds (each 'turn' = one round)."""
+        if not self.scene.runner:
+            self.scene.initialize(self._llm_client, provider_clients=self._provider_clients)
+
+        for _ in range(max_turns):
+            if self.scene.is_complete():
+                break
+            # scene.run_round is async, so we need to handle it properly
+            # When called from asyncio.to_thread(), we're in a thread with NO event loop
+            # When called directly (standalone), we can use asyncio.run()
+            try:
+                loop = asyncio.get_running_loop()
+                # We're inside an async context - use run_until_complete
+                loop.run_until_complete(self.scene.run_round(self._emit_event))
+            except RuntimeError:
+                # No running loop - we're in a thread or standalone
+                # Use asyncio.run() to create a new event loop
+                asyncio.run(self.scene.run_round(self._emit_event))
+
+            # CYCLE PHASE FIX: Advance round counter and check for phase transitions
+            # This is the ACTUAL code path used by the backend!
+            if hasattr(self.scene, '_advance_round'):
+                logger.info(f"[CYCLE PHASE FIX] Calling scene._advance_round() for {type(self.scene).__name__}")
+                self.scene._advance_round()
+                logger.info(f"[CYCLE PHASE FIX] Phase is now: {getattr(self.scene, 'cycle_phase', 'N/A')}, rounds_in_phase: {getattr(self.scene, 'rounds_in_cycle_phase', 'N/A')}")
+
+    def _emit_event(self, event_type: str, data: dict) -> None:
+        """Collect events for SimTree and emit to log handler."""
+        self.events.append({"type": event_type, "data": data})
+        # Also emit to log handler if set (for UI logs display)
+        if self.log_event is not None:
+            self.log_event(event_type, data)
+
+    def serialize(self) -> dict:
+        """Serialize for SimTree compatibility."""
+        return {
+            "agents": {},  # No legacy agents
+            "scene": {
+                "type": "experiment_template",
+                "config": self.scene.serialize_config(),
+            },
+            "max_steps_per_turn": 5,
+            "ordering": "sequential",
+            "ordering_state": {},
+            "event_queue": [],
+            "turns": self.scene.current_round,
+            "environment_config": None,
+            "_suggestions_viewed_turn": None,
+        }
+
+    @classmethod
+    def deserialize(cls, data: dict, clients: dict, log_handler=None):
+        """Deserialize for SimTree compatibility."""
+        scene_data = data["scene"]["config"]
+        scenario_id = scene_data.get("config", {}).get("scenario_id", "")
+
+        # GAP-CLOSURE-01: Deserialize to correct scene type based on scenario_id
+        if scenario_id in ("council", "council_chamber"):
+            from fos.core.experiment.scenes.council_experiment import CouncilExperimentScene
+            scene = CouncilExperimentScene.deserialize_config(scene_data)
+        else:
+            scene = ExperimentScene.deserialize_config(scene_data)
+
+        adapter = cls(scene, clients)
+        adapter.scene.current_round = data.get("turns", 0)
+        return adapter
+
+    def reset_event_queue(self) -> None:
+        """No-op for SimTree compatibility (adapter has no event queue)."""
+        pass
+
+    def emit_remaining_events(self) -> None:
+        """No-op for SimTree compatibility (adapter has no event queue)."""
+        pass
+
+    def broadcast(self, event) -> None:
+        """Broadcast a public event to the experiment scene.
+
+        Args:
+            event: PublicEvent or similar event object with text attribute
+        """
+        # For experiment scenes, broadcast emits as a public event
+        if hasattr(event, "text"):
+            self._emit_event("public_broadcast", {"text": event.text})
+        elif hasattr(event, "__dict__"):
+            self._emit_event("public_broadcast", event.__dict__)
+        else:
+            self._emit_event("public_broadcast", {"data": str(event)})
+
+    def inject_host_message(self, message: str) -> None:
+        """Inject a host message into all agents' context for the next round.
+
+        Args:
+            message: Host message text to inject
+        """
+        self.scene.inject_host_message(message)
+
+
+def _build_tree_for_scene(scene_type: str, clients: dict | None = None) -> SimTree:
+    # Normalize scene_type to registry keys (allow aliases like 'village' -> 'village_scene')
+    scene_key = scene_type if scene_type in SCENE_MAP else f"{scene_type}_scene"
+    scene_cls = get_scene_class(scene_key)
+    if scene_cls is None:
+        raise ValueError(T("api.errors.simtree.unsupported_scene_type", scene_type=scene_type))
+    active = clients or make_clients_from_env()
+    scene = scene_cls("preview", "")
+    agents = [
+        # minimal placeholder agent; real agents come from agent_config at runtime
+        Agent.deserialize(
+            {
+                "name": "Alice",
+                "user_profile": "",
+                "style": "",
+                "initial_instruction": "",
+                "role_prompt": "",
+                "action_space": [],
+                "properties": {},
+            }
+        )
+    ]
+    sim = Simulator(agents, scene, active, event_handler=_quiet_logger, ordering=SequentialOrdering())
+    return SimTree.new(sim, active)
+
+
+def _apply_agent_config(simulator, agent_config: dict | None):
+    if not agent_config:
+        return
+    items = agent_config.get("agents") or []
+    agents_list = list(simulator.agents.values())
+    count = min(len(items), len(agents_list))
+    # First apply names/profiles by position, then rebuild mapping
+    for i in range(count):
+        cfg = items[i] or {}
+        agent = agents_list[i]
+        new_name = str(cfg.get("name") or "").strip()
+        if new_name:
+            agent.name = new_name
+
+        # Try multiple field names for profile (frontend compatibility)
+        # Priority: profile > user_profile > userProfile (camelCase)
+        profile = (
+            str(cfg.get("profile") or "").strip() or
+            str(cfg.get("user_profile") or "").strip() or
+            str(cfg.get("userProfile") or "").strip()
+        )
+        if profile:
+            agent.user_profile = profile
+
+        # Try role_prompt field (snake_case from frontend)
+        role_prompt = (
+            str(cfg.get("role_prompt") or "").strip() or
+            str(cfg.get("rolePrompt") or "").strip()
+        )
+        if role_prompt and hasattr(agent, 'role_prompt'):
+            agent.role_prompt = role_prompt
+
+        # Apply all frontend-edited properties
+        properties = cfg.get("properties") or {}
+        if isinstance(properties, dict):
+            if not hasattr(agent, 'properties') or agent.properties is None:
+                agent.properties = {}
+            agent.properties.update(properties)
+
+        llm_config = cfg.get("llm_config") or cfg.get("llmConfig") or {}
+        if llm_config:
+            if not hasattr(agent, 'properties') or agent.properties is None:
+                agent.properties = {}
+            agent.properties["llm_config"] = llm_config
+
+        provider_id = cfg.get("provider_id") or cfg.get("providerId")
+        if provider_id is not None:
+            if not hasattr(agent, 'properties') or agent.properties is None:
+                agent.properties = {}
+            agent.properties["provider_id"] = provider_id
+
+        # Ensure defaults for required fields
+        if not hasattr(agent, 'history') or agent.history is None:
+            agent.history = {}
+        if not hasattr(agent, 'memory') or agent.memory is None:
+            agent.memory = []
+        if not hasattr(agent, 'score') or agent.score is None:
+            agent.score = 0
+
+        language = str(cfg.get("language") or "").strip()
+        if language:
+            agent.language = language
+    # Rebuild agents mapping to reflect renames
+    simulator.agents = {a.name: a for a in agents_list}
+    # Now apply actions (scene common + selected) per agent
+    for i in range(count):
+        cfg = items[i] or {}
+        agent = agents_list[i]
+        selected = [str(a) for a in (cfg.get("action_space") or [])]
+        if not selected:
+            reg = SCENE_ACTIONS.get(scene_key, {}) if 'scene_key' in locals() else {}
+            selected = (reg.get("basic") or []) + (reg.get("allowed") or [])
+        scene_actions = simulator.scene.get_scene_actions(agent) or []
+        picked = []
+        for key in selected:
+            act = ACTION_SPACE_MAP.get(key)
+            if act is not None:
+                picked.append(act)
+        merged = []
+        seen: set[str] = set()
+        for act in list(scene_actions) + picked:
+            n = getattr(act, "NAME", None)
+            if n and n not in seen:
+                merged.append(act)
+                seen.add(n)
+        agent.action_space = merged
+    # Refresh ordering candidates after renames
+    simulator.ordering.set_simulation(simulator)
+
+
+def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
+    scene_type = sim_record.scene_type
+    # Normalize scene_type to registry keys (allow aliases like 'village' -> 'village_scene')
+    scene_key = scene_type if scene_type in SCENE_MAP else f"{scene_type}_scene"
+    scene_cls = get_scene_class(scene_key)
+    if scene_cls is None:
+        raise ValueError(T("api.errors.simtree.unsupported_scene_type", scene_type=scene_type))
+
+    cfg = getattr(sim_record, "scene_config", {}) or {}
+    name = getattr(sim_record, "name", scene_type)
+    fallback_initial = str(
+        getattr(sim_record, "description", "")
+        or getattr(sim_record, "notes", "")
+        or name
+        or ""
+    )
+    initial_event_content = _resolve_initial_event(cfg, fallback_initial)
+    if scene_key == "policy_cascade_scene":
+        params = cfg.get("parameters") or {}
+        opening_notice = str(params.get("policy_text") or "").strip()
+        if opening_notice:
+            initial_event_content = opening_notice
+    if not initial_event_content and scene_key == "policy_cascade_scene":
+        initial_event_content = (
+            "Three-tier policy cascade: transmit the full policy top → mid → low; "
+            "each level may reinterpret or resist."
+        )
+
+    # Debug logging to show which scene type is being used
+    logger.debug(f"\n{'='*60}")
+    logger.debug(f"BUILDING TREE FOR SIMULATION: {sim_record.id}")
+    logger.debug(f"Scene type: {scene_type}")
+    logger.debug(f"Scene key: {scene_key}")
+    logger.debug(f"Scene class: {scene_cls.__name__ if hasattr(scene_cls, '__name__') else scene_cls}")
+    logger.debug(f"Scene config: {cfg}")
+    logger.debug(f"{'='*60}\n")
+
+    agent_config = getattr(sim_record, "agent_config", {}) or {}
+    items = agent_config.get("agents") or []
+    first_language = None
+    for cfg_agent in items:
+        lang = str(cfg_agent.get("language") or "").strip()
+        if lang:
+            first_language = lang
+            break
+    preferred_language = _normalize_language(cfg.get("language") or first_language)
+
+    def _localized(en_text: str, zh_text: str) -> str:
+        return en_text if _is_english_language(preferred_language) else zh_text
+
+    # Build scene via constructor based on type
+    # Use normalized scene_key for matching below
+    if scene_key in {"simple_chat_scene", "emotional_conflict_scene"}:
+        # Use generalized initial events; constructor initial can be empty
+        scene = scene_cls(name, "")
+    elif scene_key == "council_scene":
+        draft = str(cfg.get("draft_text") or "")
+        scene = scene_cls(name, "")
+    elif scene_key == "village_scene":
+        from fos.core.scenes.village_scene import GameMap
+
+        # 如果未提供 map 配置，则使用 GameMap 的默认空地图
+        map_data = cfg.get("map") or {}
+        game_map = GameMap.deserialize(map_data)
+        movement_cost = int(cfg.get("movement_cost", 1))
+        chat_range = int(cfg.get("chat_range", 5))
+        print_map_each_turn = bool(cfg.get("print_map_each_turn", False))
+        scene = scene_cls(
+            name,
+            _localized("Welcome to the village.", "欢迎来到村庄。"),
+            game_map=game_map,
+            movement_cost=movement_cost,
+            chat_range=chat_range,
+            print_map_each_turn=print_map_each_turn,
+        )
+    elif scene_key == "landlord_scene":
+        num_decks = int(cfg.get("num_decks", 1))
+        seed = cfg.get("seed")
+        seed_int = int(seed) if seed is not None else None
+        scene = scene_cls(
+            name,
+            _localized("New game: Dou Dizhu.", "新一局斗地主开始。"),
+            seed=seed_int,
+            num_decks=num_decks,
+        )
+    elif scene_key == "werewolf_scene":
+        initial = initial_event_content or _localized("Welcome to Werewolf.", "欢迎来到狼人游戏。")
+        role_map = cfg.get("role_map") or None
+        moderator_names = cfg.get("moderator_names") or None
+        scene = scene_cls(name, initial, role_map=role_map, moderator_names=moderator_names)
+    elif scene_key == "generic_scene":
+        # GenericScene needs available_actions from scene_config
+        raw_actions = cfg.get("available_actions") or []
+        available_actions: list[str] | None = None
+        if isinstance(raw_actions, list):
+            names: list[str] = []
+            for item in raw_actions:
+                if isinstance(item, str):
+                    names.append(item)
+                elif isinstance(item, dict) and "name" in item:
+                    # Frontend sometimes sends objects; use the name field
+                    n = str(item.get("name") or "").strip()
+                    if n:
+                        names.append(n)
+            available_actions = names if names else None
+        scene = scene_cls(
+            name,
+            initial_event_content,
+            available_actions=available_actions,
+        )
+    elif scene_key == "experiment_template":
+        # ExperimentScene - standalone, no legacy Simulator needed
+        # Unwrap generic_config if the config is nested (frontend sends nested structure)
+        inner_cfg = cfg.get("generic_config") or cfg
+
+        scenario_id = inner_cfg.get("scenario_id", "custom")
+
+        # GAP-CLOSURE-01: Use CouncilExperimentScene for council scenarios
+        # Support both "council" and "council_chamber" scenario_ids (frontend uses council_chamber)
+        if scenario_id in ("council", "council_chamber"):
+            # NO DEFAULTS - fail fast if parameters are missing
+            params = inner_cfg.get("parameters", {})
+
+            # Handle parameter name mapping: max_rounds -> deliberation_rounds
+            # Frontend may send 'max_rounds' but backend expects 'deliberation_rounds'
+            if "deliberation_rounds" not in params and "max_rounds" in params:
+                params["deliberation_rounds"] = params["max_rounds"]
+                logger.info(f"[PARAMETER MAPPING] Mapped max_rounds={params['max_rounds']} to deliberation_rounds")
+
+            if "deliberation_rounds" not in params:
+                raise ValueError(T("api.errors.simtree.deliberation_rounds_required", params=params))
+            if "voting_threshold" not in params:
+                raise ValueError(T("api.errors.simtree.voting_threshold_required", params=params))
+            if "proposal_text" not in params:
+                raise ValueError(T("api.errors.simtree.proposal_text_required", params=params))
+
+            council_game_config = create_council_config(
+                proposal_text=params["proposal_text"],
+                deliberation_rounds=params["deliberation_rounds"],
+                voting_threshold=params["voting_threshold"],
+            )
+            config = ExperimentConfig(
+                agents=agent_config.get("agents", []),
+                actions=[{"name": a} for a in council_game_config.actions],
+                parameters={
+                    "deliberation_rounds": council_game_config.deliberation_rounds,
+                    "voting_threshold": council_game_config.voting_threshold,
+                    "proposal_text": council_game_config.proposal_text,
+                },
+                description=council_game_config.description,
+                scenario_id="council",
+                round_visibility="sequential",
+                social_network=inner_cfg.get("social_network") or {},
+                locale=inner_cfg.get("locale") or get_request_locale(),
+            )
+            logger.debug(f"[COUNCIL_EXPERIMENT] Creating CouncilExperimentScene with parameters: {config.parameters}")
+            scene = CouncilExperimentScene(config)
+        else:
+            config = ExperimentConfig(
+                agents=agent_config.get("agents", []),
+                actions=inner_cfg.get("actions", []),
+                parameters=inner_cfg.get("parameters", {}),
+                description=inner_cfg.get("description", ""),
+                scenario_id=scenario_id,
+                round_visibility=inner_cfg.get("round_visibility", "simultaneous"),
+                social_network=inner_cfg.get("social_network") or {},
+                locale=inner_cfg.get("locale") or get_request_locale(),
+            )
+            logger.debug(f"[EXPERIMENT] Creating ExperimentConfig with parameters: {cfg.get('parameters', {})}")
+            scene = ExperimentScene(config)
+
+        # Use adapter instead of full Simulator
+        adapter = ExperimentRunnerAdapter(scene, clients or make_clients_from_env())
+
+        logger.debug(f"Created ExperimentScene with adapter: {config.scenario_id}")
+
+        return SimTree.new(adapter, adapter.clients)
+    elif scene_key == "council_experiment":
+        # REFACTOR-COUNCIL-06: Council experiment using experiment framework
+        # NO DEFAULTS - fail fast if parameters are missing
+
+        # Handle parameter name mapping: max_rounds -> deliberation_rounds
+        # Frontend may send 'max_rounds' but backend expects 'deliberation_rounds'
+        if "deliberation_rounds" not in cfg and "max_rounds" in cfg:
+            cfg["deliberation_rounds"] = cfg["max_rounds"]
+            logger.info(f"[PARAMETER MAPPING] Mapped max_rounds={cfg['max_rounds']} to deliberation_rounds")
+
+        if "deliberation_rounds" not in cfg:
+            raise ValueError(T("api.errors.simtree.deliberation_rounds_required_keys", keys=list(cfg.keys())))
+        if "voting_threshold" not in cfg:
+            raise ValueError(T("api.errors.simtree.voting_threshold_required_keys", keys=list(cfg.keys())))
+        if "proposal_text" not in cfg:
+            raise ValueError(T("api.errors.simtree.proposal_text_required_keys", keys=list(cfg.keys())))
+
+        # Create CouncilConfig with council-specific parameters
+        council_game_config = create_council_config(
+            proposal_text=cfg["proposal_text"],
+            deliberation_rounds=cfg["deliberation_rounds"],
+            voting_threshold=cfg["voting_threshold"],
+        )
+
+        config = ExperimentConfig(
+            agents=agent_config.get("agents", []),
+            actions=[{"name": a} for a in council_game_config.actions],
+            parameters={
+                "deliberation_rounds": council_game_config.deliberation_rounds,
+                "voting_threshold": council_game_config.voting_threshold,
+                "proposal_text": council_game_config.proposal_text,
+            },
+            description=council_game_config.description,
+            scenario_id="council",
+            round_visibility="sequential",  # Council uses sequential rounds
+            social_network=cfg.get("social_network") or {},
+            locale=cfg.get("locale") or get_request_locale(),
+        )
+        logger.debug(f"[COUNCIL_EXPERIMENT] Creating CouncilExperimentScene with parameters: {config.parameters}")
+        scene = CouncilExperimentScene(config)
+
+        # Use adapter instead of full Simulator
+        adapter = ExperimentRunnerAdapter(scene, clients or make_clients_from_env())
+
+        logger.debug(f"Created CouncilExperimentScene with adapter: council")
+
+        return SimTree.new(adapter, adapter.clients)
+    else:
+        scene = scene_cls(name, initial_event_content)
+        if scene_key == "policy_cascade_scene" and hasattr(scene, "configure_from_config"):
+            scene.configure_from_config(cfg)
+
+    # 存储社交网络拓扑到场景状态中（如果配置了的话）
+    social_network = cfg.get("social_network") or {}
+    if social_network:
+        scene.state["social_network"] = social_network
+
+    if hasattr(scene, "initial_event") and isinstance(scene.initial_event, PublicEvent):
+        if not getattr(scene.initial_event, "code", None):
+            scene.initial_event.code = "initial_event"
+        if not getattr(scene.initial_event, "params", None):
+            content = getattr(scene.initial_event, "content", "")
+            scene.initial_event.params = {"content": content, "lang": preferred_language}
+
+    # Build agents from agent_config
+    built_agents = []
+    for cfg_agent in items:
+        aname = str(cfg_agent.get("name") or "").strip() or "Agent"
+        profile = str(
+            cfg_agent.get("profile") or cfg_agent.get("user_profile") or cfg_agent.get("userProfile") or ""
+        )
+        role_prompt = str(cfg_agent.get("role_prompt") or cfg_agent.get("rolePrompt") or cfg_agent.get("role") or "")
+
+        # Avoid triplication: legacy Agent.system_prompt() renders both user_profile and role_prompt.
+        # If they contain the same text, clear profile so it doesn't duplicate in user_profile.
+        if profile and role_prompt and profile.strip() == role_prompt.strip():
+            profile = ""
+
+        selected = [str(a) for a in (cfg_agent.get("action_space") or [])]
+        props = dict(cfg_agent.get("properties") or {})
+        llm_config = cfg_agent.get("llm_config") or cfg_agent.get("llmConfig") or {}
+        provider_id = cfg_agent.get("provider_id") or cfg_agent.get("providerId")
+        if llm_config:
+            props["llm_config"] = llm_config
+        if provider_id is not None:
+            props["provider_id"] = provider_id
+        language = _normalize_language(cfg_agent.get("language") or preferred_language)
+        # scene common actions from registry (fallback to scene introspection)
+        # Use normalized scene_key so short names (e.g., 'village') map correctly.
+        reg = SCENE_ACTIONS.get(scene_key, {})
+        basic_names = list(reg.get("basic", []))
+        allowed_names = list(reg.get("allowed", []))
+
+        seen = set()
+        merged_names = []
+        source_names = basic_names + (selected if selected else allowed_names)
+        for n in source_names:
+            if n and n not in seen:
+                seen.add(n)
+                merged_names.append(n)
+        # Get knowledge base from agent config
+        knowledge_base = list(cfg_agent.get("knowledgeBase") or cfg_agent.get("knowledge_base") or [])
+        # Get documents from agent config
+        documents = dict(cfg_agent.get("documents") or {})
+        agent_data = {
+            "name": aname,
+            "user_profile": profile,
+            "style": "",
+            "initial_instruction": "",
+            "role_prompt": role_prompt,
+            "language": language,
+            "action_space": merged_names,
+            "properties": props,
+            "knowledge_base": knowledge_base,
+            "documents": documents,
+        }
+        new_agent = Agent.deserialize(agent_data)
+        built_agents.append(new_agent)
+
+    ordering = SequentialOrdering()
+    if scene_type == "landlord_scene":
+
+        def next_active(sim):
+            s = sim.scene
+            p = s.state.get("phase")
+            if p == "bidding":
+                if s.state.get("bidding_stage") == "call":
+                    i = s.state.get("bid_turn_index")
+                    return (s.state.get("players") or [None])[i]
+                elig = list(s.state.get("rob_eligible") or [])
+                acted = dict(s.state.get("rob_acted") or {})
+                if not elig:
+                    return None
+                names = list(s.state.get("players") or [])
+                start = s.state.get("bid_turn_index", 0)
+                for off in range(len(names)):
+                    idx = (start + off) % len(names)
+                    name = names[idx]
+                    if name in elig and not acted.get(name, False):
+                        return name
+                return None
+            if p == "doubling":
+                order = list(s.state.get("doubling_order") or [])
+                acted = dict(s.state.get("doubling_acted") or {})
+                for name in order:
+                    if not acted.get(name, False):
+                        return name
+                return None
+            if p == "playing":
+                players = s.state.get("players") or []
+                idx = s.state.get("current_turn", 0)
+                if players:
+                    return players[idx % len(players)]
+            return None
+
+        ordering = ControlledOrdering(next_fn=next_active)
+    elif scene_type == "werewolf_scene":
+        # Build cycled schedule similar to scenario builder
+        roles = cfg.get("role_map") or {}
+        names = [a.name for a in built_agents]
+        wolves = [n for n in names if roles.get(n) == "werewolf"]
+        witches = [n for n in names if roles.get(n) == "witch"]
+        seers = [n for n in names if roles.get(n) == "seer"]
+        seq = wolves + wolves + seers + witches + names + names + ["Moderator"]
+        ordering = CycledOrdering(seq)
+
+    # Read environment config from scene_config
+    environment_enabled = bool(cfg.get("environment_enabled", False))
+    environment_config = EnvironmentConfig(enabled=environment_enabled)
+
+    sim = Simulator(
+        built_agents,
+        scene,
+        clients or make_clients_from_env(),
+        event_handler=_quiet_logger,
+        ordering=ordering,
+        max_steps_per_turn=3 if scene_type == "landlord_scene" else 5,
+        environment_config=environment_config,
+    )
+    # Set global knowledge reference on all agents
+    global_knowledge = cfg.get("global_knowledge", {})
+    if global_knowledge:
+        for agent in built_agents:
+            agent.set_global_knowledge(global_knowledge)
+
+    # Broadcast configured initial events as public events
+    for text in cfg.get("initial_events") or []:
+        if isinstance(text, str) and text.strip():
+            ev = PublicEvent(text)
+            ev.code = "initial_event"
+            ev.params = {"content": text, "lang": preferred_language}
+            sim.broadcast(ev)
+    # For council, include draft announcement as an initial event if provided
+    if scene_type == "council_scene":
+        draft = str(cfg.get("draft_text") or "").strip()
+        if draft:
+            text = _localized(
+                "The chamber will now consider the following draft for debate and vote:\n{draft}",
+                "议事厅将讨论并表决以下草案：\n{draft}",
+            ).format(draft=draft)
+            ev = PublicEvent(text)
+            ev.code = "council_draft"
+            ev.params = {"draft": draft, "lang": preferred_language}
+            sim.broadcast(ev)
+    return SimTree.new(sim, sim.clients)
+
+
+class SimTreeRegistry:
+    def __init__(self) -> None:
+        self._records: Dict[str, SimTreeRecord] = {}
+        self._lock = asyncio.Lock()
+
+    async def get_or_create(self, simulation_id: str, scene_type: str, clients: dict | None = None) -> SimTreeRecord:
+        key = simulation_id.upper()
+        record = self._records.get(key)
+        if record is not None:
+            return record
+        async with self._lock:
+            record = self._records.get(key)
+            if record is not None:
+                return record
+            tree = await asyncio.to_thread(_build_tree_for_scene, scene_type, clients)
+            record = SimTreeRecord(tree)
+            # Wire event loop for thread-safe fanout
+            loop = asyncio.get_running_loop()
+            tree.attach_event_loop(loop)
+
+            def _fanout(event: dict) -> None:
+                # 只转发当前 running 的节点事件
+                if int(event.get("node", -1)) not in record.running:
+                    return
+                for q in list(record.subs):
+                    try:
+                        loop.call_soon_threadsafe(q.put_nowait, event)
+                    except Exception:  # 极端情况保护，避免某个坏订阅拖垮其他订阅
+                        logger.exception("failed to fanout event to tree subscriber")
+
+            tree.set_tree_broadcast(_fanout)
+            self._records[key] = record
+            return record
+
+    async def get_or_create_from_sim(self, sim_record, clients: dict | None = None) -> SimTreeRecord:
+        key = sim_record.id.upper()
+        record = self._records.get(key)
+        if record is not None:
+            if not record.running and getattr(sim_record, "latest_state", None) and record.tree.serialize() != sim_record.latest_state:
+                loop = asyncio.get_running_loop()
+                tree = SimTree.deserialize(sim_record.latest_state, clients or make_clients_from_env())
+                tree.attach_event_loop(loop)
+
+                def _fanout(event: dict) -> None:
+                    if int(event.get("node", -1)) not in record.running:
+                        return
+                    for q in list(record.subs):
+                        loop.call_soon_threadsafe(q.put_nowait, event)
+
+                tree.set_tree_broadcast(_fanout)
+                record.replace_tree(tree)
+            return record
+        async with self._lock:
+            record = self._records.get(key)
+            if record is not None:
+                if not record.running and getattr(sim_record, "latest_state", None) and record.tree.serialize() != sim_record.latest_state:
+                    loop = asyncio.get_running_loop()
+                    tree = SimTree.deserialize(sim_record.latest_state, clients or make_clients_from_env())
+                    tree.attach_event_loop(loop)
+
+                    def _fanout(event: dict) -> None:
+                        if int(event.get("node", -1)) not in record.running:
+                            return
+                        for q in list(record.subs):
+                            loop.call_soon_threadsafe(q.put_nowait, event)
+
+                    tree.set_tree_broadcast(_fanout)
+                    record.replace_tree(tree)
+                return record
+            # 优先使用最新持久化的 latest_state 进行恢复；否则重新构建
+            if getattr(sim_record, "latest_state", None):
+                try:
+                    tree = SimTree.deserialize(sim_record.latest_state, clients or make_clients_from_env())
+                except Exception:
+                    logger.exception("Failed to deserialize latest_state, fallback to rebuild")
+                    tree = await asyncio.to_thread(_build_tree_for_sim, sim_record, clients)
+            else:
+                tree = await asyncio.to_thread(_build_tree_for_sim, sim_record, clients)
+            record = SimTreeRecord(tree)
+            loop = asyncio.get_running_loop()
+            tree.attach_event_loop(loop)
+
+            def _fanout(event: dict) -> None:
+                if int(event.get("node", -1)) not in record.running:
+                    return
+                for q in list(record.subs):
+                    try:
+                        loop.call_soon_threadsafe(q.put_nowait, event)
+                    except Exception:
+                        logger.exception("failed to fanout event to tree subscriber")
+
+            tree.set_tree_broadcast(_fanout)
+            self._records[key] = record
+            return record
+
+    def remove(self, simulation_id: str) -> None:
+        self._records.pop(simulation_id.upper(), None)
+
+    def get(self, simulation_id: str) -> SimTreeRecord | None:
+        return self._records.get(simulation_id.upper())
+
+    def update_agent_knowledge(self, simulation_id: str, agent_config: dict) -> bool:
+        """
+        Update agent knowledge bases and documents in all nodes of an existing tree.
+        This preserves simulation state while updating knowledge.
+
+        IMPORTANT: This function MERGES knowledge/documents - it only updates agents
+        that are explicitly in the config, and preserves existing data for agents
+        not in the config.
+
+        Returns True if tree was found and updated, False if no tree exists.
+        """
+        key = simulation_id.upper()
+        record = self._records.get(key)
+        if record is None:
+            return False
+
+        # Build a mapping of agent name -> knowledge base and documents from the new config
+        # Only include agents that have the respective keys defined
+        agents_config = agent_config.get("agents", [])
+        kb_by_name = {}
+        docs_by_name = {}
+        for agent_cfg in agents_config:
+            name = agent_cfg.get("name", "")
+            # Only update knowledge base if explicitly present in config
+            if "knowledgeBase" in agent_cfg:
+                kb_by_name[name] = agent_cfg["knowledgeBase"]
+            # Only update documents if explicitly present in config
+            if "documents" in agent_cfg:
+                docs_by_name[name] = agent_cfg["documents"]
+
+        # Update knowledge base and documents in all tree nodes
+        tree = record.tree
+        nodes_updated = 0
+        for node_id, node_data in tree.nodes.items():
+            sim = node_data.get("sim")
+            if sim is None:
+                continue
+            for agent_name, agent in sim.agents.items():
+                if agent_name in kb_by_name:
+                    agent.knowledge_base = list(kb_by_name[agent_name])
+                if agent_name in docs_by_name:
+                    agent.documents = dict(docs_by_name[agent_name])
+            nodes_updated += 1
+
+        return True
+
+    def metrics(self) -> dict:
+        """
+        Return a snapshot of registry health metrics for the /api/health endpoint.
+
+        Exposes only the data the health check needs, keeping internal state private.
+        Called by the health route — do not access _records directly from outside this class.
+        """
+        active_simulations = len(self._records)
+        active_websocket_connections = sum(
+            len(record.subs) for record in self._records.values()
+        )
+        return {
+            "active_simulations": active_simulations,
+            "active_websocket_connections": active_websocket_connections,
+        }
+
+    def update_global_knowledge(self, simulation_id: str, global_knowledge: dict) -> bool:
+        """
+        Update global knowledge reference in all agents of an existing tree.
+
+        Returns True if tree was found and updated, False if no tree exists.
+        """
+        key = simulation_id.upper()
+        record = self._records.get(key)
+        if record is None:
+            return False
+
+        # Update global knowledge in all tree nodes
+        tree = record.tree
+        for node_id, node_data in tree.nodes.items():
+            sim = node_data.get("sim")
+            if sim is None:
+                continue
+            for agent_name, agent in sim.agents.items():
+                agent.set_global_knowledge(global_knowledge)
+
+        return True
+
+
+SIM_TREE_REGISTRY = SimTreeRegistry()
