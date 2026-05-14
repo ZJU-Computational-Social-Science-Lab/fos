@@ -84,7 +84,7 @@ def test_transform_event_for_export():
 
     assert result["sequence"] == 1
     assert result["node_id"] == "5"
-    assert result["agent_id"] == "Agent 1"
+    assert result["agent_id"] == "agent_1"
     assert result["type"] == "AGENT_ACTION"
     assert result["action"] == "allocate"
     assert result["follow_up"] == "12"
@@ -114,7 +114,7 @@ def test_export_events_to_csv():
     csv_content = export_events(events, scenario_params, "csv")
 
     assert "timestamp" in csv_content
-    assert "Agent 1" in csv_content
+    assert "agent_1" in csv_content
     assert "allocate" in csv_content
     assert "12" in csv_content
     assert "tokens_per_round" in csv_content
@@ -145,7 +145,7 @@ def test_export_events_to_json():
 
     assert isinstance(data, list)
     assert len(data) == 1
-    assert data[0]["agent_id"] == "Agent 1"
+    assert data[0]["agent_id"] == "agent_1"
     assert data[0]["action"] == "allocate"
 
 

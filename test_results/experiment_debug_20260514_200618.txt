@@ -1,0 +1,119 @@
+Experiment Debug Log - 2026-05-14 20:06:18
+================================================================================
+
+
+================================================================================
+# SCENARIO START: custom  [2026-05-14 20:06:18]
+# Agents: Alice
+================================================================================
+
+
+################################################################################
+# LLM DEBUG LOG - 2026-05-14T20:06:18.600490
+################################################################################
+
+## AGENT: Alice
+## ROUND: 1
+## VISIBILITY MODE: simultaneous
+
+--- ACTION FILTERING ---
+  self.scene type: ExperimentScene
+  has get_scene_actions: True
+  PGG phase: allocate
+  filtered actions: None (no filtering available)
+
+--- NETWORK VISIBILITY ---
+  (No network edges configured)
+--- AGENT PROPERTIES ---
+
+--- LLM CLIENT (actual) ---
+  source: per-agent distribution
+  provider_id: N/A
+  dialect: mock
+  model: 
+  base_url: None
+
+--- GAME CONFIG ---
+  scenario: Contribute some tokens to the pool....
+  actions: ['contribute']
+  action_type: discrete
+  output_field: action
+  action_descriptions: {'contribute': 'Contribute to the shared pool'}
+
+--- CONTEXT (filtered for this agent) ---
+This is the first round.
+
+================================================================================
+FULL PROMPT SENT TO LLM
+================================================================================
+
+=== EMBODY THIS PERSON ===
+You are Alice.
+
+=== SECTION 2: SCENARIO ===
+
+## Scenario
+Contribute some tokens to the pool.
+
+=== SECTION 3: AVAILABLE ACTIONS ===
+
+## Available Actions
+- contribute: Contribute to the shared pool
+
+=== SECTION 4: CONTEXT ===
+
+## Context
+This is the first round.
+
+=== SECTION 5: JSON OUTPUT REQUIREMENT ===
+Respond with exactly one JSON object in one of these forms:
+{"action": "speak", "message": "..."}
+{"action": "skip", "message": null}
+
+No markdown. No explanation. Only JSON.
+
+================================================================================
+END OF PROMPT
+================================================================================
+
+
+================================================================================
+LLM RAW RESPONSE
+================================================================================
+
+--- Thoughts ---
+Say one line this turn.
+
+--- Plan ---
+1. Speak once. [CURRENT]
+
+--- Action ---
+<Action name="send_message"><message>[1] Hello from Agent.</message></Action>
+
+--- Plan Update ---
+no change
+
+
+================================================================================
+END OF RESPONSE
+================================================================================
+
+
+--- CONTROLLER: Processing Response ---
+  agent: Alice
+  output_field: action
+  allowed actions: ['contribute']
+  cleaned JSON: --- Thoughts ---
+Say one line this turn.
+
+--- Plan ---
+1. Speak once. [CURRENT]
+
+--- Action ---
+<Action name="send_message"><message>[1] Hello from Agent.</message></Action>
+
+--- Plan Update ---
+no ch...
+  ERROR: Failed to parse JSON: Expecting value: line 1 column 1 (char 0)
+
+[PGG] Phase advanced: allocate -> allocate (round 1 complete)

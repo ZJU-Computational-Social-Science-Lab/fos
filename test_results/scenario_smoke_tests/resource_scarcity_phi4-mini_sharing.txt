@@ -15,11 +15,11 @@ CONFIGURATION:
 ROUND 1
 ================================================================================
   Community1: share_resources
-  Community2: share_resources
-  Individualist: horde
+  Community2: horde
+  Individualist: hoard
 ================================================================================
 SUMMARY
 ================================================================================
 Final scores: {'Community1': 0, 'Community2': 0, 'Individualist': 0}
 Errors: ['Action not in allowed set']
-Timestamp: 2026-05-14T14:07:05.650561
+Timestamp: 2026-05-14T23:19:53.263066
