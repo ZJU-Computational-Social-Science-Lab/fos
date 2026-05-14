@@ -1,0 +1,25 @@
+================================================================================
+SCENARIO: resource_scarcity
+MODEL: phi4-mini
+TEST: sharing
+================================================================================
+
+CONFIGURATION:
+  grouping_mode: group
+  payoff_type: none
+  agents: ['Community1', 'Community2', 'Individualist']
+  actions: ['share_resources', 'hoard', 'propose_trade', 'form_contract']
+  total_resources: 100
+
+================================================================================
+ROUND 1
+================================================================================
+  Community1: share_resources
+  Community2: share_resources
+  Individualist: horde
+================================================================================
+SUMMARY
+================================================================================
+Final scores: {'Community1': 0, 'Community2': 0, 'Individualist': 0}
+Errors: ['Action not in allowed set']
+Timestamp: 2026-05-14T14:07:05.650561

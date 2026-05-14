@@ -1,0 +1,26 @@
+================================================================================
+SCENARIO: public_goods
+MODEL: phi4-mini
+TEST: pool
+================================================================================
+
+CONFIGURATION:
+  grouping_mode: group
+  payoff_type: pool
+  agents: ['Player1', 'Player2', 'Player3']
+  actions: ['contribute']
+  initial_tokens: 20
+  multiplier: 1.5
+
+================================================================================
+ROUND 1
+================================================================================
+  Player1: contribute({'amount': 10, 'pool': None}) → 22.5
+  Player2: contribute({'amount': 5, 'pool': None}) → 27.5
+  Player3: contribute({'amount': 10, 'pool': None}) → 22.5
+================================================================================
+SUMMARY
+================================================================================
+Final scores: {'Player1': 22.5, 'Player2': 27.5, 'Player3': 22.5}
+Errors: None
+Timestamp: 2026-05-14T14:06:43.425007
