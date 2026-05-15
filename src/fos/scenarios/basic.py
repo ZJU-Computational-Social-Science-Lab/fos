@@ -9,6 +9,7 @@ Contains: make_clients_from_env
 import os
 from typing import Dict
 
+from fos.i18n import T
 from fos.core.llm.client import create_llm_client
 from fos.core.llm_config import LLMConfig, guess_supports_vision
 
@@ -17,7 +18,7 @@ def make_clients_from_env() -> Dict[str, object]:
     """Create LLM clients from environment variables."""
     dialect = os.getenv("LLM_DIALECT", "mock").lower()
     if dialect not in {"openai", "gemini", "mock", "ollama"}:
-        raise ValueError(f"Unsupported LLM dialect: {dialect}")
+        raise ValueError(T("Unsupported LLM dialect: {dialect}", dialect=dialect))
 
     default_models = {
         "openai": "gpt-4o-mini",

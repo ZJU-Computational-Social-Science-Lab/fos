@@ -12,6 +12,8 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, ConfigDict
 from re import match
 
+from fos.i18n import T
+
 
 class CoreMechanic(BaseModel):
     type: Literal["grid", "discussion", "voting", "resources", "hierarchy", "time"] = Field(...)
@@ -31,7 +33,7 @@ class SemanticActionParameter(BaseModel):
     @classmethod
     def validate_name(cls, v: str) -> str:
         if not match(r"^[a-z_][a-z0-9_]*$", v):
-            raise ValueError(f"Parameter name '{v}' must be snake_case")
+            raise ValueError(T("Parameter name {v} must be snake_case", v=v))
         return v
 
 

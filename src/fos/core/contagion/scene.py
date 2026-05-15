@@ -12,6 +12,7 @@ import logging
 import random
 from typing import Dict, List, Tuple
 
+from fos.i18n import T
 from fos.core.contagion.states import ContagionState
 from fos.core.contagion.rules import StateTransition, check_probability
 from fos.core.contagion.statistics import ContagionStatistics, TransitionEvent
@@ -70,8 +71,8 @@ class ContagionScene(ExperimentScene):
             scenario_id="contagion",
             agents=[],
             actions=[
-                {"name": "move", "description": "Move to an adjacent location on the map."},
-                {"name": "speak_to", "description": "Speak to a nearby agent, share information or interact."},
+                {"name": "move", "description": T("Move to an adjacent location on the map.")},
+                {"name": "speak_to", "description": T("Speak to a nearby agent, share information or interact.")},
             ],
             parameters=transmission_params,
             description=initial_event,

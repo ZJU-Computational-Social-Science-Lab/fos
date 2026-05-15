@@ -76,7 +76,7 @@ class ChoiceAction(ExperimentAction):
 
     @classmethod
     def description(cls) -> str:
-        return "Make a discrete choice from available options"
+        return T("Make a discrete choice from available options")
 
     def execute(self, agent_name: str, parameters: Dict[str, Any], context: Dict[str, Any]) -> str:
         return f"{agent_name} chose {self.choice_name}"
@@ -120,7 +120,7 @@ class VoteAction(ExperimentAction):
 
     @classmethod
     def description(cls) -> str:
-        return "Vote for an option or person"
+        return T("Vote for an option or person")
 
     @classmethod
     def parameter_schema(cls) -> Dict[str, Any]:
@@ -145,7 +145,7 @@ class NumericalAction(ExperimentAction):
 
     @classmethod
     def description(cls) -> str:
-        return "Provide a numerical value"
+        return T("Provide a numerical value")
 
     @classmethod
     def parameter_schema(cls) -> Dict[str, Any]:

@@ -275,6 +275,9 @@
     }
   },
   "prompts": {
+    "council_experiment": {
+      "first_round": "This is the first round - no prior context."
+    },
     "policy_cascade": {
       "shared": {
         "follow_up_no_action": "There is currently no remaining action tendency. Inject a new environment event or release a new policy.",
@@ -1236,5 +1239,16 @@
   "What you want to say": "What you want to say",
   "Who or what you": "Who or what you're voting for",
   "Withdraw from engagement with opposing views": "Withdraw from engagement with opposing views",
-  "Your numerical choice": "Your numerical choice"
+  "Your numerical choice": "Your numerical choice",
+  "Make a discrete choice from available options": "Make a discrete choice from available options",
+  "Vote for an option or person": "Vote for an option or person",
+  "Provide a numerical value": "Provide a numerical value",
+  "Move to an adjacent location on the map.": "Move to an adjacent location on the map.",
+  "Speak to a nearby agent, share information or interact.": "Speak to a nearby agent, share information or interact.",
+  "Unknown scene type: {scene_type}": "Unknown scene type: {scene_type}",
+  "Unsupported LLM dialect: {dialect}": "Unsupported LLM dialect: {dialect}",
+  "Unsupported file format: {suffix}": "Unsupported file format: {suffix}",
+  "Invalid template data: {e}": "Invalid template data: {e}",
+  "Parameter name '{v}' must be snake_case": "Parameter name '{v}' must be snake_case",
+  "Parameter name {v} must be snake_case": "Parameter name {v} must be snake_case"
 }

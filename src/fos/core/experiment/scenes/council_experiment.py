@@ -16,6 +16,7 @@ import logging
 from enum import Enum
 from typing import Any
 
+from fos.i18n import T
 from fos.core.experiment.scene import ExperimentScene
 from fos.core.experiment.config import ExperimentConfig
 from fos.core.experiment.round_context import RoundContextManager
@@ -123,7 +124,7 @@ class CouncilExperimentScene(ExperimentScene):
         context = self.round_context_manager.get_context_for_agent(agent_name)
 
         if not context or context.strip() == "":
-            return "This is the first round - no prior context."
+            return T("prompts.council_experiment.first_round", locale=self.config.locale)
 
         return context
 

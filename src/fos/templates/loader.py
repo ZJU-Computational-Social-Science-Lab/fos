@@ -14,6 +14,8 @@ from typing import Any
 
 import yaml
 
+from fos.i18n import T
+
 from fos.templates.schema import GenericTemplate
 
 
@@ -44,7 +46,7 @@ class TemplateLoader:
         elif suffix in (".yaml", ".yml"):
             data = yaml.safe_load(content)
         else:
-            raise ValueError(f"Unsupported file format: {suffix}")
+            raise ValueError(T("Unsupported file format: {suffix}", suffix=suffix))
 
         return self.load_from_dict(data)
 
@@ -53,7 +55,7 @@ class TemplateLoader:
         try:
             return GenericTemplate.model_validate(data)
         except Exception as e:
-            raise ValueError(f"Invalid template data: {e}") from e
+            raise ValueError(T("Invalid template data: {e}", e=str(e))) from e
 
     def load_from_directory(self, directory: str | Path) -> list[GenericTemplate]:
         """Load all templates from a directory."""
