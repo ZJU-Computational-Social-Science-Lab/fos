@@ -16,6 +16,7 @@ from typing import Callable, List, Optional
 
 from fos.core.agent import Agent
 from fos.core.environment_config import EnvironmentConfig
+from fos.i18n import T
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +135,7 @@ class Simulator:
         scene_type = scenario_data["type"]
         scene_class = get_scene_class(scene_type)
         if not scene_class:
-            raise ValueError(f"Unknown scene type: {scene_type}")
+            raise ValueError(T("Unknown scene type: {scene_type}", scene_type=scene_type))
         scene = scene_class.deserialize(scenario_data)
         agents = [Agent.deserialize(ad) for ad in data["agents"].values()]
         env_cfg = EnvironmentConfig.deserialize(data.get("environment_config", {}))

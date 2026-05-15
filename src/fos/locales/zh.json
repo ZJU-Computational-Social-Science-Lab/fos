@@ -275,6 +275,9 @@
     }
   },
   "prompts": {
+    "council_experiment": {
+      "first_round": "这是第一轮——没有之前的上下文。"
+    },
     "policy_cascade": {
       "shared": {
         "follow_up_no_action": "当前已没有任何动作倾向，建议注入新的环境事件或发布新的政策。",
@@ -1236,5 +1239,16 @@
   "What you want to say": "你想说的话",
   "Who or what you": "你要投票的对象",
   "Withdraw from engagement with opposing views": "退出与对立观点的互动",
-  "Your numerical choice": "你的数值选择"
+  "Your numerical choice": "你的数值选择",
+  "Make a discrete choice from available options": "从可用选项中做出离散选择",
+  "Vote for an option or person": "为某个选项或候选人投票",
+  "Provide a numerical value": "提供一个数值",
+  "Move to an adjacent location on the map.": "移动到地图上的相邻位置。",
+  "Speak to a nearby agent, share information or interact.": "与附近的智能体交谈、分享信息或互动。",
+  "Unknown scene type: {scene_type}": "未知的场景类型：{scene_type}",
+  "Unsupported LLM dialect: {dialect}": "不支持的 LLM 方言：{dialect}",
+  "Unsupported file format: {suffix}": "不支持的文件格式：{suffix}",
+  "Invalid template data: {e}": "无效的模板数据：{e}",
+  "Parameter name '{v}' must be snake_case": "参数名 '{v}' 必须使用 snake_case 格式",
+  "Parameter name {v} must be snake_case": "参数名 {v} 必须使用 snake_case 格式"
 }
