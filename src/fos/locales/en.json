@@ -316,7 +316,7 @@
         "thread_history": "Previous exchanges (latest {rounds} rounds):\n{history}",
         "thread_continue": "This is not a new topic. You must directly answer the other side's specific claim, doubt, or refusal from the previous round and continue the existing dispute instead of reopening it.",
         "thread_reply_requirements": "This round's reply must do at least one of the following: provide new resources/timeline/execution details, explicitly refute a concrete point from the previous round, ask the other side for evidence, or offer an acceptable compromise.",
-        "thread_ban_generic": "Do not write generic filler such as confirmed, continue推进, ensure implementation, keep communicating, or please confirm whether optimization is needed. If you cannot add a new concrete point, use the fixed no-action sentence directly.",
+        "thread_ban_generic": "Do not write generic filler such as confirmed, continue advancing, ensure implementation, keep communicating, or please confirm whether optimization is needed. If you cannot add a new concrete point, use the fixed no-action sentence directly.",
         "thread_no_action": "If you judge that the current thread no longer has a new tendency for discussion, feedback, escalation, handoff, or adjustment, do not idle and do not only write yield; use send_message to reply explicitly: {no_action}",
         "thread_upward_options": "You may also continue escalating, handing off, coordinating privately, or publishing a new policy adjustment.",
         "follow_up_intro": "There is currently no new broadcast policy. Enter the follow-up feedback and consultation stage.",

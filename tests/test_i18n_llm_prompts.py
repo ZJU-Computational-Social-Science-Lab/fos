@@ -33,7 +33,7 @@ EN_JSON = SRC / "locales" / "en.json"
 ZH_JSON = SRC / "locales" / "zh.json"
 
 ZH_CHAR_RE = re.compile(r"[\u4e00-\u9fff]")
-EN_SENT_RE = re.compile(r"\b[A-Z][a-z]{3,}[a-z ]{5,}")   # English sentence start
+EN_SENT_RE = re.compile(r"\b[A-Z][a-z]{3,}(?:\s+[a-z]{2,}){2,}")  # 3+ word English sentence
 EN_WORD_RE = re.compile(r"\b[a-zA-Z]{4,}\b")
 VAR_RE     = re.compile(r"\{(\w+)\}")
 
@@ -102,6 +102,12 @@ def test_zh_prompt_values_have_no_english_sentences():
             continue
         # Strip interpolation variables before checking
         text = re.sub(r"\{[^}]+\}", "", value)
+        # Strip XML action tags — <Action name="speak" /> must stay English
+        text = re.sub(r"<[^>]+>", "", text)
+        # Strip code fence blocks — JSON format examples use English key names
+        text = re.sub(r"```[\s\S]*?```", "", text)
+        # Strip quoted JSON key names — "thoughts", "response", etc. must be English
+        text = re.sub(r'"[a-z_]+"', "", text)
         # Look for sequences of multiple English words (sentences)
         en_words = EN_WORD_RE.findall(text)
         zh_chars = ZH_CHAR_RE.findall(text)
@@ -142,6 +148,11 @@ def test_prompt_t_calls_pass_locale():
     for pyfile in iter_py_files():
         source = pyfile.read_text(encoding="utf-8", errors="replace")
         for i, line in enumerate(source.splitlines(), start=1):
+            # Class-level attribute assignments (NAME = T(...), DESC = T(...)) are
+            # evaluated at import time — no request locale exists then, so locale=
+            # is meaningless at class body scope.
+            if re.match(r"\s+[A-Z_]+ = T\(", line):
+                continue
             for m in T_PROMPT_RE.finditer(line):
                 args = m.group(1)
                 if "locale=" not in args:
