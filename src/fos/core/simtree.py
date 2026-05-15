@@ -7,8 +7,14 @@ from datetime import datetime
 
 from fos.core.event import PublicEvent
 from fos.i18n import T
-from fos.core.simulator import Simulator
-from fos.services.llm_client_pool import LLMClientPool
+try:
+    from fos.core.simulator import Simulator  # Pipeline B — not present in fos
+except ImportError:
+    Simulator = None  # type: ignore[assignment,misc]
+try:
+    from fos.services.llm_client_pool import LLMClientPool  # Pipeline B — not present in fos
+except ImportError:
+    LLMClientPool = None  # type: ignore[assignment,misc]
 
 if TYPE_CHECKING:
     from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
