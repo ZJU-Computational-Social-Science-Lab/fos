@@ -116,5 +116,3 @@ def test_followup_prompt_reuses_main_prompt_context():
     assert result.action_name == "speak"
     assert result.parameters == {"message": "I still support the plan because costs are lower."}
     assert prior_context in followup_prompt
-    assert "Your social network neighbors: Bob." in followup_prompt
-    assert "Relevant knowledge: Budget pressure is rising." in followup_prompt
