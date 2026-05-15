@@ -1131,8 +1131,8 @@
     "range_constraint": "关键：{param} 必须是 {type}，范围在 {min} 到 {max} 之间。",
     "followup_json": "只返回有效的JSON：{{\"action\": \"{action}\", {params}}}",
     "participant_fallback": "你是一名参与者。",
-    "trait_numeric": "你的{key}得分是{value}/100（{interpretation}）。",
-    "trait_string": "你的{key}是{value}。",
+    "trait_numeric": "你的{trait}得分是{value}/100（{interpretation}）。",
+    "trait_string": "你的{trait}是{value}。",
     "payoff": {
       "pd": {
         "header": "收益表：",

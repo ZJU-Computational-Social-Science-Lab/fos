@@ -159,9 +159,9 @@ def build_agent_description(
             continue  # Already handled
         if isinstance(value, (int, float)):
             interpretation = _interpret_score(int(value), locale=locale)
-            parts.append(T("experiment.trait_numeric", locale=locale, key=key, value=value, interpretation=interpretation))
+            parts.append(T("experiment.trait_numeric", locale=locale, trait=key, value=value, interpretation=interpretation))
         elif isinstance(value, str) and value:
-            parts.append(T("experiment.trait_string", locale=locale, key=key, value=value))
+            parts.append(T("experiment.trait_string", locale=locale, trait=key, value=value))
 
     return " ".join(parts)
 

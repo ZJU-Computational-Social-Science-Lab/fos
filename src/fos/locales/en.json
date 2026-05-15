@@ -1131,8 +1131,8 @@
     "range_constraint": "CRITICAL: {param} must be {type} between {min} and {max}.",
     "followup_json": "Respond ONLY with valid JSON: {{\"action\": \"{action}\", {params}}}",
     "participant_fallback": "You are a participant.",
-    "trait_numeric": "Your {key} score is {value}/100 ({interpretation}).",
-    "trait_string": "Your {key} is {value}.",
+    "trait_numeric": "Your {trait} score is {value}/100 ({interpretation}).",
+    "trait_string": "Your {trait} is {value}.",
     "payoff": {
       "pd": {
         "header": "Payoff Table:",
