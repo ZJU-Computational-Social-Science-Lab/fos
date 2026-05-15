@@ -34,3 +34,10 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+test_results/experiment_debug_*.txt
+
+# Local Claude config
+.claude/
+
+# Scratch scripts
+_write_scene.py
