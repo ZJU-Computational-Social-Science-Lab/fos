@@ -26,7 +26,7 @@ def test_visibility_filtering():
         parameters={},
         round_num=1,
         summary="Agent 1 chose red",
-        observed_by=["Agent 1", "Agent 2"],
+        observed_by=["Agent 1", "Agent 2", "Agent 3"],
     )
     # Agent 2 sees only Agent 1 (not Agent 3)
     event2 = RoundEvent(
@@ -44,7 +44,7 @@ def test_visibility_filtering():
         parameters={},
         round_num=1,
         summary="Agent 3 chose green",
-        observed_by=["Agent 1", "Agent 3"],
+        observed_by=["Agent 3"],
     )
 
     info_model = InformationModel(scope_type="neighborhood", include_scores=False)
