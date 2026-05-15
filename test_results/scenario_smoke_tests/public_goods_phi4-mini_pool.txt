@@ -15,12 +15,12 @@ CONFIGURATION:
 ================================================================================
 ROUND 1
 ================================================================================
-  Player1: contribute({'amount': 10, 'pool': None}) → 20.0
-  Player2: contribute({'amount': 5, 'pool': None}) → 25.0
-  Player3: contribute({'amount': 5, 'pool': None}) → 25.0
+  Player1: contribute({'amount': 10, 'pool': None}) → 25.0
+  Player2: contribute({'amount': 10, 'pool': None}) → 25.0
+  Player3: contribute({'amount': 10, 'pool': None}) → 25.0
 ================================================================================
 SUMMARY
 ================================================================================
-Final scores: {'Player1': 20.0, 'Player2': 25.0, 'Player3': 25.0}
+Final scores: {'Player1': 25.0, 'Player2': 25.0, 'Player3': 25.0}
 Errors: None
-Timestamp: 2026-05-15T22:06:41.447799
+Timestamp: 2026-05-16T00:19:21.660355
