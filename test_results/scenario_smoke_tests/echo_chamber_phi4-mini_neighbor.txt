@@ -1,23 +1,26 @@
 ================================================================================
-SCENARIO: battle_of_sexes
+SCENARIO: echo_chamber
 MODEL: phi4-mini
-TEST: coordination
+TEST: neighbor
 ================================================================================
 
 CONFIGURATION:
-  grouping_mode: pairwise
-  payoff_type: matrix
-  agents: ['Partner1', 'Partner2']
-  actions: ['opera', 'football']
+  grouping_mode: neighbor
+  payoff_type: none
+  agents: ['ProAgent1', 'ProAgent2', 'AntiAgent1', 'AntiAgent2']
+  actions: ['express_opinion', 'reinforce_ingroup', 'share_content', 'disengage']
+  graph: polarized with bridge
 
 ================================================================================
 ROUND 1
 ================================================================================
-  Partner1: opera → 0
-  Partner2: football → 0
+  ProAgent1: express_opinion
+  ProAgent2: express_opinion
+  AntiAgent1: express_opinion
+  AntiAgent2: express_opinion
 ================================================================================
 SUMMARY
 ================================================================================
-Final scores: {'Partner1': 0, 'Partner2': 0}
+Final scores: {'ProAgent1': 0, 'ProAgent2': 0, 'AntiAgent1': 0, 'AntiAgent2': 0}
 Errors: None
-Timestamp: 2026-05-15T22:06:33.847296
+Timestamp: 2026-05-15T22:07:02.831454

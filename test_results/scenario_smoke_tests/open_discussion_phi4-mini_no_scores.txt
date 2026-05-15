@@ -1,0 +1,25 @@
+================================================================================
+SCENARIO: open_discussion
+MODEL: phi4-mini
+TEST: no_scores
+================================================================================
+
+CONFIGURATION:
+  grouping_mode: individual
+  payoff_type: none
+  agents: ['Tech1', 'Tech2']
+  actions: ['speak']
+  topic: Should we adopt a new technology?
+  verify: NO SCORE should appear in context
+
+================================================================================
+ROUND 1
+================================================================================
+  Tech1: speak({'message': "Absolutely, I believe we should embrace new technologies more actively! New technology has always been a driving force behind human progress and innovation throughout history—think about the Industrial Revolution or even modern digital advancements.\n\nAdopting newly developed tech can lead to significant improvements in various sectors such as healthcare by providing cutting-edge treatments; education through personalized learning experiences enabled via AI tools. Moreover, it fosters creativity across industries with things like virtual reality that create immersive environments for users and businesses alike.\n\nOf course there are valid concerns about privacy issues or job displacement due to automation — which we should definitely address - but the potential benefits far outweigh these challenges if managed responsibly by governments policies and companies' ethical guidelines adoption of new technology is a crucial step toward maintaining our competitive edge in this ever-evolving world."})
+  Tech2: speak({'message': "While I recognize that new technology often brings innovation, efficiency and convenience into our lives in numerous ways – from healthcare advancements like MRI machines enabling better diagnoses with fewer risks compared to invasive procedures; or the ease of communication facilitated through smartphones which can bridge vast distances instantly - my skepticism lies primarily within two areas.\n\nFirstly is privacy. In a world where data breaches are becoming increasingly common, adopting technologies that collect and store significant amounts of personal information poses considerable security concerns for individuals' sensitive details like health records, financial transactions etc., making one wonder if the benefits outweigh these risks sufficiently to warrant widespread adoption without stringent protective measures in place by tech developers.\n\nSecondly is job displacement. While automation indeed boosts productivity levels across various industries – from manufacturing with robots handling repetitive tasks efficiently; or customer service operations being streamlined through chatbots - it raises valid fears about human workers losing their jobs due to the efficiency of these technologies, leading us into a socio-economic dilemma which we must carefully consider before fully embracing such advancements."})
+================================================================================
+SUMMARY
+================================================================================
+Final scores: {'Tech1': 0, 'Tech2': 0}
+Errors: None
+Timestamp: 2026-05-15T22:06:17.712832
