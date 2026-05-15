@@ -15,14 +15,15 @@ CONFIGURATION:
 ================================================================================
 ROUND 1
 ================================================================================
-  Node1: red
-  Node2: blue
-  Node3: green
+  Node1: blue
+  Node2: green
+  Node3: red
 ================================================================================
 ROUND 2
 ================================================================================
   Node1: green
   Node2: red
-  Node3: yellow
-  Feedback for Node1: Conflicted with: Node2 (you green, they red)
-  Feedback for Node2: Conflicted with: Node1 (you red, they green)
+  Node3: blue
+  Feedback for Node1: Conflicted with: Node2 (you green, they red), Node3 (you green, they blue)
+  Feedback for Node2: Conflicted with: Node1 (you red, they green), Node3 (you red, they blue)
+  Feedback for Node3: Conflicted with: Node2 (you blue, they red), Node1 (you blue, they green)

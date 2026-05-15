@@ -15,11 +15,11 @@ CONFIGURATION:
 ROUND 1
 ================================================================================
   Executive: transmit_faithfully
-  Manager: reinterpret_downward
+  Manager: transmit_faithfully
   Worker: transmit_faithfully
 ================================================================================
 SUMMARY
 ================================================================================
 Final scores: {'Executive': 0, 'Manager': 0, 'Worker': 0}
 Errors: None
-Timestamp: 2026-05-14T23:19:46.596700
+Timestamp: 2026-05-15T22:06:58.911355
