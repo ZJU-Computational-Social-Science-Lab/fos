@@ -15,7 +15,7 @@ def test_fix_1_visibility_filtering():
 
     # Create information model with neighbor scope
     info_model = InformationModel(
-        scope_type="neighbor",
+        scope_type="neighborhood",
         include_scores=False,
         recent_window=5,
     )
@@ -64,7 +64,6 @@ def test_fix_1_visibility_filtering():
     context_a = context_manager.get_context_for_agent(
         "NodeA",
         agent_score=None,
-        graph=graph
     )
 
     print(f"Context for NodeA:\n{context_a}\n")
@@ -89,7 +88,7 @@ def test_fix_2_no_score_display():
 
     # Create information model WITHOUT scores
     info_model = InformationModel(
-        scope_type="neighbor",
+        scope_type="neighborhood",
         include_scores=False,  # This is the key setting
         recent_window=3,
     )
@@ -122,11 +121,9 @@ def test_fix_2_no_score_display():
     )
 
     # Get context for Node1 with agent_score=0
-    graph = {"edges": [("Node1", "Node2")]}
     context = context_manager.get_context_for_agent(
         "Node1",
         agent_score=0,
-        graph=graph
     )
 
     print(f"Context for Node1:\n{context}\n")

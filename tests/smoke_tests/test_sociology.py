@@ -261,7 +261,7 @@ async def test_echo_chamber_neighbor_visibility(default_llm_client, output_dir):
     }
 
     information_model = InformationModel(
-        scope_type="neighbor",
+        scope_type="neighborhood",
         pairing_fn=None,
         context_budget_chars=0,
     )

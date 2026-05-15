@@ -5,6 +5,8 @@ Tests that provider_id is correctly converted to different LLM clients.
 """
 from fos.core.experiment.scene import ExperimentScene
 from fos.core.experiment.config import ExperimentConfig
+from fos.core.llm.client import LLMClient
+from fos.core.llm_config import LLMConfig
 
 
 def test_llm_distribution():
@@ -31,10 +33,9 @@ def test_llm_distribution():
             ],
         )
     )
+    mock_client = LLMClient(LLMConfig(dialect="mock"))
+    scene.initialize(mock_client)
 
     # Verify that agents have different LLM configs
-    # BUG: With current implementation, both agents use the same client
-    # The test should FAIL until the bug is fixed
-    # llm_config is an LLMConfig object, not a dict
-    assert scene.agents[0].llm_config.dialect == "openai"
-    assert scene.agents[1].llm_config.dialect == "ollama"
+    assert scene.agents[0].llm_config["dialect"] == "openai"
+    assert scene.agents[1].llm_config["dialect"] == "ollama"

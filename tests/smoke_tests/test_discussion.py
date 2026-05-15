@@ -59,9 +59,9 @@ async def test_open_discussion_basic(default_llm_client, output_dir):
         build_experiment_agent("Carol", llm_config, role_prompt="You are Carol, an empathetic person."),
     ]
 
-    # Create kernel with speak action
+    # Register speak action and create kernel instance
+    ExperimentKernel.register("speak", SpeakAction)
     kernel = ExperimentKernel()
-    kernel.register_action("speak", SpeakAction())
 
     filename = f"open_discussion_phi4-mini_basic.txt"
     filepath = output_dir / filename
@@ -115,8 +115,8 @@ async def test_open_discussion_no_scores(default_llm_client, output_dir):
         build_experiment_agent("Tech2", llm_config, role_prompt="You are skeptical about technology."),
     ]
 
+    ExperimentKernel.register("speak", SpeakAction)
     kernel = ExperimentKernel()
-    kernel.register_action("speak", SpeakAction())
 
     filename = f"open_discussion_phi4-mini_no_scores.txt"
     filepath = output_dir / filename
