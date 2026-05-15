@@ -13,7 +13,7 @@ from fos.core.llm_config import LLMConfig
 
 
 def run(coro):
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 def make_agents(names):
