@@ -15,7 +15,7 @@ from fos.core.llm_config import LLMConfig
 
 
 def run(coro):
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 def test_process_response_does_not_record_to_context_manager():

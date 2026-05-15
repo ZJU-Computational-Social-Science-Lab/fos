@@ -120,7 +120,7 @@ def test_run_round_completes():
     async def _run():
         return await scene.run_round(lambda t, d: events.append((t, d)))
 
-    result = asyncio.get_event_loop().run_until_complete(_run())
+    result = asyncio.run(_run())
     assert result is not None
     assert len(result.actions) == 3  # One per agent
     assert any(e[0] == "contagion_stats" for e in events)
@@ -147,8 +147,8 @@ def test_seir_states_change():
         return await scene.run_round(lambda t, d: None)
 
     # Run 2 rounds to trigger decay recovery (decay_turns=2)
-    asyncio.get_event_loop().run_until_complete(_run())
-    asyncio.get_event_loop().run_until_complete(_run())
+    asyncio.run(_run())
+    asyncio.run(_run())
 
     stats = scene.get_statistics()["counts"]
     # After 2 rounds, the infected agent should have recovered
