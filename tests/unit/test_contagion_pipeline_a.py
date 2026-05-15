@@ -2,11 +2,16 @@
 Unit tests for ContagionScene as ExperimentScene subclass (Pipeline A).
 
 Verifies initialization, agent placement, SEIR state assignment, run_round
-execution, and inheritance. Uses mock LLM dialect to avoid external API calls.
+execution, inheritance, serialization, and Moore neighborhood geometry.
+Uses mock LLM dialect to avoid external API calls.
 
 Contains: test_instantiation, test_initialize_assigns_map_xy,
           test_initialize_marks_infected, test_run_round_completes,
-          test_seir_states_change, test_is_experiment_scene_subclass
+          test_seir_states_change, test_is_experiment_scene_subclass,
+          test_does_not_inherit_pipeline_b, test_type_attribute,
+          test_serialize_includes_game_map,
+          test_get_moore_neighbors_center, test_get_moore_neighbors_corner,
+          test_get_moore_neighbors_edge, test_get_moore_neighbors_excludes_self
 """
 import asyncio
 import pytest
@@ -155,3 +160,62 @@ def test_is_experiment_scene_subclass():
     assert issubclass(ContagionScene, ExperimentScene)
     scene = _make_scene()
     assert isinstance(scene, ExperimentScene)
+
+
+def test_does_not_inherit_pipeline_b():
+    """ContagionScene does not inherit from Pipeline B base classes."""
+    scene = _make_scene()
+    mro_names = [c.__name__ for c in type(scene).__mro__]
+    assert "VillageScene" not in mro_names
+    assert "Scene" not in mro_names
+
+
+def test_type_attribute():
+    """ContagionScene has the correct TYPE class attribute."""
+    assert ContagionScene.TYPE == "contagion_scene"
+
+
+def test_serialize_includes_game_map():
+    """serialize_config() includes the game_map with correct dimensions."""
+    scene = ContagionScene(
+        name="test_contagion",
+        initial_event="A virus spreads.",
+        game_map=GameMap(width=10, height=8),
+        rules=_make_rules(),
+        initial_infected_count=1,
+    )
+    config = scene.serialize_config()
+    assert "game_map" in config
+    assert config["game_map"]["width"] == 10
+    assert config["game_map"]["height"] == 8
+
+
+# --- Moore neighborhood geometry ---
+
+
+def test_get_moore_neighbors_center():
+    """Center cell (2,2) on a 5x5 grid has 8 Moore neighbors."""
+    scene = _make_scene()
+    neighbors = scene.get_moore_neighbors(2, 2)
+    assert len(neighbors) == 8
+
+
+def test_get_moore_neighbors_corner():
+    """Corner cell (0,0) on a 5x5 grid has 3 Moore neighbors."""
+    scene = _make_scene()
+    neighbors = scene.get_moore_neighbors(0, 0)
+    assert len(neighbors) == 3
+
+
+def test_get_moore_neighbors_edge():
+    """Edge cell (0,2) on a 5x5 grid has 5 Moore neighbors."""
+    scene = _make_scene()
+    neighbors = scene.get_moore_neighbors(0, 2)
+    assert len(neighbors) == 5
+
+
+def test_get_moore_neighbors_excludes_self():
+    """The cell itself is not included in its Moore neighbors."""
+    scene = _make_scene()
+    neighbors = scene.get_moore_neighbors(2, 2)
+    assert (2, 2) not in neighbors
