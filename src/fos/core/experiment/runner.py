@@ -148,6 +148,15 @@ class ExperimentRunner:
             state: Current experiment state
             scene: Optional scene instance for handlers that need scene context
         """
+        from fos.core.experiment.actions.registry import get_action as _get_action
+        # Game-configured actions not in the global registry are treated as record-only:
+        # they are valid game choices (e.g., "red", "blue", "invest") that have no
+        # registered state effects. Returning success=True lets them flow through to
+        # round history so per-agent context is populated for subsequent rounds.
+        if _get_action(action_name) is None:
+            configured = {str(a).lower() for a in self.game_config.actions}
+            if action_name.lower() in configured:
+                return {"success": True}
         return self.action_handler.execute(action_name, agent_name, params, state, scene)
 
     def _scene_has_followup_actions(self) -> bool:
