@@ -14,7 +14,7 @@ from fos.templates.loader import TemplateLoader
 from fos.templates.schema import GenericTemplate, export_json_schema
 
 
-PUBLIC_SCENE_KEYS = {key for key in SCENE_MAP.keys()} - {"village_scene"}
+PUBLIC_SCENE_KEYS = {key for key in SCENE_MAP.keys()}
 
 DEFAULT_SIMPLE_CHAT_NEWS = (
     "News: A new study suggests AI models now match human-level performance in creative writing benchmarks."
