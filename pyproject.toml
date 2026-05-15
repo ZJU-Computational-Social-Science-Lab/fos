@@ -5,7 +5,34 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "fos"
 version = "0.1.0"
+description = "Future of Society simulation platform"
 requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "ZJU Work"},
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio",
+    "pytest-cov",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.coverage.run]
+source = ["fos"]
+omit = [
+    "*/migrations/*",
+    "*/scripts/*",
+    "tests/*",
+]
+
+[tool.coverage.report]
+omit = [
+    "*/migrations/*",
+    "*/scripts/*",
+]
