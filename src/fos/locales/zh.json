@@ -281,16 +281,16 @@
         "unknown": "未知"
       },
       "guidelines": {
-        "notice_analysis": "When your tier is active: (1) 直接回应最新系统公告，重点做政策解读、合理性评估、优点/缺点/风险/建议分析，(2) 必须使用符合你层级职责的正式政务表述，(3) 只讨论你这一层的判断，不替其他层级部署任务，不要机械复述旧政策，(4) 如果公告里有字数、格式、重点要求，必须直接遵守。输出必须包含 send_message 或 yield，禁止空响应或 None。",
-        "notice_execution": "When your tier is active: (1) 直接回应最新系统公告或任务要求，给出你自己的分析/判断/执行方案，(2) 结合你的职位职责提供至少1条独特细节，(3) 只回答你这一层的工作，不要替其他层级部署，不要让别人去解读，不要重复发布指令，不要机械复述旧内容。(4) 如果系统公告里有字数、格式、重点要求，必须直接遵守。输出必须包含 send_message 或 yield，禁止空响应或 None。",
+        "notice_analysis": "当您的层级激活时：(1) 直接回应最新系统公告，重点做政策解读、合理性评估、优点/缺点/风险/建议分析，(2) 必须使用符合你层级职责的正式政务表述，(3) 只讨论你这一层的判断，不替其他层级部署任务，不要机械复述旧政策，(4) 如果公告里有字数、格式、重点要求，必须直接遵守。输出必须包含 send_message 或 yield，禁止空响应或 None。",
+        "notice_execution": "当您的层级激活时：(1) 直接回应最新系统公告或任务要求，给出你自己的分析/判断/执行方案，(2) 结合你的职位职责提供至少1条独特细节，(3) 只回答你这一层的工作，不要替其他层级部署，不要让别人去解读，不要重复发布指令，不要机械复述旧内容。(4) 如果系统公告里有字数、格式、重点要求，必须直接遵守。输出必须包含 send_message 或 yield，禁止空响应或 None。",
         "follow_up_thread_adjustment_strict": "只有在出现极端风险时，才允许你使用 announce_policy_adjustment 重新发布政策调整。",
         "follow_up_thread_adjustment_relaxed": "如果你认为必须调整既有政策口径，可使用 announce_policy_adjustment 发布新的政策调整并重新开启下传。",
-        "follow_up_thread": "When your tier is active: (1) 你正在处理一条私有会话或反馈线程；(2) 你可以使用 send_message 私下回复当前来件，也可以用 yield 暂时回避；(3) 你也可以进一步 report_upward、escalate_complaint、consult_peer 或 notify_subordinate，把当前问题继续上传、协商或转办；(4) {adjustment_rule}(5) 如果你判断当前线程已经没有新的讨论、反馈、上报、转办或调整动作倾向，不要空响应；请使用 send_message 明确回复：{no_action}",
+        "follow_up_thread": "当您的层级激活时：(1) 你正在处理一条私有会话或反馈线程；(2) 你可以使用 send_message 私下回复当前来件，也可以用 yield 暂时回避；(3) 你也可以进一步 report_upward、escalate_complaint、consult_peer 或 notify_subordinate，把当前问题继续上传、协商或转办；(4) {adjustment_rule}(5) 如果你判断当前线程已经没有新的讨论、反馈、上报、转办或调整动作倾向，不要空响应；请使用 send_message 明确回复：{no_action}",
         "follow_up_adjustment_strict": "只有在出现极端风险时，上级才可用 announce_policy_adjustment 重新发布政策调整。",
         "follow_up_adjustment_relaxed": "上级可用 notify_subordinate 私下回访或转办，也可用 announce_policy_adjustment 重新发布政策调整。",
-        "follow_up": "When your tier is active: (1) 当前没有新的广播政策，你可以围绕既有政策的执行困难、资源缺口、口径冲突和群体反弹展开后续互动；(2) 基层可以向直属上级 report_upward，也可以在必要时 escalate_complaint 越级反映；(3) 同层可通过 consult_peer 进行私下协商与口径统一；(4) 上级可用 notify_subordinate 私下回访或转办；{adjustment_rule}(5) 只要你仍有新的反馈、讨论、协商、上报、转办或调整动作倾向，就必须继续动作；只有在你判断当前确实无话可接、无事可做时，才允许用 send_message 明确回复：{no_action}",
-        "distortion_cascade": "When your tier is active: (1) 你需要把政策只传递给下一级，不得跳级；(2) 你可以根据本层利益、压力、风险和理解偏差，选择原样传达、选择性强调、弱化、重写、拖延，甚至不传达；(3) 如果决定不继续传达，可使用 yield 表示截留/搁置；(4) 你的表达必须体现本层的真实立场与激励，不必强行保留原文，但不能替更高或更低层发言。当前参数：失真强度={distortion_strength}，利益冲突敏感度={conflict_sensitivity}，截留概率={block_probability}。输出必须包含 send_message 或 yield，禁止空响应或 None。",
-        "default_cascade": "When your tier is active: (1) 逐字粘贴最新政策/公告全文（不要省略或改写），(2) 写明态度/疑虑/执行计划/资源需求，(3) 只把消息按照设定层级顺序传递给下一级，未轮到你时保持沉默。态度/计划必须结合你的职位和角色，至少提供1条与你职责相关的独特执行细节（不要与上一层或他人措辞相同）。不要代替其他层级发言。如收到新的系统公告/解读请求，优先围绕公告内容给出解读/行动，不要重复旧内容。输出必须包含 send_message 或 yield，禁止空响应或 None。"
+        "follow_up": "当您的层级激活时：(1) 当前没有新的广播政策，你可以围绕既有政策的执行困难、资源缺口、口径冲突和群体反弹展开后续互动；(2) 基层可以向直属上级 report_upward，也可以在必要时 escalate_complaint 越级反映；(3) 同层可通过 consult_peer 进行私下协商与口径统一；(4) 上级可用 notify_subordinate 私下回访或转办；{adjustment_rule}(5) 只要你仍有新的反馈、讨论、协商、上报、转办或调整动作倾向，就必须继续动作；只有在你判断当前确实无话可接、无事可做时，才允许用 send_message 明确回复：{no_action}",
+        "distortion_cascade": "当您的层级激活时：(1) 你需要把政策只传递给下一级，不得跳级；(2) 你可以根据本层利益、压力、风险和理解偏差，选择原样传达、选择性强调、弱化、重写、拖延，甚至不传达；(3) 如果决定不继续传达，可使用 yield 表示截留/搁置；(4) 你的表达必须体现本层的真实立场与激励，不必强行保留原文，但不能替更高或更低层发言。当前参数：失真强度={distortion_strength}，利益冲突敏感度={conflict_sensitivity}，截留概率={block_probability}。输出必须包含 send_message 或 yield，禁止空响应或 None。",
+        "default_cascade": "当您的层级激活时：(1) 逐字粘贴最新政策/公告全文（不要省略或改写），(2) 写明态度/疑虑/执行计划/资源需求，(3) 只把消息按照设定层级顺序传递给下一级，未轮到你时保持沉默。态度/计划必须结合你的职位和角色，至少提供1条与你职责相关的独特执行细节（不要与上一层或他人措辞相同）。不要代替其他层级发言。如收到新的系统公告/解读请求，优先围绕公告内容给出解读/行动，不要重复旧内容。输出必须包含 send_message 或 yield，禁止空响应或 None。"
       },
       "status": {
         "notice_analysis": "当前任务：直接回应最新系统公告，重点写合理性、优点、缺点、风险和建议，不要写成执行命令。",
