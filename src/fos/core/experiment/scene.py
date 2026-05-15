@@ -88,7 +88,11 @@ class ExperimentScene:
         #   2. llm_config dict/object        — fallback from agent config
         #   3. default llm_client             — final fallback
         self._agent_llm_clients = {}
+        _is_stub = not isinstance(llm_client, LLMClient)
         for agent in self.agents:
+            if _is_stub:
+                self._agent_llm_clients[agent.name] = llm_client
+                continue
             # PRIORITY: Use provider_clients[provider_id] when available.
             # This is the authoritative source — the DB ProviderConfig has the correct
             # model for each provider, whereas llm_config may have the default provider's
