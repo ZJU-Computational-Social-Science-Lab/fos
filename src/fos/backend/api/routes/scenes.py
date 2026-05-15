@@ -73,6 +73,25 @@ def scene_config_template(scene_key: str, scene_cls) -> dict:
             "basic_actions": list(council_config.actions),
         }
 
+    if scene_key == "contagion_scene":
+        return {
+            "type": scene_key,
+            "name": "Contagion Spread",
+            "description": SCENE_DESCRIPTIONS.get(scene_key, ""),
+            "config_schema": {
+                "parameters": {
+                    "initial_infected": 1,
+                    "proximity_probability": 0.3,
+                    "action_probability": 0.5,
+                    "recovery_turns": 5,
+                    "grid_size": 10,
+                },
+                "initial_events": [],
+            },
+            "allowed_actions": [],
+            "basic_actions": ["move", "speak_to"],
+        }
+
     scene = scene_cls("preview", "")
     config_schema = scene.serialize_config() or {}
 

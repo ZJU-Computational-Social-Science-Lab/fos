@@ -513,6 +513,57 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
         logger.debug(f"Created CouncilExperimentScene with adapter: council")
 
         return SimTree.new(adapter, adapter.clients)
+    elif scene_key == "contagion_scene":
+        from fos.core.contagion.scene import ContagionScene
+        from fos.core.contagion.states import ContagionState
+        from fos.core.contagion.rules import StateTransition
+        from fos.core.map.grid import GameMap
+
+        params = cfg.get("parameters", {})
+        grid_size = int(params.get("grid_size", 10))
+        proximity_prob = float(params.get("proximity_probability", 0.3))
+        action_prob = float(params.get("action_probability", 0.5))
+        recovery_turns = int(params.get("recovery_turns", 5))
+        initial_infected = int(params.get("initial_infected", 1))
+
+        game_map = GameMap(width=grid_size, height=grid_size)
+
+        rules = [
+            StateTransition(
+                from_state=ContagionState.SUSCEPTIBLE,
+                to_state=ContagionState.INFECTED,
+                trigger_type="proximity",
+                probability=proximity_prob,
+            ),
+            StateTransition(
+                from_state=ContagionState.SUSCEPTIBLE,
+                to_state=ContagionState.INFECTED,
+                trigger_type="action",
+                probability=action_prob,
+            ),
+            StateTransition(
+                from_state=ContagionState.INFECTED,
+                to_state=ContagionState.RECOVERED,
+                trigger_type="decay",
+                probability=1.0,
+                decay_turns=recovery_turns,
+            ),
+        ]
+
+        scene = ContagionScene(
+            name=name,
+            initial_event=initial_event_content,
+            game_map=game_map,
+            rules=rules,
+            initial_infected_count=initial_infected,
+        )
+
+        # Use adapter instead of full Simulator (same as experiment_template)
+        adapter = ExperimentRunnerAdapter(scene, clients or make_clients_from_env())
+
+        logger.debug(f"Created ContagionScene with adapter: grid={grid_size}x{grid_size}")
+
+        return SimTree.new(adapter, adapter.clients)
     else:
         scene = scene_cls(name, initial_event_content)
         if scene_key == "policy_cascade_scene" and hasattr(scene, "configure_from_config"):
