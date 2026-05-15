@@ -1,5 +1,6 @@
 from fos.core.experiment.scenes.council_experiment import CouncilExperimentScene
 from fos.core.experiment.scene import ExperimentScene
+from fos.core.contagion.scene import ContagionScene
 
 ACTION_SPACE_MAP: dict = {}
 
@@ -7,6 +8,7 @@ ACTION_SPACE_MAP: dict = {}
 SCENE_MAP = {
     "council_experiment": CouncilExperimentScene,  # REFACTOR-COUNCIL-06: New experiment-based council scene
     "experiment_template": ExperimentScene,
+    "contagion_scene": ContagionScene,
 }
 
 
@@ -38,6 +40,10 @@ SCENE_ACTIONS: dict[str, dict[str, list[str]]] = {
     },
     "experiment_template": {
         "basic": [],
+        "allowed": [],
+    },
+    "contagion_scene": {
+        "basic": ["move", "speak_to"],
         "allowed": [],
     },
 }
@@ -119,6 +125,7 @@ INFORMATION_MODEL_MAP: dict = {
     "open_discussion": InformationModel(scope_type="all", recent_window=3, include_scores=False),
     "werewolf": InformationModel(scope_type="all", recent_window=3, include_scores=False),  # LEGACY: unsupported
     "grid_world": InformationModel(scope_type="neighborhood", recent_window=3, include_scores=False),
+    "contagion_scene": InformationModel(scope_type="neighborhood", recent_window=3, include_scores=False),
     # Fallback for unknown scene types
     "_default": InformationModel(scope_type="all", recent_window=3),
 }
@@ -162,4 +169,5 @@ def get_information_model(scene_type: str) -> InformationModel:
 SCENE_DESCRIPTIONS: dict[str, str] = {
     "council_experiment": "Council experiment using experiment framework with multi-round deliberation context and phase-based action filtering.",
     "experiment_template": "Social science experiment using Three-Layer Architecture (constrained decoding, structured prompts, validation). Supports custom actions and simultaneous/sequential rounds.",
+    "contagion_scene": "SEIR contagion dynamics on a grid. Agents spread infection through proximity and social interactions, with configurable transmission rates and recovery.",
 }
