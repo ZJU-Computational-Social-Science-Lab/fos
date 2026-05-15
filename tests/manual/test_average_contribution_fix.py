@@ -5,9 +5,13 @@ This test simulates the full flow:
 1. Round 1: Agents allocate tokens
 2. Store last_contribution in agent properties
 3. Round 2: Build context - should show average contribution instead of individual
+
+Contains: test_average_contribution_e2e
 """
 import asyncio
 import sys
+import pytest
+
 sys.path.insert(0, "src")
 
 from fos.core.experiment.scene import ExperimentScene
@@ -16,6 +20,7 @@ from fos.core.llm.client import LLMClient
 from unittest.mock import MagicMock, AsyncMock
 
 
+@pytest.mark.asyncio
 async def test_average_contribution_e2e():
     """Test that last_contribution is stored and used for average calculation."""
 
