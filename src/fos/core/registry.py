@@ -71,23 +71,7 @@ def werewolf_visibility_scope(
 
 INFORMATION_MODEL_MAP: dict = {
     # Scene keys must exactly match SCENE_MAP keys
-    "simple_chat_scene": InformationModel(scope_type="all", recent_window=5),
-    "emotional_conflict_scene": InformationModel(scope_type="all", recent_window=5),
-    "council_scene": InformationModel(scope_type="all", recent_window=5),
     "council_experiment": InformationModel(scope_type="all", recent_window=3, include_scores=False),  # REFACTOR-COUNCIL-06
-    "village_scene": InformationModel(
-        scope_type="neighborhood",
-        # NOTE: proximity_scope requires state["_agent_positions"] to be populated
-        # by the runtime. Defaults to social_network fallback until that is wired.
-        recent_window=5,
-    ),
-    "werewolf_scene": InformationModel(  # LEGACY: unsupported
-        scope_type="role_based",
-        scope_fn=werewolf_visibility_scope,
-        recent_window=5,
-    ),
-    "landlord_scene": InformationModel(scope_type="all", recent_window=3),
-    "generic_scene": InformationModel(scope_type="all", recent_window=3),
     "policy_cascade_scene": InformationModel(scope_type="all", recent_window=3),
     "experiment_template": InformationModel(scope_type="all", recent_window=3),
     # Scenario-level keys (used when scene_type == scenario id)
@@ -173,15 +157,9 @@ def get_information_model(scene_type: str) -> InformationModel:
         include_scores=payoff_type not in ("none", "feedback", ""),
     )
 
+
 # Scene descriptions for selection UI and docs
 SCENE_DESCRIPTIONS: dict[str, str] = {
-    "simple_chat_scene": "Open chat room with optional web tools. Agents converse naturally; use search/page tools when needed.",
-    "emotional_conflict_scene": "Guided emotional dialogue among participants in a chat room; designed to surface and reconcile feelings.",
-    "council_scene": "Legislative council debate and voting around a draft text; supports voting and status actions.",
     "council_experiment": "Council experiment using experiment framework with multi-round deliberation context and phase-based action filtering.",
-    "village_scene": "Grid-based village simulation with movement, looking around, gathering, and resting.",
-    "werewolf_scene": "Social deduction game with night/day phases and role-specific actions (UNSUPPORTED — requires dedicated role/phase runtime).",
-    "landlord_scene": "Dou Dizhu (Landlord) card game flow with bidding, playing, and scoring stages.",
-    "generic_scene": "A flexible scene type composed from template configuration. Supports custom mechanics and semantic actions.",
     "experiment_template": "Social science experiment using Three-Layer Architecture (constrained decoding, structured prompts, validation). Supports custom actions and simultaneous/sequential rounds.",
 }

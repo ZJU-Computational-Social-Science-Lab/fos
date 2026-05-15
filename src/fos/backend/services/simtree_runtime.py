@@ -191,7 +191,7 @@ class ExperimentRunnerAdapter:
 
 
 def _build_tree_for_scene(scene_type: str, clients: dict | None = None) -> SimTree:
-    # Normalize scene_type to registry keys (allow aliases like 'village' -> 'village_scene')
+    # Normalize scene_type to registry keys (allow aliases like 'experiment' -> 'experiment_scene')
     scene_key = scene_type if scene_type in SCENE_MAP else f"{scene_type}_scene"
     scene_cls = get_scene_class(scene_key)
     if scene_cls is None:
@@ -308,7 +308,7 @@ def _apply_agent_config(simulator, agent_config: dict | None):
 
 def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
     scene_type = sim_record.scene_type
-    # Normalize scene_type to registry keys (allow aliases like 'village' -> 'village_scene')
+    # Normalize scene_type to registry keys (allow aliases like 'experiment' -> 'experiment_scene')
     scene_key = scene_type if scene_type in SCENE_MAP else f"{scene_type}_scene"
     scene_cls = get_scene_class(scene_key)
     if scene_cls is None:
@@ -364,23 +364,6 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
     elif scene_key == "council_scene":
         draft = str(cfg.get("draft_text") or "")
         scene = scene_cls(name, "")
-    elif scene_key == "village_scene":
-        from fos.core.scenes.village_scene import GameMap
-
-        # 如果未提供 map 配置，则使用 GameMap 的默认空地图
-        map_data = cfg.get("map") or {}
-        game_map = GameMap.deserialize(map_data)
-        movement_cost = int(cfg.get("movement_cost", 1))
-        chat_range = int(cfg.get("chat_range", 5))
-        print_map_each_turn = bool(cfg.get("print_map_each_turn", False))
-        scene = scene_cls(
-            name,
-            _localized("Welcome to the village.", "欢迎来到村庄。"),
-            game_map=game_map,
-            movement_cost=movement_cost,
-            chat_range=chat_range,
-            print_map_each_turn=print_map_each_turn,
-        )
     elif scene_key == "landlord_scene":
         num_decks = int(cfg.get("num_decks", 1))
         seed = cfg.get("seed")
