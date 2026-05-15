@@ -1,35 +1,42 @@
 """
-ContagionScene - standalone Pipeline A scene for SEIR contagion dynamics.
+ContagionScene - Pipeline A scene for SEIR contagion dynamics.
 
-Manages agent contagion states (S, E, I, R), evaluates decay and proximity
-transmission rules each turn, and emits statistics to the frontend. Does not
-inherit from any Pipeline B base class.
+Subclasses ExperimentScene to reuse the LLM prompting and action dispatch
+loop while replacing payoff scoring with SEIR state transitions. Agents
+spread infection through proximity and social interactions on a grid map,
+with configurable transmission rates and recovery via decay rules.
 
 Contains: ContagionScene
 """
+import logging
 import random
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 from fos.core.contagion.states import ContagionState
 from fos.core.contagion.rules import StateTransition, check_probability
 from fos.core.contagion.statistics import ContagionStatistics, TransitionEvent
-from fos.core.contagion.actions import MoveAdjacentAction, SpeakToAction
+from fos.core.experiment.scene import ExperimentScene
+from fos.core.experiment.config import ExperimentConfig
+from fos.core.experiment.runner import RoundResult
+from fos.core.experiment.controller import ActionResult
+from fos.core.experiment.game_configs import GameConfig
 from fos.core.map.grid import GameMap
 
+logger = logging.getLogger(__name__)
 
-class ContagionScene:
-    """Standalone scene with SEIR contagion state tracking.
 
-    Does not inherit from any Pipeline B base class.
+class ContagionScene(ExperimentScene):
+    """Pipeline A scene with SEIR contagion state tracking.
+
+    Inherits the ExperimentScene turn loop for LLM prompting and action
+    dispatch. Overrides run_round() to apply SEIR transitions after each
+    round. Disables the payoff engine via payoff_type="none".
 
     Attributes:
-        name: Scene name
-        initial_event: Initial event message for agents
         game_map: Grid for agent positioning
         rules: List of StateTransition rules defining allowed transitions
         initial_infected_count: Number of agents to start as infected
         _statistics: Internal tracker for state counts and events
-        _current_simulator: Runtime reference for adjacent agent queries
     """
 
     TYPE = "contagion_scene"
@@ -42,155 +49,316 @@ class ContagionScene:
         rules: List[StateTransition],
         initial_infected_count: int = 1,
     ):
-        self.name = name
-        self.initial_event = initial_event
         self.game_map = game_map
         self.rules = rules
         self.initial_infected_count = initial_infected_count
         self._statistics = ContagionStatistics()
-        self._current_simulator: Optional["Simulator"] = None
 
-    def pre_run(self, simulator: "Simulator"):
-        """Initialize agent contagion states before simulation starts."""
-        self._current_simulator = simulator
+        # Build transmission parameters from rules for the config
+        transmission_params = {
+            "initial_infected_count": initial_infected_count,
+        }
+        for rule in rules:
+            if rule.trigger_type == "proximity":
+                transmission_params["proximity_probability"] = rule.probability
+            elif rule.trigger_type == "action":
+                transmission_params["action_probability"] = rule.probability
+            elif rule.trigger_type == "decay" and rule.decay_turns is not None:
+                transmission_params["recovery_turns"] = rule.decay_turns
 
-        agents = list(simulator.agents.values())
-        agent_names = [a.name for a in agents]
-
-        infected_names: set = set()
-        if agent_names:
-            count = min(self.initial_infected_count, len(agent_names))
-            infected_names = set(random.sample(agent_names, count))
-
-        for agent in agents:
-            if agent.name in infected_names:
-                agent.properties["contagion_state"] = ContagionState.INFECTED.value
-            else:
-                agent.properties["contagion_state"] = ContagionState.SUSCEPTIBLE.value
-            agent.properties["contagion_turns"] = 0
-
-        self._update_statistics(simulator)
-
-    def pre_turn_rules(self, simulator: "Simulator"):
-        """Evaluate decay and proximity rules for all agents before they act."""
-        for agent in simulator.agents.values():
-            agent.properties["contagion_turns"] = agent.properties.get("contagion_turns", 0) + 1
-
-        for agent in simulator.agents.values():
-            self._evaluate_decay_rules(agent, simulator)
-
-        self._evaluate_proximity_rules(simulator)
-        self._update_statistics(simulator)
-
-    def _evaluate_decay_rules(self, agent: "Agent", simulator: "Simulator"):
-        """Check if any decay rules apply and apply the first matching one."""
-        current_state = agent.properties.get("contagion_state", "")
-        turns = agent.properties.get("contagion_turns", 0)
-
-        for rule in self.rules:
-            if rule.trigger_type != "decay":
-                continue
-            if rule.from_state.value == current_state and turns >= rule.decay_turns:
-                self._apply_transition(agent, rule, simulator)
-                break  # Only one transition per turn
-
-    def _apply_transition(
-        self,
-        agent: "Agent",
-        rule: StateTransition,
-        simulator: "Simulator",
-        source_agent_id: Optional[str] = None,
-    ):
-        """Apply a state transition: update agent properties and record event."""
-        from_state = agent.properties.get("contagion_state", "")
-        agent.properties["contagion_state"] = rule.to_state.value
-        agent.properties["contagion_turns"] = 0
-
-        event = TransitionEvent(
-            turn=simulator.turns,
-            agent_id=agent.name,
-            from_state=from_state,
-            to_state=rule.to_state.value,
-            trigger_type=rule.trigger_type,
-            source_agent_id=source_agent_id,
+        config = ExperimentConfig(
+            scenario_id="contagion",
+            agents=[],
+            actions=[
+                {"name": "move", "description": "Move to an adjacent location on the map."},
+                {"name": "speak_to", "description": "Speak to a nearby agent, share information or interact."},
+            ],
+            parameters=transmission_params,
+            description=initial_event,
         )
-        self._statistics.record_transition(event)
+        super().__init__(config)
 
-    def _evaluate_proximity_rules(self, simulator: "Simulator"):
-        """Evaluate proximity-based transmission for all adjacent agent pairs."""
-        position_to_agent: Dict[Tuple[int, int], "Agent"] = {}
-        for agent in simulator.agents.values():
+        # Override name after super().__init__ sets it from config
+        self.name = name
+        self.initial_event = initial_event
+
+    def initialize(self, llm_client, provider_clients=None) -> None:
+        """Initialize scene: call super, then place agents and mark infected.
+
+        After ExperimentScene.initialize() creates agents from config, this
+        randomly assigns grid positions and marks initial infected agents.
+
+        Args:
+            llm_client: LLM client for prompting agents
+            provider_clients: Optional mapping of provider_id -> LLMClient
+        """
+        super().initialize(llm_client, provider_clients)
+
+        # Assign random grid positions to agents that lack map_xy
+        for agent in self.agents:
+            if "map_xy" not in agent.properties:
+                agent.properties["map_xy"] = [
+                    random.randint(0, self.game_map.width - 1),
+                    random.randint(0, self.game_map.height - 1),
+                ]
+
+        # Randomly mark initial infected agents
+        infected = random.sample(
+            self.agents,
+            min(self.initial_infected_count, len(self.agents)),
+        )
+        for agent in infected:
+            agent.properties["contagion_state"] = "infected"
+            agent.properties["contagion_turns"] = 0
+        for agent in self.agents:
+            if "contagion_state" not in agent.properties:
+                agent.properties["contagion_state"] = "susceptible"
+                agent.properties["contagion_turns"] = 0
+
+        # Initial statistics snapshot
+        self._update_statistics()
+
+    def _create_game_config(self) -> GameConfig:
+        """Return a GameConfig with payoff_type='none' to disable scoring.
+
+        The contagion scene does not use point-based payoffs. SEIR state
+        transitions replace scoring as the primary mechanic.
+        """
+        return GameConfig(
+            name="contagion",
+            description=self.initial_event,
+            action_type="discrete",
+            actions=["move", "speak_to"],
+            action_descriptions={
+                "move": "Move to an adjacent location on the map.",
+                "speak_to": "Speak to a nearby agent, share information or interact.",
+            },
+            output_field="action",
+            payoff_type="none",
+            grouping_mode="pairwise",
+        )
+
+    def _build_payoff_summary(self) -> str:
+        """Return SEIR rules description instead of a payoff table.
+
+        Builds a human-readable description from self.rules so agents
+        understand the contagion mechanics.
+        """
+        parts = [
+            "Contagion rules: agents with 'infected' state can spread to "
+            "susceptible agents nearby.",
+            "Use 'move' to change position, 'speak_to' to interact with "
+            "nearby agents.",
+        ]
+        for rule in self.rules:
+            if rule.trigger_type == "decay" and rule.decay_turns is not None:
+                parts.append(f"Recovery happens after {rule.decay_turns} turns.")
+            elif rule.trigger_type == "proximity":
+                parts.append(
+                    f"Proximity transmission chance: {rule.probability:.0%}."
+                )
+            elif rule.trigger_type == "action":
+                parts.append(
+                    f"Action transmission chance: {rule.probability:.0%}."
+                )
+        return " ".join(parts)
+
+    async def run_round(self, event_emitter) -> RoundResult:
+        """Run one round: normal Pipeline A loop, then apply SEIR transitions.
+
+        Args:
+            event_emitter: Callback to emit events (type, data)
+
+        Returns:
+            RoundResult with all agent actions
+        """
+        # 1. Run the normal Pipeline A turn loop
+        result = await super().run_round(event_emitter)
+
+        # 2. Apply SEIR transitions based on this round's actions
+        self._apply_seir_round(result.actions)
+
+        # 3. Update statistics and emit contagion_stats event
+        self._update_statistics()
+        event_emitter("contagion_stats", {
+            "counts": self._statistics.counts,
+            "agent_states": {
+                a.name: a.properties.get("contagion_state", "unknown")
+                for a in self.agents
+            },
+        })
+
+        return result
+
+    def _apply_seir_round(self, actions: List[ActionResult]) -> None:
+        """Apply SEIR transitions after a round's actions complete.
+
+        Processes action-based transmission (speak_to), proximity-based
+        transmission (adjacent agents), and decay (recovery after N turns).
+
+        Args:
+            actions: List of ActionResult from the completed round
+        """
+        round_num = self.current_round
+
+        # Build position lookup
+        position_to_agents: Dict[Tuple[int, int], list] = {}
+        for agent in self.agents:
             xy = agent.properties.get("map_xy")
             if xy:
-                position_to_agent[(xy[0], xy[1])] = agent
+                key = (xy[0], xy[1])
+                position_to_agents.setdefault(key, []).append(agent)
 
-        transitioned_this_turn: set = set()
+        # Track agents that transitioned this round to prevent double transitions
+        transitioned: set = set()
 
-        for agent in simulator.agents.values():
+        # --- Action-based transmission (speak_to) ---
+        agent_map = {a.name: a for a in self.agents}
+        for action in actions:
+            if not action.success or action.skipped:
+                continue
+            if action.action_name != "speak_to":
+                continue
+
+            target_name = action.parameters.get("target")
+            if not target_name or target_name not in agent_map:
+                continue
+
+            sender = agent_map[action.agent_name]
+            target = agent_map[target_name]
+            sender_state = sender.properties.get("contagion_state", "")
+            target_state = target.properties.get("contagion_state", "")
+
+            # Infected sender → susceptible target
+            if (
+                sender_state == "infected"
+                and target_state == "susceptible"
+                and target.name not in transitioned
+            ):
+                for rule in self.rules:
+                    if (
+                        rule.trigger_type == "action"
+                        and rule.from_state.value == "susceptible"
+                        and check_probability(rule.probability)
+                    ):
+                        target.properties["contagion_state"] = rule.to_state.value
+                        target.properties["contagion_turns"] = 0
+                        transitioned.add(target.name)
+                        self._statistics.record_transition(TransitionEvent(
+                            turn=round_num,
+                            agent_id=target.name,
+                            from_state="susceptible",
+                            to_state=rule.to_state.value,
+                            trigger_type="action",
+                            source_agent_id=sender.name,
+                        ))
+                        break
+
+            # Susceptible sender → infected target (bidirectional check)
+            if (
+                sender_state == "susceptible"
+                and target_state == "infected"
+                and sender.name not in transitioned
+            ):
+                for rule in self.rules:
+                    if (
+                        rule.trigger_type == "action"
+                        and rule.from_state.value == "susceptible"
+                        and check_probability(rule.probability)
+                    ):
+                        sender.properties["contagion_state"] = rule.to_state.value
+                        sender.properties["contagion_turns"] = 0
+                        transitioned.add(sender.name)
+                        self._statistics.record_transition(TransitionEvent(
+                            turn=round_num,
+                            agent_id=sender.name,
+                            from_state="susceptible",
+                            to_state=rule.to_state.value,
+                            trigger_type="action",
+                            source_agent_id=target.name,
+                        ))
+                        break
+
+        # --- Proximity-based transmission ---
+        for agent in self.agents:
+            if agent.name in transitioned:
+                continue
             xy = agent.properties.get("map_xy")
-            if not xy or agent.name in transitioned_this_turn:
+            if not xy:
                 continue
 
             agent_state = agent.properties.get("contagion_state", "")
 
-            for neighbor_xy in self.get_moore_neighbors(xy[0], xy[1]):
-                neighbor = position_to_agent.get(neighbor_xy)
-                if not neighbor or neighbor.name in transitioned_this_turn:
-                    continue
+            # Check if this agent is infected — can spread to neighbors
+            if agent_state == "infected":
+                for neighbor_xy in self.get_moore_neighbors(xy[0], xy[1]):
+                    for neighbor in position_to_agents.get(neighbor_xy, []):
+                        if (
+                            neighbor.name == agent.name
+                            or neighbor.name in transitioned
+                        ):
+                            continue
+                        neighbor_state = neighbor.properties.get(
+                            "contagion_state", ""
+                        )
+                        if neighbor_state == "susceptible":
+                            for rule in self.rules:
+                                if (
+                                    rule.trigger_type == "proximity"
+                                    and rule.from_state.value == "susceptible"
+                                    and check_probability(rule.probability)
+                                ):
+                                    neighbor.properties["contagion_state"] = (
+                                        rule.to_state.value
+                                    )
+                                    neighbor.properties["contagion_turns"] = 0
+                                    transitioned.add(neighbor.name)
+                                    self._statistics.record_transition(
+                                        TransitionEvent(
+                                            turn=round_num,
+                                            agent_id=neighbor.name,
+                                            from_state="susceptible",
+                                            to_state=rule.to_state.value,
+                                            trigger_type="proximity",
+                                            source_agent_id=agent.name,
+                                        )
+                                    )
+                                    break
 
-                neighbor_state = neighbor.properties.get("contagion_state", "")
-
-                if self._check_proximity_transmission(
-                    agent_state, neighbor_state, agent, neighbor,
-                    simulator, transitioned_this_turn,
-                ):
-                    break
-
-                if self._check_proximity_transmission(
-                    neighbor_state, agent_state, neighbor, agent,
-                    simulator, transitioned_this_turn,
-                ):
-                    break
-
-    def _check_proximity_transmission(
-        self,
-        source_state: str,
-        target_state: str,
-        source_agent: "Agent",
-        target_agent: "Agent",
-        simulator: "Simulator",
-        transitioned_set: set,
-    ) -> bool:
-        """Return True and apply transition if proximity transmission occurs."""
-        if target_agent.name in transitioned_set:
-            return False
-
-        for rule in self.rules:
-            if rule.trigger_type != "proximity":
-                continue
-            if rule.from_state.value == target_state and check_probability(rule.probability):
-                self._apply_transition(
-                    target_agent, rule, simulator,
-                    source_agent_id=source_agent.name,
+        # --- Decay: increment turns and check recovery ---
+        for agent in self.agents:
+            state = agent.properties.get("contagion_state", "")
+            if state == "infected":
+                agent.properties["contagion_turns"] = (
+                    agent.properties.get("contagion_turns", 0) + 1
                 )
-                transitioned_set.add(target_agent.name)
-                return True
-
-        return False
-
-    def _update_statistics(self, simulator: "Simulator"):
-        """Recount states and emit contagion_stats event to frontend."""
-        self._statistics.update(simulator.agents)
-        simulator.emit_event_later(
-            "contagion_stats",
-            {
-                "counts": self._statistics.counts,
-                "agent_states": self._statistics.get_agent_states(simulator.agents),
-            },
-        )
+                for rule in self.rules:
+                    if (
+                        rule.trigger_type == "decay"
+                        and rule.from_state.value == "infected"
+                        and agent.properties["contagion_turns"] >= rule.decay_turns
+                    ):
+                        agent.properties["contagion_state"] = rule.to_state.value
+                        agent.properties["contagion_turns"] = 0
+                        self._statistics.record_transition(TransitionEvent(
+                            turn=round_num,
+                            agent_id=agent.name,
+                            from_state="infected",
+                            to_state=rule.to_state.value,
+                            trigger_type="decay",
+                        ))
+                        break
 
     def get_moore_neighbors(self, x: int, y: int) -> List[Tuple[int, int]]:
-        """Return all valid 8-directional (Moore) neighbor coordinates."""
+        """Return all valid 8-directional (Moore) neighbor coordinates.
+
+        Args:
+            x: X coordinate on the grid
+            y: Y coordinate on the grid
+
+        Returns:
+            List of (x, y) tuples for valid neighboring cells
+        """
         neighbors = []
         for dx in [-1, 0, 1]:
             for dy in [-1, 0, 1]:
@@ -201,90 +369,91 @@ class ContagionScene:
                     neighbors.append((nx, ny))
         return neighbors
 
-    def get_adjacent_agents(self, agent_name: str, simulator: "Simulator") -> List[str]:
-        """Return names of agents in Moore-adjacent cells to the named agent."""
-        agent = simulator.agents.get(agent_name)
+    def get_adjacent_agents(self, agent_name: str) -> List[str]:
+        """Return names of agents in Moore-adjacent cells to the named agent.
+
+        Args:
+            agent_name: Name of the agent to find neighbors for
+
+        Returns:
+            List of agent names in adjacent grid cells
+        """
+        agent = None
+        for a in self.agents:
+            if a.name == agent_name:
+                agent = a
+                break
         if not agent:
             return []
+
         xy = agent.properties.get("map_xy")
         if not xy:
             return []
 
         neighbor_coords = set(self.get_moore_neighbors(xy[0], xy[1]))
         return [
-            other_name
-            for other_name, other_agent in simulator.agents.items()
-            if other_name != agent_name
-            and other_agent.properties.get("map_xy")
-            and (other_agent.properties["map_xy"][0], other_agent.properties["map_xy"][1]) in neighbor_coords
+            other.name
+            for other in self.agents
+            if other.name != agent_name
+            and other.properties.get("map_xy")
+            and (
+                other.properties["map_xy"][0],
+                other.properties["map_xy"][1],
+            ) in neighbor_coords
         ]
 
-    def get_scene_actions(self, agent: "Agent"):
-        """Return contagion-specific actions available to the agent."""
-        return [MoveAdjacentAction(), SpeakToAction()]
+    def _update_statistics(self) -> None:
+        """Recount SEIR states across all agents."""
+        self._statistics.counts = {}
+        for agent in self.agents:
+            state = agent.properties.get("contagion_state", "unknown")
+            self._statistics.counts[state] = (
+                self._statistics.counts.get(state, 0) + 1
+            )
 
-    def check_action_transmission(self, sender: "Agent", target: "Agent", simulator: "Simulator"):
-        """Check if action-directed transmission occurs. Implements ACT-01/ACT-02."""
-        sender_state = sender.properties.get("contagion_state", "")
+    def get_statistics(self) -> dict:
+        """Return current SEIR counts and transition events.
 
-        for rule in self.rules:
-            if rule.trigger_type != "action" or rule.from_state.value != sender_state:
-                continue
-            if check_probability(rule.probability):
-                self._apply_transition(target, rule, simulator, source_agent_id=sender.name)
-                break  # First-match-wins
-
-    def get_agent_status_prompt(self, agent: "Agent") -> str:
-        """Return position and contagion state. Implements HIDE-02: neighbors show names only."""
-        xy = agent.properties.get("map_xy") or [None, None]
-        loc = None
-        if xy[0] is not None:
-            loc = self.game_map.get_location_at(xy[0], xy[1])
-        loc_name = loc.name if loc else agent.properties.get("map_position", "?")
-
-        contagion_state = agent.properties.get("contagion_state", "unknown")
-        contagion_turns = agent.properties.get("contagion_turns", 0)
-
-        lines = [
-            "--- Status ---",
-            f"Current position: {loc_name} at ({xy[0]},{xy[1]})",
-            f"Contagion state: {contagion_state.upper()}",
-        ]
-        if contagion_state != "susceptible":
-            lines.append(f"Turns in state: {contagion_turns}")
-
-        if self._current_simulator:
-            adjacent = self.get_adjacent_agents(agent.name, self._current_simulator)
-            lines.append(f"Nearby agents: {', '.join(adjacent)}" if adjacent else "Nearby agents: None")
-
-        return "\n".join(lines) + "\n"
+        Returns:
+            Dict with 'counts' (state -> count) and 'events' list
+        """
+        return self._statistics.to_dict()
 
     def serialize_config(self) -> dict:
-        """Serialize scene configuration for persistence."""
-        return {
-            "name": self.name,
-            "initial_event": self.initial_event,
-            "game_map": self.game_map.serialize(),
-            "rules": [
-                {
-                    "from_state": rule.from_state.value,
-                    "to_state": rule.to_state.value,
-                    "trigger_type": rule.trigger_type,
-                    "probability": rule.probability,
-                    "decay_turns": rule.decay_turns,
-                }
-                for rule in self.rules
-            ],
-            "initial_infected_count": self.initial_infected_count,
-        }
+        """Serialize scene configuration for persistence.
+
+        Extends ExperimentScene serialization with contagion-specific
+        fields: game_map, rules, and initial_infected_count.
+        """
+        base = super().serialize_config()
+        base["game_map"] = self.game_map.serialize()
+        base["rules"] = [
+            {
+                "from_state": rule.from_state.value,
+                "to_state": rule.to_state.value,
+                "trigger_type": rule.trigger_type,
+                "probability": rule.probability,
+                "decay_turns": rule.decay_turns,
+            }
+            for rule in self.rules
+        ]
+        base["initial_infected_count"] = self.initial_infected_count
+        return base
 
     @classmethod
-    def deserialize_config(cls, config: dict) -> dict:
-        """Parse a configuration dict into constructor kwargs."""
-        game_map = GameMap.deserialize(config.get("game_map") or {})
+    def deserialize_config(cls, data: dict) -> "ContagionScene":
+        """Restore from serialized state.
+
+        Args:
+            data: Serialized config dict from serialize_config()
+
+        Returns:
+            Restored ContagionScene instance
+        """
+        game_map = GameMap.deserialize(data.get("game_map") or {})
 
         rules = []
-        for rule_data in config.get("rules", []):
+        for rule_data in data.get("rules", []):
             rules.append(StateTransition(
                 from_state=ContagionState(rule_data["from_state"]),
                 to_state=ContagionState(rule_data["to_state"]),
@@ -293,10 +462,22 @@ class ContagionScene:
                 decay_turns=rule_data.get("decay_turns"),
             ))
 
-        return {
-            "name": config.get("name", ""),
-            "initial_event": config.get("initial_event", ""),
-            "game_map": game_map,
-            "rules": rules,
-            "initial_infected_count": config.get("initial_infected_count", 1),
-        }
+        scene = cls(
+            name=data.get("name", ""),
+            initial_event=data.get("initial_event", ""),
+            game_map=game_map,
+            rules=rules,
+            initial_infected_count=data.get("initial_infected_count", 1),
+        )
+        # Restore ExperimentScene state from config dict
+        if "config" in data:
+            config = ExperimentConfig(**data["config"])
+            scene.config = config
+        scene.current_round = data.get("current_round", 0)
+        if data.get("state") is not None:
+            from fos.core.experiment.state import ExperimentState
+            scene.state = ExperimentState.from_dict(data["state"])
+        if data.get("history"):
+            from copy import deepcopy
+            scene._history = deepcopy(data["history"])
+        return scene
