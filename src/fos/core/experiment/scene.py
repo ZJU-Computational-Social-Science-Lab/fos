@@ -39,6 +39,7 @@ class ExperimentScene:
             config: Experiment configuration with agents, actions, parameters
         """
         self.config = config
+        self.global_knowledge: dict[str, Any] = config.global_knowledge
         self.agents: list[ExperimentAgent] = []
         self.runner: ExperimentRunner | None = None
         self.llm_client: LLMClient | None = None

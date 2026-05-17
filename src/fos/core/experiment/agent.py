@@ -2,7 +2,10 @@
 Experiment Agent - lightweight agent for experiment scenarios.
 
 Unlike legacy agents, ExperimentAgent has no Plan/Thoughts/Emotion.
-It only carries properties (demographics) and LLM configuration.
+It only carries properties (demographics), LLM configuration, and
+optional RAG documents with embeddings for semantic retrieval.
+
+Contains: ExperimentAgent
 """
 
 from dataclasses import dataclass, field
@@ -38,6 +41,7 @@ class ExperimentAgent:
     action_history: List[Dict[str, Any]] = field(default_factory=list)
     score: int = 0
     knowledge_base: List[Dict[str, Any]] = field(default_factory=list)
+    documents: Dict[str, Any] = field(default_factory=dict)
 
     def get_properties_dict(self) -> Dict[str, Any]:
         """Return properties as dict for prompt builder."""
@@ -81,3 +85,53 @@ class ExperimentAgent:
         for i, item in enumerate(items, 1):
             lines.append(f"[{i}] {item.get('title', 'Untitled')}: {item.get('content', '')}")
         return "\n".join(lines)
+
+    def get_rag_context(
+        self,
+        query: str,
+        global_knowledge: Dict[str, Any] | None = None,
+        top_k: int = 3,
+    ) -> str:
+        """Retrieve relevant context using semantic search.
+
+        Uses composite_rag_retrieval() when documents are present
+        (semantic search over embeddings). Falls back to keyword-based
+        get_knowledge_context() when only knowledge_base items exist.
+
+        Args:
+            query: The search query (usually recent context/prompt)
+            global_knowledge: Shared knowledge accessible to all agents
+            top_k: Maximum number of results to return
+
+        Returns:
+            Formatted string ready for prompt injection, or "" if
+            no relevant context found.
+        """
+        global_knowledge = global_knowledge or {}
+
+        # Use semantic search if any documents are available
+        has_documents = bool(self.documents)
+        has_global = bool(global_knowledge)
+
+        if has_documents or has_global:
+            from fos.backend.services.documents import (
+                composite_rag_retrieval,
+                format_rag_context,
+            )
+            results = composite_rag_retrieval(
+                query=query,
+                agent_documents=self.documents,
+                global_knowledge=global_knowledge,
+                top_k=top_k,
+            )
+            if results:
+                return format_rag_context(results)
+
+        # Fall back to keyword matching for plain knowledge_base items
+        if self.knowledge_base:
+            return self.get_knowledge_context(
+                query=query,
+                max_items=top_k,
+            )
+
+        return ""
