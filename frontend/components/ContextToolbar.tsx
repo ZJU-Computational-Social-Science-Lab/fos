@@ -47,6 +47,10 @@ const ContextToolbar: React.FC = () => {
   const startAutoAdvance = useSimulationStore((s) => s.startAutoAdvance);
   const stopAutoAdvance = useSimulationStore((s) => s.stopAutoAdvance);
 
+  // Node readiness — disable actions when selected node is a placeholder
+  const selectedNodeId = useSimulationStore((s) => s.selectedNodeId);
+  const selectedNodeIsReady = Number.isFinite(Number(selectedNodeId));
+
   // Compare mode
   const isCompareMode = useSimulationStore((s) => s.isCompareMode);
   const toggleCompareMode = useSimulationStore((s) => s.toggleCompareMode);
@@ -86,7 +90,7 @@ const ContextToolbar: React.FC = () => {
         {/* Advance Node */}
         <Button
           onClick={() => advanceSimulation()}
-          disabled={isGenerating || isCompareMode}
+          disabled={isGenerating || isCompareMode || !selectedNodeIsReady}
           size="sm"
           className={isGenerating ? "!bg-[var(--ss-text-muted)] !text-[var(--ss-neutral-0)] !shadow-none" : ""}
         >
@@ -103,7 +107,7 @@ const ContextToolbar: React.FC = () => {
           variant="outline"
           size="sm"
           onClick={branchSimulation}
-          disabled={isGenerating || isCompareMode}
+          disabled={isGenerating || isCompareMode || !selectedNodeIsReady}
         >
           <GitFork size={14} />
           {t('simPage.branch')}
@@ -140,7 +144,7 @@ const ContextToolbar: React.FC = () => {
           <Button
             size="sm"
             onClick={() => startAutoAdvance(advanceSteps)}
-            disabled={isGenerating || isCompareMode}
+            disabled={isGenerating || isCompareMode || !selectedNodeIsReady}
             className="!bg-[var(--ss-success-600)] hover:!bg-emerald-700 !text-white !shadow-[0_14px_32px_rgba(16,185,129,0.18)]"
           >
             <SkipForward size={14} />
