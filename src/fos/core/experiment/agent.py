@@ -42,6 +42,26 @@ class ExperimentAgent:
     score: int = 0
     knowledge_base: List[Dict[str, Any]] = field(default_factory=list)
     documents: Dict[str, Any] = field(default_factory=dict)
+    feedback_buffer: List[str] = field(default_factory=list)
+
+    def add_env_feedback(self, msg: str) -> None:
+        """Add environmental feedback to be injected into next prompt.
+
+        Replaces Pipeline B's agent.add_env_feedback().
+        The buffer is read by the runner when building the next prompt
+        and cleared after each turn.
+        """
+        self.feedback_buffer.append(msg)
+
+    def clear_feedback_buffer(self) -> None:
+        """Clear feedback after it has been injected into a prompt."""
+        self.feedback_buffer.clear()
+
+    def get_feedback_text(self) -> str:
+        """Return accumulated feedback as a single string."""
+        if not self.feedback_buffer:
+            return ""
+        return "\n".join(self.feedback_buffer)
 
     def get_properties_dict(self) -> Dict[str, Any]:
         """Return properties as dict for prompt builder."""
