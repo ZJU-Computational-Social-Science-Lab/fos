@@ -50,5 +50,13 @@ frontend/e2e/test-results/
 # Local Claude config
 .claude/
 
+# Database
+fos.db
+fos.db-shm
+fos.db-wal
+
+# Planning documents
+docs/plans/
+
 # Scratch scripts
 _write_scene.py

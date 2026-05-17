@@ -14,12 +14,12 @@ CONFIGURATION:
 ROUND 1
 ================================================================================
   HighStatus1: comply_publicly
-  HighStatus2: persuade_others
-  LowStatus1: comply_covertly_resist
-  LowStatus2: resist_openly
+  HighStatus2: resist_openly
+  LowStatus1: comply_publicly
+  LowStatus2: comply_covertly_resist
 ================================================================================
 SUMMARY
 ================================================================================
 Final scores: {'HighStatus1': 0, 'HighStatus2': 0, 'LowStatus1': 0, 'LowStatus2': 0}
 Errors: None
-Timestamp: 2026-05-16T00:19:35.587323
+Timestamp: 2026-05-17T12:33:18.772318
