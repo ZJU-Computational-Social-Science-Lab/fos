@@ -15,14 +15,13 @@ CONFIGURATION:
 ================================================================================
 ROUND 1
 ================================================================================
-  Node1: blue
-  Node2: green
-  Node3: red
+  Node1: red
+  Node2: blue
+  Node3: green
 ================================================================================
 ROUND 2
 ================================================================================
-  Node1: red
-  Node2: red
+  Node1: green
+  Node2: yellow
   Node3: yellow
-  Feedback for Node1: Coordinated with: Node2 (both red)
-  Feedback for Node2: Coordinated with: Node1 (both red)
+  Feedback for Node1: No neighbors to compare with.
