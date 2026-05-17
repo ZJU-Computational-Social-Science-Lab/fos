@@ -1,6 +1,7 @@
 from fos.core.experiment.scenes.council_experiment import CouncilExperimentScene
 from fos.core.experiment.scene import ExperimentScene
 from fos.core.contagion.scene import ContagionScene
+from fos.core.scenes.policy_cascade_experiment import PolicyCascadeExperimentScene
 
 ACTION_SPACE_MAP: dict = {}
 
@@ -9,6 +10,7 @@ SCENE_MAP = {
     "council_experiment": CouncilExperimentScene,  # REFACTOR-COUNCIL-06: New experiment-based council scene
     "experiment_template": ExperimentScene,
     "contagion_scene": ContagionScene,
+    "policy_cascade_experiment": PolicyCascadeExperimentScene,
 }
 
 
@@ -79,6 +81,11 @@ INFORMATION_MODEL_MAP: dict = {
     # Scene keys must exactly match SCENE_MAP keys
     "council_experiment": InformationModel(scope_type="all", recent_window=3, include_scores=False),  # REFACTOR-COUNCIL-06
     "policy_cascade_scene": InformationModel(scope_type="all", recent_window=3),
+    "policy_cascade_experiment": InformationModel(
+        scope_type="neighborhood",
+        recent_window=5,
+        include_scores=False,
+    ),
     "experiment_template": InformationModel(scope_type="all", recent_window=3),
     # Scenario-level keys (used when scene_type == scenario id)
     "prisoners_dilemma": InformationModel(
@@ -170,4 +177,5 @@ SCENE_DESCRIPTIONS: dict[str, str] = {
     "council_experiment": "Council experiment using experiment framework with multi-round deliberation context and phase-based action filtering.",
     "experiment_template": "Social science experiment using Three-Layer Architecture (constrained decoding, structured prompts, validation). Supports custom actions and simultaneous/sequential rounds.",
     "contagion_scene": "SEIR contagion dynamics on a grid. Agents spread infection through proximity and social interactions, with configurable transmission rates and recovery.",
+    "policy_cascade_experiment": "Pipeline A policy cascade scene. Agents at different organizational tiers share and distort policy information as it passes through the hierarchy.",
 }

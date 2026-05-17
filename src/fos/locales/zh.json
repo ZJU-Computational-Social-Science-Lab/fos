@@ -1159,6 +1159,15 @@
       "generic_header": "游戏参数：",
       "param_format": "- {label}：{value}"
     },
+    "action": {
+      "send_message": "发送消息",
+      "yield": "结束回合",
+      "report_upward": "向上级汇报",
+      "escalate_complaint": "升级投诉",
+      "consult_peer": "咨询同级",
+      "notify_subordinate": "通知下级",
+      "announce_policy_adjustment": "宣布政策调整"
+    },
     "scenario": {
       "social_norm": {
         "description": "当前生效的规范或规则：\"{norm}\"",

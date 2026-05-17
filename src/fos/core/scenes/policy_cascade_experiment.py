@@ -163,7 +163,13 @@ class PolicyCascadeExperimentScene(
         self._current_round += 1
         # Refresh agent dict (agents may have been updated)
         self._agents_dict = {a.name: a for a in self.agents}
+        # Swap to ExperimentState for super().run_round() which
+        # accesses self.state.round, .history, .agents
+        cascade_state = self.state
+        self.state = self._experiment_state
         result = await super().run_round(event_emitter)
+        self._experiment_state = self.state
+        self.state = cascade_state
         return result
 
     # ------------------------------------------------------------------

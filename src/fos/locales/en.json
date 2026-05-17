@@ -1159,6 +1159,15 @@
       "generic_header": "Game Parameters:",
       "param_format": "- {label}: {value}"
     },
+    "action": {
+      "send_message": "Send a message",
+      "yield": "End your turn",
+      "report_upward": "Report to superior",
+      "escalate_complaint": "Escalate a complaint",
+      "consult_peer": "Consult a peer",
+      "notify_subordinate": "Notify subordinate",
+      "announce_policy_adjustment": "Announce policy adjustment"
+    },
     "scenario": {
       "social_norm": {
         "description": "The norm or rule in effect: \"{norm}\"",
