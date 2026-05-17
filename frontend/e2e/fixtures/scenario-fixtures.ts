@@ -361,9 +361,12 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
   },
 };
 
-/** Get all scenario configs as an array */
+/** Scene types that are not selectable in the experiment wizard yet. */
+const SCENE_ONLY_IDS = new Set(['policy_cascade_experiment']);
+
+/** Get all scenario configs as an array (excludes scene-only types). */
 export function getAllScenarios(): ScenarioConfig[] {
-  return Object.values(SCENARIOS);
+  return Object.values(SCENARIOS).filter(s => !SCENE_ONLY_IDS.has(s.id));
 }
 
 /** Get scenarios grouped by category */

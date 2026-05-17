@@ -29,6 +29,7 @@ const SCENARIO_CATEGORY: Record<string, string> = {
   policy_erosion: 'sociology',
   echo_chamber: 'sociology',
   resource_scarcity: 'sociology',
+  xihu_yilianbao: 'sociology',
 };
 
 export class ExperimentBuilder {
