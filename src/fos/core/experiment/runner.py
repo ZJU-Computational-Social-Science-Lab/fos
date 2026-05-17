@@ -853,6 +853,13 @@ class ExperimentRunner:
             if neighbors:
                 neighbor_context = f"Your social network neighbors: {', '.join(neighbors)}."
 
+        # Feedback buffer injection: include any environment feedback
+        # from the previous turn in the agent's context so they see
+        # error messages about invalid targets, missing messages, etc.
+        feedback_text = agent.get_feedback_text()
+        if feedback_text:
+            context = f"{context}\n\n[ENVIRONMENT FEEDBACK]\n{feedback_text}" if context else feedback_text
+
         # GAP-CLOSURE-01: Get filtered actions from scene if available (phase-based filtering)
         # IMPORTANT: Must happen BEFORE build_prompt, not after!
         allowed_actions = None
@@ -991,6 +998,7 @@ class ExperimentRunner:
                 debug_buffer.append(f"Agent {agent.name} received empty response from LLM\n\n")
                 # Write debug output atomically
                 await self._write_debug_atomically(debug_buffer)
+                agent.clear_feedback_buffer()
                 return ActionResult(
                     agent_name=agent.name,
                     action_name="skip",
@@ -1065,6 +1073,7 @@ class ExperimentRunner:
             if result.error:
                 logger.debug(f"Error: {result.error}")
 
+            agent.clear_feedback_buffer()
             return result
 
         except Exception as e:
@@ -1075,6 +1084,7 @@ class ExperimentRunner:
             # Write debug output atomically
             await self._write_debug_atomically(debug_buffer)
             logger.error(f"Error prompting agent {agent.name}: {e}")
+            agent.clear_feedback_buffer()
             return ActionResult(
                 success=False,
                 action_name="",

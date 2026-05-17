@@ -513,6 +513,31 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
         logger.debug(f"Created CouncilExperimentScene with adapter: council")
 
         return SimTree.new(adapter, adapter.clients)
+    elif scene_key == "policy_cascade_experiment":
+        from fos.core.scenes.policy_cascade_experiment import PolicyCascadeExperimentScene
+
+        params = cfg.get("parameters", {})
+        config = ExperimentConfig(
+            agents=agent_config.get("agents", []),
+            actions=[
+                {"name": "send_message", "description": T("experiment.action.send_message")},
+                {"name": "yield", "description": T("experiment.action.yield")},
+                {"name": "report_upward", "description": T("experiment.action.report_upward")},
+                {"name": "escalate_complaint", "description": T("experiment.action.escalate_complaint")},
+                {"name": "consult_peer", "description": T("experiment.action.consult_peer")},
+                {"name": "notify_subordinate", "description": T("experiment.action.notify_subordinate")},
+                {"name": "announce_policy_adjustment", "description": T("experiment.action.announce_policy_adjustment")},
+            ],
+            parameters=params,
+            description=str(params.get("policy_text", "")),
+            scenario_id="policy_cascade",
+            round_visibility="sequential",
+            social_network=cfg.get("social_network") or {},
+            locale=cfg.get("locale", "en"),
+        )
+        scene = PolicyCascadeExperimentScene(config)
+        adapter = ExperimentRunnerAdapter(scene, clients or make_clients_from_env())
+        return SimTree.new(adapter, adapter.clients)
     elif scene_key == "contagion_scene":
         from fos.core.contagion.scene import ContagionScene
         from fos.core.contagion.states import ContagionState
