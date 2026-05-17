@@ -2097,7 +2097,7 @@
     "knowledgeItemAdded": "Knowledge item added",
     "knowledgeItemRemoved": "Knowledge item removed",
     "knowledgeItemUpdated": "Knowledge item updated",
-    "selectedNodeNotBackend": "Selected node is not a backend node",
+    "selectedNodeNotBackend": "Simulation is still loading, please wait",
     "selectNodeFirst": "Please select a node in the simulation tree first",
     "backendAdvanceFailed": "Backend advance failed, reverting local simulation",
     "simulationAdvanceFailed": "Simulation advance failed, please try again",

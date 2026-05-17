@@ -93,6 +93,16 @@ export class SimulationWorkspace {
     const autoAdvanceBtn = this.page.getByRole('button', {
       name: new RegExp(autoAdvanceText, 'i'),
     });
+    // Wait for the button to be enabled (selected node must be a backend node)
+    await this.page.waitForFunction(
+      (text) => {
+        const buttons = document.querySelectorAll('button');
+        const btn = Array.from(buttons).find(b => b.textContent?.includes(text));
+        return btn != null && !((btn as HTMLButtonElement).disabled);
+      },
+      autoAdvanceText,
+      { timeout: 15_000 },
+    );
     await autoAdvanceBtn.click();
 
     // Wait for auto-advance to complete (Stop button disappears)
@@ -124,6 +134,17 @@ export class SimulationWorkspace {
     const advanceBtn = this.page.getByRole('button', {
       name: new RegExp(advanceText, 'i'),
     });
+    // Wait for the button to be enabled (selected node must be a backend node)
+    await advanceBtn.waitFor({ state: 'visible', timeout: 15_000 });
+    await this.page.waitForFunction(
+      (text) => {
+        const buttons = document.querySelectorAll('button');
+        const btn = Array.from(buttons).find(b => b.textContent?.includes(text));
+        return btn != null && !((btn as HTMLButtonElement).disabled);
+      },
+      advanceText,
+      { timeout: 15_000 },
+    );
     await advanceBtn.click();
   }
 
