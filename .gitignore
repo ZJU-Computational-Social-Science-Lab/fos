@@ -36,6 +36,17 @@ Thumbs.db
 htmlcov/
 test_results/experiment_debug_*.txt
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/test-logs/
+
+# Playwright
+frontend/e2e/collected-results/
+!frontend/e2e/collected-results/.gitkeep
+frontend/e2e/test-results/
+
 # Local Claude config
 .claude/
 
