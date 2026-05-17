@@ -2,13 +2,14 @@
 Experiment configuration dataclass.
 
 Defines the structure for experiment scenarios including agents,
-actions with descriptions, scenario parameters, and locale.
+actions with descriptions, scenario parameters, locale, and
+shared global knowledge for RAG retrieval.
 
 Contains: ExperimentConfig
 """
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Dict
 
 
 @dataclass
@@ -34,3 +35,4 @@ class ExperimentConfig:
     round_visibility: str = "simultaneous"  # simultaneous | sequential | paired
     social_network: dict = field(default_factory=dict)  # Graph topology: {"edges": [["Alice","Bob"], ...]}
     locale: str = "en"  # Language for prompts and generated text
+    global_knowledge: Dict[str, Any] = field(default_factory=dict)

@@ -838,7 +838,11 @@ class ExperimentRunner:
             context = f"{host_block}\n\n{context}" if context else host_block
 
         # Build KB context from agent's knowledge base (keyword match against context)
-        kb_context = agent.get_knowledge_context(query=context[:200] if context else "", max_items=3)
+        kb_context = agent.get_rag_context(
+            query=context[:200] if context else "",
+            global_knowledge=getattr(self.scene, 'global_knowledge', {}),
+            top_k=3,
+        )
 
         # Build neighbor context from social graph
         neighbor_context = ""
