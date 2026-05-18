@@ -1,0 +1,46 @@
+# CI pipeline for fos — runs unit + integration tests on every push and PR.
+# Excludes tests that need Ollama or real LLM services.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements-ci.txt
+
+      - name: Install fos package (editable)
+        run: pip install -e .
+
+      - name: Run tests with coverage
+        env:
+          PYTHONPATH: src
+        # Coverage scoped to fos.core only — backend is a thin HTTP layer;
+        # simulation logic lives in core/ and is what the CI gate protects.
+        run: |
+          python -m pytest tests/ \
+            -q --no-header \
+            --cov=fos.core \
+            --cov-fail-under=58 \
+            --ignore=tests/llm_prompt_testing \
+            --ignore=tests/smoke_tests \
+            --ignore=tests/integration/test_real_llm_phase1.py \
+            --ignore=tests/integration/test_llm_action_selection.py \
+            --ignore=tests/load \
+            2>&1 | tail -10

@@ -734,6 +734,19 @@
       "failed": "注册失败，请重试。",
       "have": "已有账户？",
       "signin": "登录"
+    },
+    "login": {
+      "badge": "Social Systems Laboratory",
+      "welcome": "欢迎回来",
+      "subtitle": "登录以继续您的模拟实验",
+      "email": "邮箱",
+      "emailPlaceholder": "you@example.com",
+      "password": "密码",
+      "passwordPlaceholder": "输入您的密码",
+      "invalid": "邮箱或密码无效，请重试。",
+      "noAccount": "还没有账户？",
+      "create": "创建一个",
+      "signin": "登录"
     }
   },
   "sim": {
