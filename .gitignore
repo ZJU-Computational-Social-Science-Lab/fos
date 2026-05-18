@@ -58,5 +58,8 @@ fos.db-wal
 # Planning documents
 docs/plans/
 
+# Large media files
+*.mp4
+
 # Scratch scripts
 _write_scene.py
