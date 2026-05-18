@@ -36,6 +36,40 @@ class TestScenarioRegistry:
             f"Scenario was mutated from str to {after_type}!"
 
 
+class TestPolicyCascadeExperimentRegistration:
+    """policy_cascade_experiment must be in ALL_SCENARIOS and SCENE_MAP."""
+
+    def test_scenario_exists_in_all_scenarios(self):
+        """policy_cascade_experiment should be listed in ALL_SCENARIOS."""
+        ids = [s["id"] for s in ALL_SCENARIOS]
+        assert "policy_cascade_experiment" in ids
+
+    def test_scenario_has_required_fields(self):
+        """Scenario entry must have id, name, category, and description."""
+        scenario = next(
+            s for s in ALL_SCENARIOS if s["id"] == "policy_cascade_experiment"
+        )
+        assert scenario["name"]
+        assert scenario["category"]
+        assert scenario["description"]
+
+    def test_scene_key_exists_in_scene_map(self):
+        """policy_cascade_experiment must have a matching SCENE_MAP entry."""
+        from fos.core.registry import SCENE_MAP
+
+        assert "policy_cascade_experiment" in SCENE_MAP
+
+    def test_scenario_has_cascade_parameters(self):
+        """Scenario should include tier_order, cascade_mode, distortion_strength params."""
+        scenario = next(
+            s for s in ALL_SCENARIOS if s["id"] == "policy_cascade_experiment"
+        )
+        param_keys = [p["key"] for p in scenario.get("parameters", [])]
+        assert "tier_order" in param_keys
+        assert "cascade_mode" in param_keys
+        assert "distortion_strength" in param_keys
+
+
 class TestCoordinationGameScenario:
     """Test Coordination Game scenario structure."""
 

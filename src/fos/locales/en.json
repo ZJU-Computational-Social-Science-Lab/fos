@@ -551,6 +551,10 @@
         "name": "Policy Meaning Erosion",
         "description": "POLICY ANNOUNCEMENT (from top-tier management):\n\n\"{policy_text}\"\n\nYou are in a three-tier organizational hierarchy:\n- Tier 1 (Top): Receives the original policy directly\n- Tier 2 (Middle): Receives policy from Tier 1, must pass to Tier 3\n- Tier 3 (Bottom): Receives policy from Tier 2, must implement\n\nEach tier decides how to interpret and pass on the policy. Observe how\nthe meaning changes as it moves down the chain.\n\nYour task:\n1. If you're Tier 1: Transmit the policy to Tier 2\n2. If you're Tier 2: Receive from Tier 1, interpret it, pass to Tier 3\n3. If you're Tier 3: Receive from Tier 2, decide how to implement\n\nYou can:\n- Transmit the policy exactly as received\n- Reinterpret or adapt the policy when passing it down\n- Comply with the directive from above\n- Quietly resist while appearing to comply\n- Report obstacles up the chain\n- Create workarounds to avoid implementation"
       },
+      "policy_cascade_experiment": {
+        "name": "Policy Cascade (Experiment)",
+        "description": "A multi-tier hierarchy transmits a policy from top to bottom using the experiment engine.\nEach level may preserve, reinterpret, distort, or block the directive.\n\nYou can:\n- Transmit the policy exactly as received\n- Reinterpret or adapt the policy when passing it down\n- Comply with the directive from above\n- Quietly resist while appearing to comply"
+      },
       "resource_scarcity": {
         "name": "Resource Scarcity",
         "description": "DISASTER SITUATION:\n\nA recent disaster has created severe resource scarcity. The community has\nonly {resource_amount} units of critical supplies to last {num_agents} people.\n\nInitial distribution: {initial_distribution}\n\nYour task: Decide how to manage these scarce resources.\n\nYou can:\n- Share resources with others in need\n- Hoard resources for yourself\n- Propose trades to exchange resources\n- Form cooperative contracts with others\n- Honor your contractual commitments\n- Defect from contracts for personal gain\n\nConsider:\n- Your current resource level\n- Others' resource levels and trustworthiness\n- Long-term community survival vs short-term gain\n- Your reputation and future cooperation\n\nThe goal is to survive while maintaining social relationships."
@@ -1177,6 +1181,10 @@
         "strength_strong": "strongly"
       },
       "policy_erosion": {
+        "policy_text": "The policy being transmitted is: \"{policy}\"",
+        "tier_labels": "The hierarchy levels (top to bottom): {tiers}."
+      },
+      "policy_cascade_experiment": {
         "policy_text": "The policy being transmitted is: \"{policy}\"",
         "tier_labels": "The hierarchy levels (top to bottom): {tiers}."
       },

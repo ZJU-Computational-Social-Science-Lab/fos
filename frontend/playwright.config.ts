@@ -5,6 +5,10 @@
  * with long timeouts for LLM calls. No retries — we want to see failures
  * as-is for diagnostics.
  *
+ * Automatically starts both backend (uvicorn) and frontend (vite) servers
+ * before tests and tears them down after. reuseExistingServer: true means
+ * manually started servers are reused without double-starting.
+ *
  * Exports: default (Playwright config)
  */
 
@@ -14,6 +18,7 @@ import { dirname, resolve } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const repoRoot = resolve(__dirname, '..');
 
 export default defineConfig({
   globalSetup: resolve(__dirname, 'e2e/global-setup.ts'),
@@ -34,6 +39,22 @@ export default defineConfig({
     video: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
+  webServer: [
+    {
+      command: resolve(repoRoot, 'start-backend-e2e.cmd'),
+      cwd: repoRoot,
+      url: 'http://127.0.0.1:8000/api/health',
+      reuseExistingServer: true,
+      timeout: 60_000,
+    },
+    {
+      command: 'npm run dev',
+      cwd: resolve(__dirname),
+      url: 'http://127.0.0.1:5173',
+      reuseExistingServer: true,
+      timeout: 30_000,
+    },
+  ],
   projects: [
     {
       name: 'en',

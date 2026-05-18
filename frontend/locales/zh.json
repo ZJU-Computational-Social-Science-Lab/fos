@@ -715,6 +715,25 @@
       "exhibits": "EXHIBITS",
       "journals": "JOURNALS",
       "index": "INDEX"
+    },
+    "register": {
+      "title": "创建账户",
+      "organization": "组织",
+      "email": "邮箱",
+      "username": "用户名",
+      "fullName": "姓名",
+      "phone": "手机号",
+      "countryCode": "国家/地区代码",
+      "phonePlaceholder": "手机号码",
+      "phoneHint": "请包含国家代码，例如 +8613800138000",
+      "invalidPhone": "请输入有效的手机号码（含国家代码）。",
+      "invalidPhoneTitle": "请仅输入数字",
+      "password": "密码",
+      "submit": "注册",
+      "success": "注册成功！正在跳转至登录页面…",
+      "failed": "注册失败，请重试。",
+      "have": "已有账户？",
+      "signin": "登录"
     }
   },
   "sim": {
@@ -2321,7 +2340,8 @@
       "action_1_name": "动作一名称",
       "action_2_name": "动作二名称",
       "action_1_description": "动作一说明",
-      "action_2_description": "动作二说明"
+      "action_2_description": "动作二说明",
+      "custom_prompt": "自定义场景提示"
     },
     "paramDescriptions": {
       "cascade_mode": "选择是严格逐层传达，还是允许在传递中出现改写、冲突和截留。",

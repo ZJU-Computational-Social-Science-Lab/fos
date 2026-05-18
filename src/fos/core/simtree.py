@@ -127,7 +127,7 @@ class SimTree:
         - 根节点的 Simulator 通过 serialize -> deserialize 克隆得到（深拷贝语义）；
         - 在克隆点上强制 reset_event_queue()，并执行一次 _check_simulator_clone 自检。
         """
-        tree = cls(clients, use_client_pool=True)
+        tree = cls(clients, use_client_pool=False)
 
         root_id = tree._next_id()
 
