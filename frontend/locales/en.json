@@ -715,6 +715,25 @@
       "exhibits": "EXHIBITS",
       "journals": "JOURNALS",
       "index": "INDEX"
+    },
+    "register": {
+      "title": "Create an Account",
+      "organization": "Organization",
+      "email": "Email",
+      "username": "Username",
+      "fullName": "Full Name",
+      "phone": "Phone",
+      "countryCode": "Country code",
+      "phonePlaceholder": "Phone number",
+      "phoneHint": "Include country code, e.g. +8613800138000",
+      "invalidPhone": "Please enter a valid phone number with country code.",
+      "invalidPhoneTitle": "Enter phone digits only",
+      "password": "Password",
+      "submit": "Register",
+      "success": "Registration successful! Redirecting to login…",
+      "failed": "Registration failed. Please try again.",
+      "have": "Already have an account?",
+      "signin": "Sign in"
     }
   },
   "sim": {
@@ -2337,7 +2356,8 @@
       "action_1_name": "Action 1 name",
       "action_2_name": "Action 2 name",
       "action_1_description": "Action 1 description",
-      "action_2_description": "Action 2 description"
+      "action_2_description": "Action 2 description",
+      "custom_prompt": "Custom Scenario Prompt"
     },
     "paramDescriptions": {
       "cascade_mode": "Choose whether each level must relay the policy faithfully or may distort and block it during transmission.",

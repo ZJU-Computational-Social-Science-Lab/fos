@@ -23,4 +23,4 @@ SUMMARY
 ================================================================================
 Final scores: {'ProAgent1': 0, 'ProAgent2': 0, 'AntiAgent1': 0, 'AntiAgent2': 0}
 Errors: None
-Timestamp: 2026-05-17T12:33:25.807968
+Timestamp: 2026-05-18T11:16:44.408973

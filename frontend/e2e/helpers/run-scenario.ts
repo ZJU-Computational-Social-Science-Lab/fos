@@ -13,7 +13,7 @@ import { ExperimentBuilder } from './experiment-builder';
 import { SimulationWorkspace } from './simulation-workspace';
 import { ResultCollector } from './result-collector';
 import { resolveProviderIds } from './providers';
-import { ScenarioConfig } from '../fixtures/scenario-fixtures';
+import { ScenarioConfig, getScenarioForLocale } from '../fixtures/scenario-fixtures';
 
 export interface ScenarioResult {
   id: string;
@@ -48,15 +48,18 @@ export async function runScenario(
   try {
     const builder = new ExperimentBuilder(page, locale);
 
+    // Adjust agent count for locale (ZH uses fewer agents to reduce Ollama load)
+    const localeScenario = getScenarioForLocale(scenario, locale);
+
     // Resolve providers dynamically from the API (portable across systems)
-    const providerIds = await resolveProviderIds(page, scenario.agentNames.length);
+    const providerIds = await resolveProviderIds(page, localeScenario.agentNames.length);
 
     await builder.createSimulationWithDefaults(
-      scenario.id,
-      scenario.agentNames,
-      scenario.agentRolePrompts,
-      scenario.zhAgentRolePrompts,
-      scenario.parameters,
+      localeScenario.id,
+      localeScenario.agentNames,
+      localeScenario.agentRolePrompts,
+      localeScenario.zhAgentRolePrompts,
+      localeScenario.parameters,
       providerIds,
     );
 

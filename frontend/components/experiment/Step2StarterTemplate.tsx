@@ -340,7 +340,7 @@ export const Step2StarterTemplate: React.FC = () => {
             className="block text-sm font-medium mb-2"
             style={{ color: 'var(--ss-heading)' }}
           >
-            Custom Scenario Prompt
+            {t('experimentBuilder.paramLabels.custom_prompt')}
           </label>
           <textarea
             id="custom-scenario-prompt"

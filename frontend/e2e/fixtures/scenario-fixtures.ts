@@ -7,7 +7,7 @@
  * Provider IDs are resolved dynamically at runtime via resolveProviderIds()
  * so tests work on any system with configured LLM providers.
  *
- * Exports: SCENARIOS, ScenarioConfig, getAllScenarios, getScenariosByCategory
+ * Exports: SCENARIOS, ScenarioConfig, getAllScenarios, getScenariosByCategory, getScenarioForLocale
  */
 
 export interface ScenarioConfig {
@@ -360,6 +360,27 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
     },
   },
 };
+
+/**
+ * Return a locale-adjusted copy of the scenario config.
+ *
+ * For ZH locale, trims agent arrays to 2 agents to reduce Ollama load.
+ * EN locale returns the config unchanged.
+ */
+export function getScenarioForLocale(
+  scenario: ScenarioConfig,
+  locale: string,
+): ScenarioConfig {
+  if (locale !== 'zh') return scenario;
+
+  const agentCount = Math.min(scenario.agentNames.length, 2);
+  return {
+    ...scenario,
+    agentNames: scenario.agentNames.slice(0, agentCount),
+    agentRolePrompts: scenario.agentRolePrompts.slice(0, agentCount),
+    zhAgentRolePrompts: scenario.zhAgentRolePrompts.slice(0, agentCount),
+  };
+}
 
 /** Scene types that are not selectable in the experiment wizard yet. */
 const SCENE_ONLY_IDS = new Set(['policy_cascade_experiment']);
