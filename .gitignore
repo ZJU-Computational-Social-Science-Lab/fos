@@ -54,6 +54,7 @@ frontend/e2e/test-results/
 fos.db
 fos.db-shm
 fos.db-wal
+chroma_db/
 
 # Internal planning and investigation docs
 .planning/
