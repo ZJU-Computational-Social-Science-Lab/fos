@@ -329,26 +329,25 @@ class ContagionScene(ExperimentScene):
         # --- Decay: increment turns and check recovery ---
         for agent in self.agents:
             state = agent.properties.get("contagion_state", "")
-            if state == "infected":
-                agent.properties["contagion_turns"] = (
-                    agent.properties.get("contagion_turns", 0) + 1
-                )
-                for rule in self.rules:
-                    if (
-                        rule.trigger_type == "decay"
-                        and rule.from_state.value == "infected"
-                        and agent.properties["contagion_turns"] >= rule.decay_turns
-                    ):
+            for rule in self.rules:
+                if (
+                    rule.trigger_type == "decay"
+                    and rule.from_state.value == state
+                ):
+                    agent.properties["contagion_turns"] = (
+                        agent.properties.get("contagion_turns", 0) + 1
+                    )
+                    if agent.properties["contagion_turns"] >= rule.decay_turns:
                         agent.properties["contagion_state"] = rule.to_state.value
                         agent.properties["contagion_turns"] = 0
                         self._statistics.record_transition(TransitionEvent(
                             turn=round_num,
                             agent_id=agent.name,
-                            from_state="infected",
+                            from_state=state,
                             to_state=rule.to_state.value,
                             trigger_type="decay",
                         ))
-                        break
+                    break
 
     def get_moore_neighbors(self, x: int, y: int) -> List[Tuple[int, int]]:
         """Return all valid 8-directional (Moore) neighbor coordinates.

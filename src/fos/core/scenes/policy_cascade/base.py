@@ -110,17 +110,25 @@ class PolicyCascadeBaseMixin:
 
     def _reset_agents_for_new_policy(self, simulator) -> None:
         for agent in simulator.agents.values():
-            agent.consecutive_llm_errors = 0
-            agent.is_offline = False
-            for entry in agent.short_memory.history:
-                if entry.get("role") != "assistant":
-                    continue
-                lines = [
-                    line
-                    for line in str(entry.get("content") or "").splitlines()
-                    if not line.startswith("[Action]")
-                ]
-                entry["content"] = "\n".join(lines).strip()
+            # Legacy Agent attributes — reset if present
+            if hasattr(agent, "consecutive_llm_errors"):
+                agent.consecutive_llm_errors = 0
+            if hasattr(agent, "is_offline"):
+                agent.is_offline = False
+            # Legacy Agent: clean [Action] prefixes from short_memory
+            if hasattr(agent, "short_memory") and hasattr(agent.short_memory, "history"):
+                for entry in agent.short_memory.history:
+                    if entry.get("role") != "assistant":
+                        continue
+                    lines = [
+                        line
+                        for line in str(entry.get("content") or "").splitlines()
+                        if not line.startswith("[Action]")
+                    ]
+                    entry["content"] = "\n".join(lines).strip()
+            # ExperimentAgent: clear feedback buffer for new policy
+            if hasattr(agent, "clear_feedback_buffer"):
+                agent.clear_feedback_buffer()
 
     def _relay_policy_text(self, message: str, fallback_policy: str) -> str:
         cleaned = self._clean_policy_text(str(message or ""))

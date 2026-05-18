@@ -892,6 +892,15 @@ class ExperimentScene:
 
         return T("experiment.previous_rounds", locale=locale, rounds="\n".join(lines))
 
+    def post_turn(self, agent, simulator) -> None:
+        """No-op base case for mixin super() chains.
+
+        Pipeline A scenes don't use post_turn for orchestration,
+        but policy cascade mixins call super().post_turn() through
+        the MRO chain. This provides the terminal method so the
+        chain resolves without AttributeError.
+        """
+
     def is_complete(self) -> bool:
         """Check if experiment has natural end (most don't)."""
         return False  # Run forever via SimTree control
