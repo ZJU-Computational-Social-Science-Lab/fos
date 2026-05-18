@@ -34,7 +34,7 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
-test_results/experiment_debug_*.txt
+test_results/
 
 # Frontend
 frontend/node_modules/
@@ -55,11 +55,16 @@ fos.db
 fos.db-shm
 fos.db-wal
 
-# Planning documents
+# Internal planning and investigation docs
+.planning/
 docs/plans/
+MIGRATION.md
 
 # Large media files
 *.mp4
 
 # Scratch scripts
 _write_scene.py
+
+# Local dev scripts
+*.cmd
