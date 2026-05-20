@@ -1,0 +1,118 @@
+/**
+ * This file shows the intervention area inside the simulation page.
+ *
+ * InterventionTab lets people switch between host control and
+ * experiment design from one place.
+ */
+
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Beaker, Zap } from "lucide-react";
+import { useSimulationStore } from "../store";
+import { HostPanel } from "./HostPanel";
+
+type InterventionView = "host-control" | "design-experiment";
+
+export const InterventionTab: React.FC = () => {
+  const { t } = useTranslation();
+  const [activeView, setActiveView] = useState<InterventionView>("host-control");
+  const toggleExperimentDesigner = useSimulationStore(
+    (state) => state.toggleExperimentDesigner
+  );
+
+  return (
+    <div
+      className="h-full flex flex-col"
+      style={{ background: "var(--ss-workspace-bg)" }}
+    >
+      <div
+        className="flex items-center gap-2 border-b px-5 pt-4"
+        style={{ borderColor: "var(--ss-workspace-border)" }}
+      >
+        <button
+          type="button"
+          onClick={() => setActiveView("host-control")}
+          className="flex items-center gap-2 px-4 py-2 text-sm border-b-2"
+          style={{
+            borderColor:
+              activeView === "host-control"
+                ? "var(--ss-brand-primary)"
+                : "transparent",
+            color:
+              activeView === "host-control"
+                ? "var(--ss-brand-primary)"
+                : "var(--ss-workspace-text)",
+          }}
+        >
+          <Zap size={16} />
+          {t("components.interventionTab.hostControl")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveView("design-experiment")}
+          className="flex items-center gap-2 px-4 py-2 text-sm border-b-2"
+          style={{
+            borderColor:
+              activeView === "design-experiment"
+                ? "var(--ss-brand-primary)"
+                : "transparent",
+            color:
+              activeView === "design-experiment"
+                ? "var(--ss-brand-primary)"
+                : "var(--ss-workspace-text)",
+          }}
+        >
+          <Beaker size={16} />
+          {t("simPage.designExperiment")}
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-hidden">
+        {activeView === "host-control" ? (
+          <HostPanel />
+        ) : (
+          <div className="h-full overflow-auto p-6">
+            <div
+              className="max-w-4xl rounded-3xl border p-8 shadow-sm"
+              style={{
+                background: "var(--ss-workspace-surface)",
+                borderColor: "var(--ss-workspace-border)",
+              }}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <Beaker
+                  size={22}
+                  style={{ color: "var(--ss-brand-primary)" }}
+                />
+                <h2
+                  className="text-xl font-semibold"
+                  style={{ color: "var(--ss-workspace-heading)" }}
+                >
+                  {t("simPage.designExperiment")}
+                </h2>
+              </div>
+              <p
+                className="text-sm leading-6 mb-6"
+                style={{ color: "var(--ss-workspace-muted)" }}
+              >
+                {t("components.interventionTab.designExperimentHint")}
+              </p>
+              <button
+                type="button"
+                onClick={() => toggleExperimentDesigner(true)}
+                className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-medium"
+                style={{
+                  background: "var(--ss-brand-primary)",
+                  color: "var(--ss-brand-on)",
+                }}
+              >
+                <Beaker size={16} />
+                {t("components.interventionTab.openDesigner")}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

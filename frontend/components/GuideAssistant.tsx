@@ -1,3 +1,9 @@
+/**
+ * This file shows the built-in helper chat for the app.
+ *
+ * GuideAssistant lets people ask for help, upload an image into the chat,
+ * and open the right part of the app from suggested actions.
+ */
 
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { useSimulationStore } from '../store';
@@ -25,11 +31,8 @@ export const GuideAssistant: React.FC = () => {
   const toggleExperimentDesigner = useSimulationStore(state => state.toggleExperimentDesigner);
   const toggleExport = useSimulationStore(state => state.toggleExport);
   const toggleAnalytics = useSimulationStore(state => state.toggleAnalytics);
+  const setActiveTab = useSimulationStore(state => state.setActiveTab);
    const addNotification = useSimulationStore(state => state.addNotification);
-  // Host Panel logic is part of Sidebar, we can't toggle it directly from store easily without a dedicated state, 
-  // but we can assume user knows where it is or add a notification/hint. 
-  // *Correction*: We can just highlight or guide user. 
-  // However, for this implementation, let's focus on the toggleable modals.
 
   const [input, setInput] = useState('');
    const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -77,15 +80,13 @@ export const GuideAssistant: React.FC = () => {
      switch(action) {
         case 'OPEN_WIZARD': toggleWizard(true); break;
         case 'OPEN_NETWORK': toggleNetworkEditor(true); break;
-        case 'OPEN_EXPERIMENT': toggleExperimentDesigner(true); break;
+        case 'OPEN_EXPERIMENT':
+           setActiveTab('intervention');
+           toggleExperimentDesigner(true);
+           break;
         case 'OPEN_EXPORT': toggleExport(true); break;
         case 'OPEN_ANALYTICS': toggleAnalytics(true); break;
-        case 'OPEN_HOST':
-           // Sidebar tab switching is local state in Sidebar.tsx.
-           // In a full app, we would move activeTab to global store.
-           // For now, we'll just show a hint.
-           alert(t('components.guideAssistant.hostPanelHint'));
-           break;
+        case 'OPEN_HOST': setActiveTab('intervention'); break;
      }
   };
 

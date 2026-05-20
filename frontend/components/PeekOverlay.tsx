@@ -40,7 +40,7 @@ export const PeekOverlay: React.FC = () => {
     >
       <div className="h-full overflow-auto">
         {/* Panels stay mounted to avoid re-initialization costs */}
-        <div className={peekTab === 'timeline' ? 'h-full flex gap-2 p-2' : 'hidden'}>
+        <div className={peekTab === 'workspace' ? 'h-full flex gap-2 p-2' : 'hidden'}>
           <div className="w-[40%]"><SimTree /></div>
           <div className="flex-1"><LogViewer /></div>
         </div>

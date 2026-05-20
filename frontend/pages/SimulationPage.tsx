@@ -1,8 +1,8 @@
 /**
  * Main simulation workspace page.
  *
- * Orchestrates the tab-based layout (Sim Tree, Logs, Agents) with a peek overlay
- * for cross-panel awareness. Loads simulation state from backend.
+ * Loads one simulation and shows the main work areas people switch between:
+ * workspace, agents, intervention, and analysis.
  *
  * Exports: SimulationPage (default), SimulationPage (named)
  */
@@ -16,6 +16,7 @@ import { ExperimentBuilderModal } from "../components/ExperimentBuilderModal";
 import SyncModal from "../components/SyncModal";
 import { HelpModal } from "../components/HelpModal";
 import { AnalyticsPanel } from "../components/AnalyticsPanel";
+import { AnalyseTab } from "../components/AnalyseTab";
 import { ExportModal } from "../components/ExportModal";
 import { ExperimentDesignModal } from "../components/ExperimentDesignModal";
 import { TimeSettingsModal } from "../components/TimeSettingsModal";
@@ -24,6 +25,7 @@ import { NetworkEditorModal } from "../components/NetworkEditorModal";
 import { ReportModal } from "../components/ReportModal";
 import { GlobalKnowledgePanel } from "../components/GlobalKnowledgePanel";
 import { GuideAssistant } from "../components/GuideAssistant";
+import { InterventionTab } from "../components/InterventionTab";
 import { ToastContainer } from "../components/Toast";
 import { useSimulationStore } from "../store";
 import { useParams } from "react-router-dom";
@@ -31,7 +33,7 @@ import { getSimulation as apiGetSimulation } from "../services/simulations";
 import { getTreeGraph, getSimEvents, getSimState, getRehydrate } from "../services/simulationTree";
 import { useAuthStore } from "../store/auth";
 import { useTranslation } from "react-i18next";
-import { TabBar } from "../components/TabBar";
+import { TabRail } from "../components/TabRail";
 import ContextToolbar from "../components/ContextToolbar";
 import { PeekOverlay } from "../components/PeekOverlay";
 
@@ -40,6 +42,8 @@ import { PeekOverlay } from "../components/PeekOverlay";
 const SimulationPage: React.FC = () => {
   const { t } = useTranslation();
   const isCompareMode = useSimulationStore((state) => state.isCompareMode);
+  const [railWidth, setRailWidth] = React.useState(96);
+  const isResizingRailRef = React.useRef(false);
   const params = useParams();
   const simIdParam = params['id'] || params['simulationId'] || null;
   const engineConfig = useSimulationStore((state) => state.engineConfig);
@@ -474,25 +478,85 @@ const SimulationPage: React.FC = () => {
 
   const activeTab = useSimulationStore((s) => s.activeTab);
 
-  return (
-    <div className="flex flex-col h-screen" style={{ background: 'var(--ss-workspace-bg)' }}>
-      <TabBar />
-      <ContextToolbar />
+  React.useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!isResizingRailRef.current) return;
+      const nextWidth = Math.min(180, Math.max(88, event.clientX));
+      setRailWidth(nextWidth);
+    };
 
-      <div className="flex-1 overflow-hidden relative p-3">
-        {activeTab === 'timeline' && (
-          <div className="flex gap-3 h-full">
-            <div className="w-[40%] flex flex-col">
-              <SimTree layoutDirection="vertical" />
+    const handleMouseUp = () => {
+      isResizingRailRef.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
+
+  return (
+    <div className="flex h-screen" style={{ background: 'var(--ss-workspace-bg)' }}>
+      <div className="relative flex">
+        <TabRail width={railWidth} />
+        <button
+          type="button"
+          aria-label={t("simPage.resizeRail", { defaultValue: "Resize rail" })}
+          onMouseDown={() => {
+            isResizingRailRef.current = true;
+            document.body.style.cursor = "col-resize";
+            document.body.style.userSelect = "none";
+          }}
+          className="absolute top-0 right-[-5px] h-full w-[10px] cursor-col-resize"
+          style={{ background: "transparent" }}
+        >
+          <span
+            className="absolute top-1/2 right-[4px] h-12 w-px -translate-y-1/2"
+            style={{ background: "var(--ss-workspace-border)" }}
+          />
+        </button>
+      </div>
+
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {activeTab === 'workspace' && (
+          <>
+            <ContextToolbar />
+            <div className="flex-1 overflow-hidden relative p-3">
+              <div className="flex gap-3 h-full">
+                <div className="w-[40%] flex flex-col">
+                  <SimTree layoutDirection="vertical" />
+                </div>
+                <div className="flex-1 flex flex-col">
+                  {isCompareMode ? <ComparisonView /> : <LogViewer />}
+                </div>
+              </div>
+              <PeekOverlay />
             </div>
-            <div className="flex-1 flex flex-col">
-              {isCompareMode ? <ComparisonView /> : <LogViewer />}
-            </div>
+          </>
+        )}
+
+        {activeTab === 'agents' && (
+          <div className="flex-1 overflow-hidden">
+            <Sidebar />
           </div>
         )}
-        {activeTab === 'agents' && <Sidebar />}
 
-        <PeekOverlay />
+        {activeTab === 'intervention' && (
+          <div className="flex-1 overflow-hidden">
+            <InterventionTab />
+          </div>
+        )}
+
+        {activeTab === 'analyse' && (
+          <div className="flex-1 overflow-hidden">
+            <AnalyseTab />
+          </div>
+        )}
       </div>
 
       {/* Modals */}

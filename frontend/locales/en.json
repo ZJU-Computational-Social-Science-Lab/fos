@@ -979,6 +979,8 @@
     "report": "Report",
     "export": "Export",
     "analytics": "Analytics",
+    "moreActions": "More actions",
+    "resizeRail": "Resize rail",
     "provider": "Provider",
     "selectProvider": "Select provider",
     "noProvider": "No provider",
@@ -1012,8 +1014,10 @@
     "autoAdvanceError": "Auto-advance error: {{error}}",
     "autoAdvanceComplete": "Auto-advance completed {{count}} steps",
     "tabs": {
-      "timeline": "Timeline",
-      "agents": "Agents"
+      "workspace": "Workspace",
+      "agents": "Agents",
+      "intervention": "Intervention",
+      "analyse": "Analyse"
     }
   },
   "components": {
@@ -1424,7 +1428,17 @@
     },
     "sidebar": {
       "agents": "Agents",
+      "agentWatch": "Agent watch",
       "hostControl": "Host Control"
+    },
+    "interventionTab": {
+      "hostControl": "Host control",
+      "designExperimentHint": "Set up parallel branches, interventions, and experiment runs from the intervention area.",
+      "openDesigner": "Open experiment designer"
+    },
+    "analyseTab": {
+      "overview": "Overview",
+      "compareDiff": "Compare diff"
     },
     "networkEditorModal": {
       "title": "Social Network Topology",

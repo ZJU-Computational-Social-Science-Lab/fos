@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import SimulationPage from '../../pages/SimulationPage';
 import { useSimulationStore } from '../../store';
+import { useAuthStore } from '../../store/auth';
 
 const translations: Record<string, string> = {
   'simPage.enterSteps': 'Enter number of steps (1–100)',
@@ -28,6 +29,22 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: vi.fn() },
 }));
 
+vi.mock('../../components/SimTree', () => ({
+  SimTree: () => <div>Sim Tree Panel</div>,
+}));
+
+vi.mock('../../components/LogViewer', () => ({
+  LogViewer: () => <div>Log Viewer Panel</div>,
+}));
+
+vi.mock('../../components/ComparisonView', () => ({
+  ComparisonView: () => <div>Comparison Panel</div>,
+}));
+
+vi.mock('../../components/PeekOverlay', () => ({
+  PeekOverlay: () => null,
+}));
+
 const renderPage = () => render(
   <MemoryRouter>
     <SimulationPage />
@@ -39,10 +56,16 @@ describe('Auto-advance — full integration flow', () => {
     const mockAdvance = vi.fn().mockResolvedValue(undefined);
     const mockNotify = vi.fn();
 
+    useAuthStore.setState({
+      isAuthenticated: false,
+      hasRestored: true,
+    });
+
     useSimulationStore.setState({
       currentSimulation: { id: 'sim-1', name: 'Test Sim' },
-      selectedNodeId: 'node-1',
-      nodes: [{ id: 'node-1', parentId: null, name: 'Root', depth: 0, isLeaf: true }],
+      selectedNodeId: '1',
+      nodes: [{ id: '1', parentId: null, name: 'Root', depth: 0, isLeaf: true }],
+      activeTab: 'workspace',
       isAutoAdvancing: false,
       isGenerating: false,
       isCompareMode: false,

@@ -979,6 +979,8 @@
     "report": "分析报告",
     "export": "导出",
     "analytics": "统计",
+    "moreActions": "更多操作",
+    "resizeRail": "调整侧栏宽度",
     "provider": "提供商",
     "selectProvider": "选择提供商",
     "noProvider": "暂无提供商",
@@ -1012,8 +1014,10 @@
     "autoAdvanceError": "自动推进错误：{{error}}",
     "autoAdvanceComplete": "自动推进完成 {{count}} 步",
     "tabs": {
-      "timeline": "时间线",
-      "agents": "智能体"
+      "workspace": "工作区",
+      "agents": "智能体",
+      "intervention": "干预",
+      "analyse": "分析"
     }
   },
   "components": {
@@ -1424,7 +1428,17 @@
     },
     "sidebar": {
       "agents": "智能体",
+      "agentWatch": "智能体观察",
       "hostControl": "主持控制"
+    },
+    "interventionTab": {
+      "hostControl": "主持控制",
+      "designExperimentHint": "在干预页面里设置平行分支、干预方案与实验运行。",
+      "openDesigner": "打开实验设计器"
+    },
+    "analyseTab": {
+      "overview": "总览",
+      "compareDiff": "对比差异"
     },
     "networkEditorModal": {
       "title": "社交网络拓扑",
