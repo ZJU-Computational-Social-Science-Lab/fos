@@ -295,7 +295,6 @@ class TestRolePromptPreservation:
         )
         assert result == role_prompt
 
-    @pytest.mark.xfail(reason="bug: pre-existing failure — needs investigation")
     def test_fallback_to_properties_without_role_prompt(self):
         """Without role_prompt, build from properties."""
         result = build_agent_description(

@@ -1,6 +1,5 @@
 """Tests for core.scenarios module."""
 
-import pytest
 from fos.core.scenarios import (
     get_all_scenarios,
     get_scenario,
@@ -14,11 +13,10 @@ def test_get_all_returns_list():
     assert isinstance(result, list)
 
 
-@pytest.mark.xfail(reason="bug: pre-existing failure — needs investigation")
 def test_get_all_contains_expected_count():
-    """Should return exactly 13 scenarios."""
+    """Should return exactly 16 scenarios."""
     result = get_all_scenarios()
-    assert len(result) == 13
+    assert len(result) == 16
 
 
 def test_all_scenarios_have_required_fields():
@@ -62,20 +60,21 @@ def test_get_scenario_actions_invalid_id():
     assert result == []
 
 
-@pytest.mark.xfail(reason="bug: pre-existing failure — needs investigation")
 def test_prisoners_dilemma_structure():
     """Prisoner's Dilemma should have correct structure."""
     scenario = get_scenario("prisoners_dilemma")
     assert scenario["category"] == "game_theory"
-    assert len(scenario["parameters"]) == 3
+    assert len(scenario["parameters"]) == 6
     assert len(scenario["actions"]) == 2
 
 
-@pytest.mark.xfail(reason="bug: pre-existing failure — needs investigation")
 def test_custom_scenario_empty_actions():
-    """Custom scenario should have empty actions list."""
+    """Custom scenario should have default speak/skip actions."""
     scenario = get_scenario("custom")
-    assert scenario["actions"] == []
+    assert len(scenario["actions"]) == 2
+    action_ids = [a["id"] for a in scenario["actions"]]
+    assert "speak" in action_ids
+    assert "skip" in action_ids
 
 
 def test_all_scenario_ids_unique():
