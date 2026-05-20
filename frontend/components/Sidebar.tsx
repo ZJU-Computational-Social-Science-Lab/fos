@@ -1,47 +1,111 @@
+/**
+ * This file shows the agents page inside the simulation workspace.
+ *
+ * Sidebar lets people switch between the agent watch list and the
+ * network view without leaving the agents tab.
+ */
 
-import React, { useState } from 'react';
-import { AgentPanel } from './AgentPanel';
-import { HostPanel } from './HostPanel';
-import { Users, Zap } from 'lucide-react';
-import { useSimulationStore } from '../store';
-import { useTranslation } from 'react-i18next';
+import React, { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Network, Users } from "lucide-react";
+import { useSimulationStore } from "../store";
+import { AgentPanel } from "./AgentPanel";
+import NetworkGraph from "./NetworkGraph";
+
+type SidebarTab = "agent-watch" | "network";
 
 export const Sidebar: React.FC = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'agents' | 'host'>('agents');
-  const agents = useSimulationStore(state => state.agents);
+  const [activeTab, setActiveTab] = useState<SidebarTab>("agent-watch");
+  const agents = useSimulationStore((state) => state.agents);
+  const currentSimulation = useSimulationStore((state) => state.currentSimulation);
+
+  const socialNetwork = useMemo(
+    () => currentSimulation?.socialNetwork ?? {},
+    [currentSimulation]
+  );
 
   return (
-    <div className="h-full flex flex-col shadow-sm" style={{ background: 'var(--ss-workspace-surface)' }}>
-      {/* Tab Header */}
-      <div className="flex border-b">
+    <div
+      className="h-full flex flex-col shadow-sm"
+      style={{ background: "var(--ss-workspace-surface)" }}
+    >
+      <div
+        className="flex border-b px-3 pt-3"
+        style={{ borderColor: "var(--ss-workspace-border)" }}
+      >
         <button
-          onClick={() => setActiveTab('agents')}
-          className={`flex-1 py-3 text-xs font-bold flex items-center justify-center gap-2 transition-colors border-b-2 ${
-            activeTab === 'agents'
-              ? 'text-brand-600 border-brand-600 bg-brand-50/50'
-              : 'border-transparent'
+          type="button"
+          onClick={() => setActiveTab("agent-watch")}
+          className={`flex items-center gap-2 px-4 py-2 text-sm border-b-2 transition-colors ${
+            activeTab === "agent-watch"
+              ? "font-semibold"
+              : "opacity-70 hover:opacity-100"
           }`}
-          style={activeTab !== 'agents' ? { color: 'var(--ss-workspace-muted)' } : undefined}
+          style={{
+            borderColor:
+              activeTab === "agent-watch"
+                ? "var(--ss-brand-primary)"
+                : "transparent",
+            color:
+              activeTab === "agent-watch"
+                ? "var(--ss-brand-primary)"
+                : "var(--ss-workspace-text)",
+          }}
         >
-          <Users size={14} /> {t('components.sidebar.agents')} ({agents.length})
+          <Users size={16} />
+          <span>{t("components.sidebar.agentWatch")}</span>
+          <span
+            className="text-xs px-2 py-0.5 rounded-full"
+            style={{
+              background: "var(--ss-brand-soft)",
+              color: "var(--ss-brand-primary)",
+            }}
+          >
+            {agents.length}
+          </span>
         </button>
+
         <button
-          onClick={() => setActiveTab('host')}
-          className={`flex-1 py-3 text-xs font-bold flex items-center justify-center gap-2 transition-colors border-b-2 ${
-            activeTab === 'host'
-              ? 'text-amber-600 border-amber-600 bg-amber-50/50'
-              : 'border-transparent'
+          type="button"
+          onClick={() => setActiveTab("network")}
+          className={`flex items-center gap-2 px-4 py-2 text-sm border-b-2 transition-colors ${
+            activeTab === "network"
+              ? "font-semibold"
+              : "opacity-70 hover:opacity-100"
           }`}
-          style={activeTab !== 'host' ? { color: 'var(--ss-workspace-muted)' } : undefined}
+          style={{
+            borderColor:
+              activeTab === "network"
+                ? "var(--ss-brand-primary)"
+                : "transparent",
+            color:
+              activeTab === "network"
+                ? "var(--ss-brand-primary)"
+                : "var(--ss-workspace-text)",
+          }}
         >
-          <Zap size={14} /> {t('components.sidebar.hostControl')}
+          <Network size={16} />
+          <span>{t("simPage.network")}</span>
         </button>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-hidden relative">
-        {activeTab === 'agents' ? <AgentPanel /> : <HostPanel />}
+        {activeTab === "agent-watch" ? (
+          <AgentPanel />
+        ) : (
+          <div className="h-full p-3">
+            <div
+              className="h-full rounded-2xl border overflow-hidden"
+              style={{
+                background: "var(--ss-workspace-bg)",
+                borderColor: "var(--ss-workspace-border)",
+              }}
+            >
+              <NetworkGraph network={socialNetwork} agents={agents} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

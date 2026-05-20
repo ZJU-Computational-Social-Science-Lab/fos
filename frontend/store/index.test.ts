@@ -368,6 +368,16 @@ describe('Store - UI Slice', () => {
   });
 
   describe('Modal Toggles', () => {
+    it('should start on the workspace tab and switch to the other main tabs', () => {
+      expect(useSimulationStore.getState().activeTab).toBe('workspace');
+
+      useSimulationStore.getState().setActiveTab('intervention');
+      expect(useSimulationStore.getState().activeTab).toBe('intervention');
+
+      useSimulationStore.getState().setActiveTab('analyse');
+      expect(useSimulationStore.getState().activeTab).toBe('analyse');
+    });
+
     it('should toggle wizard state', () => {
       useSimulationStore.getState().toggleWizard(true);
       expect(useSimulationStore.getState().isWizardOpen).toBe(true);

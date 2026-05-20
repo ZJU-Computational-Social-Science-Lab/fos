@@ -74,11 +74,11 @@ export interface UISlice {
   sendGuideMessage: (content: string) => Promise<void>;
 
   // Tab navigation
-  activeTab: 'timeline' | 'agents';
-  peekTab: 'timeline' | 'agents' | null;
+  activeTab: 'workspace' | 'agents' | 'intervention' | 'analyse';
+  peekTab: 'workspace' | 'agents' | 'intervention' | 'analyse' | null;
   peekOverlayActive: boolean;
-  setActiveTab: (tab: 'timeline' | 'agents') => void;
-  setPeekTab: (tab: 'timeline' | 'agents' | null) => void;
+  setActiveTab: (tab: 'workspace' | 'agents' | 'intervention' | 'analyse') => void;
+  setPeekTab: (tab: 'workspace' | 'agents' | 'intervention' | 'analyse' | null) => void;
   setPeekOverlayActive: (active: boolean) => void;
 }
 
@@ -111,7 +111,7 @@ export const createUISlice: StateCreator<
   isGuideOpen: false,
   guideMessages: [],
   isGuideLoading: false,
-  activeTab: 'timeline',
+  activeTab: 'workspace',
   peekTab: null,
   peekOverlayActive: false,
 

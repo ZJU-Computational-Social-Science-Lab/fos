@@ -48,6 +48,7 @@ const countAgentFields = (agentDiffs: Record<string, Record<string, unknown>>) =
 
 export const ComparisonView: React.FC = () => {
    const { t, i18n } = useTranslation();
+   const isZh = i18n.language.startsWith('zh');
    const selectedNodeId = useSimulationStore(state => state.selectedNodeId);
    const compareTargetNodeId = useSimulationStore(state => state.compareTargetNodeId);
    const nodes = useSimulationStore(state => state.nodes);
