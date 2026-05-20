@@ -34,15 +34,16 @@ class _MockModel:
     def __init__(self):
         self.agent_calls = {}
 
-    def chat(self, messages):
+    def chat(self, messages, json_mode=False):
         """
         Generate mock LLM response based on scene and agent state.
 
         Args:
             messages: List of message dicts with role/content
+            json_mode: If True, return JSON format instead of XML
 
         Returns:
-            Formatted response with Thoughts, Plan, Action, and Plan Update blocks
+            JSON string when json_mode=True, otherwise formatted XML response
         """
         # Extract system content (single string)
         sys_text = next((m["content"] for m in messages if m["role"] == "system"), "")
@@ -84,9 +85,24 @@ class _MockModel:
         elif scene == "werewolf":
             thought, plan, action, plan_update = self._werewolf_response(sys_lower, call_n)
         elif scene == "landlord":
-            return self._landlord_response(agent_name, call_n, messages, sys_lower)
+            result = self._landlord_response(agent_name, call_n, messages, sys_lower)
+            if json_mode:
+                # Re-parse landlord action from XML result
+                xml_match = re.search(r'<Action name="([^"]+)"', result)
+                name = xml_match.group(1) if xml_match else "yield"
+                # Try to extract cards parameter
+                cards_match = re.search(r'<cards>([^<]+)</cards>', result)
+                action = {"action": name}
+                if cards_match:
+                    action["cards"] = cards_match.group(1)
+                return _action_to_json(action, messages)
+            return result
         else:  # simple chat
             thought, plan, action, plan_update = self._chat_response(agent_name, call_n, messages)
+
+        # JSON mode: return parseable JSON for experiment controller
+        if json_mode:
+            return _action_to_json(action, messages)
 
         # Compose full response with XML Action
         return (
@@ -318,3 +334,59 @@ def action_to_xml(a: dict) -> str:
         return f'<Action name="{name}" />'
     parts = "".join([f"<{k}>{a[k]}</{k}>" for k in params])
     return f'<Action name="{name}">{parts}</Action>'
+
+
+def _extract_allowed_actions(messages: list) -> list[str]:
+    """Extract action names from the prompt's 'Available actions' section.
+
+    The experiment prompt builder includes lines like:
+        - cooperate: Work together
+        - defect: Act alone
+
+    This function parses those lines to find valid action names.
+
+    Args:
+        messages: Message list sent to the LLM
+
+    Returns:
+        List of action name strings, or empty list if not found
+    """
+    all_text = " ".join(
+        m.get("content", "") for m in messages if isinstance(m.get("content"), str)
+    )
+    # Match lines like "- cooperate: description" or "- cooperate"
+    matches = re.findall(r"^\s*-\s+([a-zA-Z_]\w*)", all_text, re.MULTILINE)
+    return matches
+
+
+def _action_to_json(action: dict, messages: list) -> str:
+    """Convert action dict to JSON format for experiment controller.
+
+    When json_mode is True, returns a JSON object like {"action": "cooperate"}
+    that the ExperimentController can parse. Tries to match the scene-detected
+    action against the allowed actions from the prompt. If no match, falls back
+    to the first allowed action.
+
+    Args:
+        action: Action dict with 'action' key and optional parameters
+        messages: Message list (used to extract allowed actions)
+
+    Returns:
+        JSON-formatted string with action and optional parameters
+    """
+    import json
+
+    action_name = action.get("action") or action.get("name") or "yield"
+    allowed = _extract_allowed_actions(messages)
+
+    # If the detected action is in the allowed set, use it directly
+    if allowed and action_name not in allowed:
+        # Fall back to first allowed action
+        action_name = allowed[0]
+
+    # Build the JSON response — controller expects {"action": "<name>", ...params}
+    params = {k: v for k, v in action.items() if k not in ("action", "name")}
+    result = {"action": action_name}
+    result.update(params)
+
+    return json.dumps(result)

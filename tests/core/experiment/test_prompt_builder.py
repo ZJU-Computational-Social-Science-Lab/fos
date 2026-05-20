@@ -2,7 +2,6 @@
 Tests for ExperimentPromptBuilder.
 """
 
-import pytest
 from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.game_configs import GameConfig, PRISONERS_DILEMMA, MINIMUM_EFFORT
 from fos.core.experiment.prompt_builder import (
@@ -48,7 +47,6 @@ def test_build_agent_description_basic():
     assert "You are a young adult doctor." in desc
 
 
-@pytest.mark.xfail(reason="bug: pre-existing failure — needs investigation")
 def test_build_agent_description_with_numeric_traits():
     """Build agent description with numeric traits and interpretations."""
     props = {
@@ -64,7 +62,6 @@ def test_build_agent_description_with_numeric_traits():
     assert "risk_tolerance score is 45/100 (moderate)" in desc
 
 
-@pytest.mark.xfail(reason="bug: pre-existing failure — needs investigation")
 def test_build_agent_description_low_score():
     """Low scores get (low) interpretation."""
     props = {
@@ -77,7 +74,6 @@ def test_build_agent_description_low_score():
     assert "social_capital score is 20/100 (low)" in desc
 
 
-@pytest.mark.xfail(reason="bug: pre-existing failure — needs investigation")
 def test_build_agent_description_defaults():
     """When no identity properties exist but other props do, show only traits (no 'adult person' fallback)."""
     props = {
@@ -91,7 +87,6 @@ def test_build_agent_description_defaults():
     assert "social_capital score is 50/100 (moderate)" in desc
 
 
-@pytest.mark.xfail(reason="bug: pre-existing failure — needs investigation")
 def test_build_agent_description_uses_name_when_no_identity():
     """When no identity props but agent_name provided, use agent name as identity."""
     props = {
@@ -105,7 +100,6 @@ def test_build_agent_description_uses_name_when_no_identity():
     assert "social_capital score is 75/100 (high)" in desc
 
 
-@pytest.mark.xfail(reason="bug: pre-existing failure — needs investigation")
 def test_build_prompt_discrete():
     """Build 5-section prompt for discrete action game."""
     agent = ExperimentAgent(
@@ -134,13 +128,12 @@ def test_build_prompt_discrete():
 
     # Section 5: Output Format
     assert "## Your Response" in prompt
-    assert "Respond ONLY with valid JSON" in prompt
+    assert "Respond with ONLY JSON" in prompt
     # PRISONERS_DILEMMA.output_field is "action", so the JSON format is {"action": "..."}
     assert '"action"' in prompt
     assert "No markdown. No explanation. Only JSON." in prompt
 
 
-@pytest.mark.xfail(reason="bug: pre-existing failure — needs investigation")
 def test_build_prompt_integer():
     """Build 5-section prompt for integer action game."""
     agent = ExperimentAgent(
@@ -159,7 +152,7 @@ def test_build_prompt_integer():
 
     # Section 3: Your Action (integer range)
     assert "## Your Action" in prompt
-    assert "Choose a value from 1 to 7" in prompt
+    assert "Choose a number from 1 to 7" in prompt
 
     # Section 4: Context
     assert "## Context" in prompt
@@ -168,7 +161,7 @@ def test_build_prompt_integer():
     # Section 5: Output Format
     assert "## Your Response" in prompt
     assert '"effort"' in prompt
-    assert "integer from 1-7" in prompt
+    assert "number from 1 to 7" in prompt
 
 
 def test_build_prompt_custom_uses_one_shot_message_json():
@@ -207,7 +200,6 @@ def test_build_prompt_first_round():
     assert "This is the first round - no previous context." in prompt
 
 
-@pytest.mark.xfail(reason="bug: pre-existing failure — needs investigation")
 def test_build_prompt_with_numeric_traits():
     """Agent with numeric traits in description."""
     agent = ExperimentAgent(
@@ -281,7 +273,6 @@ def test_build_reprompt_plain_text_mode():
     assert "Your response:" in reprompt
 
 
-@pytest.mark.xfail(reason="bug: pre-existing failure — needs investigation")
 def test_build_agent_description_string_properties():
     """String properties are formatted correctly."""
     props = {
@@ -307,12 +298,13 @@ def test_action_description_in_prompt_not_name_repeated():
 
     prompt = build_prompt(agent, PRISONERS_DILEMMA, "No previous context.")
 
-    # Section 3 should have action descriptions
-    # Current bug: produces "- cooperate: cooperate"
-    # Expected: should use descriptions from kernel or action definitions
     assert "## Available Actions" in prompt
-    # This test will fail until Bug A is fixed
-    # After fix: action descriptions should be present, not just name: name
+    # Real descriptions from PRISONERS_DILEMMA.action_descriptions must appear
+    assert "Remain silent and cooperate with your partner" in prompt
+    assert "Betray your partner and testify against them" in prompt
+    # Bug A pattern: name repeated as description (e.g. "cooperate: cooperate")
+    assert "cooperate: cooperate" not in prompt
+    assert "defect: defect" not in prompt
 
 
 def test_payoff_params_appear_in_prompt():
@@ -323,39 +315,39 @@ def test_payoff_params_appear_in_prompt():
         llm_config=None,
     )
 
-    # Create a game config with payoff parameters
     from fos.core.experiment.game_configs import GameConfig
+    payoff_text = "cooperate_reward: 10, defect_reward: 5, sucker_punishment: 0, temptation: 15"
     game_with_payoffs = GameConfig(
         name="PD with Params",
         description="Prisoner's Dilemma with custom payoffs.",
         action_type="discrete",
         actions=["cooperate", "defect"],
-        payoff_summary="cooperate_reward: 10, defect_reward: 5, sucker_punishment: 0, temptation: 15"
+        payoff_summary=payoff_text,
     )
 
     prompt = build_prompt(agent, game_with_payoffs, "No context.")
 
-    # Payoff information should appear in the prompt
-    # This test will fail until Bug B is fixed
-    # After fix: payoff_summary should be included in scenario or context
+    # payoff_summary is appended to the scenario section by the builder
+    assert payoff_text in prompt
 
 
 def test_role_prompt_in_section_1_before_scenario_heading():
     """Role prompt should appear in Section 1 before scenario heading (Bug C)."""
+    role_text = "You are a defense attorney. Protect your client's interests."
     agent = ExperimentAgent(
         name="Charlie",
         properties={"age_group": "adult", "profession": "lawyer"},
         llm_config=None,
-        role_prompt="You are a defense attorney. Protect your client's interests."
+        role_prompt=role_text,
     )
 
     prompt = build_prompt(agent, PRISONERS_DILEMMA, "No context.")
 
-    # Role prompt should be in Section 1 (Agent Description)
-    # and should appear before "## Scenario" heading
-    # This test will fail until Bug C is fixed
     assert "## Scenario" in prompt
-    # After fix: role_prompt should appear before "## Scenario"
+    # role_prompt is rendered as the entire agent description (Section 1)
+    assert role_text in prompt
+    # Section 1 must come before Section 2 (Scenario)
+    assert prompt.index(role_text) < prompt.index("## Scenario")
 
 
 def test_no_role_prompt_does_not_crash():
