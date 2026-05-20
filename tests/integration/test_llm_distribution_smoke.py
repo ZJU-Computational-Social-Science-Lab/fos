@@ -14,7 +14,6 @@ from fos.core.experiment.game_configs import GameConfig
 from fos.core.experiment.information_model import InformationModel
 
 
-@pytest.mark.xfail(reason="mock dialect returns XML-format responses incompatible with JSON action parser — needs source-level fix")
 @pytest.mark.asyncio
 async def test_llm_distribution_runtime():
     """Smoke test that verifies runtime LLM distribution.

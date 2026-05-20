@@ -287,7 +287,7 @@ class LLMClient:
             def _do():
                 openai = _get_openai()
                 msgs = openai["normalize_messages_for_openai"](messages, False, validate_media_url)
-                return self.client.chat(msgs)
+                return self.client.chat(msgs, json_mode=json_mode)
             return self._with_timeout_and_retry(_do)
 
         if self.provider.dialect == "ollama":
