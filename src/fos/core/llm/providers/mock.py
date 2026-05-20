@@ -337,13 +337,15 @@ def action_to_xml(a: dict) -> str:
 
 
 def _extract_allowed_actions(messages: list) -> list[str]:
-    """Extract action names from the prompt's 'Available actions' section.
+    """Extract action names from the prompt's 'Available Actions' section.
 
     The experiment prompt builder includes lines like:
         - cooperate: Work together
         - defect: Act alone
 
-    This function parses those lines to find valid action names.
+    This function parses ONLY the ## Available Actions (or ## Your Action)
+    section, stopping at the next ## heading, to avoid matching bullet points
+    from scenario descriptions, payoff tables, or context sections.
 
     Args:
         messages: Message list sent to the LLM
@@ -351,11 +353,29 @@ def _extract_allowed_actions(messages: list) -> list[str]:
     Returns:
         List of action name strings, or empty list if not found
     """
-    all_text = " ".join(
+    all_text = "\n".join(
         m.get("content", "") for m in messages if isinstance(m.get("content"), str)
     )
+
+    # Find the start of the Available Actions or Your Action section
+    section_match = re.search(
+        r"^## (Available Actions|Your Action)\s*$",
+        all_text,
+        re.MULTILINE,
+    )
+    if not section_match:
+        return []
+
+    # Extract text from section start to the next ## heading (or end)
+    section_start = section_match.end()
+    next_heading = re.search(r"^## ", all_text[section_start:], re.MULTILINE)
+    if next_heading:
+        section_text = all_text[section_start:section_start + next_heading.start()]
+    else:
+        section_text = all_text[section_start:]
+
     # Match lines like "- cooperate: description" or "- cooperate"
-    matches = re.findall(r"^\s*-\s+([a-zA-Z_]\w*)", all_text, re.MULTILINE)
+    matches = re.findall(r"^\s*-\s+([a-zA-Z_]\w*)", section_text, re.MULTILINE)
     return matches
 
 
