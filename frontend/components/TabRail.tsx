@@ -10,6 +10,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { BarChart3, GitBranch, Users, Zap } from "lucide-react";
 import { useSimulationStore } from "../store";
+import { WorkspaceMoreActionsButton } from "./WorkspaceMoreActionsButton";
 
 const TAB_ITEMS = [
   { key: "workspace", icon: GitBranch, tooltipKey: "simPage.tabs.workspace" },
@@ -116,6 +117,13 @@ export const TabRail: React.FC<TabRailProps> = ({ width }) => {
           </button>
         );
       })}
+
+      <WorkspaceMoreActionsButton
+        wrapperClassName="relative mx-2"
+        triggerClassName="w-full min-h-[68px] rounded-xl px-2 py-3 text-[var(--ss-workspace-muted)] hover:bg-black/5 !flex-col gap-2"
+        triggerLabel={t("simPage.more")}
+        panelClassName="absolute left-full ml-3 bottom-0 w-72 rounded-2xl border shadow-xl p-3 z-20"
+      />
     </div>
   );
 };
