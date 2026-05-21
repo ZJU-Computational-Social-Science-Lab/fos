@@ -15,7 +15,6 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import {
   Play,
-  SkipForward,
   GitFork,
   Loader2,
   BarChart2,
@@ -35,7 +34,6 @@ const ContextToolbar: React.FC = () => {
   const activeTab = useSimulationStore((s) => s.activeTab);
 
   // Advance / Branch / Auto-advance
-  const advanceSimulation = useSimulationStore((s) => s.advanceSimulation);
   const branchSimulation = useSimulationStore((s) => s.branchSimulation);
   const isGenerating = useSimulationStore((s) => s.isGenerating);
   const isAutoAdvancing = useSimulationStore((s) => s.isAutoAdvancing);
@@ -203,20 +201,6 @@ const ContextToolbar: React.FC = () => {
               borderColor: "var(--ss-workspace-border)",
             }}
           >
-            <Button
-              onClick={() => advanceSimulation()}
-              disabled={isGenerating || isCompareMode || !selectedNodeIsReady}
-              size="sm"
-              className={`min-w-[148px] ${isGenerating ? "!bg-[var(--ss-text-muted)] !text-[var(--ss-neutral-0)] !shadow-none" : ""}`}
-            >
-              {isGenerating ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Play size={14} fill="currentColor" />
-              )}
-              {isGenerating ? t('simPage.advancing') : t('simPage.advance')}
-            </Button>
-
             <div
               className="flex items-center gap-2 rounded-xl border px-3 py-2"
               style={{
@@ -257,10 +241,10 @@ const ContextToolbar: React.FC = () => {
                 size="sm"
                 onClick={() => startAutoAdvance(advanceSteps)}
                 disabled={isGenerating || isCompareMode || !selectedNodeIsReady}
-                className="min-w-[150px] !bg-[var(--ss-success-600)] hover:!bg-emerald-700 !text-white !shadow-[0_14px_32px_rgba(16,185,129,0.18)]"
+                className={`min-w-[148px] ${isGenerating ? "!bg-[var(--ss-text-muted)] !text-[var(--ss-neutral-0)] !shadow-none" : ""}`}
               >
-                <SkipForward size={14} />
-                {t('simPage.autoAdvance')}
+                <Play size={14} fill="currentColor" />
+                {t('simPage.advance')}
               </Button>
             )}
           </div>

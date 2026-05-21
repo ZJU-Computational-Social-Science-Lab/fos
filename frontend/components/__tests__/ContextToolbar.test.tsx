@@ -6,7 +6,7 @@
  */
 
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ContextToolbar from "../ContextToolbar";
 import { useSimulationStore } from "../../store";
@@ -73,16 +73,18 @@ describe("ContextToolbar", () => {
     expect(screen.getByText("Global knowledge")).toBeInTheDocument();
   });
 
-  it("keeps advance, steps, and auto advance in one control group", () => {
+  it("keeps advance and steps in one control group with a single advance button", () => {
     render(<ContextToolbar />);
 
     const group = screen.getByLabelText("Advance controls");
 
-    expect(screen.getByRole("button", { name: "Advance node" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Auto advance" })).toBeInTheDocument();
-    expect(screen.getByRole("spinbutton", { name: "Enter steps" })).toBeInTheDocument();
-    expect(group).toContainElement(screen.getByRole("button", { name: "Advance node" }));
-    expect(group).toContainElement(screen.getByRole("button", { name: "Auto advance" }));
-    expect(group).toContainElement(screen.getByRole("spinbutton", { name: "Enter steps" }));
+    const advanceButton = within(group).getByRole("button", { name: "Advance node" });
+    const stepsInput = within(group).getByRole("spinbutton", { name: "Enter steps" });
+
+    expect(advanceButton).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Auto advance" })).not.toBeInTheDocument();
+    expect(stepsInput).toBeInTheDocument();
+    expect(group).toContainElement(advanceButton);
+    expect(group).toContainElement(stepsInput);
   });
 });
