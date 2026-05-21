@@ -5,12 +5,12 @@
  * network view without leaving the agents tab.
  */
 
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Network, Users } from "lucide-react";
 import { useSimulationStore } from "../store";
 import { AgentPanel } from "./AgentPanel";
-import NetworkGraph from "./NetworkGraph";
+import { SimulationNetworkPanel } from "./SimulationNetworkPanel";
 
 type SidebarTab = "agent-watch" | "network";
 
@@ -18,12 +18,6 @@ export const Sidebar: React.FC = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<SidebarTab>("agent-watch");
   const agents = useSimulationStore((state) => state.agents);
-  const currentSimulation = useSimulationStore((state) => state.currentSimulation);
-
-  const socialNetwork = useMemo(
-    () => currentSimulation?.socialNetwork ?? {},
-    [currentSimulation]
-  );
 
   return (
     <div
@@ -91,21 +85,7 @@ export const Sidebar: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-hidden relative">
-        {activeTab === "agent-watch" ? (
-          <AgentPanel />
-        ) : (
-          <div className="h-full p-3">
-            <div
-              className="h-full rounded-2xl border overflow-hidden"
-              style={{
-                background: "var(--ss-workspace-bg)",
-                borderColor: "var(--ss-workspace-border)",
-              }}
-            >
-              <NetworkGraph network={socialNetwork} agents={agents} />
-            </div>
-          </div>
-        )}
+        {activeTab === "agent-watch" ? <AgentPanel /> : <SimulationNetworkPanel />}
       </div>
     </div>
   );

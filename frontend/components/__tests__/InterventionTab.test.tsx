@@ -18,9 +18,6 @@ vi.mock("react-i18next", () => ({
         {
           "components.interventionTab.hostControl": "Host control",
           "simPage.designExperiment": "Design experiment",
-          "components.interventionTab.designExperimentHint":
-            "Set up parallel branches, interventions, and experiment runs from the intervention area.",
-          "components.interventionTab.openDesigner": "Open experiment designer",
         } as Record<string, string>
       )[key] ?? key,
   }),
@@ -28,6 +25,10 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("../HostPanel", () => ({
   HostPanel: () => <div>Host Control Panel</div>,
+}));
+
+vi.mock("../experiment/ExperimentDesignPanel", () => ({
+  ExperimentDesignPanel: () => <div>Experiment Designer Panel</div>,
 }));
 
 describe("InterventionTab", () => {
@@ -50,6 +51,17 @@ describe("InterventionTab", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Design experiment" }));
 
-    expect(screen.getByText("Open experiment designer")).toBeInTheDocument();
+    expect(screen.getByText("Experiment Designer Panel")).toBeInTheDocument();
+  });
+
+  it("shows the design area without a second open button", () => {
+    render(<InterventionTab />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Design experiment" }));
+
+    expect(screen.getByText("Experiment Designer Panel")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Open experiment designer" })
+    ).not.toBeInTheDocument();
   });
 });

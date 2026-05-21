@@ -12,7 +12,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSimulationStore } from '../store';
 import { useTranslation } from 'react-i18next';
 import { LogEntry, ViewMode } from '../types';
-import { List, CreditCard, Clock, Filter, Search, X, Check, GitCommit, Image as ImageIcon } from 'lucide-react';
+import { ChevronDown, Filter, Search, X, Check, GitCommit, Image as ImageIcon } from 'lucide-react';
 import { getActionConfig, getResourceName } from '../utils/scenarioHelpers';
 
 type DiffOp<T> = {
@@ -584,11 +584,12 @@ export const LogViewer: React.FC = () => {
     return (sceneConfig.parameters as Record<string, unknown>) || sceneConfig || {};
   }, [currentSimulation]);
 
-  const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.CARD);
+  const viewMode = ViewMode.CARD;
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
+  const [openRound, setOpenRound] = useState<number | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const logItemRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -660,6 +661,34 @@ export const LogViewer: React.FC = () => {
     });
   }, [logs, searchQuery, selectedTypes, selectedAgents, ancestorIds]);
 
+  const logGroups = useMemo(() => {
+    const groups = new Map<number, LogEntry[]>();
+    filteredLogs.forEach((log) => {
+      const round = typeof log.round === 'number' ? log.round : 0;
+      if (!groups.has(round)) {
+        groups.set(round, []);
+      }
+      groups.get(round)!.push(log);
+    });
+    return Array.from(groups.entries())
+      .sort((left, right) => left[0] - right[0])
+      .map(([round, entries]) => ({ round, entries }));
+  }, [filteredLogs]);
+
+  useEffect(() => {
+    if (logGroups.length === 0) {
+      setOpenRound(null);
+      return;
+    }
+
+    const hasCurrentOpenGroup = openRound !== null
+      && logGroups.some((group) => group.round === openRound);
+
+    if (!hasCurrentOpenGroup) {
+      setOpenRound(logGroups[0].round);
+    }
+  }, [logGroups, openRound]);
+
   // When the selected node changes, jump to that node's first visible log entry.
   // Otherwise keep the existing behavior of following new logs to the bottom.
   useEffect(() => {
@@ -705,33 +734,6 @@ export const LogViewer: React.FC = () => {
       {/* Toolbar */}
       <div className="border-b px-4 py-2 flex flex-col gap-2 shrink-0 z-20" style={{ background: 'var(--ss-workspace-surface)' }}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1 p-0.5 rounded-lg border" style={{ background: 'var(--ss-surface-inset)' }}>
-            <button
-              onClick={() => setViewMode(ViewMode.LIST)}
-              className={`p-1.5 rounded-md transition-all ${viewMode === ViewMode.LIST ? 'shadow text-brand-600' : ''}`}
-              style={viewMode === ViewMode.LIST ? { background: 'var(--ss-workspace-surface)' } : { color: 'var(--ss-workspace-muted)' }}
-              title={t('components.logViewer.listView')}
-            >
-              <List size={16} />
-            </button>
-            <button
-               onClick={() => setViewMode(ViewMode.CARD)}
-               className={`p-1.5 rounded-md transition-all ${viewMode === ViewMode.CARD ? 'shadow text-brand-600' : ''}`}
-               style={viewMode === ViewMode.CARD ? { background: 'var(--ss-workspace-surface)' } : { color: 'var(--ss-workspace-muted)' }}
-               title={t('components.logViewer.cardView')}
-            >
-              <CreditCard size={16} />
-            </button>
-             <button
-               onClick={() => setViewMode(ViewMode.TIMELINE)}
-               className={`p-1.5 rounded-md transition-all ${viewMode === ViewMode.TIMELINE ? 'shadow text-brand-600' : ''}`}
-               style={viewMode === ViewMode.TIMELINE ? { background: 'var(--ss-workspace-surface)' } : { color: 'var(--ss-workspace-muted)' }}
-               title={t('components.logViewer.timelineView')}
-            >
-               <Clock size={16} />
-            </button>
-          </div>
-
           <div className="flex items-center gap-2 flex-1 justify-end">
             <div className="flex items-center gap-1 text-[10px] border px-2 py-1 rounded" style={{ color: 'var(--ss-workspace-muted)', background: 'var(--ss-surface-strong)' }}>
                <GitCommit size={12} />
@@ -846,26 +848,81 @@ export const LogViewer: React.FC = () => {
         )}
 
         {filteredLogs.length > 0 ? (
-          filteredLogs.map(log => {
-             // Find corresponding node worldTime if available (optional enhancement)
-             const node = nodes.find(n => n.id === log.nodeId);
-             return (
-               <div
-                 key={log.id}
-                 ref={(element) => {
-                   logItemRefs.current[log.id] = element;
-                 }}
-               >
-                 <LogItem
-                   entry={log}
-                   mode={viewMode}
-                   nodeWorldTime={node?.worldTime}
-                   agents={agents}
-                   scenarioParams={scenarioParams}
-                 />
-               </div>
-             );
-          })
+          <div className="space-y-3">
+            {logGroups.map((group) => {
+              const isOpen = group.round === openRound;
+              const groupLabel = group.round <= 0
+                ? t('components.logViewer.setupGroup', { defaultValue: 'Setup' })
+                : t('components.logViewer.stepGroup', {
+                    step: group.round,
+                    defaultValue: `Step ${group.round}`,
+                  });
+
+              return (
+                <section
+                  key={`round-${group.round}`}
+                  className="rounded-xl border overflow-hidden"
+                  style={{
+                    background: 'var(--ss-workspace-surface)',
+                    borderColor: 'var(--ss-workspace-border)',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setOpenRound(group.round)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-left"
+                    style={{ background: 'var(--ss-surface-strong)' }}
+                  >
+                    <div>
+                      <div
+                        className="text-sm font-semibold"
+                        style={{ color: 'var(--ss-workspace-heading)' }}
+                      >
+                        {groupLabel}
+                      </div>
+                      <div
+                        className="text-[11px] mt-1"
+                        style={{ color: 'var(--ss-workspace-muted)' }}
+                      >
+                        {t('components.logViewer.showingRecords', {
+                          count: group.entries.length,
+                        })}
+                      </div>
+                    </div>
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                      style={{ color: 'var(--ss-workspace-muted)' }}
+                    />
+                  </button>
+
+                  {isOpen && (
+                    <div className="p-4">
+                      {group.entries.map(log => {
+                        const node = nodes.find(n => n.id === log.nodeId);
+                        return (
+                          <div
+                            key={log.id}
+                            ref={(element) => {
+                              logItemRefs.current[log.id] = element;
+                            }}
+                          >
+                            <LogItem
+                              entry={log}
+                              mode={viewMode}
+                              nodeWorldTime={node?.worldTime}
+                              agents={agents}
+                              scenarioParams={scenarioParams}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-40" style={{ color: 'var(--ss-workspace-muted)' }}>
             <Search size={32} className="mb-2 opacity-20" />

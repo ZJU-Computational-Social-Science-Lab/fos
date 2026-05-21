@@ -8,17 +8,15 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Beaker, Zap } from "lucide-react";
-import { useSimulationStore } from "../store";
+
 import { HostPanel } from "./HostPanel";
+import { ExperimentDesignPanel } from "./experiment/ExperimentDesignPanel";
 
 type InterventionView = "host-control" | "design-experiment";
 
 export const InterventionTab: React.FC = () => {
   const { t } = useTranslation();
   const [activeView, setActiveView] = useState<InterventionView>("host-control");
-  const toggleExperimentDesigner = useSimulationStore(
-    (state) => state.toggleExperimentDesigner
-  );
 
   return (
     <div
@@ -68,50 +66,7 @@ export const InterventionTab: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-hidden">
-        {activeView === "host-control" ? (
-          <HostPanel />
-        ) : (
-          <div className="h-full overflow-auto p-6">
-            <div
-              className="max-w-4xl rounded-3xl border p-8 shadow-sm"
-              style={{
-                background: "var(--ss-workspace-surface)",
-                borderColor: "var(--ss-workspace-border)",
-              }}
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <Beaker
-                  size={22}
-                  style={{ color: "var(--ss-brand-primary)" }}
-                />
-                <h2
-                  className="text-xl font-semibold"
-                  style={{ color: "var(--ss-workspace-heading)" }}
-                >
-                  {t("simPage.designExperiment")}
-                </h2>
-              </div>
-              <p
-                className="text-sm leading-6 mb-6"
-                style={{ color: "var(--ss-workspace-muted)" }}
-              >
-                {t("components.interventionTab.designExperimentHint")}
-              </p>
-              <button
-                type="button"
-                onClick={() => toggleExperimentDesigner(true)}
-                className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-medium"
-                style={{
-                  background: "var(--ss-brand-primary)",
-                  color: "var(--ss-brand-on)",
-                }}
-              >
-                <Beaker size={16} />
-                {t("components.interventionTab.openDesigner")}
-              </button>
-            </div>
-          </div>
-        )}
+        {activeView === "host-control" ? <HostPanel /> : <ExperimentDesignPanel />}
       </div>
     </div>
   );
