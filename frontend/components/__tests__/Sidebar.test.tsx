@@ -18,6 +18,8 @@ vi.mock("react-i18next", () => ({
         {
           "components.sidebar.agentWatch": "Agent watch",
           "simPage.network": "Network",
+          "experimentBuilder.step5.networkPresets": "Network presets",
+          "experimentBuilder.step5.manualLinks": "Manual links",
         } as Record<string, string>
       )[key] ?? key,
   }),
@@ -59,5 +61,14 @@ describe("Sidebar", () => {
     fireEvent.click(screen.getByRole("button", { name: "Network" }));
 
     expect(screen.getByText("Network Panel")).toBeInTheDocument();
+  });
+
+  it("shows network tools in the network view", () => {
+    render(<Sidebar />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Network" }));
+
+    expect(screen.getByText("Network presets")).toBeInTheDocument();
+    expect(screen.getByText("Manual links")).toBeInTheDocument();
   });
 });
