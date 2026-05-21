@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import SimulationPage from '../../pages/SimulationPage';
@@ -85,8 +85,9 @@ describe('Auto-advance — full integration flow', () => {
     const input = screen.getByTitle(/enter number of steps/i);
     fireEvent.change(input, { target: { value: '3' } });
 
-    // Click auto advance
-    const button = screen.getByText(/auto advance/i);
+    // Click advance node, which now runs the chosen number of steps
+    const group = screen.getByRole('group', { name: /advance controls/i });
+    const button = within(group).getByRole('button', { name: /advance node/i });
     await act(async () => {
       fireEvent.click(button);
     });
@@ -121,7 +122,8 @@ describe('Auto-advance — full integration flow', () => {
     fireEvent.change(input, { target: { value: '20' } });
 
     // Start
-    const button = screen.getByText(/auto advance/i);
+    const group = screen.getByRole('group', { name: /advance controls/i });
+    const button = within(group).getByRole('button', { name: /advance node/i });
     await act(async () => {
       fireEvent.click(button);
     });
