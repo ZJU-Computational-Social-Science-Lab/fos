@@ -1362,6 +1362,7 @@
       "timelineView": "Timeline view",
       "currentBranchFilter": "Current branch path filter",
       "searchPlaceholder": "Search logs...",
+      "agentOutputProgress": "{{finished}} of {{total}} agents reported",
       "filter": "Filter",
       "eventTypes": "Event Types",
       "typeSystem": "System",

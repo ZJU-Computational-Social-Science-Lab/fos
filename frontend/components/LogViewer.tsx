@@ -12,8 +12,10 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSimulationStore } from '../store';
 import { useTranslation } from 'react-i18next';
 import { LogEntry, ViewMode } from '../types';
-import { ChevronDown, Filter, Search, X, Check, GitCommit, Image as ImageIcon } from 'lucide-react';
+import { ChevronDown, Filter, Search, X, Check, Image as ImageIcon } from 'lucide-react';
 import { getActionConfig, getResourceName } from '../utils/scenarioHelpers';
+import { buildRoundProgressMap, getLatestRoundProgress } from '../utils/logProgress';
+import { WorkspaceRunControls } from './WorkspaceRunControls';
 
 type DiffOp<T> = {
   type: 'equal' | 'add' | 'remove';
@@ -589,8 +591,8 @@ export const LogViewer: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
-  const [openRound, setOpenRound] = useState<number | null>(null);
-  const hasInitializedOpenRoundRef = useRef(false);
+  const [openRounds, setOpenRounds] = useState<Set<number>>(new Set());
+  const hasInitializedOpenRoundsRef = useRef(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const logItemRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -620,24 +622,28 @@ export const LogViewer: React.FC = () => {
     }
   }, [logs]);
 
-  // Filter Logic with deduplication (BUG-UI-02 fix)
-  const filteredLogs = useMemo(() => {
+  const pathLogs = useMemo(() => {
     const seenIds = new Set<string>();
 
     return logs.filter(log => {
-      // 0. Deduplication guard - prevent duplicate event IDs
       if (seenIds.has(log.id)) {
         console.warn(`Duplicate event filtered: ${log.id}`);
         return false;
       }
       seenIds.add(log.id);
 
-      // 1. Ancestry Filter (Strict: only show logs from current path)
       if (log.nodeId && !ancestorIds.has(log.nodeId)) {
         return false;
       }
 
-      // 2. Search Text
+      return true;
+    });
+  }, [logs, ancestorIds]);
+
+  // Filter Logic with deduplication (BUG-UI-02 fix)
+  const filteredLogs = useMemo(() => {
+    return pathLogs.filter(log => {
+
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const contentMatch = log.content.toLowerCase().includes(query);
@@ -646,12 +652,10 @@ export const LogViewer: React.FC = () => {
         if (!contentMatch && !agentMatch && !typeMatch) return false;
       }
 
-      // 3. Filter by Type
       if (selectedTypes.length > 0 && !selectedTypes.includes(log.type)) {
         return false;
       }
 
-      // 4. Filter by Agent
       if (selectedAgents.length > 0) {
         if (!log.agentId || !selectedAgents.includes(log.agentId)) {
           return false;
@@ -660,7 +664,7 @@ export const LogViewer: React.FC = () => {
 
       return true;
     });
-  }, [logs, searchQuery, selectedTypes, selectedAgents, ancestorIds]);
+  }, [pathLogs, searchQuery, selectedTypes, selectedAgents]);
 
   const logGroups = useMemo(() => {
     const groups = new Map<number, LogEntry[]>();
@@ -676,26 +680,76 @@ export const LogViewer: React.FC = () => {
       .map(([round, entries]) => ({ round, entries }));
   }, [filteredLogs]);
 
+  const pathLogGroups = useMemo(() => {
+    const groups = new Map<number, LogEntry[]>();
+    pathLogs.forEach((log) => {
+      const round = typeof log.round === 'number' ? log.round : 0;
+      if (!groups.has(round)) {
+        groups.set(round, []);
+      }
+      groups.get(round)!.push(log);
+    });
+    return Array.from(groups.entries())
+      .sort((left, right) => left[0] - right[0])
+      .map(([round, entries]) => ({ round, entries }));
+  }, [pathLogs]);
+
+  const progressByRound = useMemo(
+    () => buildRoundProgressMap(pathLogGroups, agents.length),
+    [pathLogGroups, agents.length],
+  );
+
+  const latestRoundProgress = useMemo(
+    () => getLatestRoundProgress(pathLogGroups, agents.length),
+    [pathLogGroups, agents.length],
+  );
+
+  const progressLabel = useMemo(() => {
+    if (!latestRoundProgress || latestRoundProgress.totalAgents <= 0) {
+      return null;
+    }
+
+    const stepLabel = latestRoundProgress.round <= 0
+      ? t('components.logViewer.setupGroup', { defaultValue: 'Setup' })
+      : t('components.logViewer.stepGroup', {
+          step: latestRoundProgress.round,
+          defaultValue: `Step ${latestRoundProgress.round}`,
+        });
+    const agentProgress = t('components.logViewer.agentOutputProgress', {
+      finished: latestRoundProgress.finishedAgents,
+      total: latestRoundProgress.totalAgents,
+      defaultValue: `${latestRoundProgress.finishedAgents} of ${latestRoundProgress.totalAgents} agents reported`,
+    });
+
+    return `${stepLabel} - ${agentProgress}`;
+  }, [latestRoundProgress, t]);
+
   useEffect(() => {
     if (logGroups.length === 0) {
-      setOpenRound(null);
-      hasInitializedOpenRoundRef.current = false;
+      setOpenRounds(new Set());
+      hasInitializedOpenRoundsRef.current = false;
       return;
     }
 
-    if (!hasInitializedOpenRoundRef.current) {
-      hasInitializedOpenRoundRef.current = true;
-      setOpenRound(logGroups[0].round);
+    if (!hasInitializedOpenRoundsRef.current) {
+      hasInitializedOpenRoundsRef.current = true;
+      setOpenRounds(new Set([logGroups[0].round]));
       return;
     }
 
-    const hasCurrentOpenGroup = openRound !== null
-      && logGroups.some((group) => group.round === openRound);
+    const availableRounds = new Set(logGroups.map((group) => group.round));
+    setOpenRounds((currentRounds) => {
+      const nextRounds = new Set(
+        Array.from(currentRounds).filter((round) => availableRounds.has(round)),
+      );
 
-    if (openRound !== null && !hasCurrentOpenGroup) {
-      setOpenRound(logGroups[0].round);
-    }
-  }, [logGroups, openRound]);
+      if (nextRounds.size === 0 && logGroups.length > 0) {
+        nextRounds.add(logGroups[0].round);
+      }
+
+      return nextRounds;
+    });
+  }, [logGroups]);
 
   // When the selected node changes, jump to that node's first visible log entry.
   // Otherwise keep the existing behavior of following new logs to the bottom.
@@ -741,25 +795,41 @@ export const LogViewer: React.FC = () => {
     <div className="flex flex-col h-full border rounded-lg overflow-hidden relative" style={{ background: 'var(--ss-surface-strong)' }}>
       {/* Toolbar */}
       <div className="border-b px-4 py-2 flex flex-col gap-2 shrink-0 z-20" style={{ background: 'var(--ss-workspace-surface)' }}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 flex-1 justify-end">
-            <div className="flex items-center gap-1 text-[10px] border px-2 py-1 rounded" style={{ color: 'var(--ss-workspace-muted)', background: 'var(--ss-surface-strong)' }}>
-               <GitCommit size={12} />
-               <span>{t('components.logViewer.currentBranchFilter')}</span>
-            </div>
-
-            <div className="relative max-w-[180px] w-full">
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex items-center gap-2 flex-1 justify-end xl:order-2">
+            <WorkspaceRunControls progressLabel={progressLabel} compact />
+          </div>
+          <div className="flex items-center gap-2 flex-1 justify-end xl:order-1">
+            <div className="relative w-full min-w-[180px] max-w-[220px]">
               <input
                 type="text"
                 placeholder={t('components.logViewer.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs border rounded focus:ring-1 focus:ring-brand-500 outline-none transition-all"
-                style={{ background: 'var(--ss-surface-strong)' }}
+                className="w-full py-1.5 text-xs border rounded focus:ring-1 focus:ring-brand-500 outline-none transition-all"
+                style={{
+                  background: 'var(--ss-surface-strong)',
+                  paddingLeft: '2.875rem',
+                  paddingRight: '2.25rem',
+                  minHeight: '2.25rem',
+                }}
               />
-              <Search size={12} className="absolute left-2.5 top-2" style={{ color: 'var(--ss-workspace-muted)' }} />
+              <Search
+                data-testid="log-search-icon"
+                size={12}
+                className="absolute top-1/2 -translate-y-1/2"
+                style={{
+                  color: 'var(--ss-workspace-muted)',
+                  left: '0.875rem',
+                  pointerEvents: 'none',
+                }}
+              />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="absolute right-2 top-2 hover:text-slate-600" style={{ color: 'var(--ss-workspace-muted)' }}>
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute top-1/2 -translate-y-1/2 hover:text-slate-600"
+                  style={{ color: 'var(--ss-workspace-muted)', right: '0.5rem' }}
+                >
                   <X size={12} />
                 </button>
               )}
@@ -858,7 +928,7 @@ export const LogViewer: React.FC = () => {
         {filteredLogs.length > 0 ? (
           <div className="space-y-3">
             {logGroups.map((group) => {
-              const isOpen = group.round === openRound;
+              const isOpen = openRounds.has(group.round);
               const groupLabel = group.round <= 0
                 ? t('components.logViewer.setupGroup', { defaultValue: 'Setup' })
                 : t('components.logViewer.stepGroup', {
@@ -878,9 +948,15 @@ export const LogViewer: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setOpenRound((currentRound) => (
-                        currentRound === group.round ? null : group.round
-                      ));
+                      setOpenRounds((currentRounds) => {
+                        const nextRounds = new Set(currentRounds);
+                        if (nextRounds.has(group.round)) {
+                          nextRounds.delete(group.round);
+                        } else {
+                          nextRounds.add(group.round);
+                        }
+                        return nextRounds;
+                      });
                     }}
                     className="w-full flex items-center justify-between px-4 py-3 text-left"
                     style={{ background: 'var(--ss-surface-strong)' }}
@@ -892,15 +968,21 @@ export const LogViewer: React.FC = () => {
                       >
                         {groupLabel}
                       </div>
-                      <div
-                        className="text-[11px] mt-1"
-                        style={{ color: 'var(--ss-workspace-muted)' }}
-                      >
-                        {t('components.logViewer.showingRecords', {
+                    <div
+                      className="text-[11px] mt-1"
+                      style={{ color: 'var(--ss-workspace-muted)' }}
+                    >
+                        {[t('components.logViewer.showingRecords', {
                           count: group.entries.length,
-                        })}
-                      </div>
+                        }), progressByRound.has(group.round) && progressByRound.get(group.round)!.totalAgents > 0
+                          ? t('components.logViewer.agentOutputProgress', {
+                              finished: progressByRound.get(group.round)!.finishedAgents,
+                              total: progressByRound.get(group.round)!.totalAgents,
+                              defaultValue: `${progressByRound.get(group.round)!.finishedAgents} of ${progressByRound.get(group.round)!.totalAgents} agents reported`,
+                            })
+                            : null].filter(Boolean).join(' - ')}
                     </div>
+                  </div>
                     <ChevronDown
                       size={16}
                       className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
