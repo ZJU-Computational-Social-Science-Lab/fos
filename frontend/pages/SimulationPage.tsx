@@ -34,7 +34,6 @@ import { getTreeGraph, getSimEvents, getSimState, getRehydrate } from "../servic
 import { useAuthStore } from "../store/auth";
 import { useTranslation } from "react-i18next";
 import { TabRail } from "../components/TabRail";
-import ContextToolbar from "../components/ContextToolbar";
 import { PeekOverlay } from "../components/PeekOverlay";
 
 // ---------------- SimulationPage ----------------
@@ -525,8 +524,7 @@ const SimulationPage: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {activeTab === 'workspace' && (
           <>
-            <ContextToolbar />
-            <div className="flex-1 overflow-hidden relative p-3">
+            <div className="flex-1 overflow-hidden relative px-3 pb-3 pt-2">
               <div className="flex gap-3 h-full">
                 <div className="w-[40%] flex flex-col">
                   <SimTree layoutDirection="vertical" />
