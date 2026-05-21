@@ -12,7 +12,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSimulationStore } from '../store';
 import { useTranslation } from 'react-i18next';
 import { LogEntry, ViewMode } from '../types';
-import { ChevronDown, Filter, Search, X, Check, Image as ImageIcon } from 'lucide-react';
+import { ChevronDown, Search, X, Check, Image as ImageIcon } from 'lucide-react';
 import { getActionConfig, getResourceName } from '../utils/scenarioHelpers';
 import { buildRoundProgressMap, getLatestRoundProgress } from '../utils/logProgress';
 import { WorkspaceRunControls } from './WorkspaceRunControls';
@@ -587,10 +587,7 @@ export const LogViewer: React.FC = () => {
   }, [currentSimulation]);
 
   const viewMode = ViewMode.CARD;
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
   const [openRounds, setOpenRounds] = useState<Set<number>>(new Set());
   const hasInitializedOpenRoundsRef = useRef(false);
 
@@ -643,7 +640,6 @@ export const LogViewer: React.FC = () => {
   // Filter Logic with deduplication (BUG-UI-02 fix)
   const filteredLogs = useMemo(() => {
     return pathLogs.filter(log => {
-
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         const contentMatch = log.content.toLowerCase().includes(query);
@@ -652,19 +648,9 @@ export const LogViewer: React.FC = () => {
         if (!contentMatch && !agentMatch && !typeMatch) return false;
       }
 
-      if (selectedTypes.length > 0 && !selectedTypes.includes(log.type)) {
-        return false;
-      }
-
-      if (selectedAgents.length > 0) {
-        if (!log.agentId || !selectedAgents.includes(log.agentId)) {
-          return false;
-        }
-      }
-
       return true;
     });
-  }, [pathLogs, searchQuery, selectedTypes, selectedAgents]);
+  }, [pathLogs, searchQuery]);
 
   const logGroups = useMemo(() => {
     const groups = new Map<number, LogEntry[]>();
@@ -771,25 +757,11 @@ export const LogViewer: React.FC = () => {
     }
   }, [filteredLogs, selectedNodeId]);
 
-  const toggleType = (type: string) => {
-    setSelectedTypes(prev =>
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-    );
-  };
-
-  const toggleAgent = (agentId: string) => {
-    setSelectedAgents(prev =>
-      prev.includes(agentId) ? prev.filter(id => id !== agentId) : [...prev, agentId]
-    );
-  };
-
   const clearFilters = () => {
     setSearchQuery('');
-    setSelectedTypes([]);
-    setSelectedAgents([]);
   };
 
-  const hasActiveFilters = searchQuery || selectedTypes.length > 0 || selectedAgents.length > 0;
+  const hasActiveFilters = Boolean(searchQuery);
 
   return (
     <div className="flex flex-col h-full border rounded-lg overflow-hidden relative" style={{ background: 'var(--ss-surface-strong)' }}>
@@ -834,89 +806,8 @@ export const LogViewer: React.FC = () => {
                 </button>
               )}
             </div>
-
-            <button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium border rounded transition-colors ${isFilterOpen || (hasActiveFilters && !searchQuery) ? 'bg-brand-50 text-brand-700 border-brand-200' : ''}`}
-              style={!isFilterOpen && !(hasActiveFilters && !searchQuery) ? { background: 'var(--ss-workspace-surface)', color: 'var(--ss-workspace-text)' } : undefined}
-            >
-              <Filter size={14} />
-              <span className="hidden sm:inline">{t('components.logViewer.filter')}</span>
-              {(selectedTypes.length > 0 || selectedAgents.length > 0) && (
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand-600 text-[9px] text-white">
-                  {selectedTypes.length + selectedAgents.length}
-                </span>
-              )}
-            </button>
           </div>
         </div>
-
-        {/* Filter Panel */}
-        {isFilterOpen && (
-          <div className="pt-2 pb-3 border-t mt-1 space-y-3 animate-in slide-in-from-top-2 duration-200">
-             <div>
-              <div className="text-[10px] uppercase font-bold mb-1.5 tracking-wider" style={{ color: 'var(--ss-workspace-muted)' }}>{t('components.logViewer.eventTypes')}</div>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { id: 'SYSTEM', label: t('components.logViewer.system') },
-                  { id: 'AGENT_METADATA', label: t('components.logViewer.agentMetadata') },
-                  { id: 'AGENT_SAY', label: t('components.logViewer.dialogue') },
-                  { id: 'AGENT_ACTION', label: t('components.logViewer.action') },
-                  { id: 'ENVIRONMENT', label: t('components.logViewer.environment') },
-                ].map(type => (
-                  <button
-                    key={type.id}
-                    onClick={() => toggleType(type.id)}
-                    className={`px-2 py-1 rounded text-xs border flex items-center gap-1.5 transition-all ${
-                      selectedTypes.includes(type.id)
-                        ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
-                        : ''
-                    }`}
-                    style={!selectedTypes.includes(type.id) ? { background: 'var(--ss-workspace-surface)', color: 'var(--ss-workspace-text)', borderColor: 'var(--ss-workspace-border)' } : undefined}
-                  >
-                    {selectedTypes.includes(type.id) && <Check size={10} />}
-                    {type.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Agents */}
-            {agents.length > 0 && (
-              <div>
-                <div className="text-[10px] uppercase font-bold mb-1.5 tracking-wider" style={{ color: 'var(--ss-workspace-muted)' }}>{t('components.logViewer.relatedAgents')}</div>
-                <div className="flex flex-wrap gap-2">
-                  {agents.map(agent => (
-                    <button
-                      key={agent.id}
-                      onClick={() => toggleAgent(agent.id)}
-                      className={`px-2 py-1 rounded-full text-xs border flex items-center gap-1.5 transition-all pl-1 ${
-                        selectedAgents.includes(agent.id)
-                          ? 'bg-brand-600 text-white border-brand-600 shadow-sm'
-                          : ''
-                      }`}
-                      style={!selectedAgents.includes(agent.id) ? { background: 'var(--ss-workspace-surface)', color: 'var(--ss-workspace-text)', borderColor: 'var(--ss-workspace-border)' } : undefined}
-                    >
-                      <img src={agent.avatarUrl} alt="" className="w-4 h-4 rounded-full" style={{ background: 'var(--ss-surface-inset)' }} />
-                      {agent.name}
-                      {selectedAgents.includes(agent.id) && <Check size={10} />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end pt-2">
-              <button
-                onClick={clearFilters}
-                className="text-xs hover:text-slate-600 underline underline-offset-2"
-                style={{ color: 'var(--ss-workspace-muted)' }}
-              >
-                {t('components.logViewer.clearAllFilters')}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Content */}

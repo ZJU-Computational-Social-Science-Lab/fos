@@ -19,7 +19,6 @@ vi.mock("react-i18next", () => ({
         {
           "components.logViewer.currentBranchFilter": "Current branch",
           "components.logViewer.searchPlaceholder": "Search logs",
-          "components.logViewer.filter": "Filter",
           "components.logViewer.noMatchingLogs": "No matching logs found",
           "components.logViewer.noActivityYet": "No activity yet",
           "components.logViewer.showingRecords": `Showing ${options?.count ?? 0} records`,
@@ -81,6 +80,7 @@ describe("LogViewer", () => {
     expect(screen.queryByTitle("Card view")).not.toBeInTheDocument();
     expect(screen.queryByTitle("Timeline view")).not.toBeInTheDocument();
     expect(screen.queryByText("Current branch")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Filter" })).not.toBeInTheDocument();
     expect(screen.getByText("No matching logs found")).toBeInTheDocument();
   });
 
