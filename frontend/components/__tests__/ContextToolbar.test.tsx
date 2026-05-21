@@ -29,6 +29,8 @@ vi.mock("react-i18next", () => ({
           "simPage.globalKnowledge": "Global knowledge",
           "simPage.moreActions": "More actions",
           "simPage.selectProvider": "Select provider",
+          "sim.running": "Running",
+          "sim.agents": "Agents",
         } as Record<string, string>
       )[key] ?? key,
   }),
@@ -44,6 +46,7 @@ describe("ContextToolbar", () => {
       isAutoAdvancing: false,
       autoAdvanceCurrent: 0,
       autoAdvanceTotal: 0,
+      agents: [],
       llmProviders: [],
       selectedProviderId: null,
       currentProviderId: null,
@@ -83,8 +86,24 @@ describe("ContextToolbar", () => {
 
     expect(advanceButton).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Auto advance" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create branch" })).not.toBeInTheDocument();
     expect(stepsInput).toBeInTheDocument();
     expect(group).toContainElement(advanceButton);
     expect(group).toContainElement(stepsInput);
+  });
+
+  it("shows running status and agent count beside the advance controls", () => {
+    useSimulationStore.setState({
+      isGenerating: true,
+      agents: new Array(1247).fill(null).map((_, index) => ({
+        id: `agent-${index}`,
+        name: `Agent ${index}`,
+      })),
+    } as never);
+
+    render(<ContextToolbar />);
+
+    expect(screen.getByText("Running")).toBeInTheDocument();
+    expect(screen.getByText("1,247 Agents")).toBeInTheDocument();
   });
 });
