@@ -22,17 +22,45 @@ vi.mock("react-i18next", () => ({
           "simPage.tabs.agents": "Agents",
           "simPage.tabs.intervention": "Intervention",
           "simPage.tabs.analyse": "Analyse",
+          "simPage.more": "More",
+          "simPage.moreActions": "More actions",
+          "simPage.provider": "Provider",
+          "simPage.selectProvider": "Select provider",
+          "simPage.globalKnowledge": "Global Knowledge Base",
+          "simPage.analytics": "Analytics",
+          "simPage.report": "Report",
+          "simPage.export": "Export",
+          "simPage.resetSimulation": "Reset",
+          "simPage.deleteSimulation": "Delete experiment...",
+          "simPage.confirmReset": "Reset this simulation?",
+          "simPage.confirmDelete": "Delete this simulation?",
         } as Record<string, string>
       )[key] ?? key,
   }),
 }));
 
 describe("TabRail", () => {
+  const confirmMock = vi.fn();
+
   beforeEach(() => {
+    confirmMock.mockReset();
+    vi.stubGlobal("confirm", confirmMock);
     useSimulationStore.setState({
+      currentSimulation: { id: "sim-1", name: "Test simulation" },
       activeTab: "workspace",
       peekTab: null,
       peekOverlayActive: false,
+      llmProviders: [],
+      selectedProviderId: null,
+      currentProviderId: null,
+      setSelectedProvider: vi.fn(),
+      toggleAnalytics: vi.fn(),
+      toggleExport: vi.fn(),
+      toggleReportModal: vi.fn(),
+      setGlobalKnowledgeOpen: vi.fn(),
+      resetSimulation: vi.fn(() => Promise.resolve()),
+      deleteSimulation: vi.fn(() => Promise.resolve()),
+      isGenerating: false,
     } as never);
   });
 
@@ -54,5 +82,23 @@ describe("TabRail", () => {
     vi.advanceTimersByTime(350);
 
     expect(useSimulationStore.getState().peekTab).toBeNull();
+  });
+
+  it("shows the more actions button below the analyse tab", () => {
+    render(<TabRail width={96} />);
+
+    const buttons = screen.getAllByRole("button");
+    expect(buttons.at(-2)).toHaveAttribute("title", "Analyse");
+    expect(buttons.at(-1)).toHaveAttribute("aria-label", "More");
+    expect(buttons.at(-1)).toHaveTextContent("More");
+  });
+
+  it("opens the moved more actions menu from the rail", () => {
+    render(<TabRail width={96} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+
+    expect(screen.getByRole("button", { name: "Reset" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete experiment..." })).toBeInTheDocument();
   });
 });

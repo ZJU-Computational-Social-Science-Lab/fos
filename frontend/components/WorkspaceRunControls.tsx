@@ -1,21 +1,13 @@
 /**
  * This file shows the run controls used on the workspace page.
  *
- * `WorkspaceRunControls` shows run status, agent count, step progress, advance controls,
- * and the overflow menu for secondary tools.
+ * `WorkspaceRunControls` shows run status, agent count, step progress,
+ * and the advance controls.
  */
 
 import React from "react";
 import { useTranslation } from "react-i18next";
-import {
-  BarChart2,
-  Download,
-  FileText,
-  Globe,
-  MoreHorizontal,
-  Play,
-  Square,
-} from "lucide-react";
+import { Play, Square } from "lucide-react";
 
 import { useSimulationStore } from "../store";
 import { Button } from "./ui/button";
@@ -24,133 +16,6 @@ interface WorkspaceRunControlsProps {
   progressLabel?: string | null;
   compact?: boolean;
 }
-
-// This builds the small provider picker shown inside the overflow menu.
-const ProviderPicker: React.FC = () => {
-  const { t } = useTranslation();
-  const llmProviders = useSimulationStore((state) => state.llmProviders);
-  const selectedProviderId = useSimulationStore((state) => state.selectedProviderId);
-  const currentProviderId = useSimulationStore((state) => state.currentProviderId);
-  const setSelectedProvider = useSimulationStore((state) => state.setSelectedProvider);
-  const providerSelection = selectedProviderId ?? currentProviderId ?? null;
-
-  return (
-    <div
-      className="rounded-xl border p-3 space-y-2"
-      style={{ borderColor: "var(--ss-workspace-border)" }}
-    >
-      <div className="text-xs font-medium" style={{ color: "var(--ss-workspace-muted)" }}>
-        {t("simPage.provider")}
-      </div>
-      <select
-        value={providerSelection ?? ""}
-        onChange={(event) => {
-          const nextValue = event.target.value;
-          setSelectedProvider(nextValue ? Number(nextValue) : null);
-        }}
-        className="w-full border rounded-full px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--ss-brand-primary)]"
-        style={{ background: "var(--ss-surface)", borderColor: "var(--ss-border)" }}
-      >
-        <option value="">{t("simPage.selectProvider")}</option>
-        {llmProviders.map((provider) => (
-          <option key={provider.id} value={provider.id}>
-            {provider.name || provider.provider} {provider.model ? `(${provider.model})` : ""}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-};
-
-// This shows the extra tools that do not need to stay on the main control row.
-const MoreActionsMenu: React.FC = () => {
-  const { t } = useTranslation();
-  const [isOpen, setIsOpen] = React.useState(false);
-  const toggleAnalytics = useSimulationStore((state) => state.toggleAnalytics);
-  const toggleExport = useSimulationStore((state) => state.toggleExport);
-  const toggleReportModal = useSimulationStore((state) => state.toggleReportModal);
-  const setGlobalKnowledgeOpen = useSimulationStore((state) => state.setGlobalKnowledgeOpen);
-
-  return (
-    <div className="relative">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => setIsOpen((current) => !current)}
-        aria-label={t("simPage.moreActions")}
-      >
-        <MoreHorizontal size={14} />
-      </Button>
-
-      {isOpen ? (
-        <div
-          className="absolute right-0 top-full mt-2 w-72 rounded-2xl border shadow-xl p-3 z-20"
-          style={{
-            background: "var(--ss-workspace-surface)",
-            borderColor: "var(--ss-workspace-border)",
-          }}
-        >
-          <div className="space-y-2">
-            <ProviderPicker />
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setGlobalKnowledgeOpen(true);
-                setIsOpen(false);
-              }}
-              className="w-full justify-start"
-            >
-              <Globe size={14} />
-              {t("simPage.globalKnowledge")}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                toggleAnalytics(true);
-                setIsOpen(false);
-              }}
-              className="w-full justify-start"
-            >
-              <BarChart2 size={14} />
-              {t("simPage.analytics")}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                toggleReportModal(true);
-                setIsOpen(false);
-              }}
-              className="w-full justify-start"
-            >
-              <FileText size={14} />
-              {t("simPage.report")}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                toggleExport(true);
-                setIsOpen(false);
-              }}
-              className="w-full justify-start"
-            >
-              <Download size={14} />
-              {t("simPage.export")}
-            </Button>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-};
 
 // This shows the main workspace controls in a compact row.
 export const WorkspaceRunControls: React.FC<WorkspaceRunControlsProps> = ({
@@ -288,8 +153,6 @@ export const WorkspaceRunControls: React.FC<WorkspaceRunControlsProps> = ({
           })}
         </span>
       ) : null}
-
-      <MoreActionsMenu />
     </div>
   );
 };
