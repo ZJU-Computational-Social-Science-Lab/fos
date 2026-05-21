@@ -15,8 +15,6 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import {
   Play,
-  GitFork,
-  Loader2,
   BarChart2,
   Download,
   Globe,
@@ -33,14 +31,14 @@ const ContextToolbar: React.FC = () => {
   // Tab selection
   const activeTab = useSimulationStore((s) => s.activeTab);
 
-  // Advance / Branch / Auto-advance
-  const branchSimulation = useSimulationStore((s) => s.branchSimulation);
+  // Advance / Auto-advance
   const isGenerating = useSimulationStore((s) => s.isGenerating);
   const isAutoAdvancing = useSimulationStore((s) => s.isAutoAdvancing);
   const autoAdvanceCurrent = useSimulationStore((s) => s.autoAdvanceCurrent);
   const autoAdvanceTotal = useSimulationStore((s) => s.autoAdvanceTotal);
   const startAutoAdvance = useSimulationStore((s) => s.startAutoAdvance);
   const stopAutoAdvance = useSimulationStore((s) => s.stopAutoAdvance);
+  const agents = useSimulationStore((s) => s.agents);
 
   // Node readiness — disable actions when selected node is a placeholder
   const selectedNodeId = useSimulationStore((s) => s.selectedNodeId);
@@ -64,23 +62,9 @@ const ContextToolbar: React.FC = () => {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = React.useState(false);
 
   const providerSelection = selectedProviderId ?? currentProviderId ?? null;
-
-  // ---- simTree tab toolbar ----
-  const simTreeToolbar = (
-    <>
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={branchSimulation}
-          disabled={isGenerating || isCompareMode || !selectedNodeIsReady}
-        >
-          <GitFork size={14} />
-          {t('simPage.branch')}
-        </Button>
-      </div>
-    </>
-  );
+  const isRunning = isGenerating || isAutoAdvancing;
+  const agentCount = agents.length;
+  const formattedAgentCount = new Intl.NumberFormat().format(agentCount);
 
   const moreMenu = (
     <div className="relative">
@@ -190,8 +174,37 @@ const ContextToolbar: React.FC = () => {
     <div className="flex items-center gap-3 px-4 py-3 border-b min-h-[56px]" style={{ background: 'var(--ss-workspace-toolbar)', borderColor: 'var(--ss-border)' }}>
       {activeTab === 'workspace' && (
         <>
-          {simTreeToolbar}
           <div className="flex-1" />
+          <div className="flex items-center gap-2">
+            {isRunning ? (
+              <div
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm"
+                style={{
+                  background: "rgba(126, 164, 120, 0.10)",
+                  borderColor: "rgba(126, 164, 120, 0.24)",
+                  color: "#5F8F61",
+                }}
+              >
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-current opacity-40" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-current" />
+                </span>
+                <span className="font-medium">{t("sim.running")}</span>
+              </div>
+            ) : null}
+            {agentCount > 0 ? (
+              <div
+                className="inline-flex items-center rounded-full border px-3 py-2 text-sm font-medium"
+                style={{
+                  background: "var(--ss-workspace-surface)",
+                  borderColor: "var(--ss-workspace-border)",
+                  color: "var(--ss-workspace-heading)",
+                }}
+              >
+                {`${formattedAgentCount} ${t("sim.agents")}`}
+              </div>
+            ) : null}
+          </div>
           <div
             role="group"
             aria-label="Advance controls"

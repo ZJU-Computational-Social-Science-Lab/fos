@@ -590,6 +590,7 @@ export const LogViewer: React.FC = () => {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
   const [openRound, setOpenRound] = useState<number | null>(null);
+  const hasInitializedOpenRoundRef = useRef(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const logItemRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -678,13 +679,20 @@ export const LogViewer: React.FC = () => {
   useEffect(() => {
     if (logGroups.length === 0) {
       setOpenRound(null);
+      hasInitializedOpenRoundRef.current = false;
+      return;
+    }
+
+    if (!hasInitializedOpenRoundRef.current) {
+      hasInitializedOpenRoundRef.current = true;
+      setOpenRound(logGroups[0].round);
       return;
     }
 
     const hasCurrentOpenGroup = openRound !== null
       && logGroups.some((group) => group.round === openRound);
 
-    if (!hasCurrentOpenGroup) {
+    if (openRound !== null && !hasCurrentOpenGroup) {
       setOpenRound(logGroups[0].round);
     }
   }, [logGroups, openRound]);
@@ -869,7 +877,11 @@ export const LogViewer: React.FC = () => {
                 >
                   <button
                     type="button"
-                    onClick={() => setOpenRound(group.round)}
+                    onClick={() => {
+                      setOpenRound((currentRound) => (
+                        currentRound === group.round ? null : group.round
+                      ));
+                    }}
                     className="w-full flex items-center justify-between px-4 py-3 text-left"
                     style={{ background: 'var(--ss-surface-strong)' }}
                   >

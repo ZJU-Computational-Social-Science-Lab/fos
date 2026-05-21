@@ -88,6 +88,44 @@ describe("LogViewer", () => {
     expect(screen.queryByText("Agents acted in step 4")).not.toBeInTheDocument();
   });
 
+  it("lets people collapse all step groups after opening one", () => {
+    useSimulationStore.setState({
+      logs: [
+        {
+          id: "log-1",
+          nodeId: "node-1",
+          round: 1,
+          type: "SYSTEM",
+          content: "Agents acted in step 1",
+          timestamp: "2026-05-21T10:00:00.000Z",
+        },
+        {
+          id: "log-2",
+          nodeId: "node-1",
+          round: 2,
+          type: "SYSTEM",
+          content: "Agents acted in step 2",
+          timestamp: "2026-05-21T10:05:00.000Z",
+        },
+      ],
+      nodes: [{ id: "node-1", parentId: null, name: "Root", depth: 0, isLeaf: true }],
+      selectedNodeId: "node-1",
+      agents: [],
+      currentSimulation: null,
+    } as never);
+
+    render(<LogViewer />);
+
+    const stepOneButton = screen.getByRole("button", { name: /Step 1/i });
+
+    expect(screen.getByText("Agents acted in step 1")).toBeInTheDocument();
+
+    fireEvent.click(stepOneButton);
+
+    expect(screen.queryByText("Agents acted in step 1")).not.toBeInTheDocument();
+    expect(screen.queryByText("Agents acted in step 2")).not.toBeInTheDocument();
+  });
+
   it("lists step groups in ascending order", () => {
     useSimulationStore.setState({
       logs: [

@@ -4,8 +4,9 @@ import * as d3 from 'd3';
 import { SimNode } from '../types';
 import { useSimulationStore } from '../store';
 import { useTranslation } from 'react-i18next';
-import { HelpCircle, Move, ZoomIn, ZoomOut, Maximize, MousePointer2, Trash2 } from 'lucide-react';
-import { EnvironmentSuggestionDialogWrapper, EnvironmentToggleButton } from './EnvironmentSuggestion';
+import { HelpCircle, Move, ZoomIn, ZoomOut, Maximize, MousePointer2, Trash2, GitFork } from 'lucide-react';
+import { EnvironmentSuggestionDialogWrapper } from './EnvironmentSuggestion';
+import { Button } from './ui/button';
 
 interface SimTreeProps {
   nodesOverride?: SimNode[];
@@ -28,6 +29,8 @@ export const SimTree: React.FC<SimTreeProps> = ({
   const toggleHelpModal = useSimulationStore(state => state.toggleHelpModal);
   const isCompareMode = useSimulationStore(state => state.isCompareMode);
   const deleteNode = useSimulationStore(state => state.deleteNode);
+  const branchSimulation = useSimulationStore(state => state.branchSimulation);
+  const isGenerating = useSimulationStore(state => state.isGenerating);
 
   // Keep track of zoom behavior to call it programmatically
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
@@ -225,6 +228,8 @@ const root = d3.stratify<SimNode>()
       });
   }, [selectedNodeId, compareTargetNodeId, isCompareMode]);
 
+  const selectedNodeIsReady = Number.isFinite(Number(selectedNodeId));
+
   const handleZoomIn = () => {
     if (svgRef.current && zoomRef.current) {
       svgRef.current.transition().duration(300).call(zoomRef.current.scaleBy, 1.2);
@@ -256,10 +261,20 @@ const root = d3.stratify<SimNode>()
           <div className="flex items-center justify-between gap-3">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--ss-workspace-heading)]">
               {isCompareMode ? <MousePointer2 size={16} className="text-[#B7AED9]" /> : <Move size={16} className="text-[var(--ss-workspace-muted)]" />}
-            {isCompareMode ? t('components.simTree.selectCompareNode') : t('components.simTree.title')}
+              {isCompareMode ? t('components.simTree.selectCompareNode') : t('components.simTree.title')}
             </h3>
             <div className="flex items-center gap-2">
-              <EnvironmentToggleButton />
+              {!isCompareMode ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void branchSimulation()}
+                  disabled={isGenerating || !selectedNodeIsReady}
+                >
+                  <GitFork size={14} />
+                  {t('simPage.branch')}
+                </Button>
+              ) : null}
               <button
                 onClick={() => toggleHelpModal(true)}
                 className="inline-flex items-center gap-1 text-xs text-[var(--ss-workspace-link)] transition-colors hover:opacity-80"
