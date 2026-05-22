@@ -10,7 +10,9 @@
     "cancel": "Cancel",
     "next": "Next",
     "back": "Back",
-    "previous": "Previous"
+    "previous": "Previous",
+    "overview": "Overview",
+    "status": "Status"
   },
   "brand": "FOS",
   "nav": {
@@ -67,7 +69,64 @@
     "nodeIdLabel": "Node ID",
     "branchRelations": "Branch relations",
     "branchCountsInline": "Parent {{parent}} · Siblings {{siblings}} · Children {{children}}",
-    "branchRelationsHint": "Shows how this node connects to nearby branches."
+    "branchRelationsHint": "Shows how this node connects to nearby branches.",
+    "hostIntervention": "Host intervention",
+    "roleObservation": "Role observation",
+    "hostInterventionDesk": "Host intervention desk",
+    "hostInterventionCopy": "Intervene in the current simulation node through environment suggestions, system broadcasts, and property edits.",
+    "focusedAgent": "Focused agent",
+    "compareHint": "Compare mode is active. Select agents to inspect behavior differences across branches.",
+    "compareActive": "Compare active",
+    "clearFocus": "Clear focus",
+    "memoryCount": "Memory",
+    "knowledgeCount": "Knowledge",
+    "propertyCount": "Properties",
+    "lastObserved": "Last observed",
+    "noFocusedAgent": "No focused agent",
+    "noFocusedAgentHint": "Select an active role or collection to inspect its latest context.",
+    "observeRole": "Observe active role",
+    "collectionRepresentative": "Representative",
+    "roleCollections": "Role collections",
+    "roleDirectorySearch": "Search collections, members, activity",
+    "noDirectoryResults": "No roles match the current search.",
+    "memberRoster": "Member roster"
+    ,
+    "removeNode": "Remove node",
+    "noChildBranches": "No child branches"
+  },
+  "topologyExplorer": {
+    "topologyExplorer": "Topology explorer",
+    "subtitle": "Inspect branch structure, filter states, and prepare side-by-side comparisons.",
+    "returnToExperiment": "Return to experiment",
+    "leftRailLabel": "Topology controls",
+    "overview": "Topology overview",
+    "overviewHint": "Filter, search, and prepare branch comparison context.",
+    "openInControlRoom": "Open in control room",
+    "exitComparePrep": "Exit compare prep",
+    "prepareCompare": "Prepare compare",
+    "searchNodes": "Search nodes",
+    "branchStateFilters": "Branch state filters",
+    "selectionSummary": "Selection summary",
+    "activeBranch": "Active branch",
+    "compareBranch": "Compare branch",
+    "selectedBranchDetail": "Selected branch detail",
+    "detailHint": "Review current branch metadata and available actions.",
+    "branchDepth": "Branch depth",
+    "childBranches": "Child branches",
+    "parentBranch": "Parent branch",
+    "branchState": "Branch state",
+    "visibleNodes": "Visible nodes",
+    "branchActions": "Branch actions",
+    "compareReady": "Compare ready",
+    "compareReadyHint": "Open compare mode in the control room to inspect branch differences.",
+    "immediateChildren": "Immediate children",
+    "valueUnavailable": "—",
+    "status": {
+      "running": "Running",
+      "completed": "Completed",
+      "failed": "Failed",
+      "pending": "Pending"
+    }
   },
   "simulationWorkspace": {
     "running": "Running...",
@@ -1143,6 +1202,8 @@
       "noUploadedDocs": "No uploaded documents yet",
       "textChunks": "text chunks",
       "shortTermMemory": "Short-term Memory",
+      "activeNow": "Active now",
+      "noRecentActivity": "No recent activity.",
       "memoryTypes": {
         "thought": "Thought",
         "assistant": "Assistant reply",
@@ -1518,7 +1579,8 @@
     "sidebar": {
       "agents": "Agents",
       "agentWatch": "Agent watch",
-      "hostControl": "Host Control"
+      "hostControl": "Host Control",
+      "overviewHint": "Observe role activity or open host intervention controls."
     },
     "interventionTab": {
       "hostControl": "Host control",

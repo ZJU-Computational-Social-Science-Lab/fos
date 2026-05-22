@@ -10,7 +10,9 @@
     "cancel": "取消",
     "next": "下一步",
     "back": "返回",
-    "previous": "上一页"
+    "previous": "上一页",
+    "overview": "??",
+    "status": "??"
   },
   "brand": "FOS",
   "controlRoom": {
@@ -55,7 +57,29 @@
     "nodeIdLabel": "节点 ID",
     "branchRelations": "分支关系",
     "branchCountsInline": "父级 {{parent}} · 同级 {{siblings}} · 子级 {{children}}",
-    "branchRelationsHint": "展示当前节点与附近分支的连接关系。"
+    "branchRelationsHint": "展示当前节点与附近分支的连接关系。",
+    "hostIntervention": "主持干预",
+    "roleObservation": "角色观察",
+    "hostInterventionDesk": "主持干预控制台",
+    "hostInterventionCopy": "通过环境建议、系统广播和属性编辑直接干预当前仿真节点。",
+    "focusedAgent": "聚焦智能体",
+    "compareHint": "对比模式已开启。选择智能体以检查分支间行为差异。",
+    "compareActive": "对比已开启",
+    "clearFocus": "清除聚焦",
+    "memoryCount": "记忆",
+    "knowledgeCount": "知识",
+    "propertyCount": "属性",
+    "lastObserved": "最近观察",
+    "noFocusedAgent": "暂无聚焦智能体",
+    "noFocusedAgentHint": "选择活跃角色或分组以查看其最新上下文。",
+    "observeRole": "观察活跃角色",
+    "collectionRepresentative": "代表",
+    "roleCollections": "角色分组",
+    "roleDirectorySearch": "搜索分组、成员、活动",
+    "noDirectoryResults": "没有角色匹配当前搜索。",
+    "memberRoster": "成员列表",
+    "removeNode": "????",
+    "noChildBranches": "?????"
   },
   "simulationWorkspace": {
     "running": "è¿è¡Œä¸­...",
@@ -1143,6 +1167,8 @@
       "noUploadedDocs": "暂无上传文档",
       "textChunks": "个文本块",
       "shortTermMemory": "短期记忆",
+      "activeNow": "当前活跃",
+      "noRecentActivity": "暂无最新活动。",
       "memoryTypes": {
         "thought": "思考",
         "assistant": "助手回复",
@@ -1517,7 +1543,8 @@
     "sidebar": {
       "agents": "智能体",
       "agentWatch": "智能体观察",
-      "hostControl": "主持控制"
+      "hostControl": "主持控制",
+      "overviewHint": "观察角色活动，或打开主持干预控制。"
     },
     "interventionTab": {
       "hostControl": "主持控制",
@@ -2974,5 +3001,39 @@
     "primaryNav": "主导航",
     "switchToLight": "切换到日间模式",
     "switchToDark": "切换到夜间模式"
+  },
+  "topologyExplorer": {
+    "topologyExplorer": "????",
+    "subtitle": "??????????????????",
+    "returnToExperiment": "????",
+    "leftRailLabel": "????",
+    "overview": "????",
+    "overviewHint": "????????????????",
+    "openInControlRoom": "???????",
+    "exitComparePrep": "??????",
+    "prepareCompare": "????",
+    "searchNodes": "????",
+    "branchStateFilters": "??????",
+    "selectionSummary": "????",
+    "activeBranch": "????",
+    "compareBranch": "????",
+    "selectedBranchDetail": "??????",
+    "detailHint": "???????????????",
+    "branchDepth": "????",
+    "childBranches": "???",
+    "parentBranch": "???",
+    "branchState": "????",
+    "visibleNodes": "????",
+    "branchActions": "????",
+    "compareReady": "?????",
+    "compareReadyHint": "????????????????",
+    "immediateChildren": "?????",
+    "valueUnavailable": "?",
+    "status": {
+      "running": "???",
+      "completed": "???",
+      "failed": "??",
+      "pending": "???"
+    }
   }
 }

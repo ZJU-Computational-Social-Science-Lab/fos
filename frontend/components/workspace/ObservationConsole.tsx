@@ -142,9 +142,7 @@ const CollectionRow: React.FC<{
           ) : null}
         </div>
         <div className="ss-observation__directory-role">
-          {t("controlRoom.collectionRepresentative", {
-            defaultValue: "Representative",
-          })}
+          {t("controlRoom.collectionRepresentative")}
           : {collection.representative.name}
         </div>
         <div className="ss-observation__directory-activity">
@@ -344,14 +342,10 @@ export const ObservationConsole: React.FC<ObservationConsoleProps> = ({
     ? t("controlRoom.hostIntervention")
     : t("controlRoom.roleObservation");
   const panelTitle = isHostTab
-    ? t("controlRoom.hostInterventionDesk", {
-        defaultValue: "主持干预控制台",
-      })
+    ? t("controlRoom.hostInterventionDesk")
     : t("controlRoom.focusedAgent");
   const panelCopy = isHostTab
-    ? t("controlRoom.hostInterventionCopy", {
-        defaultValue: "通过环境建议、系统广播和属性编辑直接干预当前仿真节点。",
-      })
+    ? t("controlRoom.hostInterventionCopy")
     : isCompareMode
       ? t("controlRoom.compareHint")
       : t("components.sidebar.overviewHint");
@@ -456,7 +450,7 @@ export const ObservationConsole: React.FC<ObservationConsoleProps> = ({
           <section className="ss-observation__secondary ss-observation__secondary--directory">
             <div className="ss-observation__section-header">
               <div className="ss-observation__section-label">
-                {t("controlRoom.roleCollections", { defaultValue: "Role Collections" })}
+                {t("controlRoom.roleCollections")}
               </div>
               <span className="ss-observation__count">
                 {directoryCollections.length}/{agentCollections.length}
@@ -469,9 +463,7 @@ export const ObservationConsole: React.FC<ObservationConsoleProps> = ({
                 <input
                   value={directoryQuery}
                   onChange={(event) => setDirectoryQuery(event.target.value)}
-                  placeholder={t("controlRoom.roleDirectorySearch", {
-                    defaultValue: "Search collections, members, activity",
-                  })}
+                  placeholder={t("controlRoom.roleDirectorySearch")}
                 />
               </label>
             </div>
@@ -490,7 +482,7 @@ export const ObservationConsole: React.FC<ObservationConsoleProps> = ({
                 ))
               ) : (
                 <div className="ss-path__empty">
-                  {t("controlRoom.noDirectoryResults", { defaultValue: "No roles match the current search." })}
+                  {t("controlRoom.noDirectoryResults")}
                 </div>
               )}
             </div>
@@ -500,7 +492,7 @@ export const ObservationConsole: React.FC<ObservationConsoleProps> = ({
             <section className="ss-observation__secondary">
               <div className="ss-observation__section-header">
                 <div className="ss-observation__section-label">
-                  {t("controlRoom.memberRoster", { defaultValue: "Member Roster" })}
+                  {t("controlRoom.memberRoster")}
                 </div>
                 <span className="ss-observation__count">
                   {selectedCollection.members.length}
