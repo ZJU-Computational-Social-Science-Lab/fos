@@ -94,8 +94,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 export function SettingsPage() {
-  const { t, i18n } = useTranslation();
-  const isZh = i18n.language.startsWith("zh");
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
@@ -179,31 +178,31 @@ export function SettingsPage() {
     {
       id: "profile" as const,
       title: t("settings.tabs.profile"),
-      hint: isZh ? "身份与工作空间归属" : "Identity and workspace ownership",
+      hint: t("settings.tabHints.profile"),
       icon: <UserCircle2 size={15} />,
     },
     {
       id: "security" as const,
       title: t("settings.tabs.security"),
-      hint: isZh ? "会话访问与退出控制" : "Session access and sign-out controls",
+      hint: t("settings.tabHints.security"),
       icon: <Shield size={15} />,
     },
     {
       id: "providers_llm" as const,
-      title: "LLM 配置",
-      hint: isZh ? "模型与接口配置" : "Model and interface configuration",
+      title: t("settings.tabs.llmProviders"),
+      hint: t("settings.tabHints.providersLlm"),
       icon: <Bot size={15} />,
     },
     {
       id: "providers_search" as const,
       title: t("settings.tabs.searchProviders") || t("settings.providers.searchTab"),
-      hint: isZh ? "搜索与检索提供商" : "Search and retrieval providers",
+      hint: t("settings.tabHints.providersSearch"),
       icon: <Search size={15} />,
     },
     {
       id: "files" as const,
       title: t("settings.tabs.files"),
-      hint: isZh ? "文件上传与存储整理" : "Uploads and storage hygiene",
+      hint: t("settings.tabHints.files"),
       icon: <FileStack size={15} />,
     },
   ];
@@ -248,11 +247,7 @@ export function SettingsPage() {
       <div className="ss-settings-grid">
         <section className="card">
           <div className="panel-title">{t("settings.tabs.profile")}</div>
-          <div className="panel-subtitle">
-            {isZh
-              ? "保持研究者身份信息在实验、导出结果与共享工作空间中的一致性。"
-              : "Keep your researcher identity consistent across simulations, exports, and shared workspace surfaces."}
-          </div>
+          <div className="panel-subtitle">{t("settings.profile.consistencyHint")}</div>
           <div className="ss-settings-info-grid">
             <InfoRow label={t("settings.profile.email")} value={String(user?.email ?? "—")} />
             <InfoRow label={t("settings.profile.username")} value={String(user?.username ?? "—")} />
@@ -267,15 +262,11 @@ export function SettingsPage() {
           <div className="ss-settings-stack">
             <div className="ss-pill ss-pill--quiet">
               <Shield size={14} />
-              <span>{isZh ? "已验证的工作空间访问" : "Authenticated workspace access"}</span>
+              <span>{t("settings.workspaceStatus.authenticatedAccess")}</span>
             </div>
             <div className="ss-pill ss-pill--quiet">
               <Database size={14} />
-              <span>
-                {isZh
-                  ? "身份信息会复用于已保存实验"
-                  : "Profile values are reused across saved simulations"}
-              </span>
+              <span>{t("settings.workspaceStatus.profileReuse")}</span>
             </div>
           </div>
         </section>
@@ -297,11 +288,7 @@ export function SettingsPage() {
       <section className="card">
         <div className="panel-title">{t("settings.security.controlTitle")}</div>
         <div className="panel-subtitle">{t("settings.security.controlHint")}</div>
-        <div className="ss-settings-note">
-            {isZh
-            ? "认证流程仍然连接到 Future of Society 当前后端与 token 刷新链路。"
-            : "Authentication flows remain connected to the current Future of Society backend and token refresh chain."}
-          </div>
+        <div className="ss-settings-note">{t("settings.security.authFlowNote")}</div>
         </section>
     </div>
   );
@@ -314,11 +301,7 @@ export function SettingsPage() {
     <div className="ss-settings-grid ss-settings-grid--split">
       <section className="card">
         <div className="panel-title">{t("settings.providers.searchTitle")}</div>
-        <div className="panel-subtitle">
-          {isZh
-            ? "让检索服务与同一个研究工作空间和访问模型保持一致。"
-            : "Keep retrieval services aligned with the same research workspace and access model."}
-        </div>
+        <div className="panel-subtitle">{t("settings.providers.searchAlignmentHint")}</div>
         <div className="ss-settings-info-grid">
           <InfoRow label={t("settings.providers.fields.provider")} value={searchProvider?.provider || "—"} />
           <InfoRow label={t("settings.providers.fields.baseUrl")} value={searchProvider?.base_url || "—"} />
@@ -474,12 +457,12 @@ export function SettingsPage() {
     <div className="ss-settings-section">
       <div className="ss-settings-grid">
         <SettingsMetric
-          label={isZh ? "文件数量" : "Files"}
+          label={t("settings.files.metrics.files")}
           value={String(uploads.length)}
           icon={<FileStack size={16} />}
         />
         <SettingsMetric
-          label={isZh ? "孤立文件扫描" : "Orphan scan"}
+          label={t("settings.files.metrics.orphanScan")}
           value={orphanResult ? String(orphanResult.orphaned.length) : "—"}
           icon={<Database size={16} />}
         />
@@ -537,11 +520,7 @@ export function SettingsPage() {
         {!uploads.length && !filesQuery.isLoading ? (
           <div className="ss-empty-state ss-inset">
             <div className="panel-title">{t("settings.files.empty")}</div>
-            <div className="panel-subtitle">
-              {isZh
-                ? "上传的研究文件会在关联到实验后显示在这里。"
-                : "Uploaded research files will appear here once they are attached to simulations."}
-            </div>
+            <div className="panel-subtitle">{t("settings.files.emptyHint")}</div>
           </div>
         ) : null}
       </section>
