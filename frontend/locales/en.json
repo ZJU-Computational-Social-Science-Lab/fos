@@ -14,7 +14,9 @@
     "overview": "Overview",
     "status": "Status",
     "increase": "Increase",
-    "decrease": "Decrease"
+    "decrease": "Decrease",
+    "actions": "Actions",
+    "autosave": "Autosave"
   },
   "brand": "FOS",
   "nav": {
@@ -3077,6 +3079,44 @@
     "fallbacks": {
       "role": "Role",
       "profile": "No description"
+    }
+  },
+  "dashboardDesk": {
+    "eyebrow": "Desk overview",
+    "title": "Dashboard Desk",
+    "subtitle": "Launch new experiments, revisit active runs, and manage your scenario workspace from one place.",
+    "launchExperiment": "Launch experiment",
+    "openArchive": "Open archive",
+    "providerMissing": "Provider setup required",
+    "providerWarningTitle": "Connect a provider before running simulations",
+    "providerWarningBody": "Add at least one model provider so experiments can run and save results correctly.",
+    "recommendationSetup": "Set up providers",
+    "recommendations": "Recommended next steps",
+    "recommendationsHint": "Use these quick actions to start, explore scenes, and review experiment outcomes.",
+    "recommendationNew": "Start a new experiment",
+    "newExperimentHint": "Open the experiment builder and configure a fresh run.",
+    "recommendationScenes": "Browse scene library",
+    "sceneLibraryHint": "Review available scenario types and pick one to begin.",
+    "recommendationNetwork": "Design network setup",
+    "networkHint": "Prepare agent relationships and simulation structure before launch.",
+    "recommendationAnalyze": "Analyze saved outcomes",
+    "analyzeHint": "Open archived simulations and inspect previous experiment results.",
+    "scenarioEntry": "Scenario entry",
+    "scenarioEntryHint": "Select a scenario template and adjust details before launching.",
+    "openScenarioLibrary": "Open scenario library",
+    "currentExperiment": "Current experiment",
+    "noRecent": "No recent experiment",
+    "currentExperimentHint": "Continue your latest simulation or begin a new one if no active run exists.",
+    "providerReady": "Provider ready",
+    "recentChanges": "Recent changes",
+    "continueLabel": "Continue experiment",
+    "activeStatus": {
+      "active": "Active",
+      "archived": "Archived",
+      "completed": "Completed",
+      "failed": "Failed",
+      "draft": "Draft",
+      "unknown": "Unknown"
     }
   }
 }
