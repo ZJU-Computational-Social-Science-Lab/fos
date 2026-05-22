@@ -52,6 +52,11 @@ vi.mock("react-i18next", () => ({
     const language = (globalThis as { i18n: { language: Language } }).i18n.language;
     const translations: Record<Language, Record<string, string>> = {
       en: {
+        "components.workspace.topologyModal.kicker": "Full topology",
+        "components.workspace.topologyModal.subtitle":
+          "Review the full node topology here and jump directly into experiment or network configuration.",
+        "components.workspace.topologyModal.closeAriaLabel": "Close topology",
+        "components.workspace.topologyModal.emptyPath": "—",
         "components.workspace.topologyModal.currentPath": "Current path",
         "components.workspace.topologyModal.currentNode": "Current node",
         "components.workspace.topologyModal.branches": "Branches",
@@ -63,6 +68,10 @@ vi.mock("react-i18next", () => ({
         "components.workspace.topologyModal.openNodeDetails": "Open node details",
       },
       zh: {
+        "components.workspace.topologyModal.kicker": "完整拓扑结构",
+        "components.workspace.topologyModal.subtitle": "在完整拓扑视图中查看全部节点与分支，并直接打开实验配置与网络配置。",
+        "components.workspace.topologyModal.closeAriaLabel": "关闭拓扑结构",
+        "components.workspace.topologyModal.emptyPath": "—",
         "components.workspace.topologyModal.currentPath": "当前路径",
         "components.workspace.topologyModal.currentNode": "当前节点",
         "components.workspace.topologyModal.branches": "分支",
