@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:i18n": "vitest run __tests__/i18n.strict.test.ts",
+    "test:i18n:audit": "vitest run __tests__/i18n.audit.test.ts"
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
