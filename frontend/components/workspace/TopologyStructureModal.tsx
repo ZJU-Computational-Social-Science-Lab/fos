@@ -17,8 +17,7 @@ export const TopologyStructureModal: React.FC<TopologyStructureModalProps> = ({
   onClose,
   onOpenNodeDetails,
 }) => {
-  const { t, i18n } = useTranslation();
-  const isZh = i18n.language.startsWith("zh");
+  const { t } = useTranslation();
   const currentSimulation = useSimulationStore((state) => state.currentSimulation);
   const nodes = useSimulationStore((state) => state.nodes);
   const selectedNodeId = useSimulationStore((state) => state.selectedNodeId);
@@ -56,18 +55,19 @@ export const TopologyStructureModal: React.FC<TopologyStructureModalProps> = ({
       <section className="ss-topology-modal__panel">
         <header className="ss-topology-modal__header">
           <div>
-            <div className="ss-kicker">{isZh ? "完整拓扑结构" : "Full topology"}</div>
+            <div className="ss-kicker">{t("components.workspace.topologyModal.kicker")}</div>
             <h2 id="ss-topology-modal-title">
               {currentSimulation?.name || t("components.workspace.topologyModal.title")}
             </h2>
-            <p>
-              {isZh
-                ? "在完整拓扑视图中查看全部节点与分支，并直接打开实验配置与网络配置。"
-                : "Review the full node topology here and jump directly into experiment or network configuration."}
-            </p>
+            <p>{t("components.workspace.topologyModal.subtitle")}</p>
           </div>
 
-          <button type="button" className="ss-icon-button" onClick={onClose} aria-label={isZh ? "关闭拓扑结构" : "Close topology"}>
+          <button
+            type="button"
+            className="ss-icon-button"
+            onClick={onClose}
+            aria-label={t("components.workspace.topologyModal.closeAriaLabel")}
+          >
             <X size={16} />
           </button>
         </header>
@@ -83,7 +83,7 @@ export const TopologyStructureModal: React.FC<TopologyStructureModalProps> = ({
               <strong>
                 {currentPath.length
                   ? currentPath.map((node) => getWorkspaceNodeLabel(node, t)).join(" / ")
-                  : "—"}
+                  : t("components.workspace.topologyModal.emptyPath")}
               </strong>
             </div>
 

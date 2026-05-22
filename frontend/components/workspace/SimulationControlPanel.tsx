@@ -130,12 +130,10 @@ export const SimulationControlPanel: React.FC<SimulationControlPanelProps> = ({
         <section className="ss-config-panel__group">
           <div className="ss-config-panel__group-head">
             <div className="ss-config-panel__group-title">
-              {isObservationMode ? (t("controlRoom.primaryActionsTitle")) : t("controlRoom.primaryActionsTitle")}
+              {t("controlRoom.primaryActionsTitle")}
             </div>
             <p>
-              {isObservationMode
-                ? (t("controlRoom.primaryActionsCopy"))
-                : t("controlRoom.primaryActionsCopy")}
+              {t("controlRoom.primaryActionsCopy")}
             </p>
           </div>
 
@@ -169,7 +167,7 @@ export const SimulationControlPanel: React.FC<SimulationControlPanelProps> = ({
             />
             <ControlAction
               icon={<Beaker size={15} />}
-              label={isObservationMode ? (t("controlRoom.viewDetails")) : t("simulationWorkspace.experiment")}
+              label={isObservationMode ? t("controlRoom.viewDetails") : t("simulationWorkspace.experiment")}
               caption={t("controlRoom.experimentDesignCopy")}
               onClick={() => toggleExperimentDesigner(true)}
               disabled={!hasSimulation}
@@ -347,7 +345,7 @@ export const SimulationControlPanel: React.FC<SimulationControlPanelProps> = ({
         ) : null}
 
         <details className="ss-config-panel__advanced">
-          <summary>{isObservationMode ? (t("simulationWorkspace.developerTools")) : t("simulationWorkspace.developerTools")}</summary>
+          <summary>{t("simulationWorkspace.developerTools")}</summary>
           <div className="ss-config-panel__advanced-body">
             {isObservationMode ? (
               <>
