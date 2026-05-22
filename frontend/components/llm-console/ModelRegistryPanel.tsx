@@ -182,8 +182,8 @@ export function ModelRegistryPanel({
               <th style={{ width: "200px" }}>
                 {t("components.llmConsole.registry.modelName")}
               </th>
-              <th style={{ width: "150px" }}>Model ID</th>
-              <th style={{ width: "120px" }}>Provider</th>
+              <th style={{ width: "150px" }}>{t("components.llmConsole.registry.modelId")}</th>
+              <th style={{ width: "120px" }}>{t("components.llmConsole.registry.provider")}</th>
               <th style={{ width: "100px" }}>
                 {t("components.llmConsole.registry.protocol")}
               </th>

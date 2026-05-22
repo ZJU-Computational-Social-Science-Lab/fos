@@ -9,7 +9,7 @@ type BatchImportModalProps = {
   isOpen: boolean;
   providers: Provider[];
   onClose: () => void;
-  onImport: (models: Omit<ModelRecord, "id">[]) => Promise<void>;
+  onImport: (models: Omit<ModelRecord, "id">[]) => void | PromiseLike<void>;
 };
 
 export function BatchImportModal({
