@@ -207,7 +207,7 @@ const ContextToolbar: React.FC = () => {
           </div>
           <div
             role="group"
-            aria-label="Advance controls"
+            aria-label={t("simPage.advanceControls")}
             className="flex items-center gap-2 rounded-2xl border px-2 py-2 shadow-sm"
             style={{
               background: "var(--ss-workspace-surface)",

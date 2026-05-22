@@ -96,7 +96,7 @@ export function ProviderDrawerForm({
                   className="provider-field__input"
                   value={values.base_url}
                   onChange={(event) => setValues((current) => ({ ...current, base_url: event.target.value }))}
-                  placeholder="https://api.openai.com/v1"
+                  placeholder={t("settings.providers.providerForm.baseUrlPlaceholder")}
                   required
                 />
               </label>
@@ -110,10 +110,19 @@ export function ProviderDrawerForm({
                   type={showApiKey ? "text" : "password"}
                   value={values.api_key}
                   onChange={(event) => setValues((current) => ({ ...current, api_key: event.target.value }))}
-                  placeholder="••••••••••••••••"
+                  placeholder={t("settings.providers.providerForm.apiKeyPlaceholder")}
                   required={mode === "create"}
                 />
-                <button type="button" className="provider-field__secret-toggle" onClick={() => setShowApiKey((current) => !current)}>
+                <button
+                  type="button"
+                  className="provider-field__secret-toggle"
+                  onClick={() => setShowApiKey((current) => !current)}
+                  aria-label={
+                    showApiKey
+                      ? t("settings.providers.providerForm.hideApiKey")
+                      : t("settings.providers.providerForm.showApiKey")
+                  }
+                >
                   {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
@@ -125,7 +134,11 @@ export function ProviderDrawerForm({
                 className="provider-field__input"
                 value={values.model}
                 onChange={(event) => setValues((current) => ({ ...current, model: event.target.value }))}
-                placeholder={isGemini ? "gemini-1.5-flash" : "gpt-4o-mini"}
+                placeholder={
+                  isGemini
+                    ? t("settings.providers.providerForm.defaultModelPlaceholderGemini")
+                    : t("settings.providers.providerForm.defaultModelPlaceholderOpenai")
+                }
               />
             </label>
           </div>

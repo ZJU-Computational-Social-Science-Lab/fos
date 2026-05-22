@@ -12,7 +12,9 @@
     "back": "返回",
     "previous": "上一页",
     "overview": "??",
-    "status": "??"
+    "status": "??",
+    "increase": "增加",
+    "decrease": "减少"
   },
   "brand": "FOS",
   "controlRoom": {
@@ -427,6 +429,7 @@
       "loading": "加载中…",
       "error": "无法加载提供商。",
       "none": "还没有添加任何提供商。",
+      "costHintAriaLabel": "LLM 费用提示",
       "capabilities": {
         "title": "能力与费用速查",
         "hint": "按用途选模型：便宜的用于回合推理，昂贵的用于报告和总结。",
@@ -1150,6 +1153,7 @@
     "autoAdvance": "自动推进",
     "stop": "停止",
     "enterSteps": "输入步数",
+    "advanceControls": "推进控制",
     "advancingProgress": "第 {{current}} 步，共 {{total}} 步",
     "autoAdvanceStopped": "自动推进停止于第 {{current}} 步（共 {{total}} 步）",
     "autoAdvanceError": "自动推进错误：{{error}}",

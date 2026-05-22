@@ -12,7 +12,9 @@
     "back": "Back",
     "previous": "Previous",
     "overview": "Overview",
-    "status": "Status"
+    "status": "Status",
+    "increase": "Increase",
+    "decrease": "Decrease"
   },
   "brand": "FOS",
   "nav": {
@@ -461,6 +463,7 @@
       "loading": "Loading…",
       "error": "Unable to load providers.",
       "none": "No providers added yet.",
+      "costHintAriaLabel": "LLM cost hints",
       "capabilities": {
         "title": "Capabilities & cost guide",
         "hint": "Pick models that match your workload: cheaper ones for agent turns, premium ones for summaries.",
@@ -1184,6 +1187,7 @@
     "autoAdvance": "Auto-advance",
     "stop": "Stop",
     "enterSteps": "Enter number of steps",
+    "advanceControls": "Advance controls",
     "advancingProgress": "Step {{current}} of {{total}}",
     "autoAdvanceStopped": "Auto-advance stopped at step {{current}} of {{total}}",
     "autoAdvanceError": "Auto-advance error: {{error}}",
