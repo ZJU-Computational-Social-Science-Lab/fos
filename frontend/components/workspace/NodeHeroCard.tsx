@@ -73,7 +73,7 @@ export const NodeHeroCard: React.FC<NodeHeroCardProps> = ({ observationMode }) =
             <strong>
               {currentPath.length
                 ? currentPath.map((node) => getWorkspaceNodeLabel(node, t)).join(" / ")
-                : "—"}
+                : t("controlRoom.valueUnavailable")}
             </strong>
           </div>
           <h2 className="ss-node-hero__title">{nodeLabel}</h2>
@@ -99,17 +99,17 @@ export const NodeHeroCard: React.FC<NodeHeroCardProps> = ({ observationMode }) =
       <div className="ss-node-hero__meta">
         <div className="ss-node-hero__meta-card">
           <span>{t("controlRoom.nodeIdLabel")}</span>
-          <strong>{selectedNode?.display_id || selectedNode?.id || "—"}</strong>
+          <strong>{selectedNode?.display_id || selectedNode?.id || t("controlRoom.valueUnavailable")}</strong>
         </div>
         <div className="ss-node-hero__meta-card">
           <span>{t("simulationWorkspace.metrics.worldTime")}</span>
-          <strong>{selectedNode?.worldTime || "—"}</strong>
+          <strong>{selectedNode?.worldTime || t("controlRoom.valueUnavailable")}</strong>
         </div>
         <div className="ss-node-hero__meta-card">
           <span>{t("simulationWorkspace.provider")}</span>
           <strong>
             {selectedProvider
-              ? `${selectedProvider.name || selectedProvider.provider}${selectedProvider.model ? ` · ${selectedProvider.model}` : ""}`
+              ? `${selectedProvider.name || selectedProvider.provider}${selectedProvider.model ? ` � ${selectedProvider.model}` : ""}`
               : t("simulationWorkspace.noProvider")}
           </strong>
           <p>{t("simPage.fosEngine")}</p>
@@ -131,3 +131,4 @@ export const NodeHeroCard: React.FC<NodeHeroCardProps> = ({ observationMode }) =
 };
 
 export default NodeHeroCard;
+

@@ -45,12 +45,24 @@
     "hideBranchDetails": "éšè—åˆ†æ”¯è¯¦æƒ…",
     "branchRelationsCopy": "åˆ‡æ¢æ‰€é€‰èŠ‚ç‚¹çš„åˆ†æ”¯å…³ç³»è¯¦æƒ…ã€‚",
     "startNodeLabel": "èµ·å§‹",
-    "valueUnavailable": "â€”"
+    "valueUnavailable": "â€”",
+    "currentPath": "当前路径",
+    "statusCurrent": "当前",
+    "modeGlobal": "全局",
+    "modeFocused": "聚焦",
+    "modeCompare": "对比",
+    "currentNodeConfiguration": "当前节点配置",
+    "nodeIdLabel": "节点 ID",
+    "branchRelations": "分支关系",
+    "branchCountsInline": "父级 {{parent}} · 同级 {{siblings}} · 子级 {{children}}",
+    "branchRelationsHint": "展示当前节点与附近分支的连接关系。"
   },
   "simulationWorkspace": {
     "running": "è¿è¡Œä¸­...",
     "compare": "å¯¹æ¯”",
     "compareExit": "é€€å‡ºå¯¹æ¯”æ¨¡å¼",
+    "titleFallback": "未命名模拟",
+    "subtitleFallback": "暂无场景摘要。",
     "experiment": "å®žéªŒæž„å»ºå™¨",
     "export": "å¯¼å‡º",
     "provider": "æä¾›å•†",
@@ -64,7 +76,10 @@
     "developerTools": "å¼€å‘è€…å·¥å…·",
     "sync": "åŒæ­¥",
     "reset": "é‡ç½®æ¨¡æ‹Ÿ",
-    "delete": "åˆ é™¤æ¨¡æ‹Ÿ"
+    "delete": "åˆ é™¤æ¨¡æ‹Ÿ",
+    "metrics": {
+      "worldTime": "世界时间"
+    }
   },
   "nav": {
     "dashboard": "仪表盘",

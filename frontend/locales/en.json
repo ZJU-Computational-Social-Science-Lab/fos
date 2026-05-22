@@ -57,12 +57,24 @@
     "hideBranchDetails": "Hide branch details",
     "branchRelationsCopy": "Toggle branch relationship details for the selected node.",
     "startNodeLabel": "Start",
-    "valueUnavailable": "—"
+    "valueUnavailable": "—",
+    "currentPath": "Current path",
+    "statusCurrent": "Current",
+    "modeGlobal": "Global",
+    "modeFocused": "Focused",
+    "modeCompare": "Compare",
+    "currentNodeConfiguration": "Current node configuration",
+    "nodeIdLabel": "Node ID",
+    "branchRelations": "Branch relations",
+    "branchCountsInline": "Parent {{parent}} · Siblings {{siblings}} · Children {{children}}",
+    "branchRelationsHint": "Shows how this node connects to nearby branches."
   },
   "simulationWorkspace": {
     "running": "Running...",
     "compare": "Compare",
     "compareExit": "Exit compare mode",
+    "titleFallback": "Untitled simulation",
+    "subtitleFallback": "No scenario summary available yet.",
     "experiment": "Experiment builder",
     "export": "Export",
     "provider": "Provider",
@@ -76,7 +88,10 @@
     "developerTools": "Developer tools",
     "sync": "Sync",
     "reset": "Reset simulation",
-    "delete": "Delete simulation"
+    "delete": "Delete simulation",
+    "metrics": {
+      "worldTime": "World time"
+    }
   },
   "landing": {
     "hero": {
