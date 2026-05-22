@@ -55,7 +55,9 @@
     "branchToolsCopy": "Manage branch-specific controls and visibility.",
     "showBranchDetails": "Show branch details",
     "hideBranchDetails": "Hide branch details",
-    "branchRelationsCopy": "Toggle branch relationship details for the selected node."
+    "branchRelationsCopy": "Toggle branch relationship details for the selected node.",
+    "startNodeLabel": "Start",
+    "valueUnavailable": "—"
   },
   "simulationWorkspace": {
     "running": "Running...",

@@ -8,8 +8,8 @@ import type { SimNode } from "../../types";
 const GENERIC_NODE_PATTERN = /^(Node \d+|节点 \d+)$/;
 
 const getNodeLabel = (node: SimNode | null, t: (key: string, options?: any) => string) => {
-  if (!node) return "—";
-  if (node.depth === 0) return "起始";
+  if (!node) return t("controlRoom.valueUnavailable");
+  if (node.depth === 0) return t("controlRoom.startNodeLabel");
   if (node.name && !GENERIC_NODE_PATTERN.test(node.name)) return node.name;
   return t("controlRoom.roundNodeLabel", { round: node.depth });
 };
@@ -83,8 +83,7 @@ export const NodeWorkspacePanel: React.FC<NodeWorkspacePanelProps> = ({
     t("simulationWorkspace.subtitleFallback");
   const isObservationMode = workspaceMode === "observation";
   const providerSelection = selectedProviderId ?? currentProviderId ?? null;
-  const selectedProvider =
-    llmProviders.find((provider) => provider.id === providerSelection) || null;
+  const selectedProvider = llmProviders.find((provider) => provider.id === providerSelection) || null;
 
   const handleActivateNode = (nodeId: string) => {
     if (isCompareMode && nodeId !== selectedNodeId) {
@@ -121,15 +120,15 @@ export const NodeWorkspacePanel: React.FC<NodeWorkspacePanelProps> = ({
         <div className="ss-node-workspace__summary-grid">
           <div className="ss-node-workspace__summary-card is-wide">
             <span>{t("controlRoom.currentPath")}</span>
-            <strong>{pathLabel || "—"}</strong>
+            <strong>{pathLabel || t("controlRoom.valueUnavailable")}</strong>
           </div>
           <div className="ss-node-workspace__summary-card">
             <span>{t("controlRoom.nodeIdLabel")}</span>
-            <strong>{selectedNode?.display_id || selectedNode?.id || "—"}</strong>
+            <strong>{selectedNode?.display_id || selectedNode?.id || t("controlRoom.valueUnavailable")}</strong>
           </div>
           <div className="ss-node-workspace__summary-card">
             <span>{t("simulationWorkspace.metrics.worldTime")}</span>
-            <strong>{selectedNode?.worldTime || "—"}</strong>
+            <strong>{selectedNode?.worldTime || t("controlRoom.valueUnavailable")}</strong>
           </div>
           <div className="ss-node-workspace__summary-card">
             <span>{t("simulationWorkspace.provider")}</span>
