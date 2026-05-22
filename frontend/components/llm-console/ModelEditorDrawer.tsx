@@ -12,7 +12,7 @@ type ModelEditorDrawerProps = {
   editingModel: ModelRecord | null;
   providers: Provider[];
   onClose: () => void;
-  onSubmit: (data: Omit<ModelRecord, "id"> | Partial<ModelRecord>) => Promise<void>;
+  onSubmit: (data: Omit<ModelRecord, "id"> | Partial<ModelRecord>) => void | PromiseLike<void>;
 };
 
 export function ModelEditorDrawer({
@@ -163,9 +163,9 @@ export function ModelEditorDrawer({
                 })
               }
             >
-              <option value="openai">OpenAI</option>
-              <option value="google">Google</option>
-              <option value="custom">Custom</option>
+              <option value="openai">{t("components.llmConsole.modelEditor.protocolOpenai")}</option>
+              <option value="google">{t("components.llmConsole.modelEditor.protocolGoogle")}</option>
+              <option value="custom">{t("components.llmConsole.modelEditor.protocolCustom")}</option>
             </select>
           </div>
 

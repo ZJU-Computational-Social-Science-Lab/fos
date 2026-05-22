@@ -14,7 +14,7 @@ type ProviderFormModalProps = {
     model: string;
     base_url?: string;
     api_key?: string;
-  }) => Promise<void>;
+  }) => void | PromiseLike<void>;
 };
 
 export function ProviderFormModal({
@@ -109,12 +109,12 @@ export function ProviderFormModal({
                 setFormData({ ...formData, provider: e.target.value })
               }
             >
-              <option value="openai-compatible">OpenAI Compatible</option>
-              <option value="deepseek">DeepSeek</option>
-              <option value="openrouter">OpenRouter</option>
-              <option value="azure-openai">Azure OpenAI</option>
-              <option value="gemini">Google Gemini</option>
-              <option value="custom">Custom</option>
+              <option value="openai-compatible">{t("components.llmConsole.providerForm.typeOpenaiCompatible")}</option>
+              <option value="deepseek">{t("components.llmConsole.providerForm.typeDeepseek")}</option>
+              <option value="openrouter">{t("components.llmConsole.providerForm.typeOpenrouter")}</option>
+              <option value="azure-openai">{t("components.llmConsole.providerForm.typeAzureOpenai")}</option>
+              <option value="gemini">{t("components.llmConsole.providerForm.typeGoogleGemini")}</option>
+              <option value="custom">{t("components.llmConsole.providerForm.typeCustom")}</option>
             </select>
           </div>
 
