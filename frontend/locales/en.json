@@ -89,8 +89,7 @@
     "roleCollections": "Role collections",
     "roleDirectorySearch": "Search collections, members, activity",
     "noDirectoryResults": "No roles match the current search.",
-    "memberRoster": "Member roster"
-    ,
+    "memberRoster": "Member roster",
     "removeNode": "Remove node",
     "noChildBranches": "No child branches"
   },
@@ -482,6 +481,35 @@
         "includeDomains": "Include Domains (comma-separated)",
         "excludeDomains": "Exclude Domains (comma-separated)",
         "active": "Active"
+      },
+      "providerForm": {
+        "newLlmTitle": "Add LLM",
+        "editLlmTitle": "Edit LLM ? {{name}}",
+        "geminiAccessConfig": "Google Gemini model access configuration",
+        "openaiCompatibleAccessConfig": "OpenAI Compatible model access configuration",
+        "llmNameRequired": "LLM Name *",
+        "llmNamePlaceholder": "e.g. OpenAI Primary / Gemini Backup",
+        "providerTypeRequired": "Provider Type *",
+        "baseUrlRequired": "Base URL *",
+        "apiKeyRequired": "API Key *",
+        "advancedSettings": "Advanced settings",
+        "exampleDecimal07": "e.g. 0.7",
+        "exampleDecimal10": "e.g. 1.0",
+        "exampleMaxTokens": "e.g. 4096",
+        "responseFormat": "Response format",
+        "exampleJsonObject": "e.g. json_object",
+        "exampleTimeoutMs": "e.g. 60000",
+        "customEndpoint": "Custom Endpoint",
+        "headersMetadata": "Headers / Metadata",
+        "optional": "Optional",
+        "advancedHint": "Leave blank to follow backend or model defaults.",
+        "defaultModel": "Default Model",
+        "save": "Save",
+        "saving": "Saving...",
+        "temperature": "Temperature",
+        "topP": "Top P",
+        "maxTokens": "Max Tokens",
+        "timeoutMs": "Timeout (ms)"
       }
     },
     "files": {
