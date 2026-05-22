@@ -43,7 +43,9 @@
     "branchToolsCopy": "ç®¡ç†åˆ†æ”¯ä¸“ç”¨æŽ§åˆ¶å’Œå¯è§æ€§ã€‚",
     "showBranchDetails": "æ˜¾ç¤ºåˆ†æ”¯è¯¦æƒ…",
     "hideBranchDetails": "éšè—åˆ†æ”¯è¯¦æƒ…",
-    "branchRelationsCopy": "åˆ‡æ¢æ‰€é€‰èŠ‚ç‚¹çš„åˆ†æ”¯å…³ç³»è¯¦æƒ…ã€‚"
+    "branchRelationsCopy": "åˆ‡æ¢æ‰€é€‰èŠ‚ç‚¹çš„åˆ†æ”¯å…³ç³»è¯¦æƒ…ã€‚",
+    "startNodeLabel": "èµ·å§‹",
+    "valueUnavailable": "â€”"
   },
   "simulationWorkspace": {
     "running": "è¿è¡Œä¸­...",
