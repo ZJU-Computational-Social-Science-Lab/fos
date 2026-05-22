@@ -1,6 +1,7 @@
-// frontend/components/provider-management/ProviderDrawerForm.tsx
+﻿// frontend/components/provider-management/ProviderDrawerForm.tsx
 import { useEffect, useState } from "react";
 import { Eye, EyeOff, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Provider } from "../../services/providers";
 import type { ProviderFormValues } from "./ProviderManagementPage";
 
@@ -23,6 +24,7 @@ export function ProviderDrawerForm({
   onSubmit,
   isSaving,
 }: ProviderDrawerFormProps) {
+  const { t } = useTranslation();
   const [values, setValues] = useState<ProviderFormValues>(initialValues);
   const [showApiKey, setShowApiKey] = useState(false);
 
@@ -34,7 +36,10 @@ export function ProviderDrawerForm({
   if (!isOpen) return null;
 
   const isGemini = values.provider === "gemini";
-  const title = mode === "create" ? "新增 LLM" : `编辑 LLM · ${provider?.name ?? ""}`;
+  const title =
+    mode === "create"
+      ? t("settings.providers.providerForm.newLlmTitle")
+      : t("settings.providers.providerForm.editLlmTitle", { name: provider?.name ?? "" });
 
   return (
     <div className="provider-drawer-shell" role="presentation" onClick={onClose}>
@@ -43,10 +48,12 @@ export function ProviderDrawerForm({
           <div>
             <h2 className="provider-drawer__title">{title}</h2>
             <p className="provider-drawer__subtitle">
-              {isGemini ? "Google Gemini 模型接入配置" : "OpenAI Compatible 模型接入配置"}
+              {isGemini
+                ? t("settings.providers.providerForm.geminiAccessConfig")
+                : t("settings.providers.providerForm.openaiCompatibleAccessConfig")}
             </p>
           </div>
-          <button type="button" className="provider-drawer__close" onClick={onClose} aria-label="关闭">
+          <button type="button" className="provider-drawer__close" onClick={onClose} aria-label={t("common.cancel")}>
             <X size={18} />
           </button>
         </div>
@@ -60,31 +67,31 @@ export function ProviderDrawerForm({
         >
           <div className="provider-form-grid">
             <label className="provider-field">
-              <span className="provider-field__label">LLM 名称 *</span>
+              <span className="provider-field__label">{t("settings.providers.providerForm.llmNameRequired")}</span>
               <input
                 className="provider-field__input"
                 value={values.name}
                 onChange={(event) => setValues((current) => ({ ...current, name: event.target.value }))}
-                placeholder="如：OpenAI 主线路 / Gemini 备用"
+                placeholder={t("settings.providers.providerForm.llmNamePlaceholder")}
                 required
               />
             </label>
 
             <label className="provider-field">
-              <span className="provider-field__label">Provider 类型 *</span>
+              <span className="provider-field__label">{t("settings.providers.providerForm.providerTypeRequired")}</span>
               <select
                 className="provider-field__input"
                 value={values.provider}
                 onChange={(event) => setValues((current) => ({ ...current, provider: event.target.value as ProviderFormValues["provider"] }))}
               >
-                <option value="openai-compatible">OpenAI Compatible</option>
-                <option value="gemini">Google Gemini</option>
+                <option value="openai-compatible">{t("settings.providers.type.openai")}</option>
+                <option value="gemini">{t("settings.providers.type.gemini")}</option>
               </select>
             </label>
 
             {!isGemini ? (
               <label className="provider-field provider-field--full">
-                <span className="provider-field__label">Base URL *</span>
+                <span className="provider-field__label">{t("settings.providers.providerForm.baseUrlRequired")}</span>
                 <input
                   className="provider-field__input"
                   value={values.base_url}
@@ -96,7 +103,7 @@ export function ProviderDrawerForm({
             ) : null}
 
             <label className="provider-field provider-field--full">
-              <span className="provider-field__label">API Key *</span>
+              <span className="provider-field__label">{t("settings.providers.providerForm.apiKeyRequired")}</span>
               <div className="provider-field__secret-row">
                 <input
                   className="provider-field__input"
@@ -113,7 +120,7 @@ export function ProviderDrawerForm({
             </label>
 
             <label className="provider-field provider-field--full">
-              <span className="provider-field__label">默认模型</span>
+              <span className="provider-field__label">{t("settings.providers.providerForm.defaultModel")}</span>
               <input
                 className="provider-field__input"
                 value={values.model}
@@ -124,95 +131,95 @@ export function ProviderDrawerForm({
           </div>
 
           <details className="provider-advanced">
-            <summary className="provider-advanced__summary">高级设置</summary>
+            <summary className="provider-advanced__summary">{t("settings.providers.providerForm.advancedSettings")}</summary>
             <div className="provider-advanced__body">
               <div className="provider-advanced__grid">
                 <label className="provider-field">
-                  <span className="provider-field__label">Temperature</span>
+                  <span className="provider-field__label">{t("settings.providers.providerForm.temperature")}</span>
                   <input
                     className="provider-field__input"
                     value={values.temperature}
                     onChange={(event) => setValues((current) => ({ ...current, temperature: event.target.value }))}
-                    placeholder="如：0.7"
+                    placeholder={t("settings.providers.providerForm.exampleDecimal07")}
                     inputMode="decimal"
                   />
                 </label>
 
                 <label className="provider-field">
-                  <span className="provider-field__label">Top P</span>
+                  <span className="provider-field__label">{t("settings.providers.providerForm.topP")}</span>
                   <input
                     className="provider-field__input"
                     value={values.top_p}
                     onChange={(event) => setValues((current) => ({ ...current, top_p: event.target.value }))}
-                    placeholder="如：1.0"
+                    placeholder={t("settings.providers.providerForm.exampleDecimal10")}
                     inputMode="decimal"
                   />
                 </label>
 
                 <label className="provider-field">
-                  <span className="provider-field__label">Max Tokens</span>
+                  <span className="provider-field__label">{t("settings.providers.providerForm.maxTokens")}</span>
                   <input
                     className="provider-field__input"
                     value={values.max_tokens}
                     onChange={(event) => setValues((current) => ({ ...current, max_tokens: event.target.value }))}
-                    placeholder="如：4096"
+                    placeholder={t("settings.providers.providerForm.exampleMaxTokens")}
                     inputMode="numeric"
                   />
                 </label>
 
                 <label className="provider-field">
-                  <span className="provider-field__label">响应格式</span>
+                  <span className="provider-field__label">{t("settings.providers.providerForm.responseFormat")}</span>
                   <input
                     className="provider-field__input"
                     value={values.response_format}
                     onChange={(event) => setValues((current) => ({ ...current, response_format: event.target.value }))}
-                    placeholder="如：json_object"
+                    placeholder={t("settings.providers.providerForm.exampleJsonObject")}
                   />
                 </label>
 
                 <label className="provider-field provider-field--full">
-                  <span className="provider-field__label">Timeout (ms)</span>
+                  <span className="provider-field__label">{t("settings.providers.providerForm.timeoutMs")}</span>
                   <input
                     className="provider-field__input"
                     value={values.timeout_ms}
                     onChange={(event) => setValues((current) => ({ ...current, timeout_ms: event.target.value }))}
-                    placeholder="如：60000"
+                    placeholder={t("settings.providers.providerForm.exampleTimeoutMs")}
                     inputMode="numeric"
                   />
                 </label>
               </div>
 
               <label className="provider-field provider-field--full">
-                <span className="provider-field__label">Custom Endpoint</span>
+                <span className="provider-field__label">{t("settings.providers.providerForm.customEndpoint")}</span>
                 <input
                   className="provider-field__input"
                   value={values.custom_endpoint}
                   onChange={(event) => setValues((current) => ({ ...current, custom_endpoint: event.target.value }))}
-                  placeholder="可选"
+                  placeholder={t("settings.providers.providerForm.optional")}
                 />
               </label>
 
               <label className="provider-field provider-field--full">
-                <span className="provider-field__label">Headers / Metadata</span>
+                <span className="provider-field__label">{t("settings.providers.providerForm.headersMetadata")}</span>
                 <textarea
                   className="provider-field__textarea"
                   value={values.metadata}
                   onChange={(event) => setValues((current) => ({ ...current, metadata: event.target.value }))}
-                  placeholder="可选"
+                  placeholder={t("settings.providers.providerForm.optional")}
                   rows={4}
                 />
               </label>
 
-              <p className="provider-advanced__hint">留空时将跟随后端或模型默认配置。</p>
+              <p className="provider-advanced__hint">{t("settings.providers.providerForm.advancedHint")}</p>
             </div>
           </details>
 
           <div className="provider-drawer__footer">
             <button type="button" className="provider-button provider-button--ghost" onClick={onClose}>
-              取消
+              {t("common.cancel")}
             </button>
             <button type="submit" className="provider-button provider-button--primary" disabled={isSaving}>
-              {isSaving ? "保存中…" : "保存"}
+              {isSaving ? t("settings.providers.providerForm.saving") : t("settings.providers.providerForm.save")}
             </button>
           </div>
         </form>
