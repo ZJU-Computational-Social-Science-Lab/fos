@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useExperimentBuilder } from '../../store/experiment-builder';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
@@ -46,6 +47,7 @@ const UPDATE_LABELS: Record<string, string> = {
 };
 
 export const ExperimentPreview: React.FC = () => {
+  const { t } = useTranslation();
   const {
     selectedScenarioData,
     scenarioDescription,
@@ -74,7 +76,7 @@ export const ExperimentPreview: React.FC = () => {
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle>Experiment Preview</CardTitle>
+        <CardTitle>{t('components.experimentDesignModal.previewTitle')}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
