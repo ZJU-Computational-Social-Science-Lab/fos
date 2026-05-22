@@ -1,6 +1,7 @@
 // frontend/components/provider-management/ProviderManagementPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { ProviderPageHeader } from "./ProviderPageHeader";
 import { ProviderCardList } from "./ProviderCardList";
 import { ProviderDrawerForm } from "./ProviderDrawerForm";
@@ -85,6 +86,7 @@ const COST_HINT_ROWS = [
 ];
 
 export function ProviderManagementPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedProviderId, setSelectedProviderId] = useState<number | null>(null);
@@ -258,7 +260,7 @@ export function ProviderManagementPage() {
           <ProviderEmptyState onAddProvider={openCreateDrawer} />
         ) : null}
 
-        <section className="provider-cost-note" aria-label="LLM 费用提示">
+        <section className="provider-cost-note" aria-label={t("settings.providers.costHintAriaLabel")}>
           <div className="provider-cost-note__header">
             <h2 className="provider-cost-note__title">费用提示</h2>
             <p className="provider-cost-note__subtitle">以下是常见模型公开定价示例，实际费用以供应商最新账单为准。</p>

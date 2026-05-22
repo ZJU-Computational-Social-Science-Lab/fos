@@ -8,6 +8,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from "react-i18next";
 import { Minus, Plus } from 'lucide-react';
 
 interface NumberFieldProps {
@@ -27,6 +28,7 @@ export default function NumberField({
   step = 1,
   disabled = false
 }: NumberFieldProps) {
+  const { t } = useTranslation();
   const handleDecrement = () => {
     const newValue = Math.max(min, value - step);
     onChange(newValue);
@@ -53,7 +55,7 @@ export default function NumberField({
         disabled={disabled || value <= min}
         className="p-2 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         style={{ borderColor: 'var(--ss-border-strong)', background: 'var(--ss-page-surface)', color: 'var(--ss-text)' }}
-        aria-label="Decrease"
+        aria-label={t("common.decrease")}
       >
         <Minus className="w-4 h-4" />
       </button>
@@ -74,7 +76,7 @@ export default function NumberField({
         disabled={disabled || value >= max}
         className="p-2 rounded-md border disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         style={{ borderColor: 'var(--ss-border-strong)', background: 'var(--ss-page-surface)', color: 'var(--ss-text)' }}
-        aria-label="Increase"
+        aria-label={t("common.increase")}
       >
         <Plus className="w-4 h-4" />
       </button>
