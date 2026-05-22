@@ -42,10 +42,11 @@ const includeAncestors = (nodeMap: globalThis.Map<string, SimNode>, ids: Set<str
 };
 
 const BranchSummaryCard: React.FC<{
+  t: (key: string) => string;
   title: string;
   node: SimNode | null;
   highlight?: "selected" | "compare";
-}> = ({ title, node, highlight }) => (
+}> = ({ t, title, node, highlight }) => (
   <div className={`ss-topology__summary-card ${highlight ? `is-${highlight}` : ""}`}>
     <div className="ss-topology__summary-kicker">{title}</div>
     {node ? (
@@ -54,11 +55,11 @@ const BranchSummaryCard: React.FC<{
         <div className="ss-topology__summary-meta">{node.display_id || node.id}</div>
         <div className="ss-topology__summary-status">
           <span className={statusClassName(node.status)} aria-hidden />
-          <span>{node.status}</span>
+          <span>{t(`topologyExplorer.status.${node.status}`)}</span>
         </div>
       </>
     ) : (
-      <div className="ss-topology__summary-empty">—</div>
+      <div className="ss-topology__summary-empty">{t("topologyExplorer.valueUnavailable")}</div>
     )}
   </div>
 );
@@ -383,12 +384,14 @@ const TopologyExplorerPage: React.FC = () => {
                 <section className="ss-topology__filter-section">
                   <div className="ss-topology__filter-title">{t("topologyExplorer.selectionSummary")}</div>
                   <BranchSummaryCard
+                    t={t}
                     title={t("topologyExplorer.activeBranch")}
                     node={selectedNode}
                     highlight="selected"
                   />
                   {compareTargetNode ? (
                     <BranchSummaryCard
+                      t={t}
                       title={t("topologyExplorer.compareBranch")}
                       node={compareTargetNode}
                       highlight="compare"
@@ -405,7 +408,7 @@ const TopologyExplorerPage: React.FC = () => {
             <aside className="ss-workspace__panel ss-topology__detail">
               <div className="ss-workspace__panel-header">
                 <div className="ss-kicker">{t("topologyExplorer.selectedBranchDetail")}</div>
-                <h2 className="ss-workspace__panel-title mt-2">{selectedNode?.name || "—"}</h2>
+                <h2 className="ss-workspace__panel-title mt-2">{selectedNode?.name || t("topologyExplorer.valueUnavailable")}</h2>
                 <p className="ss-workspace__panel-copy">{t("topologyExplorer.detailHint")}</p>
               </div>
 
@@ -413,7 +416,7 @@ const TopologyExplorerPage: React.FC = () => {
                 <div className="ss-topology__detail-grid">
                   <div className="ss-topology__detail-stat">
                     <span>{t("simulationWorkspace.metrics.branch")}</span>
-                    <strong>{selectedNode?.display_id || "—"}</strong>
+                    <strong>{selectedNode?.display_id || t("topologyExplorer.valueUnavailable")}</strong>
                   </div>
                   <div className="ss-topology__detail-stat">
                     <span>{t("topologyExplorer.branchDepth")}</span>
@@ -425,7 +428,7 @@ const TopologyExplorerPage: React.FC = () => {
                   </div>
                   <div className="ss-topology__detail-stat">
                     <span>{t("topologyExplorer.parentBranch")}</span>
-                    <strong>{parentNode?.display_id || "—"}</strong>
+                    <strong>{parentNode?.display_id || t("topologyExplorer.valueUnavailable")}</strong>
                   </div>
                 </div>
 
@@ -433,11 +436,11 @@ const TopologyExplorerPage: React.FC = () => {
                   <div className="ss-topology__detail-card-title">{t("topologyExplorer.branchState")}</div>
                   <div className="ss-topology__detail-line">
                     <span>{t("common.status")}</span>
-                    <strong className="capitalize">{selectedNode?.status || "—"}</strong>
+                    <strong className="capitalize">{selectedNode?.status ? t(`topologyExplorer.status.${selectedNode.status}`) : t("topologyExplorer.valueUnavailable")}</strong>
                   </div>
                   <div className="ss-topology__detail-line">
                     <span>{t("simulationWorkspace.metrics.worldTime")}</span>
-                    <strong>{selectedNode?.worldTime || "—"}</strong>
+                    <strong>{selectedNode?.worldTime || t("topologyExplorer.valueUnavailable")}</strong>
                   </div>
                   <div className="ss-topology__detail-line">
                     <span>{t("topologyExplorer.visibleNodes")}</span>
@@ -477,11 +480,13 @@ const TopologyExplorerPage: React.FC = () => {
                     <p className="ss-topology__detail-copy">{t("topologyExplorer.compareReadyHint")}</p>
                     <div className="ss-topology__compare-stack">
                       <BranchSummaryCard
+                        t={t}
                         title={t("topologyExplorer.activeBranch")}
                         node={selectedNode}
                         highlight="selected"
                       />
                       <BranchSummaryCard
+                        t={t}
                         title={t("topologyExplorer.compareBranch")}
                         node={compareTargetNode}
                         highlight="compare"
