@@ -264,18 +264,31 @@
       "searchProviders": "搜索提供商",
       "files": "文件管理"
     },
+    "tabHints": {
+      "profile": "身份与工作空间归属",
+      "security": "会话访问与退出控制",
+      "providersLlm": "模型与接口配置",
+      "providersSearch": "搜索与检索提供商",
+      "files": "文件上传与存储整理"
+    },
     "profile": {
       "email": "邮箱",
       "username": "用户名",
       "fullName": "姓名",
-      "organization": "组织"
+      "organization": "组织",
+      "consistencyHint": "保持研究者身份信息在实验、导出结果与共享工作空间中的一致性。"
+    },
+    "workspaceStatus": {
+      "authenticatedAccess": "已验证的工作空间访问",
+      "profileReuse": "身份信息会复用于已保存实验"
     },
     "security": {
       "signoutAll": "退出所有会话",
       "placeholder": "这里将展示双因素认证和密码重置流程。",
       "sessionsTitle": "会话控制",
       "controlTitle": "访问姿态",
-      "controlHint": "这里仍然连接 FOS 真实的认证会话与 token 刷新链路。"
+      "controlHint": "这里仍然连接 FOS 真实的认证会话与 token 刷新链路。",
+      "authFlowNote": "认证流程仍然连接到 Future of Society 当前后端与 token 刷新链路。"
     },
     "providers": {
       "title": "提供商集成",
@@ -300,6 +313,7 @@
       "searchTab": "搜索提供商",
       "setSearchProvider": "配置搜索提供商",
       "searchTitle": "搜索提供商",
+      "searchAlignmentHint": "让检索服务与同一个研究工作空间和访问模型保持一致。",
       "fields": {
         "label": "名称",
         "provider": "提供商",
@@ -351,6 +365,11 @@
       "loading": "正在加载文件…",
       "error": "无法加载文件。",
       "empty": "没有上传文件。",
+      "emptyHint": "上传的研究文件会在关联到实验后显示在这里。",
+      "metrics": {
+        "files": "文件数量",
+        "orphanScan": "孤立文件扫描"
+      },
       "table": {
         "filename": "文件名",
         "size": "大小",
@@ -1976,6 +1995,8 @@
         "logsCount": "日志数",
         "rawEvents": "原始事件",
         "title": "右侧摘要栏",
+        "statusKicker": "状态摘要",
+        "headerSubtitle": "只保留最关键配置与操作入口。",
         "hideTitle": "收起右侧摘要",
         "simConfigTitle": "实验配置摘要",
         "worldRulesTitle": "世界规则",
@@ -1993,7 +2014,8 @@
         "openReport": "导出报告",
         "exportResults": "导出结果",
         "openResearchLogs": "打开研究日志",
-        "settings": "系统设置"
+        "settings": "系统设置",
+        "pauseNote": "暂停 / 终止逻辑仍保留在系统设置与后续实验控制中，这里先保留当前稳定能力。"
       },
       "topologyModal": {
         "title": "实验拓扑结构",

@@ -49,6 +49,8 @@ vi.mock("react-i18next", () => ({
     const translations: Record<Language, Record<string, string>> = {
       en: {
         "components.workspace.summaryRail.title": "Simulation Snapshot",
+        "components.workspace.summaryRail.statusKicker": "Status summary",
+        "components.workspace.summaryRail.headerSubtitle": "Keep only configuration, rules, metrics, and action shortcuts on the right side.",
         "components.workspace.summaryRail.worldModel": "World model",
         "components.workspace.summaryRail.branches": "Branches",
         "components.workspace.summaryRail.actions": "Actions",
@@ -56,9 +58,13 @@ vi.mock("react-i18next", () => ({
         "components.workspace.summaryRail.systemMetrics": "System metrics",
         "components.workspace.summaryRail.saveTemplate": "Save as template",
         "components.workspace.summaryRail.openResearchLogs": "Open research logs",
+        "components.workspace.summaryRail.pauseNote":
+          "Pause or halt controls remain in the broader experiment controls while this rail stays focused on the stable actions available today.",
       },
       zh: {
         "components.workspace.summaryRail.title": "模拟快照",
+        "components.workspace.summaryRail.statusKicker": "状态摘要",
+        "components.workspace.summaryRail.headerSubtitle": "只保留最关键配置与操作入口。",
         "components.workspace.summaryRail.worldModel": "世界模型",
         "components.workspace.summaryRail.branches": "分支数",
         "components.workspace.summaryRail.actions": "操作",
@@ -66,6 +72,7 @@ vi.mock("react-i18next", () => ({
         "components.workspace.summaryRail.systemMetrics": "系统指标",
         "components.workspace.summaryRail.saveTemplate": "保存为模板",
         "components.workspace.summaryRail.openResearchLogs": "打开研究日志",
+        "components.workspace.summaryRail.pauseNote": "暂停 / 终止逻辑仍保留在系统设置与后续实验控制中，这里先保留当前稳定能力。",
       },
     };
     return {

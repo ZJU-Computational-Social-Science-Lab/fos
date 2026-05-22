@@ -13,8 +13,7 @@ interface SimulationSummaryRailProps {
 }
 
 export const SimulationSummaryRail: React.FC<SimulationSummaryRailProps> = ({ onOpenLogs, onHide }) => {
-  const { t, i18n } = useTranslation();
-  const isZh = i18n.language.startsWith("zh");
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const currentSimulation = useSimulationStore((state) => state.currentSimulation);
   const nodes = useSimulationStore((state) => state.nodes);
@@ -116,13 +115,9 @@ export const SimulationSummaryRail: React.FC<SimulationSummaryRailProps> = ({ on
     <aside className="ss-summary-rail" id="workspace-summary">
       <div className="ss-summary-rail__header">
         <div>
-          <div className="ss-kicker">{isZh ? "状态摘要" : "Status summary"}</div>
+          <div className="ss-kicker">{t("components.workspace.summaryRail.statusKicker")}</div>
           <h2>{t("components.workspace.summaryRail.title")}</h2>
-          <p>
-            {isZh
-              ? "只保留最关键配置与操作入口。"
-              : "Keep only configuration, rules, metrics, and action shortcuts on the right side."}
-          </p>
+          <p>{t("components.workspace.summaryRail.headerSubtitle")}</p>
         </div>
         <button
           type="button"
@@ -271,11 +266,7 @@ export const SimulationSummaryRail: React.FC<SimulationSummaryRailProps> = ({ on
 
           <div className="ss-summary-rail__pause-note">
             <PauseCircle size={15} />
-            <span>
-              {isZh
-                ? "暂停 / 终止逻辑仍保留在系统设置与后续实验控制中，这里先保留当前稳定能力。"
-                : "Pause or halt controls remain in the broader experiment controls while this rail stays focused on the stable actions available today."}
-            </span>
+            <span>{t("components.workspace.summaryRail.pauseNote")}</span>
           </div>
         </CollapsibleInsightSection>
       </div>
