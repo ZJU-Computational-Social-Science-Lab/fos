@@ -15,8 +15,8 @@ import {
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useThemeStore } from "../store/theme";
+import { getBilibiliEmbedUrl, isBilibiliConfigured } from "../config/video";
 
-import landingDemoVideo from "../assets/landing/landing-demo.mp4";
 import sceneBehaviorImage from "../assets/landing/scene-behavior.png";
 import sceneInstitutionImage from "../assets/landing/scene-institution.png";
 import sceneInterventionImage from "../assets/landing/scene-intervention.png";
@@ -270,18 +270,21 @@ export function LandingPage() {
 
           <div className="ss-landing__preview-grid">
             <div className="ss-landing__preview-stage ss-landing__preview-stage--video">
-              <video
-                className="ss-landing__preview-video"
-                src={landingDemoVideo}
-                autoPlay
-                muted
-                loop
-                playsInline
-                controls
-                preload="metadata"
-              >
-                {t("landing.preview.title")}
-              </video>
+              {isBilibiliConfigured() ? (
+                <iframe
+                  className="ss-landing__preview-video"
+                  src={getBilibiliEmbedUrl()}
+                  scrolling="no"
+                  border="none"
+                  frameBorder="0"
+                  allowFullScreen
+                  title={String(t("landing.preview.title"))}
+                />
+              ) : (
+                <div className="ss-landing__preview-placeholder">
+                  <p>{t("landing.preview.configureVideo")}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -1310,6 +1310,69 @@
       "disableDynamicEvents": "Disable dynamic environment events",
       "enableDynamicEvents": "Enable dynamic environment events"
     },
+    "event": {
+      "panel": {
+        "title": "External Events"
+      },
+      "tab": {
+        "all": "All",
+        "policy": "Policy",
+        "market": "Market",
+        "news": "News",
+        "manual": "Manual"
+      },
+      "severity": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "critical": "Critical"
+      },
+      "loading": "Loading events...",
+      "empty": "No events available",
+      "emptyHint": "External events will appear here when detected",
+      "refresh": "Refresh",
+      "viewSource": "View Source",
+      "apply": "Apply"
+    },
+    "rule": {
+      "config": {
+        "title": "Event Rules",
+        "name": "Rule Name",
+        "description": "Description",
+        "conditions": "Conditions",
+        "addCondition": "Add Condition",
+        "cooldown": "Cooldown (seconds)",
+        "eventType": "Event Type",
+        "severity": "Severity",
+        "titleTemplate": "Title Template",
+        "contentTemplate": "Content Template",
+        "newRule": "New Rule",
+        "noRules": "No rules configured",
+        "noRulesHint": "Add rules to trigger events automatically",
+        "addRule": "Add Rule"
+      }
+    },
+    "customApi": {
+      "title": "Custom API Sources",
+      "name": "Source Name",
+      "apiUrl": "API URL",
+      "pollInterval": "Poll Interval (minutes)",
+      "authType": "Authentication",
+      "authNone": "None",
+      "authBearer": "Bearer Token",
+      "authApiKey": "API Key",
+      "authToken": "Token / Key",
+      "fieldMapping": "Field Mapping",
+      "titleField": "Title Field",
+      "contentField": "Content Field",
+      "timestampField": "Timestamp Field",
+      "severityField": "Severity Field",
+      "newSource": "New API Source",
+      "noSources": "No custom API sources configured",
+      "noSourcesHint": "Add custom APIs to pull external events",
+      "addSource": "Add API Source",
+      "test": "Test Connection"
+    },
     "experimentDesignModal": {
       "title": "Causal Intervention Experiment Design",
       "subtitle": "Create parallel control groups based on node <span class=\"font-mono bg-white px-1 rounded border border-indigo-200\">{{displayId}}</span> ({{name}})",
