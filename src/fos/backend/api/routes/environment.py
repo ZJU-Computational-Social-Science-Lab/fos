@@ -1,5 +1,6 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 import logging
+from datetime import datetime, timedelta
 from litestar import Router, get, post
 from litestar.connection import Request
 from litestar.exceptions import HTTPException
@@ -14,6 +15,8 @@ from ...services.environment_suggestion_service import (
     broadcast_environment_event,
     dismiss_suggestions,
 )
+from ...core.event_queue import EventQueue
+from ...core.external_event import ExternalEvent, EventFilter, ExternalEventType
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +126,116 @@ async def dismiss_suggestions_endpoint(
             raise HTTPException(status_code=400, detail=str(e))
 
 
+# Per-simulation event queues to avoid leaking events across simulations
+_simulation_event_queues: dict[str, EventQueue] = {}
+
+
+def _get_simulation_queue(simulation_id: str) -> EventQueue:
+    """Get or create an event queue for a specific simulation."""
+    if simulation_id not in _simulation_event_queues:
+        _simulation_event_queues[simulation_id] = EventQueue(max_size=1000, dedup_window_hours=24)
+    return _simulation_event_queues[simulation_id]
+
+
+@get("/events/external")
+async def get_external_events(
+    request: Request,
+    simulation_id: str | None = None,
+    type: str | None = None,
+    min_severity: str | None = None,
+    limit: int = 50,
+) -> Dict[str, Any]:
+    """Get external events for a simulation.
+
+    Args:
+        simulation_id: Optional simulation ID to scope events (required for isolation)
+        type: Optional event type filter (policy, market, news, custom, manual)
+        min_severity: Optional minimum severity filter (low, medium, high, critical)
+        limit: Maximum number of events to return (default 50)
+    """
+    token = extract_bearer_token(request)
+    async with get_session() as session:
+        current_user = await resolve_current_user(session, token)
+
+        # Use simulation_id if provided, otherwise require simulation context
+        queue = _get_simulation_queue(simulation_id) if simulation_id else EventQueue(max_size=100, dedup_window_hours=1)
+
+        # Build filter if parameters provided
+        event_filter = None
+        if type or min_severity:
+            type_map = {
+                "policy": ExternalEventType.POLICY,
+                "market": ExternalEventType.MARKET,
+                "news": ExternalEventType.NEWS,
+                "custom": ExternalEventType.CUSTOM,
+                "manual": ExternalEventType.MANUAL,
+            }
+            type_filter = [type_map[t]] if type and type in type_map else None
+            min_sev = min_severity if min_severity and min_severity in ("low", "medium", "high", "critical") else None
+
+            if type_filter or min_sev:
+                from ...core.external_event import Severity
+                severity_enum = Severity[min_sev.upper()] if min_sev else None
+                event_filter = EventFilter(
+                    types=type_filter,
+                    min_severity=severity_enum,
+                )
+
+        if event_filter:
+            events = queue.get_by_filter(event_filter)
+        else:
+            events = queue.get_pending(limit=limit)
+
+        return {
+            "events": [e.to_dict() for e in events],
+            "total": len(events),
+        }
+
+
+@post("/events/external")
+async def add_external_event(
+    data: Dict[str, Any],
+    request: Request,
+    simulation_id: str | None = None,
+) -> Dict[str, Any]:
+    """Add an external event to a simulation's event queue.
+
+    This endpoint allows manual injection of events or forwarding
+    from external sources.
+    """
+    token = extract_bearer_token(request)
+    async with get_session() as session:
+        current_user = await resolve_current_user(session, token)
+
+        queue = _get_simulation_queue(simulation_id) if simulation_id else None
+
+        try:
+            event = ExternalEvent.from_dict(data)
+            if queue:
+                success = queue.enqueue(event)
+            else:
+                success = False
+            return {
+                "success": success,
+                "event_id": event.id,
+                "message": "Event added" if success else "No simulation context - event not stored",
+            }
+        except (KeyError, ValueError) as e:
+            raise HTTPException(status_code=400, detail=f"Invalid event data: {e}")
+
+
+def get_external_event_queue(simulation_id: str | None = None) -> EventQueue:
+    """Get the event queue for a simulation, or a default queue if none specified."""
+    if simulation_id:
+        return _get_simulation_queue(simulation_id)
+    # Return a module-level default queue for backward compatibility
+    return _external_event_queue
+
+
+# Backward compatibility - module-level default queue
+_external_event_queue: EventQueue = EventQueue(max_size=1000, dedup_window_hours=24)
+
+
 router = Router(
     path="",
     route_handlers=[
@@ -130,5 +243,7 @@ router = Router(
         generate_suggestions,
         apply_environment_event,
         dismiss_suggestions_endpoint,
+        get_external_events,
+        add_external_event,
     ],
 )

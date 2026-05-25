@@ -511,9 +511,21 @@ class CustomEventFetcher(BaseEventFetcher):
                 data = json.loads(response.read().decode("utf-8"))
 
             # Handle both array and object responses
-            items = data if isinstance(data, list) else data.get("data", data.get("items", []))
+            items = data if isinstance(data, list) else data.get("data", data.get("items"))
+
+            # If single object (no items key and not a list), treat as single item
+            if items is None:
+                items = [data] if isinstance(data, dict) else []
+            elif not isinstance(items, list):
+                items = [items]
 
             for item in items:
+                # Skip if not a dict (shouldn't happen but be safe)
+                if not isinstance(item, dict):
+                    continue
+                # Skip if already processed (avoids double mapping)
+                if "event_type" in item or "_mapped" in item:
+                    continue
                 mapped = self._map_fields(item)
                 if mapped:
                     events.append(ExternalEvent.create(
