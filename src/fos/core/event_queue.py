@@ -20,7 +20,8 @@ class EventQueue:
             max_size: Maximum number of events to store.
             dedup_window_hours: Time window for deduplication (hours).
         """
-        self._queue: deque[ExternalEvent] = deque(maxlen=max_size)
+        self._queue: deque[ExternalEvent] = deque()
+        self._max_size = max_size
         self._seen_ids: set[str] = set()
         self._dedup_window = timedelta(hours=dedup_window_hours)
 
@@ -35,6 +36,11 @@ class EventQueue:
         """
         if event.id in self._seen_ids:
             return False
+
+        # Remove oldest if at capacity
+        while len(self._queue) >= self._max_size:
+            oldest = self._queue.popleft()
+            self._seen_ids.discard(oldest.id)
 
         self._queue.append(event)
         self._seen_ids.add(event.id)

@@ -58,14 +58,31 @@ class RuleCondition:
         return self._compare(field_value, self.operator, self.value)
 
     def _get_nested_field(self, data: Dict[str, Any], field_path: str) -> Any:
-        """Get a nested field from a dictionary using dot notation."""
+        """Get a nested field from a dictionary using dot notation.
+
+        Supports special properties for collections:
+        - length: returns len(list)
+        - count: returns len(list)
+        - first: returns list[0]
+        - last: returns list[-1]
+        """
         keys = field_path.split(".")
         value = data
         for key in keys:
             if isinstance(value, dict):
                 value = value.get(key)
-            elif isinstance(value, list) and key.isdigit():
-                value = value[int(key)]
+            elif isinstance(value, list):
+                if key.isdigit():
+                    idx = int(key)
+                    value = value[idx] if 0 <= idx < len(value) else None
+                elif key == "length" or key == "count":
+                    value = len(value)
+                elif key == "first":
+                    value = value[0] if value else None
+                elif key == "last":
+                    value = value[-1] if value else None
+                else:
+                    return None
             else:
                 return None
         return value
@@ -112,8 +129,8 @@ class Rule:
     id: str
     name: str
     description: str = ""
-    conditions: List[RuleCondition] = field(default_factory=dict)
-    action: RuleAction = field(default_factory=RuleAction(
+    conditions: List[RuleCondition] = field(default_factory=list)
+    action: RuleAction = field(default_factory=lambda: RuleAction(
         event_type=ExternalEventType.MANUAL,
         title_template="Rule triggered",
         content_template="A rule condition was met.",
