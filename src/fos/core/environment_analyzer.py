@@ -1,31 +1,14 @@
-"""Minimal environment analyzer stub.
+"""Environment analyzer for fos simulations.
 
-Environment analysis was intentionally not migrated from the legacy codebase.
-This stub unblocks backend imports. Actual analysis is a no-op.
-
-TODO: Implement environment analyzer for fos if needed.
+This module re-exports from the new environment_agent implementation.
+The EnvironmentAnalyzer is now a thin wrapper around EnvironmentAgent.
 
 Contains: EnvironmentAnalyzer
 """
 
-from __future__ import annotations
+from fos.core.environment_agent import EnvironmentAgent
 
-from typing import Any, Dict, List, Optional
+# Re-export for backwards compatibility
+EnvironmentAnalyzer = EnvironmentAgent
 
-
-class EnvironmentAnalyzer:
-    """No-op environment analyzer stub.
-
-    Returns empty suggestions — environment analysis is not implemented in fos.
-    """
-
-    def __init__(self, clients: Optional[Dict[str, Any]] = None) -> None:
-        self.clients = clients
-
-    def generate_suggestions(
-        self,
-        context: Dict[str, Any],
-        count: int = 3,
-    ) -> List[Dict[str, Any]]:
-        """Return empty list — no environment suggestions available."""
-        return []
+__all__ = ["EnvironmentAnalyzer"]

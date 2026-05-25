@@ -1276,6 +1276,69 @@
       "disableDynamicEvents": "禁用动态环境事件",
       "enableDynamicEvents": "启用动态环境事件"
     },
+    "event": {
+      "panel": {
+        "title": "外部事件"
+      },
+      "tab": {
+        "all": "全部",
+        "policy": "政策",
+        "market": "市场",
+        "news": "新闻",
+        "manual": "手动"
+      },
+      "severity": {
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "critical": "严重"
+      },
+      "loading": "加载事件中...",
+      "empty": "暂无事件",
+      "emptyHint": "检测到外部事件后将显示在此处",
+      "refresh": "刷新",
+      "viewSource": "查看来源",
+      "apply": "应用"
+    },
+    "rule": {
+      "config": {
+        "title": "事件规则",
+        "name": "规则名称",
+        "description": "描述",
+        "conditions": "条件",
+        "addCondition": "添加条件",
+        "cooldown": "冷却时间（秒）",
+        "eventType": "事件类型",
+        "severity": "严重程度",
+        "titleTemplate": "标题模板",
+        "contentTemplate": "内容模板",
+        "newRule": "新规则",
+        "noRules": "暂无规则",
+        "noRulesHint": "添加规则以自动触发事件",
+        "addRule": "添加规则"
+      }
+    },
+    "customApi": {
+      "title": "自定义 API 数据源",
+      "name": "数据源名称",
+      "apiUrl": "API 地址",
+      "pollInterval": "轮询间隔（分钟）",
+      "authType": "认证方式",
+      "authNone": "无",
+      "authBearer": "Bearer 令牌",
+      "authApiKey": "API 密钥",
+      "authToken": "令牌/密钥",
+      "fieldMapping": "字段映射",
+      "titleField": "标题字段",
+      "contentField": "内容字段",
+      "timestampField": "时间戳字段",
+      "severityField": "严重程度字段",
+      "newSource": "新数据源",
+      "noSources": "暂无自定义 API 数据源",
+      "noSourcesHint": "添加自定义 API 以拉取外部事件",
+      "addSource": "添加 API 数据源",
+      "test": "测试连接"
+    },
     "experimentDesignModal": {
       "title": "因果干预实验设计",
       "subtitle": "基于节点 <span class=\"font-mono bg-white px-1 rounded border border-indigo-200\">{{displayId}}</span> ({{name}}) 创建平行对照组",

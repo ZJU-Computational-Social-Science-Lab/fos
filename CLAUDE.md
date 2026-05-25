@@ -1,5 +1,9 @@
 # Project Conventions
 
+## Reference Documents
+
+- **Environment Agent Design**: `docs/environment-agent-design.md` — 初始设计规范，定义环境代理功能的需求、架构、组件和实现计划。
+
 ## File Rules
 - Keep all files under 500 lines. If a file grows too large, split it into focused modules.
 - Begin every file with a plain-language comment explaining what the file does and what each function in it does. No technical jargon — write it so anyone could understand.
