@@ -1,6 +1,6 @@
 from typing import Dict, Any, List
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from litestar import Router, get, post
 from litestar.connection import Request
 from litestar.exceptions import HTTPException
@@ -16,7 +16,7 @@ from fos.backend.services.environment_suggestion_service import (
     dismiss_suggestions,
 )
 from fos.core.event_queue import EventQueue
-from fos.core.external_event import ExternalEvent, EventFilter, ExternalEventType, Severity
+from fos.core.external_event import ExternalEvent, EventFilter, ExternalEventType, EventSource, Severity
 
 logger = logging.getLogger(__name__)
 
@@ -178,52 +178,66 @@ async def get_external_events(
     simulation_id: str | None = None,
     type: str | None = None,
     min_severity: str | None = None,
+    status: str | None = "pending",
     limit: int = 50,
 ) -> Dict[str, Any]:
-    """Get external events for a simulation.
+    """Get external events for a simulation from DB.
 
     Args:
-        simulation_id: Optional simulation ID to scope events (required for isolation)
+        simulation_id: Optional simulation ID to scope events
         type: Optional event type filter (policy, market, news, custom, manual)
         min_severity: Optional minimum severity filter (low, medium, high, critical)
+        status: Optional status filter (pending, applied, dismissed) — default "pending"
         limit: Maximum number of events to return (default 50)
     """
     token = extract_bearer_token(request)
     async with get_session() as session:
         current_user = await resolve_current_user(session, token)
 
-        # Use simulation_id if provided, otherwise require simulation context
-        queue = _get_simulation_queue(simulation_id) if simulation_id else EventQueue(max_size=100, dedup_window_hours=1)
+        from sqlalchemy import select, desc
+        from fos.backend.models.external_event_record import ExternalEventRecord
 
-        # Build filter if parameters provided
-        event_filter = None
-        if type or min_severity:
-            type_map = {
-                "policy": ExternalEventType.POLICY,
-                "market": ExternalEventType.MARKET,
-                "news": ExternalEventType.NEWS,
-                "custom": ExternalEventType.CUSTOM,
-                "manual": ExternalEventType.MANUAL,
-            }
-            type_filter = [type_map[t]] if type and type in type_map else None
-            min_sev = min_severity if min_severity and min_severity in ("low", "medium", "high", "critical") else None
+        stmt = select(ExternalEventRecord)
 
-            if type_filter or min_sev:
-                severity_enum = Severity[min_sev.upper()] if min_sev else None
-                event_filter = EventFilter(
-                    types=type_filter,
-                    min_severity=severity_enum,
+        # Apply filters
+        if simulation_id:
+            stmt = stmt.where(ExternalEventRecord.simulation_id == simulation_id)
+        if type:
+            stmt = stmt.where(ExternalEventRecord.event_type == type)
+        if min_severity:
+            severity_order = {"low": 1, "medium": 2, "high": 3, "critical": 4}
+            min_level = severity_order.get(min_severity, 0)
+            # Filter events with severity >= min_level
+            from sqlalchemy import func
+            stmt = stmt.where(
+                ExternalEventRecord.severity.in_(
+                    [k for k, v in severity_order.items() if v >= min_level]
                 )
+            )
+        if status:
+            stmt = stmt.where(ExternalEventRecord.status == status)
 
-        if event_filter:
-            events = queue.get_by_filter(event_filter)
-        else:
-            events = queue.get_pending(limit=limit)
+        stmt = stmt.order_by(desc(ExternalEventRecord.event_timestamp)).limit(limit)
 
-        return {
-            "events": [e.to_dict() for e in events],
-            "total": len(events),
-        }
+        result = await session.execute(stmt)
+        records = result.scalars().all()
+
+        events = [
+            {
+                "id": r.id,
+                "event_type": r.event_type,
+                "source": r.source,
+                "title": r.title,
+                "content": r.content,
+                "severity": r.severity,
+                "url": r.url,
+                "timestamp": r.event_timestamp.isoformat(),
+                "status": r.status,
+            }
+            for r in records
+        ]
+
+        return {"events": events, "total": len(events)}
 
 
 @post("/events/external")
@@ -232,30 +246,42 @@ async def add_external_event(
     request: Request,
     simulation_id: str | None = None,
 ) -> Dict[str, Any]:
-    """Add an external event to a simulation's event queue.
+    """Add an external event to DB.
 
     This endpoint allows manual injection of events or forwarding
-    from external sources.
+    from external sources (webhook push).
     """
     token = extract_bearer_token(request)
     async with get_session() as session:
         current_user = await resolve_current_user(session, token)
 
-        queue = _get_simulation_queue(simulation_id) if simulation_id else None
+        from fos.backend.models.external_event_record import ExternalEventRecord
+        from datetime import datetime
 
+        record = ExternalEventRecord(
+            simulation_id=simulation_id,
+            event_type=data.get("event_type", "manual"),
+            source=data.get("source", "manual"),
+            title=data.get("title", ""),
+            content=data.get("content", ""),
+            severity=data.get("severity", "medium"),
+            url=data.get("url"),
+            raw_data=data.get("metadata", {}),
+            event_timestamp=datetime.fromisoformat(data["timestamp"]) if data.get("timestamp") else datetime.utcnow(),
+            status="pending",
+        )
+        session.add(record)
         try:
-            event = ExternalEvent.from_dict(data)
-            if queue:
-                success = queue.enqueue(event)
-            else:
-                success = False
-            return {
-                "success": success,
-                "event_id": event.id,
-                "message": "Event added" if success else "No simulation context - event not stored",
-            }
-        except (KeyError, ValueError) as e:
-            raise HTTPException(status_code=400, detail=f"Invalid event data: {e}")
+            await session.commit()
+        except Exception as e:
+            logger.error(f"Failed to persist external event: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Failed to save event to database")
+
+        return {
+            "success": True,
+            "event_id": record.id,
+            "message": "Event added to DB",
+        }
 
 
 @post("/events/seed")
@@ -264,65 +290,80 @@ async def seed_demo_events(
     simulation_id: str | None = None,
 ) -> Dict[str, Any]:
     """Seed demo events for testing the event panel UI."""
-    token = extract_bearer_token(request)
-    async with get_session() as session:
-        current_user = await resolve_current_user(session, token)
+    try:
+        token = extract_bearer_token(request)
+        async with get_session() as session:
+            current_user = await resolve_current_user(session, token)
 
-    queue = _get_simulation_queue(simulation_id) if simulation_id else _get_default_queue()
+        queue = _get_simulation_queue(simulation_id) if simulation_id else _get_default_queue()
+        logger.info(f"Seed auth OK, queue created, simulation_id={simulation_id}")
 
-    demo_events = [
-        ExternalEvent.create(
-            event_type=ExternalEventType.MARKET,
-            source=EventSource.YAHOO_FINANCE,
-            title="股市大幅波动",
-            content="上证指数单日下跌 3.2%，市场恐慌情绪蔓延",
-            severity=Severity.HIGH,
-            metadata={"index": "000001.SS", "change_pct": -3.2},
-        ),
-        ExternalEvent.create(
-            event_type=ExternalEventType.POLICY,
-            source=EventSource.NATIONAL_BUREAU,
-            title="政府发布新能源汽车补贴政策",
-            content="财政部宣布延续新能源汽车购置税减免政策至 2027 年",
-            severity=Severity.MEDIUM,
-            metadata={"region": "全国", "category": "industrial"},
-        ),
-        ExternalEvent.create(
-            event_type=ExternalEventType.NEWS,
-            source=EventSource.NEWS_API,
-            title="社交媒体舆论风暴",
-            content="某企业家微博发言引发广泛讨论，相关话题阅读量突破 5 亿",
-            severity=Severity.HIGH,
-            metadata={"platform": "微博", "views": 500000000},
-        ),
-        ExternalEvent.create(
-            event_type=ExternalEventType.MARKET,
-            source=EventSource.YAHOO_FINANCE,
-            title="银行利率上调",
-            content="央行宣布一年期存贷款利率上调 25 个基点",
-            severity=Severity.MEDIUM,
-            metadata={"rate_change_bp": 25},
-        ),
-        ExternalEvent.create(
-            event_type=ExternalEventType.MANUAL,
-            source=EventSource.MANUAL,
-            title="突发自然灾害",
-            content="某地区发生 5.1 级地震，暂无人员伤亡报告",
-            severity=Severity.CRITICAL,
-            metadata={"magnitude": 5.1, "region": "某地区"},
-        ),
-    ]
+        demo_events = [
+            ExternalEvent.create(
+                event_type=ExternalEventType.MARKET,
+                source=EventSource.YAHOO_FINANCE,
+                title="股市大幅波动",
+                content="上证指数单日下跌 3.2%，市场恐慌情绪蔓延",
+                severity=Severity.HIGH,
+                metadata={"index": "000001.SS", "change_pct": -3.2},
+            ),
+            ExternalEvent.create(
+                event_type=ExternalEventType.POLICY,
+                source=EventSource.NATIONAL_BUREAU,
+                title="政府发布新能源汽车补贴政策",
+                content="财政部宣布延续新能源汽车购置税减免政策至 2027 年",
+                severity=Severity.MEDIUM,
+                metadata={"region": "全国", "category": "industrial"},
+            ),
+            ExternalEvent.create(
+                event_type=ExternalEventType.NEWS,
+                source=EventSource.NEWS_API,
+                title="社交媒体舆论风暴",
+                content="某企业家微博发言引发广泛讨论，相关话题阅读量突破 5 亿",
+                severity=Severity.HIGH,
+                metadata={"platform": "微博", "views": 500000000},
+            ),
+            ExternalEvent.create(
+                event_type=ExternalEventType.MARKET,
+                source=EventSource.YAHOO_FINANCE,
+                title="银行利率上调",
+                content="央行宣布一年期存贷款利率上调 25 个基点",
+                severity=Severity.MEDIUM,
+                metadata={"rate_change_bp": 25},
+            ),
+            ExternalEvent.create(
+                event_type=ExternalEventType.MANUAL,
+                source=EventSource.MANUAL,
+                title="突发自然灾害",
+                content="某地区发生 5.1 级地震，暂无人员伤亡报告",
+                severity=Severity.CRITICAL,
+                metadata={"magnitude": 5.1, "region": "某地区"},
+            ),
+        ]
 
-    added = 0
-    for event in demo_events:
-        if queue.enqueue(event):
-            added += 1
+        added = 0
+        for event in demo_events:
+            if queue.enqueue(event):
+                added += 1
 
-    return {"added": added, "total": queue.size()}
+        logger.info(f"Seed complete: added={added}, total={queue.size()}")
+        return {"added": added, "total": queue.size()}
+    except Exception as e:
+        logger.error(f"Seed error: {type(e).__name__}: {e}", exc_info=True)
+        raise
 
 
 def get_external_event_queue(simulation_id: str | None = None) -> EventQueue:
-    """Get the event queue for a simulation, or a default queue if none specified."""
+    """Get the event queue for a simulation, or a default queue if none specified.
+
+    DEPRECATED: This function returns in-memory EventQueue which is no longer
+    used for DB-backed external events. It is retained for backward compatibility
+    with code that may still use in-memory queues for non-DB purposes.
+    """
+    logger.warning(
+        "get_external_event_queue is deprecated and returns in-memory EventQueue. "
+        "External events are now stored in DB (external_event_records table)."
+    )
     if simulation_id:
         return _get_simulation_queue(simulation_id)
     # Return a module-level default queue for backward compatibility
