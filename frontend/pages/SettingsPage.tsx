@@ -18,6 +18,7 @@ import {
 
 import { AppSelect } from "../components/AppSelect";
 import { TitleCard } from "../components/TitleCard";
+import { DataSourceSettings } from "../components/DataSourceSettings";
 import { ProviderManagementPage } from "../components/provider-management/ProviderManagementPage";
 import {
   createSearchProvider,
@@ -27,7 +28,7 @@ import {
 import { deleteUpload, findOrphans, listUploads } from "../services/uploads";
 import { useAuthStore } from "../store/auth";
 
-type Tab = "profile" | "security" | "providers_llm" | "providers_search" | "files";
+type Tab = "profile" | "security" | "providers_llm" | "providers_search" | "files" | "dataSources";
 
 const getCapabilityRows = (t: (key: string) => string) => [
   {
@@ -205,6 +206,12 @@ export function SettingsPage() {
       hint: t("settings.tabHints.files"),
       icon: <FileStack size={15} />,
     },
+    {
+      id: "dataSources" as const,
+      title: t("settings.tabs.dataSources"),
+      hint: t("settings.tabHints.dataSources"),
+      icon: <Database size={15} />,
+    },
   ];
 
   useEffect(() => {
@@ -215,7 +222,8 @@ export function SettingsPage() {
       nextTab === "security" ||
       nextTab === "providers_llm" ||
       nextTab === "providers_search" ||
-      nextTab === "files"
+      nextTab === "files" ||
+      nextTab === "dataSources"
     ) {
       setActiveTab(nextTab);
     }
@@ -559,6 +567,7 @@ export function SettingsPage() {
     if (activeTab === "security") return renderSecurity();
     if (activeTab === "providers_llm") return renderProviders();
     if (activeTab === "providers_search") return renderSearchProviders();
+    if (activeTab === "dataSources") return <DataSourceSettings />;
     return renderFiles();
   };
 

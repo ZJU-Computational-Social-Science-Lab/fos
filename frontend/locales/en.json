@@ -392,14 +392,16 @@
       "providers": "Providers",
       "llmProviders": "LLM providers",
       "searchProviders": "Search providers",
-      "files": "File Management"
+      "files": "File Management",
+      "dataSources": "Data Sources"
     },
     "tabHints": {
       "profile": "Identity and workspace ownership",
       "security": "Session access and sign-out controls",
       "providersLlm": "Model and interface configuration",
       "providersSearch": "Search and retrieval providers",
-      "files": "Uploads and storage hygiene"
+      "files": "Uploads and storage hygiene",
+      "dataSources": "Configure external data sources"
     },
     "profile": {
       "email": "Email",
@@ -1332,7 +1334,22 @@
       "emptyHint": "External events will appear here when detected",
       "refresh": "Refresh",
       "viewSource": "View Source",
-      "apply": "Apply"
+      "apply": "Apply",
+      "addTitle": "Add Event",
+      "addEvent": "Add Event",
+      "form": {
+        "title": "Title",
+        "titlePlaceholder": "Enter event title",
+        "content": "Content",
+        "contentPlaceholder": "Enter event content",
+        "severity": "Severity",
+        "url": "Source URL",
+        "optional": "optional",
+        "add": "Add",
+        "cancel": "Cancel",
+        "saving": "Adding..."
+      },
+      "lastUpdate": "Updated at"
     },
     "rule": {
       "config": {

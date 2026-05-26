@@ -358,14 +358,16 @@
       "providers": "提供商",
       "llmProviders": "模型提供商",
       "searchProviders": "搜索提供商",
-      "files": "文件管理"
+      "files": "文件管理",
+      "dataSources": "数据源"
     },
     "tabHints": {
       "profile": "身份与工作空间归属",
       "security": "会话访问与退出控制",
       "providersLlm": "模型与接口配置",
       "providersSearch": "搜索与检索提供商",
-      "files": "文件上传与存储整理"
+      "files": "文件上传与存储整理",
+      "dataSources": "配置外部数据源"
     },
     "profile": {
       "email": "邮箱",
@@ -1298,7 +1300,22 @@
       "emptyHint": "检测到外部事件后将显示在此处",
       "refresh": "刷新",
       "viewSource": "查看来源",
-      "apply": "应用"
+      "apply": "应用",
+      "addTitle": "添加事件",
+      "addEvent": "添加事件",
+      "form": {
+        "title": "标题",
+        "titlePlaceholder": "输入事件标题",
+        "content": "内容",
+        "contentPlaceholder": "输入事件内容",
+        "severity": "严重程度",
+        "url": "来源链接",
+        "optional": "可选",
+        "add": "添加",
+        "cancel": "取消",
+        "saving": "添加中"
+      },
+      "lastUpdate": "更新于"
     },
     "rule": {
       "config": {
