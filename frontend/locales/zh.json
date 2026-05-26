@@ -515,6 +515,75 @@
       "byte": "字节",
       "kb": "KB",
       "mb": "GB"
+    },
+    "dataSource": {
+      "title": "数据源管理",
+      "listTitle": "数据源列表",
+      "addTitle": "添加数据源",
+      "editTitle": "编辑数据源",
+      "table": {
+        "name": "名称",
+        "eventType": "事件类型",
+        "pollInterval": "轮询间隔",
+        "status": "状态",
+        "actions": "操作",
+        "seconds": "秒"
+      },
+      "form": {
+        "name": "名称",
+        "apiUrl": "API 地址",
+        "authType": "认证方式",
+        "authNone": "无",
+        "authBearer": "Bearer Token",
+        "authApiKey": "API Key",
+        "authToken": "令牌/密钥",
+        "pollInterval": "轮询间隔（秒）",
+        "eventType": "事件类型",
+        "eventTypeMarket": "市场",
+        "eventTypePolicy": "政策",
+        "eventTypeNews": "新闻",
+        "eventTypeCustom": "自定义",
+        "scope": "作用域",
+        "scopeGlobal": "全局",
+        "scopeSimulation": "按仿真",
+        "simulationId": "仿真 ID",
+        "fieldMapping": "字段映射",
+        "titleField": "标题字段",
+        "contentField": "内容字段",
+        "timestampField": "时间戳字段",
+        "urlField": "URL 字段",
+        "test": "测试连接",
+        "testConnection": "测试连接",
+        "pollNow": "立即轮询",
+        "save": "保存",
+        "cancel": "取消"
+      },
+      "status": {
+        "running": "运行中",
+        "paused": "已暂停",
+        "error": "错误",
+        "neverRun": "从未运行"
+      },
+      "message": {
+        "testSuccess": "连接成功",
+        "testFailed": "连接失败",
+        "saveSuccess": "保存成功",
+        "deleteSuccess": "删除成功",
+        "operationFailed": "操作失败，请重试"
+      },
+      "confirm": {
+        "delete": "确认删除",
+        "deleteMessage": "确定要删除此数据源吗？此操作不可撤销。"
+      },
+      "empty": "暂无数据源",
+      "emptyHint": "点击上方「添加」按钮配置您的第一个数据源",
+      "actions": {
+        "poll": "立即轮询",
+        "edit": "编辑",
+        "pause": "暂停",
+        "resume": "恢复",
+        "delete": "删除"
+      }
     }
   },
   "wizard": {
