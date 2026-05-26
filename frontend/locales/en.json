@@ -549,6 +549,75 @@
       "byte": "B",
       "kb": "KB",
       "mb": "GB"
+    },
+    "dataSource": {
+      "title": "Data Source Management",
+      "listTitle": "Data Sources",
+      "addTitle": "Add Data Source",
+      "editTitle": "Edit Data Source",
+      "table": {
+        "name": "Name",
+        "eventType": "Event Type",
+        "pollInterval": "Poll Interval",
+        "status": "Status",
+        "actions": "Actions",
+        "seconds": "sec"
+      },
+      "form": {
+        "name": "Name",
+        "apiUrl": "API URL",
+        "authType": "Authentication",
+        "authNone": "None",
+        "authBearer": "Bearer Token",
+        "authApiKey": "API Key",
+        "authToken": "Token / Key",
+        "pollInterval": "Poll Interval (seconds)",
+        "eventType": "Event Type",
+        "eventTypeMarket": "Market",
+        "eventTypePolicy": "Policy",
+        "eventTypeNews": "News",
+        "eventTypeCustom": "Custom",
+        "scope": "Scope",
+        "scopeGlobal": "Global",
+        "scopeSimulation": "Per Simulation",
+        "simulationId": "Simulation ID",
+        "fieldMapping": "Field Mapping",
+        "titleField": "Title Field",
+        "contentField": "Content Field",
+        "timestampField": "Timestamp Field",
+        "urlField": "URL Field",
+        "test": "Test Connection",
+        "testConnection": "Test Connection",
+        "pollNow": "Poll Now",
+        "save": "Save",
+        "cancel": "Cancel"
+      },
+      "status": {
+        "running": "Running",
+        "paused": "Paused",
+        "error": "Error",
+        "neverRun": "Never Run"
+      },
+      "message": {
+        "testSuccess": "Connection successful",
+        "testFailed": "Connection failed",
+        "saveSuccess": "Saved successfully",
+        "deleteSuccess": "Deleted successfully",
+        "operationFailed": "Operation failed, please retry"
+      },
+      "confirm": {
+        "delete": "Confirm Delete",
+        "deleteMessage": "Are you sure you want to delete this data source? This action cannot be undone."
+      },
+      "empty": "No data sources",
+      "emptyHint": "Click the Add button above to configure your first data source",
+      "actions": {
+        "poll": "Poll Now",
+        "edit": "Edit",
+        "pause": "Pause",
+        "resume": "Resume",
+        "delete": "Delete"
+      }
     }
   },
   "wizard": {
