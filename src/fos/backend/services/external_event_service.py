@@ -11,8 +11,32 @@ from dateutil.parser import parse as parse_dt
 
 from fos.backend.models.data_source import DataSource
 from fos.backend.models.external_event_record import ExternalEventRecord
+from fos.core.external_event import ExternalEventType, Severity
 
 logger = logging.getLogger(__name__)
+
+
+# Keyword-based rule engine for ExternalEventService
+def _evaluate_event_type(title: str, content: str) -> str:
+    """Infer event_type from title/content keywords."""
+    text = f"{title} {content}".lower()
+    if any(kw in text for kw in ["政策", "regulation", "监管", "government", "official"]):
+        return ExternalEventType.POLICY.value
+    if any(kw in text for kw in ["新闻", "news", "报道", "announcement"]):
+        return ExternalEventType.NEWS.value
+    return ExternalEventType.MARKET.value
+
+
+def _evaluate_severity(title: str, content: str) -> str:
+    """Infer severity from title/content keywords."""
+    text = f"{title} {content}".lower()
+    if any(kw in text for kw in ["紧急", "critical", "crisis", "重大", "breaking", "alert"]):
+        return Severity.CRITICAL.value
+    if any(kw in text for kw in ["警告", "warning", "high", "风险", "danger"]):
+        return Severity.HIGH.value
+    if any(kw in text for kw in ["暴跌", "surge", "spike", "plunge", "soar"]):
+        return Severity.HIGH.value
+    return Severity.MEDIUM.value
 
 
 class ExternalEventService:
@@ -86,6 +110,10 @@ class ExternalEventService:
             headers["Authorization"] = f"Bearer {source.auth_token}"
         elif source.auth_type == "api_key":
             headers["X-API-Key"] = source.auth_token
+        else:
+            # "none" is valid — no auth needed. Log for unknown types only.
+            if source.auth_type and source.auth_type not in ("none", ""):
+                logger.warning(f"Unknown auth_type '{source.auth_type}' for source {source.id} — proceeding without auth")
         return headers
 
     def _parse_response(
@@ -121,7 +149,8 @@ class ExternalEventService:
                 ts = datetime.utcnow()
 
             results.append({
-                "event_type": "market",
+                "event_type": _evaluate_event_type(str(title), str(content)),
+                "severity": _evaluate_severity(str(title), str(content)),
                 "title": str(title),
                 "content": str(content),
                 "event_timestamp": ts,
@@ -145,7 +174,8 @@ class ExternalEventService:
                         except Exception:
                             ts = datetime.utcnow()
                         results.append({
-                            "event_type": "market",
+                            "event_type": _evaluate_event_type(str(title), str(content)),
+                            "severity": _evaluate_severity(str(title), str(content)),
                             "title": str(title),
                             "content": str(content),
                             "event_timestamp": ts,

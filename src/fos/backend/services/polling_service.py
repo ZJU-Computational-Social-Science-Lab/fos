@@ -29,10 +29,36 @@ class PollingService:
         return cls._instance
 
     def start(self) -> None:
-        """Start the scheduler. Call once at app startup."""
+        """Start scheduler and register jobs for all enabled data sources."""
         if not self._scheduler.running:
             self._scheduler.start()
             logger.info("PollingService started")
+
+        # Load enabled sources from DB and register jobs
+        import asyncio
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        loop.run_until_complete(self._load_enabled_sources())
+
+    async def _load_enabled_sources(self) -> None:
+        """Load enabled sources and register poll jobs."""
+        from fos.backend.core.database import get_session
+        from sqlalchemy import select
+        from fos.backend.models.data_source import DataSource
+
+        async with get_session() as session:
+            stmt = select(DataSource).where(DataSource.is_enabled == True)
+            result = await session.execute(stmt)
+            sources = result.scalars().all()
+
+        for source in sources:
+            from fos.backend.services.external_event_service import poll_data_source
+            self.add_job(source, poll_data_source)
+
+        logger.info(f"Loaded {len(sources)} enabled data sources")
 
     def add_job(self, source: DataSource, poll_fn) -> None:
         """Register or update a polling job for a data source.
@@ -62,8 +88,12 @@ class PollingService:
         try:
             self._scheduler.remove_job(source_id)
             logger.info(f"Job removed: {source_id}")
-        except Exception:
-            pass  # Job may not exist
+        except Exception as e:
+            import apscheduler
+            if isinstance(e, apscheduler.exceptions.JobNotFoundError):
+                logger.debug(f"Job not found (already removed): {source_id}")
+            else:
+                logger.warning(f"Failed to remove job {source_id}: {e}")
 
     def pause_job(self, source_id: str) -> None:
         """Pause (not remove) a job — can be resumed."""
