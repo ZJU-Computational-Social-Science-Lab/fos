@@ -683,6 +683,110 @@ GRID_WORLD: Dict[str, Any] = {
     ],
 }
 
+GAWORLD: Dict[str, Any] = {
+    "id": "gaworld",
+    "name": "scenario_templates.gaworld.name",
+    "category": "generative_city",
+    "description": "scenario_templates.gaworld.description",
+    "grouping_mode": "all",
+    "payoff_type": "none",
+    "interaction_mode": "simultaneous",
+    "display_type": "timeline",
+    "parameters": [
+        {
+            "id": "sim_days",
+            "key": "sim_days",
+            "label": "scenario_templates.gaworld.parameters.sim_days.label",
+            "description": "scenario_templates.gaworld.parameters.sim_days.description",
+            "type": "integer",
+            "default": 2,
+            "ui_hint": "number",
+            "min": 1,
+            "max": 30,
+        },
+        {
+            "id": "agent_ids",
+            "key": "agent_ids",
+            "label": "scenario_templates.gaworld.parameters.agent_ids.label",
+            "description": "scenario_templates.gaworld.parameters.agent_ids.description",
+            "type": "string",
+            "default": "",
+            "ui_hint": "text",
+        },
+        {
+            "id": "seed",
+            "key": "seed",
+            "label": "scenario_templates.gaworld.parameters.seed.label",
+            "description": "scenario_templates.gaworld.parameters.seed.description",
+            "type": "integer",
+            "default": 42,
+            "ui_hint": "number",
+        },
+        {
+            "id": "intervention_enabled",
+            "key": "intervention_enabled",
+            "label": "scenario_templates.gaworld.parameters.intervention_enabled.label",
+            "description": "scenario_templates.gaworld.parameters.intervention_enabled.description",
+            "type": "boolean",
+            "default": False,
+            "ui_hint": "toggle",
+        },
+        {
+            "id": "intervention_event_name",
+            "key": "intervention_event_name",
+            "label": "scenario_templates.gaworld.parameters.intervention_event_name.label",
+            "description": "scenario_templates.gaworld.parameters.intervention_event_name.description",
+            "type": "string",
+            "ui_hint": "text",
+        },
+        {
+            "id": "intervention_event_description",
+            "key": "intervention_event_description",
+            "label": "scenario_templates.gaworld.parameters.intervention_event_description.label",
+            "description": "scenario_templates.gaworld.parameters.intervention_event_description.description",
+            "type": "text",
+            "ui_hint": "textarea",
+        },
+        {
+            "id": "intervention_day",
+            "key": "intervention_day",
+            "label": "scenario_templates.gaworld.parameters.intervention_day.label",
+            "description": "scenario_templates.gaworld.parameters.intervention_day.description",
+            "type": "integer",
+            "default": 1,
+            "ui_hint": "number",
+            "min": 1,
+        },
+    ],
+    "actions": [
+        {
+            "id": "work",
+            "name": "scenario_templates.gaworld.actions.work.name",
+            "description": "scenario_templates.gaworld.actions.work.description",
+        },
+        {
+            "id": "social_interact",
+            "name": "scenario_templates.gaworld.actions.social_interact.name",
+            "description": "scenario_templates.gaworld.actions.social_interact.description",
+        },
+        {
+            "id": "consume_media",
+            "name": "scenario_templates.gaworld.actions.consume_media.name",
+            "description": "scenario_templates.gaworld.actions.consume_media.description",
+        },
+        {
+            "id": "move",
+            "name": "scenario_templates.gaworld.actions.move.name",
+            "description": "scenario_templates.gaworld.actions.move.description",
+        },
+        {
+            "id": "rest",
+            "name": "scenario_templates.gaworld.actions.rest.name",
+            "description": "scenario_templates.gaworld.actions.rest.description",
+        },
+    ],
+}
+
 # ============================================================================
 # Social Deduction
 # ============================================================================
@@ -1034,6 +1138,7 @@ ALL_SCENARIOS: List[Dict[str, Any]] = [
     OPEN_DISCUSSION,
     COUNCIL_CHAMBER,
     GRID_WORLD,
+    GAWORLD,
     WEREWOLF,
     PUBLIC_GOODS,
     COORDINATION_GAME,
