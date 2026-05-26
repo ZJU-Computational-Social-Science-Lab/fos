@@ -201,14 +201,30 @@ async def poll_data_source(
     source_id: str,
     request: Request,
 ) -> Dict[str, Any]:
-    """Manually trigger a poll for a data source."""
+    """Manually trigger a poll for a specific data source."""
+    from fos.backend.services.external_event_service import ExternalEventService
+
     token = extract_bearer_token(request)
     async with get_session() as session:
         current_user = await resolve_current_user(session, token)
 
-    # This will be implemented in Task 3 (PollingService)
-    # For now, return a placeholder
-    return {"message": "Poll triggered", "source_id": source_id}
+    async with get_session() as session:
+        stmt = select(DataSource).where(DataSource.id == source_id)
+        result = await session.execute(stmt)
+        source = result.scalar_one_or_none()
+
+        if not source:
+            raise HTTPException(status_code=404, detail="Data source not found")
+
+        # Call the polling service
+        service = ExternalEventService()
+        count = await service.poll_source(source)
+
+    return {
+        "message": "Poll completed",
+        "source_id": source_id,
+        "events_created": count,
+    }
 
 
 def _source_to_dict(source: DataSource) -> Dict[str, Any]:
