@@ -19,6 +19,7 @@ export interface ExternalEvent {
   id: string;
   event_type: 'policy' | 'market' | 'news' | 'custom' | 'manual';
   source: string;
+  source_name?: string | null;
   title: string;
   content: string;
   timestamp: string;
@@ -67,7 +68,13 @@ function EventCard({
   };
 
   return (
-    <div className={`border rounded-lg p-4 ${severity.bg} ${severity.border}`}>
+    <div className={`border rounded-lg p-4 ${severity.bg} ${severity.border} relative`}>
+      {event.source_name && (
+        <span className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-indigo-50 text-indigo-600 border border-indigo-100">
+          <Globe className="w-3 h-3" />
+          {event.source_name}
+        </span>
+      )}
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           <TypeIcon className={`w-4 h-4 ${typeConfig.color}`} />
@@ -210,7 +217,7 @@ export const EventPanel: React.FC<EventPanelProps> = ({ simulationId, onEventApp
   const [events, setEvents] = useState<ExternalEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(true);
-  const [activeTab, setActiveTab] = useState<'all' | 'policy' | 'market' | 'news' | 'manual'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'dataSources' | 'policy' | 'market' | 'news' | 'manual'>('all');
   const [showAddForm, setShowAddForm] = useState(false);
   const [addingEvent, setAddingEvent] = useState(false);
   // Track last fetch time for auto-update indicator
@@ -266,10 +273,15 @@ export const EventPanel: React.FC<EventPanelProps> = ({ simulationId, onEventApp
     }
   };
 
-  const filteredEvents = activeTab === 'all' ? events : events.filter(e => e.event_type === activeTab);
+  const filteredEvents = activeTab === 'all'
+    ? events
+    : activeTab === 'dataSources'
+    ? events.filter(e => e.source_name)
+    : events.filter(e => e.event_type === activeTab);
 
   const tabCounts = {
     all: events.length,
+    dataSources: events.filter(e => e.source_name).length,
     policy: events.filter(e => e.event_type === 'policy').length,
     market: events.filter(e => e.event_type === 'market').length,
     news: events.filter(e => e.event_type === 'news').length,
@@ -293,15 +305,16 @@ export const EventPanel: React.FC<EventPanelProps> = ({ simulationId, onEventApp
       {expanded && (
         <div className="border-t">
           <div className="flex border-b overflow-x-auto">
-            {(['all', 'policy', 'market', 'news', 'manual'] as const).map(tab => (
+            {(['all', 'dataSources', 'policy', 'market', 'news', 'manual'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 text-sm whitespace-nowrap border-b-2 transition-colors ${
+                className={`px-4 py-2 text-sm whitespace-nowrap border-b-2 transition-colors flex items-center gap-1 ${
                   activeTab === tab ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-600 hover:text-gray-900'
                 }`}
               >
-                {t(`components.event.tab.${tab}`)}
+                {tab === 'dataSources' && <Globe className="w-3.5 h-3.5" />}
+                {tab === 'dataSources' ? t('components.event.tab.dataSources') : t(`components.event.tab.${tab}`)}
                 {tabCounts[tab] > 0 && <span className="ml-1 text-xs text-gray-400">({tabCounts[tab]})</span>}
               </button>
             ))}

@@ -592,7 +592,8 @@
         "save": "Save",
         "cancel": "Cancel",
         "browseTemplates": "Browse Templates",
-        "hideTemplates": "Hide Templates"
+        "hideTemplates": "Hide Templates",
+        "invalidPollInterval": "Poll interval must be between 60 and 86400 seconds"
       },
       "status": {
         "running": "Running",
@@ -1439,6 +1440,7 @@
       },
       "tab": {
         "all": "All",
+        "dataSources": "Data Sources",
         "policy": "Policy",
         "market": "Market",
         "news": "News",
