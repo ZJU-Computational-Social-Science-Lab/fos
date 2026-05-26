@@ -28,20 +28,16 @@ class PollingService:
             cls._instance = cls()
         return cls._instance
 
-    def start(self) -> None:
-        """Start scheduler and register jobs for all enabled data sources."""
+    async def start(self) -> None:
+        """Start scheduler and register jobs for all enabled data sources.
+
+        Must be called when an event loop is already running (e.g., from Litestar lifespan).
+        """
         if not self._scheduler.running:
             self._scheduler.start()
             logger.info("PollingService started")
 
-        # Load enabled sources from DB and register jobs
-        import asyncio
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        loop.run_until_complete(self._load_enabled_sources())
+        await self._load_enabled_sources()
 
     async def _load_enabled_sources(self) -> None:
         """Load enabled sources and register poll jobs."""
