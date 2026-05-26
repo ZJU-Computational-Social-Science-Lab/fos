@@ -11,6 +11,7 @@ interface AddDataSourceModalProps {
 export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, onClose }) => {
   const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: source?.name || '',
     api_url: source?.api_url || '',
@@ -29,11 +30,18 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
     if (!form.name.trim() || !form.api_url.trim()) return;
 
     setSaving(true);
+    setSaveError(null);
     try {
+      const raw = parseInt(String(form.poll_interval_seconds), 10);
+      if (isNaN(raw) || raw < 60 || raw > 86400) {
+        setSaveError(t('dataSource.message.invalidPollInterval'));
+        setSaving(false);
+        return;
+      }
       const payload = {
         ...form,
         simulation_id: form.is_global ? null : (form.simulation_id || null),
-        poll_interval_seconds: parseInt(String(form.poll_interval_seconds), 10),
+        poll_interval_seconds: raw,
         field_mapping: form.field_mapping,
       };
 
@@ -45,6 +53,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
       onClose();
     } catch (e) {
       console.warn('Failed to save data source', e);
+      setSaveError(t('dataSource.message.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -125,7 +134,12 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
             <input
               type="number"
               value={form.poll_interval_seconds}
-              onChange={e => setForm(f => ({ ...f, poll_interval_seconds: parseInt(e.target.value, 10) }))}
+              onChange={e => {
+                const raw = parseInt(e.target.value, 10);
+                if (!isNaN(raw) && raw >= 60 && raw <= 86400) {
+                  setForm(f => ({ ...f, poll_interval_seconds: raw }));
+                }
+              }}
               min={60}
               max={86400}
               className="w-full border rounded px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-500 outline-none"
@@ -236,6 +250,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
 
           {/* Actions */}
           <div className="flex gap-2 pt-2 border-t">
+            {saveError && <div className="w-full text-sm text-red-600">{saveError}</div>}
             <button
               type="submit"
               disabled={saving || !form.name.trim() || !form.api_url.trim()}
