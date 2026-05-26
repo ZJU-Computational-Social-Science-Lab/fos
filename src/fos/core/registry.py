@@ -1,4 +1,5 @@
 from fos.core.experiment.scenes.council_experiment import CouncilExperimentScene
+from fos.core.experiment.scenes.gaworld.scene import GAWorldScene
 from fos.core.experiment.scene import ExperimentScene
 from fos.core.contagion.scene import ContagionScene
 from fos.core.scenes.policy_cascade_experiment import PolicyCascadeExperimentScene
@@ -11,6 +12,7 @@ SCENE_MAP = {
     "experiment_template": ExperimentScene,
     "contagion_scene": ContagionScene,
     "policy_cascade_experiment": PolicyCascadeExperimentScene,
+    "gaworld_scene": GAWorldScene,
 }
 
 
@@ -46,6 +48,10 @@ SCENE_ACTIONS: dict[str, dict[str, list[str]]] = {
     },
     "contagion_scene": {
         "basic": ["move", "speak_to"],
+        "allowed": [],
+    },
+    "gaworld_scene": {
+        "basic": ["work", "social_interact", "consume_media", "move", "rest"],
         "allowed": [],
     },
 }
@@ -133,6 +139,7 @@ INFORMATION_MODEL_MAP: dict = {
     "werewolf": InformationModel(scope_type="all", recent_window=3, include_scores=False),  # LEGACY: unsupported
     "grid_world": InformationModel(scope_type="neighborhood", recent_window=3, include_scores=False),
     "contagion_scene": InformationModel(scope_type="neighborhood", recent_window=3, include_scores=False),
+    "gaworld_scene": InformationModel(scope_type="all", recent_window=3, include_scores=False),
     # Fallback for unknown scene types
     "_default": InformationModel(scope_type="all", recent_window=3),
 }
@@ -178,4 +185,5 @@ SCENE_DESCRIPTIONS: dict[str, str] = {
     "experiment_template": "Social science experiment using Three-Layer Architecture (constrained decoding, structured prompts, validation). Supports custom actions and simultaneous/sequential rounds.",
     "contagion_scene": "SEIR contagion dynamics on a grid. Agents spread infection through proximity and social interactions, with configurable transmission rates and recovery.",
     "policy_cascade_experiment": "Pipeline A policy cascade scene. Agents at different organizational tiers share and distort policy information as it passes through the hierarchy.",
+    "gaworld_scene": "gaworld.scene.description",
 }
