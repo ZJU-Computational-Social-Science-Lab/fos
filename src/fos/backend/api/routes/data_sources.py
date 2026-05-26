@@ -194,6 +194,9 @@ async def test_data_source(
         return {"success": True, "status_code": response.status_code, "message": "Connection successful"}
     except httpx.HTTPError as e:
         return {"success": False, "error": str(e)}
+    except Exception as e:
+        logger.error(f"Test connection error: {e}", exc_info=True)
+        return {"success": False, "error": f"Connection failed: {str(e)}"}
 
 
 @post("/{source_id:str}/poll")
