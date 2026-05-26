@@ -108,7 +108,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
                 if (catTemplates.length === 0) return null;
                 return (
                   <div key={cat.id} className="space-y-1">
-                    <p className="text-xs font-medium text-gray-400 uppercase">{t('settings.tabs.lang') === 'en' ? cat.labelEn : cat.label}</p>
+                    <p className="text-xs font-medium text-gray-400 uppercase">{t(cat.labelKey)}</p>
                     {catTemplates.map(tmpl => (
                       <button
                         key={tmpl.id}
@@ -116,8 +116,8 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
                         onClick={() => applyTemplate(tmpl.id)}
                         className="w-full text-left px-3 py-2 rounded border hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
                       >
-                        <span className="text-sm">{tmpl.icon} {tmpl.name}</span>
-                        <p className="text-xs text-gray-500 mt-0.5">{tmpl.description}</p>
+                        <span className="text-sm">{tmpl.icon} {t(tmpl.nameKey)}</span>
+                        <p className="text-xs text-gray-500 mt-0.5">{t(tmpl.descriptionKey)}</p>
                       </button>
                     ))}
                   </div>

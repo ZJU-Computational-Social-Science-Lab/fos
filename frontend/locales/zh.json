@@ -586,6 +586,56 @@
         "resume": "恢复",
         "delete": "删除"
       }
+    },
+    "dataSourceTemplate": {
+      "category": {
+        "market": "市场/金融",
+        "news": "新闻",
+        "social": "社交",
+        "crypto": "加密货币",
+        "policy": "政策/政府",
+        "custom": "自定义"
+      },
+      "yahooFinance": {
+        "name": "Yahoo Finance",
+        "description": "实时股票行情和市场新闻",
+        "hint": "无需认证，返回股票报价。请根据实际查询调整 items_path 路径。"
+      },
+      "alphavantage": {
+        "name": "Alpha Vantage",
+        "description": "免费股票 API（每分钟5次请求）",
+        "hint": "请到 alphavantage.co 获取免费 API Key。DEMO Key 功能受限。"
+      },
+      "coingecko": {
+        "name": "CoinGecko",
+        "description": "加密货币价格和市场数据（免费，无需认证）",
+        "hint": "无需认证。频率限制 10-30次/分钟。用于加密货币价格事件。"
+      },
+      "newsapi": {
+        "name": "NewsAPI",
+        "description": "来自数千个来源的全球新闻",
+        "hint": "请到 newsapi.org 获取免费 API Key。DEMO Key 只能获取 The Guardian 的新闻。"
+      },
+      "hackernews": {
+        "name": "Hacker News",
+        "description": "科技新闻和创业讨论（免费，无需认证）",
+        "hint": "此接口返回故事 ID。如需完整故事内容，请使用 hacker-news Firebase API。"
+      },
+      "reddit": {
+        "name": "Reddit",
+        "description": "社交媒体帖子和讨论（公开内容无需认证）",
+        "hint": "公开接口无需认证。频率限制约60次/分钟。适合社会舆情分析。"
+      },
+      "govcn": {
+        "name": "中国政府网",
+        "description": "政府公告和政策发布",
+        "hint": "无需认证。请根据实际 API 返回结构调整 items_path。"
+      },
+      "webhook": {
+        "name": "Webhook（自定义）",
+        "description": "通过 POST 接收外部事件推送",
+        "hint": "设置 poll_interval_seconds=0 可禁用自动轮询。通过 POST /api/events/external 手动推送事件。"
+      }
     }
   },
   "wizard": {

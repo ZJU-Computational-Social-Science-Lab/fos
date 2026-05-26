@@ -620,6 +620,56 @@
         "resume": "Resume",
         "delete": "Delete"
       }
+    },
+    "dataSourceTemplate": {
+      "category": {
+        "market": "Market / Finance",
+        "news": "News",
+        "social": "Social",
+        "crypto": "Crypto",
+        "policy": "Policy / Government",
+        "custom": "Custom"
+      },
+      "yahooFinance": {
+        "name": "Yahoo Finance",
+        "description": "Real-time stock quotes and market news",
+        "hint": "No auth required. Returns stock quotes. Adjust items_path based on your query."
+      },
+      "alphavantage": {
+        "name": "Alpha Vantage",
+        "description": "Stock API with free tier (5 req/min)",
+        "hint": "Get free API key at alphavantage.co. DEMO key has limited functionality."
+      },
+      "coingecko": {
+        "name": "CoinGecko",
+        "description": "Cryptocurrency prices and market data (free, no auth)",
+        "hint": "No auth required. Rate limit: 10-30 calls/min. Use for crypto price events."
+      },
+      "newsapi": {
+        "name": "NewsAPI",
+        "description": "World news from thousands of sources",
+        "hint": "Get free API key at newsapi.org. DEMO key returns headlines from The Guardian only."
+      },
+      "hackernews": {
+        "name": "Hacker News",
+        "description": "Tech news and startup discussions (free, no auth)",
+        "hint": "This returns story IDs. For full stories use the hacker-news Firebase API."
+      },
+      "reddit": {
+        "name": "Reddit",
+        "description": "Social media posts and discussions (no auth for public)",
+        "hint": "Public endpoint (no auth). Rate limit ~60 req/min. Best for social sentiment."
+      },
+      "govcn": {
+        "name": "中国政府网",
+        "description": "Official government announcements and policies",
+        "hint": "No auth required. Adjust items_path based on actual API response structure."
+      },
+      "webhook": {
+        "name": "Webhook (Custom)",
+        "description": "Receive events via POST - configure your own source",
+        "hint": "Set poll_interval_seconds=0 to disable auto-polling. Use POST /api/events/external to push events manually."
+      }
     }
   },
   "wizard": {

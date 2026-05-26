@@ -1,15 +1,16 @@
 /**
  * Pre-built data source templates for common external APIs.
- * Users can select a template to auto-fill configuration.
+ * All user-facing text uses i18n keys resolved at render time.
  */
 
 export interface DataSourceTemplate {
   id: string;
-  name: string;
-  description: string;
+  /** i18n key for template name, e.g. "settings.dataSourceTemplate.yahooFinance.name" */
+  nameKey: string;
+  descriptionKey: string;
+  hintKey?: string;
   icon: string;
-  category: 'market' | 'news' | 'social' | 'crypto' | 'custom';
-  /** Default values to populate the form */
+  category: 'market' | 'news' | 'social' | 'crypto' | 'policy' | 'custom';
   defaults: {
     name: string;
     api_url: string;
@@ -25,16 +26,15 @@ export interface DataSourceTemplate {
       items_path?: string;
     };
   };
-  /** Hint shown to user after template is selected */
-  hint?: string;
 }
 
 export const DATA_SOURCE_TEMPLATES: DataSourceTemplate[] = [
   // ── Market / Finance ──────────────────────────────────────────────
   {
     id: 'yahoo-finance',
-    name: 'Yahoo Finance',
-    description: 'Real-time stock quotes and market news',
+    nameKey: 'settings.dataSourceTemplate.yahooFinance.name',
+    descriptionKey: 'settings.dataSourceTemplate.yahooFinance.description',
+    hintKey: 'settings.dataSourceTemplate.yahooFinance.hint',
     icon: '📈',
     category: 'market',
     defaults: {
@@ -51,20 +51,20 @@ export const DATA_SOURCE_TEMPLATES: DataSourceTemplate[] = [
         url_path: 'quoteType',
       },
     },
-    hint: 'No auth required. Returns stock quotes — adjust items_path based on your query.',
   },
 
   {
     id: 'alphavantage',
-    name: 'Alpha Vantage',
-    description: 'Stock API with free tier (5 req/min)',
+    nameKey: 'settings.dataSourceTemplate.alphavantage.name',
+    descriptionKey: 'settings.dataSourceTemplate.alphavantage.description',
+    hintKey: 'settings.dataSourceTemplate.alphavantage.hint',
     icon: '📊',
     category: 'market',
     defaults: {
       name: 'Alpha Vantage',
       api_url: 'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=IBM&apikey=DEMO',
       auth_type: 'api_key',
-      auth_token: '', // user fills in their key
+      auth_token: '',
       poll_interval_seconds: 300,
       event_type: 'market',
       field_mapping: {
@@ -75,13 +75,13 @@ export const DATA_SOURCE_TEMPLATES: DataSourceTemplate[] = [
         url_path: '',
       },
     },
-    hint: 'Get free API key at alphavantage.co. "DEMO" key has limited functionality.',
   },
 
   {
     id: 'coingecko',
-    name: 'CoinGecko',
-    description: 'Cryptocurrency prices and market data (free, no auth)',
+    nameKey: 'settings.dataSourceTemplate.coingecko.name',
+    descriptionKey: 'settings.dataSourceTemplate.coingecko.description',
+    hintKey: 'settings.dataSourceTemplate.coingecko.hint',
     icon: '🪙',
     category: 'crypto',
     defaults: {
@@ -98,21 +98,21 @@ export const DATA_SOURCE_TEMPLATES: DataSourceTemplate[] = [
         url_path: 'symbol',
       },
     },
-    hint: 'No auth required. Rate limit: 10-30 calls/min. Use for crypto price events.',
   },
 
   // ── News ──────────────────────────────────────────────────────────
   {
     id: 'newsapi',
-    name: 'NewsAPI',
-    description: 'World news from thousands of sources',
+    nameKey: 'settings.dataSourceTemplate.newsapi.name',
+    descriptionKey: 'settings.dataSourceTemplate.newsapi.description',
+    hintKey: 'settings.dataSourceTemplate.newsapi.hint',
     icon: '📰',
     category: 'news',
     defaults: {
       name: 'NewsAPI Headlines',
       api_url: 'https://newsapi.org/v2/top-headlines?country=us&category=business&apiKey=DEMO_KEY',
       auth_type: 'api_key',
-      auth_token: '', // user fills in their key
+      auth_token: '',
       poll_interval_seconds: 600,
       event_type: 'news',
       field_mapping: {
@@ -123,13 +123,13 @@ export const DATA_SOURCE_TEMPLATES: DataSourceTemplate[] = [
         url_path: 'url',
       },
     },
-    hint: 'Get free API key at newsapi.org. "DEMO" key returns headlines from The Guardian only.',
   },
 
   {
     id: 'hackernews',
-    name: 'Hacker News',
-    description: 'Tech news and startup discussions (free, no auth)',
+    nameKey: 'settings.dataSourceTemplate.hackernews.name',
+    descriptionKey: 'settings.dataSourceTemplate.hackernews.description',
+    hintKey: 'settings.dataSourceTemplate.hackernews.hint',
     icon: '💻',
     category: 'news',
     defaults: {
@@ -146,14 +146,14 @@ export const DATA_SOURCE_TEMPLATES: DataSourceTemplate[] = [
         url_path: 'url',
       },
     },
-    hint: 'This returns story IDs. For full stories, use: https://hacker-news.firebaseio.com/v0/item/{id}.json',
   },
 
   // ── Social ─────────────────────────────────────────────────────────
   {
     id: 'reddit',
-    name: 'Reddit',
-    description: 'Social media posts and discussions (no auth for public)',
+    nameKey: 'settings.dataSourceTemplate.reddit.name',
+    descriptionKey: 'settings.dataSourceTemplate.reddit.description',
+    hintKey: 'settings.dataSourceTemplate.reddit.hint',
     icon: '💬',
     category: 'social',
     defaults: {
@@ -170,14 +170,14 @@ export const DATA_SOURCE_TEMPLATES: DataSourceTemplate[] = [
         url_path: 'data.url',
       },
     },
-    hint: 'Public endpoint (no auth). Rate limit ~60 req/min. Best for social sentiment.',
   },
 
   // ── Policy ─────────────────────────────────────────────────────────
   {
     id: 'gov.cn',
-    name: '中国政府网',
-    description: 'Official government announcements and policies',
+    nameKey: 'settings.dataSourceTemplate.govcn.name',
+    descriptionKey: 'settings.dataSourceTemplate.govcn.description',
+    hintKey: 'settings.dataSourceTemplate.govcn.hint',
     icon: '🏛️',
     category: 'policy',
     defaults: {
@@ -194,14 +194,14 @@ export const DATA_SOURCE_TEMPLATES: DataSourceTemplate[] = [
         url_path: 'url',
       },
     },
-    hint: 'No auth required. Adjust items_path based on actual API response structure.',
   },
 
-  // ── Webhook (manual push) ──────────────────────────────────────────
+  // ── Custom / Webhook ──────────────────────────────────────────────
   {
     id: 'webhook-generic',
-    name: 'Webhook (自定义)',
-    description: 'Receive events via POST — configure your own source',
+    nameKey: 'settings.dataSourceTemplate.webhook.name',
+    descriptionKey: 'settings.dataSourceTemplate.webhook.description',
+    hintKey: 'settings.dataSourceTemplate.webhook.hint',
     icon: '🔗',
     category: 'custom',
     defaults: {
@@ -209,7 +209,7 @@ export const DATA_SOURCE_TEMPLATES: DataSourceTemplate[] = [
       api_url: 'https://your-server.com/events/api',
       auth_type: 'bearer',
       auth_token: 'your-webhook-secret-token',
-      poll_interval_seconds: 0, // 0 = manual-only, no auto-poll
+      poll_interval_seconds: 0,
       event_type: 'custom',
       field_mapping: {
         title_path: 'title',
@@ -218,16 +218,14 @@ export const DATA_SOURCE_TEMPLATES: DataSourceTemplate[] = [
         url_path: 'url',
       },
     },
-    hint: 'Set poll_interval_seconds=0 to disable auto-polling. Use POST /api/events/external to push events manually.',
   },
 ];
 
-/** Categories for grouping templates in the UI */
 export const TEMPLATE_CATEGORIES = [
-  { id: 'market', label: '市场/金融', labelEn: 'Market / Finance' },
-  { id: 'news', label: '新闻', labelEn: 'News' },
-  { id: 'social', label: '社交', labelEn: 'Social' },
-  { id: 'crypto', label: '加密货币', labelEn: 'Crypto' },
-  { id: 'policy', label: '政策/政府', labelEn: 'Policy / Government' },
-  { id: 'custom', label: '自定义', labelEn: 'Custom' },
+  { id: 'market', labelKey: 'settings.dataSourceTemplate.category.market' },
+  { id: 'news', labelKey: 'settings.dataSourceTemplate.category.news' },
+  { id: 'social', labelKey: 'settings.dataSourceTemplate.category.social' },
+  { id: 'crypto', labelKey: 'settings.dataSourceTemplate.category.crypto' },
+  { id: 'policy', labelKey: 'settings.dataSourceTemplate.category.policy' },
+  { id: 'custom', labelKey: 'settings.dataSourceTemplate.category.custom' },
 ] as const;
