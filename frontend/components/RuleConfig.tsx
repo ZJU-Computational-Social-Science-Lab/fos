@@ -68,8 +68,9 @@ function RuleCard({
   const [expanded, setExpanded] = useState(false);
 
   const updateCondition = (index: number, field: string, value: unknown) => {
-    const newConditions = [...rule.conditions];
-    (newConditions[index] as Record<string, unknown>)[field] = value;
+    const newConditions = rule.conditions.map((c, i) =>
+      i === index ? { ...c, [field]: value } : c
+    );
     onUpdate({ ...rule, conditions: newConditions });
   };
 
@@ -130,7 +131,7 @@ function RuleCard({
         <div className="p-4 border-t space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('rule.config.name')}
+              {t('components.rule.config.name')}
             </label>
             <input
               type="text"
@@ -142,7 +143,7 @@ function RuleCard({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('rule.config.description')}
+              {t('components.rule.config.description')}
             </label>
             <input
               type="text"
@@ -154,7 +155,7 @@ function RuleCard({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {t('rule.config.conditions')}
+              {t('components.rule.config.conditions')}
             </label>
             <div className="space-y-2">
               {rule.conditions.map((condition, index) => (
@@ -197,14 +198,14 @@ function RuleCard({
                 className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700"
               >
                 <Plus className="w-4 h-4" />
-                {t('rule.config.addCondition')}
+                {t('components.rule.config.addCondition')}
               </button>
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('rule.config.cooldown')}
+              {t('components.rule.config.cooldown')}
             </label>
             <input
               type="number"
@@ -220,7 +221,7 @@ function RuleCard({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('rule.config.eventType')}
+                {t('components.rule.config.eventType')}
               </label>
               <select
                 value={rule.action.event_type}
@@ -241,7 +242,7 @@ function RuleCard({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('rule.config.severity')}
+                {t('components.rule.config.severity')}
               </label>
               <select
                 value={rule.action.severity}
@@ -264,7 +265,7 @@ function RuleCard({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('rule.config.titleTemplate')}
+              {t('components.rule.config.titleTemplate')}
             </label>
             <input
               type="text"
@@ -282,7 +283,7 @@ function RuleCard({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('rule.config.contentTemplate')}
+              {t('components.rule.config.contentTemplate')}
             </label>
             <textarea
               value={rule.action.content_template}
@@ -341,7 +342,7 @@ export const RuleConfig: React.FC<RuleConfigProps> = ({ rules, onChange, simulat
   const addRule = () => {
     const newRule: Rule = {
       id: `rule-${Date.now()}`,
-      name: t('rule.config.newRule'),
+      name: t('components.rule.config.newRule'),
       description: '',
       conditions: [{ field: 'resource_pressure', operator: 'gt', value: 0.8 }],
       action: {
@@ -374,7 +375,7 @@ export const RuleConfig: React.FC<RuleConfigProps> = ({ rules, onChange, simulat
       >
         <div className="flex items-center gap-2">
           <Settings className="w-5 h-5 text-indigo-600" />
-          <h3 className="font-medium text-gray-900">{t('rule.config.title')}</h3>
+          <h3 className="font-medium text-gray-900">{t('components.rule.config.title')}</h3>
           <span className="text-xs text-gray-500">({rules.length})</span>
         </div>
         {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -385,8 +386,8 @@ export const RuleConfig: React.FC<RuleConfigProps> = ({ rules, onChange, simulat
           {rules.length === 0 ? (
             <div className="text-center py-6 text-gray-500">
               <Settings className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm">{t('rule.config.noRules')}</p>
-              <p className="text-xs text-gray-400 mt-1">{t('rule.config.noRulesHint')}</p>
+              <p className="text-sm">{t('components.rule.config.noRules')}</p>
+              <p className="text-xs text-gray-400 mt-1">{t('components.rule.config.noRulesHint')}</p>
             </div>
           ) : (
             rules.map((rule, index) => (
@@ -404,7 +405,7 @@ export const RuleConfig: React.FC<RuleConfigProps> = ({ rules, onChange, simulat
             className="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-indigo-600 hover:text-indigo-600 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            {t('rule.config.addRule')}
+            {t('components.rule.config.addRule')}
           </button>
         </div>
       )}
