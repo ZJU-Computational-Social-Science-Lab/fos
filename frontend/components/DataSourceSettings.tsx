@@ -28,7 +28,8 @@ export const DataSourceSettings: React.FC = () => {
     setLoading(true);
     try {
       const response = await dataSourceApi.list();
-      setSources(response.data || []);
+      const list = response.data?.data_sources ?? response.data ?? [];
+      setSources(Array.isArray(list) ? list : []);
     } catch (e) {
       console.warn('Failed to fetch data sources', e);
       setError(t('settings.dataSource.message.operationFailed'));

@@ -5,6 +5,7 @@ from litestar import Router, get, post
 from litestar.connection import Request
 from litestar.exceptions import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+import sqlalchemy.orm
 
 from fos.i18n import T
 from fos.backend.core.database import get_session
@@ -180,6 +181,7 @@ async def get_external_events(
     min_severity: str | None = None,
     status: str | None = "pending",
     limit: int = 50,
+    source: str | None = None,
 ) -> Dict[str, Any]:
     """Get external events for a simulation from DB.
 
@@ -189,6 +191,7 @@ async def get_external_events(
         min_severity: Optional minimum severity filter (low, medium, high, critical)
         status: Optional status filter (pending, applied, dismissed) — default "pending"
         limit: Maximum number of events to return (default 50)
+        source: Optional data source ID filter (filters by ExternalEventRecord.source field)
     """
     token = extract_bearer_token(request)
     async with get_session() as session:
@@ -197,7 +200,9 @@ async def get_external_events(
         from sqlalchemy import select, desc
         from fos.backend.models.external_event_record import ExternalEventRecord
 
-        stmt = select(ExternalEventRecord)
+        stmt = select(ExternalEventRecord).options(
+            sqlalchemy.orm.selectinload(ExternalEventRecord.data_source)
+        )
 
         # Apply filters
         if simulation_id:
@@ -216,6 +221,9 @@ async def get_external_events(
             )
         if status:
             stmt = stmt.where(ExternalEventRecord.status == status)
+        if source:
+            # 'source' param filters by data_source_id (UUID foreign key)
+            stmt = stmt.where(ExternalEventRecord.data_source_id == source)
 
         stmt = stmt.order_by(desc(ExternalEventRecord.event_timestamp)).limit(limit)
 
@@ -227,6 +235,7 @@ async def get_external_events(
                 "id": r.id,
                 "event_type": r.event_type,
                 "source": r.source,
+                "source_name": r.data_source.name if r.data_source else (r.source if r.source != "manual" else None),
                 "title": r.title,
                 "content": r.content,
                 "severity": r.severity,

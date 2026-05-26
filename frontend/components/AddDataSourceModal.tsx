@@ -306,22 +306,26 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-2 pt-2 border-t">
-            {saveError && <div className="w-full text-sm text-red-600">{saveError}</div>}
-            <button
-              type="submit"
-              disabled={saving || !form.name.trim() || !form.api_url.trim()}
-              className="flex-1 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {saving ? '...' : t('settings.dataSource.form.save')}
-            </button>
+          {saveError && (
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+              {saveError}
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-2 border-t">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
+              className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 transition-colors"
             >
               {t('settings.dataSource.form.cancel')}
+            </button>
+            <button
+              type="submit"
+              disabled={saving || !form.name.trim() || !form.api_url.trim()}
+              className="px-5 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            >
+              {saving ? '...' : t('settings.dataSource.form.save')}
             </button>
           </div>
         </form>

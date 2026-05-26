@@ -558,7 +558,8 @@
         "save": "保存",
         "cancel": "取消",
         "browseTemplates": "浏览模板",
-        "hideTemplates": "收起模板"
+        "hideTemplates": "收起模板",
+        "invalidPollInterval": "轮询间隔必须在 60~86400 秒之间"
       },
       "status": {
         "running": "运行中",
@@ -1405,6 +1406,7 @@
       },
       "tab": {
         "all": "全部",
+        "dataSources": "数据源",
         "policy": "政策",
         "market": "市场",
         "news": "新闻",
