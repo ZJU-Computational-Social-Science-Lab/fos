@@ -147,11 +147,15 @@ class ExperimentRunnerAdapter:
         """Deserialize for SimTree compatibility."""
         scene_data = data["scene"]["config"]
         scenario_id = scene_data.get("config", {}).get("scenario_id", "")
+        scene_type = scene_data.get("type", "")
 
         # GAP-CLOSURE-01: Deserialize to correct scene type based on scenario_id
         if scenario_id in ("council", "council_chamber"):
             from fos.core.experiment.scenes.council_experiment import CouncilExperimentScene
             scene = CouncilExperimentScene.deserialize_config(scene_data)
+        elif scene_type == "gaworld_scene" or scenario_id == "gaworld":
+            from fos.core.experiment.scenes.gaworld import GAWorldScene
+            scene = GAWorldScene.deserialize_config(scene_data)
         else:
             scene = ExperimentScene.deserialize_config(scene_data)
 
@@ -588,6 +592,27 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
 
         logger.debug(f"Created ContagionScene with adapter: grid={grid_size}x{grid_size}")
 
+        return SimTree.new(adapter, adapter.clients)
+    elif scene_key == "gaworld_scene":
+        from fos.core.experiment.scenes.gaworld import GAWorldScene
+        import os as _os
+
+        gaworld_path = _os.environ.get("GAWORLD_PATH")
+        if not gaworld_path:
+            raise ValueError("gaworld.error.path_not_set")
+
+        inner_cfg = cfg.get("generic_config") or cfg
+        gaworld_params = inner_cfg.get("parameters", {})
+        gaworld_params["gaworld_path"] = gaworld_path
+        config = ExperimentConfig(
+            agents=agent_config.get("agents", []),
+            actions=gaworld_params.get("actions", []),
+            parameters=gaworld_params,
+            scenario_id="gaworld",
+            locale=inner_cfg.get("locale", "zh"),
+        )
+        scene = GAWorldScene(config)
+        adapter = ExperimentRunnerAdapter(scene, clients or make_clients_from_env())
         return SimTree.new(adapter, adapter.clients)
     else:
         scene = scene_cls(name, initial_event_content)
