@@ -1581,7 +1581,10 @@
       "enterNewValue": "Enter new value",
       "updateProperty": "Update Property",
       "broadcastSent": "Broadcast sent to agents",
-      "broadcastFailed": "Failed to send broadcast"
+      "broadcastFailed": "Failed to send broadcast",
+      "externalEvents": "External Events",
+      "ruleConfig": "Rule Config",
+      "new": "NEW"
     },
     "initialEventsModal": {
       "title": "Initial Event Editor",

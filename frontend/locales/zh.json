@@ -1547,7 +1547,10 @@
       "enterNewValue": "输入新值",
       "updateProperty": "更新属性",
       "broadcastSent": "广播已发送给智能体",
-      "broadcastFailed": "广播发送失败"
+      "broadcastFailed": "广播发送失败",
+      "externalEvents": "外部事件",
+      "ruleConfig": "规则配置",
+      "new": "新功能"
     },
     "initialEventsModal": {
       "title": "初始事件编辑器",

@@ -29,6 +29,7 @@ export interface ExternalEvent {
 }
 
 interface EventPanelProps {
+  simulationId?: string;
   onEventApply?: (event: ExternalEvent) => void;
 }
 
@@ -133,7 +134,7 @@ function EventCard({
   );
 }
 
-export const EventPanel: React.FC<EventPanelProps> = ({ onEventApply }) => {
+export const EventPanel: React.FC<EventPanelProps> = ({ simulationId, onEventApply }) => {
   const { t } = useTranslation();
   const [events, setEvents] = useState<ExternalEvent[]>([]);
   const [loading, setLoading] = useState(false);
@@ -144,8 +145,23 @@ export const EventPanel: React.FC<EventPanelProps> = ({ onEventApply }) => {
     setLoading(true);
     try {
       const { apiClient } = await import('../services/client');
-      const response = await apiClient.get('/events/external');
-      setEvents(response.data?.events || []);
+      const params = new URLSearchParams();
+      if (simulationId) params.set('simulation_id', simulationId);
+      const response = await apiClient.get(`/events/external?${params.toString()}`);
+      let events = response.data?.events || [];
+
+      // Auto-seed demo events if queue is empty
+      if (events.length === 0 && simulationId) {
+        try {
+          await apiClient.post(`/events/seed?simulation_id=${simulationId}`);
+          const reResp = await apiClient.get(`/events/external?${params.toString()}`);
+          events = reResp.data?.events || [];
+        } catch (e) {
+          console.warn('Auto-seed failed', e);
+        }
+      }
+
+      setEvents(events);
     } catch (e) {
       console.warn('Failed to fetch external events', e);
     } finally {
@@ -157,7 +173,7 @@ export const EventPanel: React.FC<EventPanelProps> = ({ onEventApply }) => {
     fetchEvents();
     const interval = setInterval(fetchEvents, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [simulationId]);
 
   const handleApply = (event: ExternalEvent) => {
     onEventApply?.(event);

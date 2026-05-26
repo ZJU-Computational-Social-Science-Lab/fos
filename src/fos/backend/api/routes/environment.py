@@ -7,16 +7,16 @@ from litestar.exceptions import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fos.i18n import T
-from ...core.database import get_session
-from ...dependencies import extract_bearer_token, resolve_current_user
-from ...services.environment_suggestion_service import (
+from fos.backend.core.database import get_session
+from fos.backend.dependencies import extract_bearer_token, resolve_current_user
+from fos.backend.services.environment_suggestion_service import (
     get_simulation_state,
     generate_environment_suggestions,
     broadcast_environment_event,
     dismiss_suggestions,
 )
-from ...core.event_queue import EventQueue
-from ...core.external_event import ExternalEvent, EventFilter, ExternalEventType
+from fos.core.event_queue import EventQueue
+from fos.core.external_event import ExternalEvent, EventFilter, ExternalEventType, Severity
 
 logger = logging.getLogger(__name__)
 
@@ -126,8 +126,43 @@ async def dismiss_suggestions_endpoint(
             raise HTTPException(status_code=400, detail=str(e))
 
 
+# In-memory rules store for MVP (persists until server restart)
+_rules_store: list[Any] = []
+
+@get("/rules")
+async def get_rules(request: Request) -> Dict[str, Any]:
+    """Get all configured rules."""
+    token = extract_bearer_token(request)
+    async with get_session() as session:
+        current_user = await resolve_current_user(session, token)
+    return {"rules": _rules_store}
+
+@post("/rules")
+async def save_rules(
+    data: Dict[str, Any],
+    request: Request,
+) -> Dict[str, Any]:
+    """Save/replace all rules."""
+    token = extract_bearer_token(request)
+    async with get_session() as session:
+        current_user = await resolve_current_user(session, token)
+    global _rules_store
+    _rules_store = data.get("rules", [])
+    return {"saved": len(_rules_store)}
+
+
 # Per-simulation event queues to avoid leaking events across simulations
 _simulation_event_queues: dict[str, EventQueue] = {}
+
+# Default queue for non-simulation contexts
+_default_event_queue: EventQueue | None = None
+
+
+def _get_default_queue() -> EventQueue:
+    global _default_event_queue
+    if _default_event_queue is None:
+        _default_event_queue = EventQueue(max_size=1000, dedup_window_hours=24)
+    return _default_event_queue
 
 
 def _get_simulation_queue(simulation_id: str) -> EventQueue:
@@ -174,7 +209,6 @@ async def get_external_events(
             min_sev = min_severity if min_severity and min_severity in ("low", "medium", "high", "critical") else None
 
             if type_filter or min_sev:
-                from ...core.external_event import Severity
                 severity_enum = Severity[min_sev.upper()] if min_sev else None
                 event_filter = EventFilter(
                     types=type_filter,
@@ -224,6 +258,69 @@ async def add_external_event(
             raise HTTPException(status_code=400, detail=f"Invalid event data: {e}")
 
 
+@post("/events/seed")
+async def seed_demo_events(
+    request: Request,
+    simulation_id: str | None = None,
+) -> Dict[str, Any]:
+    """Seed demo events for testing the event panel UI."""
+    token = extract_bearer_token(request)
+    async with get_session() as session:
+        current_user = await resolve_current_user(session, token)
+
+    queue = _get_simulation_queue(simulation_id) if simulation_id else _get_default_queue()
+
+    demo_events = [
+        ExternalEvent.create(
+            event_type=ExternalEventType.MARKET,
+            source=EventSource.YAHOO_FINANCE,
+            title="股市大幅波动",
+            content="上证指数单日下跌 3.2%，市场恐慌情绪蔓延",
+            severity=Severity.HIGH,
+            metadata={"index": "000001.SS", "change_pct": -3.2},
+        ),
+        ExternalEvent.create(
+            event_type=ExternalEventType.POLICY,
+            source=EventSource.NATIONAL_BUREAU,
+            title="政府发布新能源汽车补贴政策",
+            content="财政部宣布延续新能源汽车购置税减免政策至 2027 年",
+            severity=Severity.MEDIUM,
+            metadata={"region": "全国", "category": "industrial"},
+        ),
+        ExternalEvent.create(
+            event_type=ExternalEventType.NEWS,
+            source=EventSource.NEWS_API,
+            title="社交媒体舆论风暴",
+            content="某企业家微博发言引发广泛讨论，相关话题阅读量突破 5 亿",
+            severity=Severity.HIGH,
+            metadata={"platform": "微博", "views": 500000000},
+        ),
+        ExternalEvent.create(
+            event_type=ExternalEventType.MARKET,
+            source=EventSource.YAHOO_FINANCE,
+            title="银行利率上调",
+            content="央行宣布一年期存贷款利率上调 25 个基点",
+            severity=Severity.MEDIUM,
+            metadata={"rate_change_bp": 25},
+        ),
+        ExternalEvent.create(
+            event_type=ExternalEventType.MANUAL,
+            source=EventSource.MANUAL,
+            title="突发自然灾害",
+            content="某地区发生 5.1 级地震，暂无人员伤亡报告",
+            severity=Severity.CRITICAL,
+            metadata={"magnitude": 5.1, "region": "某地区"},
+        ),
+    ]
+
+    added = 0
+    for event in demo_events:
+        if queue.enqueue(event):
+            added += 1
+
+    return {"added": added, "total": queue.size()}
+
+
 def get_external_event_queue(simulation_id: str | None = None) -> EventQueue:
     """Get the event queue for a simulation, or a default queue if none specified."""
     if simulation_id:
@@ -243,7 +340,10 @@ router = Router(
         generate_suggestions,
         apply_environment_event,
         dismiss_suggestions_endpoint,
+        get_rules,
+        save_rules,
         get_external_events,
         add_external_event,
+        seed_demo_events,
     ],
 )
