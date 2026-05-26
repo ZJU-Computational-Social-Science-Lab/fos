@@ -52,7 +52,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
     try {
       const raw = parseInt(String(form.poll_interval_seconds), 10);
       if (isNaN(raw) || raw < 60 || raw > 86400) {
-        setSaveError(t('dataSource.message.invalidPollInterval'));
+        setSaveError(t('settings.dataSource.message.invalidPollInterval'));
         setSaving(false);
         return;
       }
@@ -71,7 +71,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
       onClose();
     } catch (e) {
       console.warn('Failed to save data source', e);
-      setSaveError(t('dataSource.message.saveFailed'));
+      setSaveError(t('settings.dataSource.message.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -81,7 +81,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-medium">{source ? t('dataSource.editTitle') : t('dataSource.addTitle')}</h3>
+          <h3 className="text-lg font-medium">{source ? t('settings.dataSource.editTitle') : t('settings.dataSource.addTitle')}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
           </button>
@@ -95,7 +95,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
               className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
             >
               <ChevronDown className={`w-4 h-4 transition-transform ${showTemplates ? 'rotate-180' : ''}`} />
-              {showTemplates ? t('dataSource.form.hideTemplates') : t('dataSource.form.browseTemplates')}
+              {showTemplates ? t('settings.dataSource.form.hideTemplates') : t('settings.dataSource.form.browseTemplates')}
             </button>
           </div>
         )}
@@ -130,7 +130,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('dataSource.form.name')} *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.dataSource.form.name')} *</label>
             <input
               type="text"
               value={form.name}
@@ -142,7 +142,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
 
           {/* API URL */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('dataSource.form.apiUrl')} *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.dataSource.form.apiUrl')} *</label>
             <input
               type="url"
               value={form.api_url}
@@ -155,7 +155,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
 
           {/* Auth Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('dataSource.form.authType')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.dataSource.form.authType')}</label>
             <div className="flex gap-4">
               {(['none', 'bearer', 'api_key'] as const).map(type => (
                 <label key={type} className="flex items-center gap-1.5 text-sm">
@@ -175,7 +175,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
           {/* Auth Token */}
           {(form.auth_type === 'bearer' || form.auth_type === 'api_key') && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('dataSource.form.authToken')}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.dataSource.form.authToken')}</label>
               <input
                 type="password"
                 value={form.auth_token}
@@ -188,7 +188,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
 
           {/* Poll Interval */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('dataSource.form.pollInterval')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.dataSource.form.pollInterval')}</label>
             <input
               type="number"
               value={form.poll_interval_seconds}
@@ -206,22 +206,22 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
 
           {/* Event Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('dataSource.form.eventType')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.dataSource.form.eventType')}</label>
             <select
               value={form.event_type}
               onChange={e => setForm(f => ({ ...f, event_type: e.target.value }))}
               className="w-full border rounded px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
             >
-              <option value="market">{t('dataSource.form.eventTypeMarket')}</option>
-              <option value="policy">{t('dataSource.form.eventTypePolicy')}</option>
-              <option value="news">{t('dataSource.form.eventTypeNews')}</option>
-              <option value="custom">{t('dataSource.form.eventTypeCustom')}</option>
+              <option value="market">{t('settings.dataSource.form.eventTypeMarket')}</option>
+              <option value="policy">{t('settings.dataSource.form.eventTypePolicy')}</option>
+              <option value="news">{t('settings.dataSource.form.eventTypeNews')}</option>
+              <option value="custom">{t('settings.dataSource.form.eventTypeCustom')}</option>
             </select>
           </div>
 
           {/* Scope */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('dataSource.form.scope')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.dataSource.form.scope')}</label>
             <div className="flex gap-4">
               <label className="flex items-center gap-1.5 text-sm">
                 <input
@@ -231,7 +231,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
                   checked={form.is_global === true}
                   onChange={() => setForm(f => ({ ...f, is_global: true }))}
                 />
-                {t('dataSource.form.scopeGlobal')}
+                {t('settings.dataSource.form.scopeGlobal')}
               </label>
               <label className="flex items-center gap-1.5 text-sm">
                 <input
@@ -241,7 +241,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
                   checked={form.is_global === false}
                   onChange={() => setForm(f => ({ ...f, is_global: false }))}
                 />
-                {t('dataSource.form.scopeSimulation')}
+                {t('settings.dataSource.form.scopeSimulation')}
               </label>
             </div>
           </div>
@@ -249,7 +249,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
           {/* Simulation ID (shown when is_global is false) */}
           {!form.is_global && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('dataSource.form.simulationId')}</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('settings.dataSource.form.simulationId')}</label>
               <input
                 type="text"
                 value={form.simulation_id}
@@ -261,10 +261,10 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
 
           {/* Field Mapping */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">{t('dataSource.form.fieldMapping')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.dataSource.form.fieldMapping')}</label>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-gray-500 block mb-0.5">{t('dataSource.form.titleField')}</label>
+                <label className="text-xs text-gray-500 block mb-0.5">{t('settings.dataSource.form.titleField')}</label>
                 <input
                   type="text"
                   value={form.field_mapping.title_path || ''}
@@ -274,7 +274,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500 block mb-0.5">{t('dataSource.form.contentField')}</label>
+                <label className="text-xs text-gray-500 block mb-0.5">{t('settings.dataSource.form.contentField')}</label>
                 <input
                   type="text"
                   value={form.field_mapping.content_path || ''}
@@ -284,7 +284,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500 block mb-0.5">{t('dataSource.form.timestampField')}</label>
+                <label className="text-xs text-gray-500 block mb-0.5">{t('settings.dataSource.form.timestampField')}</label>
                 <input
                   type="text"
                   value={form.field_mapping.timestamp_path || ''}
@@ -294,7 +294,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500 block mb-0.5">{t('dataSource.form.urlField')}</label>
+                <label className="text-xs text-gray-500 block mb-0.5">{t('settings.dataSource.form.urlField')}</label>
                 <input
                   type="text"
                   value={form.field_mapping.url_path || ''}
@@ -314,14 +314,14 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
               disabled={saving || !form.name.trim() || !form.api_url.trim()}
               className="flex-1 py-2 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
             >
-              {saving ? '...' : t('dataSource.form.save')}
+              {saving ? '...' : t('settings.dataSource.form.save')}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50"
             >
-              {t('dataSource.form.cancel')}
+              {t('settings.dataSource.form.cancel')}
             </button>
           </div>
         </form>
