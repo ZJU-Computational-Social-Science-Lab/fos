@@ -22,6 +22,7 @@ export const DataSourceSettings: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editSource, setEditSource] = useState<DataSource | null>(null);
   const [pollingId, setPollingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchSources = async () => {
     setLoading(true);
@@ -30,6 +31,8 @@ export const DataSourceSettings: React.FC = () => {
       setSources(response.data || []);
     } catch (e) {
       console.warn('Failed to fetch data sources', e);
+      setError(t('dataSource.message.operationFailed'));
+      setTimeout(() => setError(null), 3000);
     } finally {
       setLoading(false);
     }
@@ -48,6 +51,8 @@ export const DataSourceSettings: React.FC = () => {
       fetchSources();
     } catch (e) {
       console.warn('Failed to delete data source', e);
+      setError(t('dataSource.message.operationFailed'));
+      setTimeout(() => setError(null), 3000);
     }
   };
 
@@ -57,6 +62,8 @@ export const DataSourceSettings: React.FC = () => {
       fetchSources();
     } catch (e) {
       console.warn('Failed to pause/resume data source', e);
+      setError(t('dataSource.message.operationFailed'));
+      setTimeout(() => setError(null), 3000);
     }
   };
 
@@ -68,6 +75,8 @@ export const DataSourceSettings: React.FC = () => {
       setTimeout(fetchSources, 1000);
     } catch (e) {
       console.warn('Failed to trigger poll', e);
+      setError(t('dataSource.message.operationFailed'));
+      setTimeout(() => setError(null), 3000);
     } finally {
       setPollingId(null);
     }
@@ -111,6 +120,12 @@ export const DataSourceSettings: React.FC = () => {
           {t('dataSource.addTitle')}
         </button>
       </div>
+
+      {error && (
+        <div className="mb-4 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       {sources.length === 0 && !loading ? (
         <div className="text-center py-12 text-gray-500">
