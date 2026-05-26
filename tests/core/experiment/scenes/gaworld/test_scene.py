@@ -2,7 +2,8 @@
 
 - test_type_identifier_matches_expected_value checks the scene type value.
 - test_constructor_starts_with_empty_skipped_days checks skipped days starts empty.
-- test_initialize_sets_subprocess_manager_and_translator checks initialize wires required collaborators.
+- test_initialize_sets_translator_without_starting_subprocess checks initialize avoids starting GAWorld.
+- test_run_round_launches_subprocess_on_first_round checks first run_round lazily starts GAWorld.
 - test_run_round_emits_one_event_per_translated_event checks run_round emits translated events.
 - test_run_round_skips_day_when_translation_key_missing checks key errors skip a day without crashing.
 - test_serialize_config_includes_skipped_days checks skipped days are returned in config serialization.
@@ -40,18 +41,43 @@ def test_constructor_starts_with_empty_skipped_days() -> None:
     assert scene.skipped_days == []
 
 
-def test_initialize_sets_subprocess_manager_and_translator(monkeypatch) -> None:
+def test_initialize_sets_translator_without_starting_subprocess(monkeypatch) -> None:
     scene = GAWorldScene(_make_config())
+    launch_calls: list[str] = []
 
     def _fake_launch() -> None:
+        launch_calls.append("called")
         scene._subprocess_manager = SimpleNamespace(wait_for_day=lambda *args, **kwargs: {"last_day": 1})
 
     monkeypatch.setattr(scene, "_launch_subprocess", _fake_launch)
 
     scene.initialize(llm_client=object())
 
-    assert scene._subprocess_manager is not None
+    assert launch_calls == []
+    assert scene._subprocess_manager is None
     assert scene._translator is not None
+
+
+def test_run_round_launches_subprocess_on_first_round(monkeypatch) -> None:
+    scene = GAWorldScene(_make_config())
+    launch_calls: list[str] = []
+
+    def _fake_launch() -> None:
+        launch_calls.append("called")
+        scene._subprocess_manager = SimpleNamespace(wait_for_day=lambda *args, **kwargs: {"last_day": 1}, output_dir=Path("."))
+
+    monkeypatch.setattr(scene, "_launch_subprocess", _fake_launch)
+    monkeypatch.setattr(scene, "_read_day_data", lambda day_num: {"day": day_num, "agents": []})
+
+    scene.initialize(llm_client=object())
+    scene._translator = SimpleNamespace(
+        translate_day=lambda _day_data: [],
+        translate_state_updates=lambda _day_data: {},
+    )
+
+    asyncio.run(scene.run_round(lambda _event_type, _payload: None))
+
+    assert launch_calls == ["called"]
 
 
 def test_run_round_emits_one_event_per_translated_event(monkeypatch) -> None:

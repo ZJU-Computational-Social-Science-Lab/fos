@@ -141,6 +141,7 @@ export function launchExperimentFromBuilderState({
     scenarioData?.category === 'sociology' ||
     scenarioData?.category === 'social_deduction' ||
     scenarioData?.category === 'spatial' ||
+    scenarioData?.category === 'generative_city' ||
     scenarioData?.category === 'custom';
 
   addSimulation(
@@ -326,12 +327,13 @@ export const ExperimentBuilderModal: React.FC<ExperimentBuilderModalProps> = ({
     // Determine if this uses the new Three-Layer Architecture
     // (strategic_decisions or any scenario with structured actions)
     const isNewArchitecture = scenarioData?.category === 'game_theory' ||
-                             scenarioData?.category === 'discussion' ||
-                             scenarioData?.category === 'grid' ||
-                             scenarioData?.category === 'sociology' ||
-                             scenarioData?.category === 'social_deduction' ||
-                             scenarioData?.category === 'spatial' ||
-                             scenarioData?.category === 'custom';
+      scenarioData?.category === 'discussion' ||
+      scenarioData?.category === 'grid' ||
+      scenarioData?.category === 'sociology' ||
+      scenarioData?.category === 'social_deduction' ||
+      scenarioData?.category === 'spatial' ||
+      scenarioData?.category === 'generative_city' ||
+      scenarioData?.category === 'custom';
 
     addSimulation(
       name,

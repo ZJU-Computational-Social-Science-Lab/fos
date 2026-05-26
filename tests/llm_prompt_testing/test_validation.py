@@ -3,8 +3,8 @@ Tests for validation module.
 """
 
 import pytest
-from llm_prompt_testing.prompt_v2.game_configs import GameConfig, PRISONERS_DILEMMA, PUBLIC_GOODS
-from llm_prompt_testing.prompt_v2.validation import (
+from tests.llm_prompt_testing.prompt_v2.game_configs import GameConfig, PRISONERS_DILEMMA, PUBLIC_GOODS
+from tests.llm_prompt_testing.prompt_v2.validation import (
     strip_markdown_fences,
     strip_think_tags,
     validate_and_clamp,
@@ -213,3 +213,4 @@ class TestValidateAndClamp:
         validated = validate_and_clamp(result, PUBLIC_GOODS)
 
         assert validated["contribution"] == 20  # clamped to max
+
