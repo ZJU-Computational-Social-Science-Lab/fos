@@ -31,7 +31,7 @@ export const DataSourceSettings: React.FC = () => {
       setSources(response.data || []);
     } catch (e) {
       console.warn('Failed to fetch data sources', e);
-      setError(t('dataSource.message.operationFailed'));
+      setError(t('settings.dataSource.message.operationFailed'));
       setTimeout(() => setError(null), 3000);
     } finally {
       setLoading(false);
@@ -45,13 +45,13 @@ export const DataSourceSettings: React.FC = () => {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t('dataSource.confirm.deleteMessage'))) return;
+    if (!confirm(t('settings.dataSource.confirm.deleteMessage'))) return;
     try {
       await dataSourceApi.delete(id);
       fetchSources();
     } catch (e) {
       console.warn('Failed to delete data source', e);
-      setError(t('dataSource.message.operationFailed'));
+      setError(t('settings.dataSource.message.operationFailed'));
       setTimeout(() => setError(null), 3000);
     }
   };
@@ -62,7 +62,7 @@ export const DataSourceSettings: React.FC = () => {
       fetchSources();
     } catch (e) {
       console.warn('Failed to pause/resume data source', e);
-      setError(t('dataSource.message.operationFailed'));
+      setError(t('settings.dataSource.message.operationFailed'));
       setTimeout(() => setError(null), 3000);
     }
   };
@@ -75,7 +75,7 @@ export const DataSourceSettings: React.FC = () => {
       setTimeout(fetchSources, 1000);
     } catch (e) {
       console.warn('Failed to trigger poll', e);
-      setError(t('dataSource.message.operationFailed'));
+      setError(t('settings.dataSource.message.operationFailed'));
       setTimeout(() => setError(null), 3000);
     } finally {
       setPollingId(null);
@@ -100,24 +100,24 @@ export const DataSourceSettings: React.FC = () => {
 
   const getStatusBadge = (source: DataSource) => {
     if (!source.is_enabled) {
-      return <span className="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600">{t('dataSource.status.paused')}</span>;
+      return <span className="px-2 py-0.5 text-xs rounded bg-gray-100 text-gray-600">{t('settings.dataSource.status.paused')}</span>;
     }
     if (source.last_error) {
-      return <span className="px-2 py-0.5 text-xs rounded bg-red-50 text-red-600">{t('dataSource.status.error')}</span>;
+      return <span className="px-2 py-0.5 text-xs rounded bg-red-50 text-red-600">{t('settings.dataSource.status.error')}</span>;
     }
-    return <span className="px-2 py-0.5 text-xs rounded bg-green-50 text-green-600">{t('dataSource.status.running')}</span>;
+    return <span className="px-2 py-0.5 text-xs rounded bg-green-50 text-green-600">{t('settings.dataSource.status.running')}</span>;
   };
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-medium">{t('dataSource.title')}</h2>
+        <h2 className="text-lg font-medium">{t('settings.dataSource.title')}</h2>
         <button
           onClick={handleAdd}
           className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
         >
           <Plus className="w-4 h-4" />
-          {t('dataSource.addTitle')}
+          {t('settings.dataSource.addTitle')}
         </button>
       </div>
 
@@ -130,19 +130,19 @@ export const DataSourceSettings: React.FC = () => {
       {sources.length === 0 && !loading ? (
         <div className="text-center py-12 text-gray-500">
           <Globe className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-          <p>{t('dataSource.empty')}</p>
-          <p className="text-xs text-gray-400 mt-1">{t('dataSource.emptyHint')}</p>
+          <p>{t('settings.dataSource.empty')}</p>
+          <p className="text-xs text-gray-400 mt-1">{t('settings.dataSource.emptyHint')}</p>
         </div>
       ) : (
         <div className="border rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="text-left px-4 py-2 font-medium text-gray-600">{t('dataSource.table.name')}</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-600">{t('dataSource.table.eventType')}</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-600">{t('dataSource.table.pollInterval')}</th>
-                <th className="text-left px-4 py-2 font-medium text-gray-600">{t('dataSource.table.status')}</th>
-                <th className="text-right px-4 py-2 font-medium text-gray-600">{t('dataSource.table.actions')}</th>
+                <th className="text-left px-4 py-2 font-medium text-gray-600">{t('settings.dataSource.table.name')}</th>
+                <th className="text-left px-4 py-2 font-medium text-gray-600">{t('settings.dataSource.table.eventType')}</th>
+                <th className="text-left px-4 py-2 font-medium text-gray-600">{t('settings.dataSource.table.pollInterval')}</th>
+                <th className="text-left px-4 py-2 font-medium text-gray-600">{t('settings.dataSource.table.status')}</th>
+                <th className="text-right px-4 py-2 font-medium text-gray-600">{t('settings.dataSource.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -150,20 +150,20 @@ export const DataSourceSettings: React.FC = () => {
                 <tr key={source.id} className="border-b last:border-b-0 hover:bg-gray-50">
                   <td className="px-4 py-2 font-medium text-gray-900">{source.name}</td>
                   <td className="px-4 py-2 text-gray-600">{t(`dataSource.table.eventType${source.event_type.charAt(0).toUpperCase() + source.event_type.slice(1)}`) || source.event_type}</td>
-                  <td className="px-4 py-2 text-gray-600">{source.poll_interval_seconds}{t('dataSource.table.seconds')}</td>
+                  <td className="px-4 py-2 text-gray-600">{source.poll_interval_seconds}{t('settings.dataSource.table.seconds')}</td>
                   <td className="px-4 py-2">{getStatusBadge(source)}</td>
                   <td className="px-4 py-2">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => handlePoll(source.id)} disabled={pollingId === source.id} className="p-1.5 text-gray-500 hover:text-indigo-600" title={t('dataSource.actions.poll')}>
+                      <button onClick={() => handlePoll(source.id)} disabled={pollingId === source.id} className="p-1.5 text-gray-500 hover:text-indigo-600" title={t('settings.dataSource.actions.poll')}>
                         {pollingId === source.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                       </button>
-                      <button onClick={() => handleEdit(source)} className="p-1.5 text-gray-500 hover:text-indigo-600" title={t('dataSource.actions.edit')}>
+                      <button onClick={() => handleEdit(source)} className="p-1.5 text-gray-500 hover:text-indigo-600" title={t('settings.dataSource.actions.edit')}>
                         <Pencil className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handlePauseResume(source)} className="p-1.5 text-gray-500 hover:text-indigo-600" title={source.is_enabled ? t('dataSource.actions.pause') : t('dataSource.actions.resume')}>
+                      <button onClick={() => handlePauseResume(source)} className="p-1.5 text-gray-500 hover:text-indigo-600" title={source.is_enabled ? t('settings.dataSource.actions.pause') : t('settings.dataSource.actions.resume')}>
                         {source.is_enabled ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                       </button>
-                      <button onClick={() => handleDelete(source.id)} className="p-1.5 text-gray-500 hover:text-red-600" title={t('dataSource.actions.delete')}>
+                      <button onClick={() => handleDelete(source.id)} className="p-1.5 text-gray-500 hover:text-red-600" title={t('settings.dataSource.actions.delete')}>
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
