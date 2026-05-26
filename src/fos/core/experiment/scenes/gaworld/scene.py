@@ -1,7 +1,7 @@
 """This file runs a GAWorld-backed experiment scene.
 
 - GAWorldScene stores GAWorld-specific config values and run state.
-- initialize sets up mapping, translator, and subprocess launch.
+- initialize sets up mapping and translator without starting subprocesses.
 - _launch_subprocess prepares GAWorld input files and starts run managers.
 - run_round waits for one day, translates actions, updates state, and returns result.
 - _read_day_data loads one day of per-agent action and state files.
@@ -47,7 +47,7 @@ class GAWorldScene(ExperimentScene):
             for agent in self.config.agents
         }
         self._translator = GAWorldOutputTranslator(self._agent_name_map)
-        self._launch_subprocess()
+        # Subprocess is launched lazily on first run_round() call.
 
     def _launch_subprocess(self) -> None:
         profiles = load_profiles()
@@ -91,6 +91,8 @@ class GAWorldScene(ExperimentScene):
     async def run_round(self, event_emitter: Callable[[str, dict], None]) -> RoundResult:
         self.current_round += 1
         day_num = self.current_round
+        if self._subprocess_manager is None:
+            self._launch_subprocess()
         if self._subprocess_manager is None or self._translator is None:
             raise RuntimeError("gaworld.error.not_initialized")
 

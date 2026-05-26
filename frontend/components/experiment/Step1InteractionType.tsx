@@ -23,6 +23,7 @@ const CATEGORY_ORDER = [
   'spatial',
   'social_deduction',
   'sociology',
+  'generative_city',
   'custom',
 ] as const;
 
@@ -32,6 +33,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   spatial: '#f59e0b',
   social_deduction: '#ef4444',
   sociology: '#ec4899',
+  generative_city: '#8b5cf6',
   custom: '#6b7280',
 };
 
