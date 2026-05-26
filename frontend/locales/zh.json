@@ -556,7 +556,9 @@
         "testConnection": "测试连接",
         "pollNow": "立即轮询",
         "save": "保存",
-        "cancel": "取消"
+        "cancel": "取消",
+        "browseTemplates": "浏览模板",
+        "hideTemplates": "收起模板"
       },
       "status": {
         "running": "运行中",

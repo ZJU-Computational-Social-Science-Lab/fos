@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X } from 'lucide-react';
+import { X, ChevronDown } from 'lucide-react';
 import { dataSourceApi, DataSource } from '../services/dataSourceApi';
+import { DATA_SOURCE_TEMPLATES, TEMPLATE_CATEGORIES } from '../services/dataSourceTemplates';
 
 interface AddDataSourceModalProps {
   source?: DataSource | null;
@@ -12,6 +13,7 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
   const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showTemplates, setShowTemplates] = useState(!source);
   const [form, setForm] = useState({
     name: source?.name || '',
     api_url: source?.api_url || '',
@@ -24,6 +26,22 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
     field_mapping: source?.field_mapping || { title_path: '', content_path: '', timestamp_path: '', url_path: '' },
     is_enabled: source?.is_enabled ?? true,
   });
+
+  const applyTemplate = (templateId: string) => {
+    const tmpl = DATA_SOURCE_TEMPLATES.find(t => t.id === templateId);
+    if (!tmpl) return;
+    setForm(f => ({
+      ...f,
+      name: tmpl.defaults.name,
+      api_url: tmpl.defaults.api_url,
+      auth_type: tmpl.defaults.auth_type,
+      auth_token: tmpl.defaults.auth_token || '',
+      poll_interval_seconds: tmpl.defaults.poll_interval_seconds,
+      event_type: tmpl.defaults.event_type,
+      field_mapping: { ...tmpl.defaults.field_mapping },
+    }));
+    setShowTemplates(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +86,46 @@ export const AddDataSourceModal: React.FC<AddDataSourceModalProps> = ({ source, 
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {!source && (
+          <div className="px-4 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowTemplates(v => !v)}
+              className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+            >
+              <ChevronDown className={`w-4 h-4 transition-transform ${showTemplates ? 'rotate-180' : ''}`} />
+              {showTemplates ? t('dataSource.form.hideTemplates') : t('dataSource.form.browseTemplates')}
+            </button>
+          </div>
+        )}
+
+        {showTemplates && !source && (
+          <div className="px-4 pb-2 max-h-64 overflow-y-auto">
+            <div className="grid grid-cols-2 gap-2">
+              {TEMPLATE_CATEGORIES.map(cat => {
+                const catTemplates = DATA_SOURCE_TEMPLATES.filter(t => t.category === cat.id);
+                if (catTemplates.length === 0) return null;
+                return (
+                  <div key={cat.id} className="space-y-1">
+                    <p className="text-xs font-medium text-gray-400 uppercase">{t('settings.tabs.lang') === 'en' ? cat.labelEn : cat.label}</p>
+                    {catTemplates.map(tmpl => (
+                      <button
+                        key={tmpl.id}
+                        type="button"
+                        onClick={() => applyTemplate(tmpl.id)}
+                        className="w-full text-left px-3 py-2 rounded border hover:border-indigo-400 hover:bg-indigo-50 transition-colors"
+                      >
+                        <span className="text-sm">{tmpl.icon} {tmpl.name}</span>
+                        <p className="text-xs text-gray-500 mt-0.5">{tmpl.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {/* Name */}

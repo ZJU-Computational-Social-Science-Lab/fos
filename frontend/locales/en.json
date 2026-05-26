@@ -590,7 +590,9 @@
         "testConnection": "Test Connection",
         "pollNow": "Poll Now",
         "save": "Save",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "browseTemplates": "Browse Templates",
+        "hideTemplates": "Hide Templates"
       },
       "status": {
         "running": "Running",
