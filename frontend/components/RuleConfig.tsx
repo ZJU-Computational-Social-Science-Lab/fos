@@ -37,6 +37,7 @@ export interface Rule {
 interface RuleConfigProps {
   rules: Rule[];
   onChange: (rules: Rule[]) => void;
+  simulationId?: string;
 }
 
 const operators = [
@@ -302,9 +303,40 @@ function RuleCard({
   );
 }
 
-export const RuleConfig: React.FC<RuleConfigProps> = ({ rules, onChange }) => {
+export const RuleConfig: React.FC<RuleConfigProps> = ({ rules, onChange, simulationId }) => {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
+
+  // Load rules from backend on mount, save on change
+  React.useEffect(() => {
+    if (!simulationId) return;
+    (async () => {
+      const { apiClient } = await import('../services/client');
+      try {
+        const resp = await apiClient.get(`/rules?simulation_id=${simulationId}`);
+        const backendRules = resp.data?.rules || [];
+        if (backendRules.length > 0) {
+          onChange(backendRules);
+        }
+      } catch (e) {
+        // Silently ignore — local state is fine for MVP
+      }
+    })();
+  }, [simulationId]);
+
+  // Debounced auto-save to backend
+  React.useEffect(() => {
+    if (!simulationId || rules.length === 0) return;
+    const timer = setTimeout(async () => {
+      const { apiClient } = await import('../services/client');
+      try {
+        await apiClient.post(`/rules?simulation_id=${simulationId}`, { rules });
+      } catch (e) {
+        console.warn('Failed to save rules to backend', e);
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [rules, simulationId]);
 
   const addRule = () => {
     const newRule: Rule = {

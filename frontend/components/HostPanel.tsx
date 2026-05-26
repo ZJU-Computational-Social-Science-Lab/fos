@@ -3,9 +3,11 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSimulationStore } from '../store';
 import { applyEnvironmentEvent, generateSuggestions, type EnvironmentSuggestion } from '../services/environmentSuggestions';
-import { Megaphone, CloudLightning, Edit, Save, Sparkles, Loader2, Check, FilePlus } from 'lucide-react';
+import { Megaphone, CloudLightning, Edit, Save, Sparkles, Loader2, Check, FilePlus, Globe, Settings } from 'lucide-react';
 import { MultimodalInput } from './MultimodalInput';
 import { InitialEventsModal } from './InitialEventsModal';
+import { EventPanel } from './EventPanel';
+import { RuleConfig, type Rule } from './RuleConfig';
 
 const humanizeBackendLabel = (value: string): string => {
   const normalized = String(value || '').trim();
@@ -39,6 +41,11 @@ export const HostPanel: React.FC = () => {
   // #12 Environment Suggestions
   const [suggestions, setSuggestions] = useState<EnvironmentSuggestion[]>([]);
   const [isSuggesting, setIsSuggesting] = useState(false);
+
+  // EventPanel & RuleConfig state
+  const [rules, setRules] = useState<Rule[]>([]);
+  const [showEventPanel, setShowEventPanel] = useState(false);
+  const [showRuleConfig, setShowRuleConfig] = useState(false);
 
   const translateSuggestionEventType = (eventType: string) => {
     const key = `components.environmentSuggestion.eventType.${eventType}`;
@@ -338,6 +345,51 @@ export const HostPanel: React.FC = () => {
           >
             <Save size={12} /> {t('components.hostPanel.updateProperty')}
           </button>
+        </div>
+
+        <hr style={{ borderColor: 'var(--ss-border)' }} />
+
+        {/* External Events */}
+        <div className="space-y-2">
+          <label
+            className="text-xs font-bold flex items-center gap-1 cursor-pointer"
+            style={{ color: 'var(--ss-workspace-heading)' }}
+            onClick={() => setShowEventPanel(!showEventPanel)}
+          >
+            <Globe size={14} /> {t('components.hostPanel.externalEvents')}
+            <span className="text-[10px] ml-1 px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-600">
+              {t('components.hostPanel.new')}
+            </span>
+          </label>
+          {showEventPanel && (
+            <div className="mt-2">
+              <EventPanel
+                simulationId={currentSimulation?.id}
+                onEventApply={(event) => {
+                  handleEnvEvent(`${event.title}: ${event.content}`);
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Rule Configuration */}
+        <div className="space-y-2">
+          <label
+            className="text-xs font-bold flex items-center gap-1 cursor-pointer"
+            style={{ color: 'var(--ss-workspace-heading)' }}
+            onClick={() => setShowRuleConfig(!showRuleConfig)}
+          >
+            <Settings size={14} /> {t('components.hostPanel.ruleConfig')}
+            <span className="text-[10px] ml-1 px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-600">
+              {t('components.hostPanel.new')}
+            </span>
+          </label>
+          {showRuleConfig && (
+            <div className="mt-2">
+              <RuleConfig rules={rules} onChange={setRules} simulationId={currentSimulation?.id} />
+            </div>
+          )}
         </div>
 
       </div>
