@@ -51,6 +51,12 @@ class GAWorldSubprocessManager:
         command = [sys.executable, str(script_path), "run"]
         env = os.environ.copy()
         env["GAWORLD_CONFIG_OVERRIDES"] = json.dumps(self.config_overrides)
+        existing_pythonpath = env.get("PYTHONPATH", "")
+        gaworld_dir = str(self.gaworld_path)
+        if existing_pythonpath:
+            env["PYTHONPATH"] = gaworld_dir + os.pathsep + existing_pythonpath
+        else:
+            env["PYTHONPATH"] = gaworld_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         if os.name == "nt":

@@ -12,6 +12,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
 import tempfile
 from pathlib import Path
 from typing import Any, Callable
@@ -21,6 +23,8 @@ from fos.core.experiment.scene import ExperimentScene
 from fos.core.experiment.scenes.gaworld.profiles import export_profiles_csv, load_profiles
 from fos.core.experiment.scenes.gaworld.subprocess_manager import GAWorldSubprocessManager
 from fos.core.experiment.scenes.gaworld.translator import GAWorldOutputTranslator
+
+logger = logging.getLogger(__name__)
 
 
 class GAWorldScene(ExperimentScene):
@@ -93,6 +97,15 @@ class GAWorldScene(ExperimentScene):
         day_num = self.current_round
         if self._subprocess_manager is None:
             self._launch_subprocess()
+            logger.info(f"GAWorld subprocess launched for day {self.current_round}")
+            if self._subprocess_manager is not None:
+                output_dir = self._subprocess_manager.output_dir
+                logger.info(f"GAWorld output_dir: {output_dir}")
+                logger.info(f"GAWorld output_dir exists: {output_dir.exists()}")
+                if output_dir.exists():
+                    for root, _, files in os.walk(output_dir):
+                        for file_name in files:
+                            logger.info(f"GAWorld output file: {os.path.join(root, file_name)}")
         if self._subprocess_manager is None or self._translator is None:
             raise RuntimeError("gaworld.error.not_initialized")
 
@@ -101,6 +114,7 @@ class GAWorldScene(ExperimentScene):
 
         try:
             events = self._translator.translate_day(day_data)
+            logger.info(f"GAWorld day {day_num}: translated {len(events)} events")
             state_updates = self._translator.translate_state_updates(day_data)
         except (json.JSONDecodeError, KeyError):
             self.skipped_days.append(day_num)
@@ -108,6 +122,7 @@ class GAWorldScene(ExperimentScene):
 
         for event in events:
             event_emitter("experiment_action", event)
+            logger.debug(f"GAWorld emitted event: {event}")
 
         for agent_name, updates in state_updates.items():
             if agent_name in self.state.agents:
@@ -118,17 +133,27 @@ class GAWorldScene(ExperimentScene):
     def _read_day_data(self, day_num: int) -> dict[str, Any]:
         if self._subprocess_manager is None:
             raise RuntimeError("gaworld.error.not_initialized")
+        logger.info(
+            f"GAWorld reading day {day_num} from "
+            f"{self._subprocess_manager.output_dir if self._subprocess_manager else 'None'}"
+        )
 
         memory_dir = self._subprocess_manager.output_dir / "memory"
-        agents: dict[str, dict[str, Any]] = {}
+        agents_data: dict[str, dict[str, Any]] = {}
         for agent_id in self._agent_ids:
             actions_path = memory_dir / f"agent_{agent_id}_actions.json"
             state_path = memory_dir / f"agent_{agent_id}.json"
             actions = json.loads(actions_path.read_text(encoding="utf-8")) if actions_path.exists() else []
             state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {}
-            agents[agent_id] = {"actions": actions, "state": state}
+            agents_data[agent_id] = {"actions": actions, "state": state}
+        logger.info(
+            "GAWorld day %s agents_data keys: %s, actions counts: %s",
+            day_num,
+            list(agents_data.keys()),
+            [(agent_id, len(data["actions"])) for agent_id, data in agents_data.items()],
+        )
 
-        return {"day": day_num, "agents": agents}
+        return {"day": day_num, "agents": agents_data}
 
     def serialize_config(self) -> dict:
         data = super().serialize_config()
