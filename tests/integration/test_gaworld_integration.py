@@ -48,6 +48,7 @@ def test_information_model_for_gaworld_scene_is_all_without_scores() -> None:
 def test_simtree_routing_raises_when_gaworld_path_is_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     """Routing to gaworld_scene fails with i18n key when env path is missing."""
     monkeypatch.delenv("GAWORLD_PATH", raising=False)
+    monkeypatch.setattr(simtree_runtime, "_GAWORLD_PATH", None)
 
     sim_record = type(
         "SimRecord",
@@ -65,3 +66,30 @@ def test_simtree_routing_raises_when_gaworld_path_is_missing(monkeypatch: pytest
 
     with pytest.raises(ValueError, match="gaworld.error.path_not_set"):
         simtree_runtime._build_tree_for_sim(sim_record, clients={})
+
+
+def test_gaworld_routing_uses_startup_path_after_env_changes(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Routing to gaworld_scene keeps using the path captured at startup."""
+    startup_path = "C:/startup/gaworld"
+    changed_path = "C:/changed/gaworld"
+    monkeypatch.setattr(simtree_runtime, "_GAWORLD_PATH", startup_path)
+    monkeypatch.setenv("GAWORLD_PATH", changed_path)
+
+    sim_record = type(
+        "SimRecord",
+        (),
+        {
+            "id": "SIM-GAWORLD-2",
+            "scene_type": "gaworld_scene",
+            "scene_config": {"parameters": {}},
+            "name": "GAWorld Startup Path Test",
+            "description": "",
+            "notes": "",
+            "agent_config": {"agents": []},
+        },
+    )()
+
+    tree = simtree_runtime._build_tree_for_sim(sim_record, clients={})
+
+    scene_parameters = tree.nodes[tree.root]["sim"].scene.config.parameters
+    assert scene_parameters["gaworld_path"] == startup_path

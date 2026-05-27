@@ -8,10 +8,12 @@
 - test_wait_for_day_raises_timeout_error_when_deadline_passes checks wait_for_day raises timeout while process stays alive.
 - test_kill_calls_terminate_on_windows checks kill calls terminate on Windows.
 - test_kill_preserves_output_directory_when_requested checks kill does not delete output when preserve_output is True.
+- test_launch_adds_gaworld_path_to_subprocess_pythonpath checks child imports can find GAWorld modules.
 - test_launch_comparative_returns_two_manager_instances checks launch_comparative returns two launched managers.
 """
 
 import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -99,6 +101,34 @@ def test_kill_preserves_output_directory_when_requested(tmp_path: Path, monkeypa
     manager.kill()
 
     assert output_dir.exists()
+
+
+def test_launch_adds_gaworld_path_to_subprocess_pythonpath(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gaworld_path = tmp_path / "GAWorld"
+    output_dir = tmp_path / "out"
+    gaworld_path.mkdir()
+    (gaworld_path / "generative_city_sim.py").write_text("print('ok')", encoding="utf-8")
+    monkeypatch.setenv("PYTHONPATH", "existing_path")
+    captured: dict[str, object] = {}
+
+    def _fake_popen(command: list[str], **kwargs: object) -> SimpleNamespace:
+        captured["command"] = command
+        captured.update(kwargs)
+        return SimpleNamespace(poll=lambda: None)
+
+    monkeypatch.setattr("subprocess.Popen", _fake_popen)
+
+    manager = GAWorldSubprocessManager(gaworld_path, {"seed": 7}, output_dir)
+    manager.launch()
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert captured["cwd"] == str(gaworld_path)
+    assert env["PYTHONPATH"] == str(gaworld_path) + os.pathsep + "existing_path"
+    assert json.loads(env["GAWORLD_CONFIG_OVERRIDES"]) == {"seed": 7}
 
 
 def test_launch_comparative_returns_two_manager_instances(

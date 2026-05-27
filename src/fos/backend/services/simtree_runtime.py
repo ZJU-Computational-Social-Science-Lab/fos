@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import logging as _logging
+import os as _os
 import sys
 from typing import Dict
 
 from fos.core.agent import Agent
 from fos.core.event import PublicEvent
-from fos.core.registry import get_information_model
 from fos.core.ordering import ControlledOrdering, CycledOrdering, SequentialOrdering
 from fos.core.registry import ACTION_SPACE_MAP, SCENE_ACTIONS, SCENE_MAP, get_scene_class
 from fos.core.simtree import SimTree
@@ -21,11 +22,15 @@ from fos.core.experiment.scenes.council_experiment import CouncilExperimentScene
 from fos.i18n import T, get_request_locale
 
 
+_GAWORLD_PATH: str | None = _os.environ.get("GAWORLD_PATH")
+_log = _logging.getLogger(__name__)
 logger = logging.getLogger(__name__)
 _logging_handler = logging.StreamHandler(sys.stdout)
 _logging_handler.setLevel(logging.DEBUG)
 _logging_handler.setFormatter(logging.Formatter('[SIMTREE RUNTIME] %(message)s'))
 logger.addHandler(_logging_handler)
+_log.setLevel(_logging.INFO)
+_log.info(f"[GAWorld] GAWORLD_PATH resolved at import: {_GAWORLD_PATH!r}")
 
 def _normalize_language(value: str | None) -> str:
     lang = str(value or "").strip()
@@ -290,7 +295,7 @@ def _apply_agent_config(simulator, agent_config: dict | None):
         agent = agents_list[i]
         selected = [str(a) for a in (cfg.get("action_space") or [])]
         if not selected:
-            reg = SCENE_ACTIONS.get(scene_key, {}) if 'scene_key' in locals() else {}
+            reg = {}
             selected = (reg.get("basic") or []) + (reg.get("allowed") or [])
         scene_actions = simulator.scene.get_scene_actions(agent) or []
         picked = []
@@ -514,7 +519,7 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
         # Use adapter instead of full Simulator
         adapter = ExperimentRunnerAdapter(scene, clients or make_clients_from_env())
 
-        logger.debug(f"Created CouncilExperimentScene with adapter: council")
+        logger.debug("Created CouncilExperimentScene with adapter: council")
 
         return SimTree.new(adapter, adapter.clients)
     elif scene_key == "policy_cascade_experiment":
@@ -595,9 +600,8 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
         return SimTree.new(adapter, adapter.clients)
     elif scene_key == "gaworld_scene":
         from fos.core.experiment.scenes.gaworld import GAWorldScene
-        import os as _os
 
-        gaworld_path = _os.environ.get("GAWORLD_PATH")
+        gaworld_path = _GAWORLD_PATH
         if not gaworld_path:
             raise ValueError("gaworld.error.path_not_set")
 
