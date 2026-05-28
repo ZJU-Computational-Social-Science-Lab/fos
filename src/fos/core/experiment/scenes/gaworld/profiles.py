@@ -1,6 +1,10 @@
 ﻿"""This file defines GAWorld agent profile data and helper functions.
 Each function does one simple job:
 - GAWorldAgentProfile stores one agent's profile values.
+- _float_from_row reads one decimal value from a CSV row.
+- _profile_from_csv_row turns one CSV row into a profile object.
+- _profile_summary turns one profile into readable card text.
+- _default_profiles_path finds the bundled JSON or local GAWorld CSV data.
 - load_profiles reads a JSON file and turns rows into profile objects.
 - profiles_to_fos_agents turns profile objects into FOS agent dictionaries.
 - export_profiles_csv writes selected profile fields to a CSV file.
@@ -13,6 +17,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 import csv
 import json
+import os
 from pathlib import Path
 from typing import Iterable
 
@@ -45,12 +50,87 @@ class GAWorldAgentProfile:
     city_identity: float
 
 
+def _float_from_row(row: dict[str, str], field_name: str) -> float:
+    """Reads one decimal number from a CSV row."""
+
+    return float(row.get(field_name, 0.0) or 0.0)
+
+
+def _profile_from_csv_row(row: dict[str, str]) -> GAWorldAgentProfile:
+    """Turns one GAWorld CSV row into a profile object."""
+
+    residence = row.get("residence", "")
+    return GAWorldAgentProfile(
+        id=str(row.get("id", "")).strip(),
+        name=str(row.get("name", "")).strip(),
+        gender=str(row.get("gender", "")).strip(),
+        age=int(row.get("age", 0) or 0),
+        hukou=str(row.get("hukou", "")).strip(),
+        residence=residence,
+        occupation="",
+        income="",
+        education="",
+        personality_traits="",
+        daily_routine=f"Lives in {residence}." if residence else "",
+        social_network="",
+        values="",
+        policy_sensitivity=_float_from_row(row, "policy_sensitivity"),
+        platform_dependence=_float_from_row(row, "platform_dependence"),
+        risk_preference=_float_from_row(row, "risk_preference"),
+        voice_propensity=_float_from_row(row, "voice_propensity"),
+        mobility_intent=_float_from_row(row, "mobility_intent"),
+        emotion=_float_from_row(row, "emotion"),
+        stress=_float_from_row(row, "stress"),
+        econ_security=_float_from_row(row, "econ_security"),
+        city_identity=_float_from_row(row, "city_identity"),
+    )
+
+
+def _profile_summary(profile: GAWorldAgentProfile) -> str:
+    """Turns one profile into readable card text."""
+
+    return "\n".join(
+        [
+            f"Gender: {profile.gender}",
+            f"Age: {profile.age}",
+            f"Hukou: {profile.hukou}",
+            f"Residence: {profile.residence}",
+            f"Occupation: {profile.occupation}",
+            f"Income: {profile.income}",
+            f"Education: {profile.education}",
+            f"Emotion: {profile.emotion}",
+            f"Stress: {profile.stress}",
+            f"Economic security: {profile.econ_security}",
+            f"City identity: {profile.city_identity}",
+        ]
+    )
+
+
+def _default_profiles_path() -> Path:
+    """Finds the bundled profile JSON, or local GAWorld CSV data."""
+
+    json_path = Path(__file__).with_name("profiles").joinpath("hangzhou_50.json")
+    if json_path.exists():
+        return json_path
+
+    gaworld_path = os.environ.get("GAWORLD_PATH", "").strip()
+    if gaworld_path:
+        csv_path = Path(gaworld_path) / "data" / "hangzhou_agents_state_init.csv"
+        if csv_path.exists():
+            return csv_path
+    return json_path
+
+
 def load_profiles(path: Path | None = None) -> list[GAWorldAgentProfile]:
     """Reads profile JSON and returns profile objects, or an empty list when missing."""
 
-    source_path = path or Path(__file__).with_name("profiles").joinpath("hangzhou_50.json")
+    source_path = path or _default_profiles_path()
     if not source_path.exists():
         return []
+
+    if source_path.suffix.lower() == ".csv":
+        with source_path.open("r", encoding="utf-8-sig", newline="") as file_obj:
+            return [_profile_from_csv_row(row) for row in csv.DictReader(file_obj)]
 
     with source_path.open("r", encoding="utf-8") as file_obj:
         rows = json.load(file_obj)
@@ -77,15 +157,19 @@ def profiles_to_fos_agents(
             f"Social network: {profile.social_network}. "
             f"Values: {profile.values}."
         )
+        profile_data = asdict(profile)
+        profile_properties = dict(profile_data)
+        profile_properties.pop("id", None)
+        profile_properties.pop("name", None)
+        profile_text = _profile_summary(profile)
+        profile_properties["profile"] = profile_text
+
         generated_agents.append(
             {
                 "id": profile.id,
                 "name": profile.name,
-                "properties": {
-                    "occupation": profile.occupation,
-                    "income": profile.income,
-                    "policy_sensitivity": profile.policy_sensitivity,
-                },
+                "profile": profile_text,
+                "properties": profile_properties,
                 "role_prompt": role_prompt,
                 # GAWorld controls its own LLM selection; FOS-side config stays empty.
                 "llm_config": {},

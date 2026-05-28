@@ -1,4 +1,11 @@
 Metadata-Version: 2.4
 Name: fos
 Version: 0.1.0
+Summary: Future of Society simulation platform
+Author: ZJU Work
+License: MIT
 Requires-Python: >=3.10
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-asyncio; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"

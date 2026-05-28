@@ -75,6 +75,25 @@ def test_load_profiles_reads_json_and_returns_profiles() -> None:
     assert isinstance(profiles[0], GAWorldAgentProfile)
 
 
+def test_load_profiles_reads_csv_and_returns_profiles(tmp_path: Path) -> None:
+    csv_path = tmp_path / "profiles.csv"
+    csv_path.write_text(
+        "\n".join(
+            [
+                "id,name,gender,age,hukou,residence,emotion,stress,econ_security,city_identity,"
+                "policy_sensitivity,platform_dependence,risk_preference,voice_propensity,mobility_intent",
+                "34,徐桂兰,女,68,本地,萧山·社区,0.58,0.4,0.6,0.8,0.65,0.02,0.05,0.25,0.02",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    profiles = load_profiles(csv_path)
+
+    assert profiles[0].id == "34"
+    assert profiles[0].name == "徐桂兰"
+
+
 def test_load_profiles_returns_empty_list_when_file_does_not_exist() -> None:
     profiles = load_profiles(Path("tests/core/experiment/scenes/gaworld/does_not_exist.json"))
 
@@ -114,6 +133,8 @@ def test_profiles_to_fos_agents_returns_expected_structure() -> None:
     assert agents[0]["properties"]["occupation"] == "designer"
     assert agents[0]["properties"]["income"] == "medium"
     assert agents[0]["properties"]["policy_sensitivity"] == 0.8
+    assert "Age: 29" in agents[0]["properties"]["profile"]
+    assert agents[0]["profile"] == agents[0]["properties"]["profile"]
     assert "kind and careful" in agents[0]["role_prompt"]
     assert agents[0]["llm_config"] == {}
 

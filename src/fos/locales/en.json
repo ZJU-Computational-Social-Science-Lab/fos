@@ -1043,6 +1043,62 @@
           "description": "Keep all your resources this round"
         }
       }
+    },
+    "gaworld": {
+      "name": "GAWorld City Simulation",
+      "description": "Multi-agent generative city simulation with 50 Hangzhou residents.",
+      "parameters": {
+        "sim_days": {
+          "label": "Simulation Days",
+          "description": "Number of days to simulate"
+        },
+        "agent_ids": {
+          "label": "Agent IDs",
+          "description": "Comma-separated IDs to include (empty = all 50)"
+        },
+        "seed": {
+          "label": "Random Seed",
+          "description": "Seed for reproducibility"
+        },
+        "intervention_enabled": {
+          "label": "Enable Comparative Intervention",
+          "description": "Run baseline and treatment branches side by side"
+        },
+        "intervention_event_name": {
+          "label": "Intervention Event Name",
+          "description": "Short name for the policy intervention"
+        },
+        "intervention_event_description": {
+          "label": "Intervention Event Description",
+          "description": "Full description of the policy intervention"
+        },
+        "intervention_day": {
+          "label": "Intervention Start Day",
+          "description": "Day number when the intervention takes effect"
+        }
+      },
+      "actions": {
+        "work": {
+          "name": "Work",
+          "description": "Agent performs work duties"
+        },
+        "social_interact": {
+          "name": "Social Interact",
+          "description": "Agent interacts with other agents"
+        },
+        "consume_media": {
+          "name": "Consume Media",
+          "description": "Agent reads or watches news or social media"
+        },
+        "move": {
+          "name": "Move",
+          "description": "Agent changes location"
+        },
+        "rest": {
+          "name": "Rest",
+          "description": "Agent rests at home or other location"
+        }
+      }
     }
   },
   "game_configs": {
