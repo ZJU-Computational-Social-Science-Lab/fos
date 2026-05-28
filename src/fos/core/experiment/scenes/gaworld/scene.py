@@ -3,6 +3,7 @@
 - GAWorldScene stores GAWorld-specific config values and run state.
 - initialize sets up mapping and translator without starting subprocesses.
 - _launch_subprocess prepares GAWorld input files and starts run managers.
+- _build_output_overrides tells GAWorld where to save every output file.
 - run_round waits for one day, translates actions, updates state, and returns result.
 - _read_day_data loads one day of per-agent action and state files.
 - serialize_config adds GAWorld extra fields to base serialized scene data.
@@ -25,6 +26,26 @@ from fos.core.experiment.scenes.gaworld.subprocess_manager import GAWorldSubproc
 from fos.core.experiment.scenes.gaworld.translator import GAWorldOutputTranslator
 
 logger = logging.getLogger(__name__)
+
+
+def _build_output_overrides(output_dir: Path) -> dict[str, Any]:
+    """Builds GAWorld settings so all saved files go under one FOS folder."""
+    memory_dir = output_dir / "memory"
+    return {
+        "memory_dir": str(memory_dir),
+        "log_dir": str(output_dir / "logs"),
+        "diary_output_dir": str(output_dir / "diaries"),
+        "environment_output_dir": str(output_dir / "environment"),
+        "state_output_dir": str(output_dir / "state"),
+        "network_output_dir": str(output_dir / "network"),
+        "vector_db_path": str(memory_dir / "vector_db.sqlite"),
+        "intervention": {
+            "output_dir": str(output_dir / "intervention"),
+        },
+        "visualization": {
+            "output_dir": str(output_dir / "visualization"),
+        },
+    }
 
 
 class GAWorldScene(ExperimentScene):
@@ -62,15 +83,27 @@ class GAWorldScene(ExperimentScene):
         temp_dir = Path(tempfile.mkdtemp(prefix="gaworld_"))
         export_profiles_csv(profiles, temp_dir / "profiles.csv")
 
+        output_dir = Path(self.config.parameters.get("output_dir", temp_dir / "output"))
         config_overrides: dict[str, Any] = {
             "sim_days": self._sim_days,
             "seed": self._seed,
             "agent_ids": self._agent_ids,
             "profiles_csv": str(temp_dir / "profiles.csv"),
+            **_build_output_overrides(output_dir),
         }
 
-        gaworld_path = Path(self.config.parameters.get("gaworld_path", "."))
-        output_dir = Path(self.config.parameters.get("output_dir", temp_dir / "output"))
+        gaworld_path_str = (
+            self.config.parameters.get("gaworld_path")
+            or os.environ.get("GAWORLD_PATH")
+            or "."
+        )
+        gaworld_path = Path(gaworld_path_str)
+        logger.info(
+            "GAWorld _launch_subprocess: gaworld_path=%s (from_param=%s, from_env=%s)",
+            gaworld_path,
+            self.config.parameters.get("gaworld_path"),
+            os.environ.get("GAWORLD_PATH"),
+        )
 
         if bool(self.config.parameters.get("intervention_enabled", False)):
             event_config = dict(self.config.parameters.get("event_config", {}))
