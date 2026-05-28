@@ -608,6 +608,10 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
         inner_cfg = cfg.get("generic_config") or cfg
         gaworld_params = inner_cfg.get("parameters", {})
         gaworld_params["gaworld_path"] = gaworld_path
+        logger.info(
+            "GAWorld tree build: gaworld_path=%s, params_keys=%s",
+            gaworld_path, list(gaworld_params.keys()),
+        )
         config = ExperimentConfig(
             agents=agent_config.get("agents", []),
             actions=gaworld_params.get("actions", []),

@@ -9,11 +9,14 @@
 - test_kill_calls_terminate_on_windows checks kill calls terminate on Windows.
 - test_kill_preserves_output_directory_when_requested checks kill does not delete output when preserve_output is True.
 - test_launch_adds_gaworld_path_to_subprocess_pythonpath checks child imports can find GAWorld modules.
+- test_launch_forces_utf8_io_in_subprocess_environment checks child Python uses UTF-8 I/O.
+- test_launch_writes_subprocess_output_to_gaworld_log checks child output is captured to a run log.
 - test_launch_comparative_returns_two_manager_instances checks launch_comparative returns two launched managers.
 """
 
 import json
 import os
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -23,6 +26,8 @@ from fos.core.experiment.scenes.gaworld.subprocess_manager import (
     GAWorldProcessError,
     GAWorldSubprocessManager,
     GAWorldTimeoutError,
+    _gaworld_package_dirs,
+    _resolve_python_executable,
 )
 
 
@@ -127,8 +132,64 @@ def test_launch_adds_gaworld_path_to_subprocess_pythonpath(
     env = captured["env"]
     assert isinstance(env, dict)
     assert captured["cwd"] == str(gaworld_path)
-    assert env["PYTHONPATH"] == str(gaworld_path) + os.pathsep + "existing_path"
+    # PYTHONPATH must start with gaworld_path and preserve existing entries.
+    # Additional gaworld package dirs may also be present.
+    pythonpath_parts = env["PYTHONPATH"].split(os.pathsep)
+    assert str(gaworld_path) in pythonpath_parts
+    assert "existing_path" in pythonpath_parts
     assert json.loads(env["GAWORLD_CONFIG_OVERRIDES"]) == {"seed": 7}
+
+
+def test_launch_writes_subprocess_output_to_gaworld_log(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gaworld_path = tmp_path / "GAWorld"
+    output_dir = tmp_path / "out"
+    gaworld_path.mkdir()
+    (gaworld_path / "generative_city_sim.py").write_text("print('ok')", encoding="utf-8")
+    captured: dict[str, object] = {}
+
+    def _fake_popen(command: list[str], **kwargs: object) -> SimpleNamespace:
+        captured["command"] = command
+        captured.update(kwargs)
+        stdout = kwargs["stdout"]
+        assert hasattr(stdout, "write")
+        stdout.write("child output")
+        return SimpleNamespace(poll=lambda: None)
+
+    monkeypatch.setattr("subprocess.Popen", _fake_popen)
+
+    manager = GAWorldSubprocessManager(gaworld_path, {}, output_dir)
+    manager.launch()
+
+    assert captured["stderr"] is subprocess.STDOUT
+    assert (output_dir / "gaworld.log").read_text(encoding="utf-8") == "child output"
+
+
+def test_launch_forces_utf8_io_in_subprocess_environment(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gaworld_path = tmp_path / "GAWorld"
+    output_dir = tmp_path / "out"
+    gaworld_path.mkdir()
+    (gaworld_path / "generative_city_sim.py").write_text("print('ok')", encoding="utf-8")
+    captured: dict[str, object] = {}
+
+    def _fake_popen(command: list[str], **kwargs: object) -> SimpleNamespace:
+        captured.update(kwargs)
+        return SimpleNamespace(poll=lambda: None)
+
+    monkeypatch.setattr("subprocess.Popen", _fake_popen)
+
+    manager = GAWorldSubprocessManager(gaworld_path, {}, output_dir)
+    manager.launch()
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["PYTHONUTF8"] == "1"
+    assert env["PYTHONIOENCODING"] == "utf-8"
 
 
 def test_launch_comparative_returns_two_manager_instances(
@@ -152,3 +213,119 @@ def test_launch_comparative_returns_two_manager_instances(
     assert isinstance(baseline, GAWorldSubprocessManager)
     assert isinstance(treatment, GAWorldSubprocessManager)
     assert len(launched) == 2
+
+
+def test_resolve_python_executable_returns_sys_executable_by_default(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """When sys.executable is a valid absolute path, it is returned as-is."""
+    fake_python_path = tmp_path / ("python.exe" if os.name == "nt" else "python3")
+    fake_python_path.write_text("fake", encoding="utf-8")
+    fake_python = str(fake_python_path)
+    monkeypatch.setattr("sys.executable", fake_python, raising=False)
+    monkeypatch.setattr("os.path.isfile", lambda p: True)
+
+    result = _resolve_python_executable()
+    assert result == fake_python
+
+
+def test_resolve_python_executable_falls_back_to_conda_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """When sys.executable is empty, conda prefix is used to find Python."""
+    monkeypatch.setattr("sys.executable", "", raising=False)
+    monkeypatch.setattr("os.path.isabs", lambda p: False if p == "" else True)
+
+    conda_dir = tmp_path / "conda_env"
+    conda_dir.mkdir()
+    python_exe = conda_dir / "python.exe"
+    python_exe.write_text("fake", encoding="utf-8")
+    monkeypatch.setenv("CONDA_PREFIX", str(conda_dir))
+    monkeypatch.setattr("os.name", "nt")
+    monkeypatch.setattr("os.path.isfile", lambda p: Path(p).exists())
+
+    result = _resolve_python_executable()
+    assert result == str(python_exe)
+
+
+def test_resolve_python_executable_falls_back_to_exec_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """When sys.executable and CONDA_PREFIX are both absent, exec_prefix is used."""
+    monkeypatch.setattr("sys.executable", "", raising=False)
+    monkeypatch.setattr("os.path.isabs", lambda p: False if p == "" else True)
+    monkeypatch.setattr("sys.exec_prefix", str(tmp_path), raising=False)
+    monkeypatch.delenv("CONDA_PREFIX", raising=False)
+    monkeypatch.setattr("os.name", "nt")
+    python_exe = tmp_path / "python.exe"
+    python_exe.write_text("fake", encoding="utf-8")
+    monkeypatch.setattr("os.path.isfile", lambda p: Path(p).exists())
+
+    result = _resolve_python_executable()
+    assert result == str(python_exe)
+
+
+def test_launch_uses_resolved_python_executable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """launch() uses _resolve_python_executable instead of raw sys.executable."""
+    gaworld_path = tmp_path / "GAWorld"
+    output_dir = tmp_path / "out"
+    gaworld_path.mkdir()
+    (gaworld_path / "generative_city_sim.py").write_text("print('ok')", encoding="utf-8")
+
+    captured_command: list[str] = []
+
+    def _fake_popen(command: list[str], **kwargs: object) -> SimpleNamespace:
+        captured_command.extend(command)
+        return SimpleNamespace(poll=lambda: None)
+
+    monkeypatch.setattr("subprocess.Popen", _fake_popen)
+    monkeypatch.setattr("os.name", "nt")
+    # Force _resolve_python_executable to return a specific path
+    monkeypatch.setattr(
+        "fos.core.experiment.scenes.gaworld.subprocess_manager._resolve_python_executable",
+        lambda: "/custom/python",
+    )
+
+    manager = GAWorldSubprocessManager(gaworld_path, {}, output_dir)
+    manager.launch()
+
+    assert captured_command[0] == "/custom/python"
+
+
+def test_launch_includes_gaworld_package_dirs_in_pythonpath(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """launch() adds gaworld package directories to PYTHONPATH."""
+    gaworld_path = tmp_path / "GAWorld"
+    output_dir = tmp_path / "out"
+    gaworld_path.mkdir()
+    (gaworld_path / "generative_city_sim.py").write_text("print('ok')", encoding="utf-8")
+
+    captured: dict[str, object] = {}
+
+    def _fake_popen(command: list[str], **kwargs: object) -> SimpleNamespace:
+        captured["env"] = kwargs.get("env", {})
+        return SimpleNamespace(poll=lambda: None)
+
+    monkeypatch.setattr("subprocess.Popen", _fake_popen)
+    monkeypatch.setattr("os.name", "nt")
+    monkeypatch.setattr(
+        "fos.core.experiment.scenes.gaworld.subprocess_manager._gaworld_package_dirs",
+        lambda: ["/site-packages/gaworld-parent"],
+    )
+
+    manager = GAWorldSubprocessManager(gaworld_path, {}, output_dir)
+    manager.launch()
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    pythonpath = env["PYTHONPATH"]
+    assert str(gaworld_path) in pythonpath
+    assert "/site-packages/gaworld-parent" in pythonpath

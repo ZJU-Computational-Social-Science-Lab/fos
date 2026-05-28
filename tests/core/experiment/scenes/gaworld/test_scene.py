@@ -6,6 +6,7 @@
 - test_run_round_launches_subprocess_on_first_round checks first run_round lazily starts GAWorld.
 - test_run_round_emits_one_event_per_translated_event checks run_round emits translated events.
 - test_run_round_skips_day_when_translation_key_missing checks key errors skip a day without crashing.
+- test_launch_subprocess_passes_gaworld_output_paths checks GAWorld writes under the FOS output folder.
 - test_serialize_config_includes_skipped_days checks skipped days are returned in config serialization.
 """
 
@@ -16,6 +17,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import fos.core.experiment.scenes.gaworld.scene as scene_module
 from fos.core.experiment.config import ExperimentConfig
 from fos.core.experiment.scenes.gaworld.scene import GAWorldScene
 
@@ -127,6 +129,42 @@ def test_run_round_skips_day_when_translation_key_missing(monkeypatch) -> None:
 
     assert scene.skipped_days == [1]
     assert emitted == []
+
+
+def test_launch_subprocess_passes_gaworld_output_paths(tmp_path: Path, monkeypatch) -> None:
+    output_dir = tmp_path / "gaworld-output"
+    config = _make_config()
+    config.parameters["output_dir"] = output_dir
+    config.parameters["gaworld_path"] = tmp_path / "GAWorld"
+    captured: dict[str, Any] = {}
+
+    class FakeManager:
+        def __init__(self, **kwargs: Any) -> None:
+            captured.update(kwargs)
+            self.output_dir = kwargs["output_dir"]
+
+        def launch(self) -> None:
+            captured["launched"] = True
+
+    monkeypatch.setattr(scene_module, "load_profiles", lambda: [])
+    monkeypatch.setattr(scene_module, "export_profiles_csv", lambda _profiles, _path: None)
+    monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
+
+    scene = GAWorldScene(config)
+    scene._launch_subprocess()
+
+    overrides = captured["config_overrides"]
+    assert overrides["memory_dir"] == str(output_dir / "memory")
+    assert overrides["log_dir"] == str(output_dir / "logs")
+    assert overrides["diary_output_dir"] == str(output_dir / "diaries")
+    assert overrides["environment_output_dir"] == str(output_dir / "environment")
+    assert overrides["state_output_dir"] == str(output_dir / "state")
+    assert overrides["network_output_dir"] == str(output_dir / "network")
+    assert overrides["vector_db_path"] == str(output_dir / "memory" / "vector_db.sqlite")
+    assert overrides["visualization"]["output_dir"] == str(output_dir / "visualization")
+    assert overrides["intervention"]["output_dir"] == str(output_dir / "intervention")
+    assert captured["output_dir"] == output_dir
+    assert captured["launched"] is True
 
 
 def test_serialize_config_includes_skipped_days() -> None:
