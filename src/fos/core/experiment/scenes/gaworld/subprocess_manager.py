@@ -6,6 +6,7 @@
 - GAWorldTimeoutError is raised when waiting takes too long.
 - GAWorldSubprocessManager stores run settings and controls one GAWorld subprocess.
 - launch starts the GAWorld simulator process with config overrides in env.
+- env_overrides lets the scene add needed environment values for the subprocess.
 - wait_for_day keeps checking state output until a target day is reached.
 - is_alive tells whether the subprocess is still running.
 - kill stops the process and optionally removes run output.
@@ -113,6 +114,7 @@ class GAWorldSubprocessManager:
     config_overrides: dict[str, Any]
     output_dir: Path
     preserve_output: bool = False
+    env_overrides: dict[str, str] = field(default_factory=dict)
     process: subprocess.Popen[str] | Any | None = field(default=None, init=False)
 
     def launch(self) -> None:
@@ -124,9 +126,17 @@ class GAWorldSubprocessManager:
         python_exe = _resolve_python_executable()
         command = [python_exe, str(script_path), "run"]
         env = os.environ.copy()
+        env.update({key: value for key, value in self.env_overrides.items() if value})
         env["GAWORLD_CONFIG_OVERRIDES"] = json.dumps(self.config_overrides)
         env["PYTHONUTF8"] = "1"
         env["PYTHONIOENCODING"] = "utf-8"
+        logger.info(
+            "GAWorld env API keys present: ANTHROPIC_API_KEY=%s, MINIMAX_API_KEY=%s, "
+            "ANTHROPIC_AUTH_TOKEN=%s",
+            bool(env.get("ANTHROPIC_API_KEY")),
+            bool(env.get("MINIMAX_API_KEY")),
+            bool(env.get("ANTHROPIC_AUTH_TOKEN")),
+        )
 
         # Build PYTHONPATH: gaworld script dir + gaworld package dirs
         path_entries: list[str] = [str(self.gaworld_path)]
@@ -222,6 +232,7 @@ class GAWorldSubprocessManager:
         event_config: dict[str, Any],
         base_output_dir: Path,
         config_overrides: dict[str, Any],
+        env_overrides: dict[str, str] | None = None,
     ) -> tuple[GAWorldSubprocessManager, GAWorldSubprocessManager]:
         """Starts baseline and treatment runs and returns both managers."""
         baseline_overrides = {
@@ -233,8 +244,18 @@ class GAWorldSubprocessManager:
             "intervention": {"enabled": True, **event_config},
         }
 
-        baseline = cls(gaworld_path, baseline_overrides, base_output_dir / "baseline")
-        treatment = cls(gaworld_path, treatment_overrides, base_output_dir / "treatment")
+        baseline = cls(
+            gaworld_path,
+            baseline_overrides,
+            base_output_dir / "baseline",
+            env_overrides=env_overrides or {},
+        )
+        treatment = cls(
+            gaworld_path,
+            treatment_overrides,
+            base_output_dir / "treatment",
+            env_overrides=env_overrides or {},
+        )
         baseline.launch()
         treatment.launch()
         return baseline, treatment

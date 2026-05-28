@@ -4,6 +4,7 @@ import asyncio
 import logging
 import logging as _logging
 import os as _os
+import re
 import sys
 from typing import Dict
 
@@ -23,6 +24,7 @@ from fos.i18n import T, get_request_locale
 
 
 _GAWORLD_PATH: str | None = _os.environ.get("GAWORLD_PATH")
+_GAWORLD_LLM_API_KEY: str | None = _os.environ.get("GAWORLD_LLM_API_KEY")
 _log = _logging.getLogger(__name__)
 logger = logging.getLogger(__name__)
 _logging_handler = logging.StreamHandler(sys.stdout)
@@ -31,6 +33,7 @@ _logging_handler.setFormatter(logging.Formatter('[SIMTREE RUNTIME] %(message)s')
 logger.addHandler(_logging_handler)
 _log.setLevel(_logging.INFO)
 _log.info(f"[GAWorld] GAWORLD_PATH resolved at import: {_GAWORLD_PATH!r}")
+_log.info(f"[GAWorld] GAWORLD_LLM_API_KEY present at import: {bool(_GAWORLD_LLM_API_KEY)}")
 
 def _normalize_language(value: str | None) -> str:
     lang = str(value or "").strip()
@@ -54,6 +57,38 @@ def _resolve_initial_event(cfg: dict, fallback: str = "") -> str:
 def _is_english_language(lang: str) -> bool:
     lower = lang.lower()
     return lower.startswith("en") or "english" in lower
+
+
+def _looks_like_generated_placeholder_agent(agent: dict) -> bool:
+    """Return True when an agent looks like a generic builder placeholder."""
+    raw_name = str(agent.get("name") or "").strip()
+    if not raw_name:
+        return True
+    if agent.get("id"):
+        return False
+    numbered_name = re.fullmatch(r"(Agent|代理|智能体|角色)\s*#?\s*\d+", raw_name, re.IGNORECASE)
+    generic_profile = str(agent.get("profile") or agent.get("role") or agent.get("role_prompt") or "").strip()
+    empty_properties = not bool(agent.get("properties") or {})
+    return bool(numbered_name and empty_properties and not generic_profile)
+
+
+def _should_use_gaworld_profile_agents(agents: list[dict]) -> bool:
+    """Return True when GAWorld should replace missing or placeholder agents."""
+    if not agents:
+        return True
+    return all(_looks_like_generated_placeholder_agent(agent) for agent in agents)
+
+
+def _resolve_gaworld_agents(agent_config: dict) -> list[dict]:
+    """Return GAWorld profile agents when request agents are not meaningful."""
+    agents = list(agent_config.get("agents") or [])
+    if not _should_use_gaworld_profile_agents(agents):
+        return agents
+
+    from fos.core.experiment.scenes.gaworld import profiles as profiles_module
+
+    profile_agents = profiles_module.profiles_to_fos_agents(profiles_module.load_profiles())
+    return profile_agents or agents
 
 
 class SimTreeRecord:
@@ -93,8 +128,8 @@ class ExperimentRunnerAdapter:
         self.log_event = None  # Will be set by SimTree._attach_log_handler
 
         # Pre-initialize to populate scene.agents so UI can render agent cards without running a round
-        if self._llm_client is not None and not self.scene.agents:
-            self.scene.initialize(self._llm_client, provider_clients=self._provider_clients)
+        if not self.scene.agents and (self._llm_client is not None or getattr(self.scene, "TYPE", "") == "gaworld_scene"):
+            self.scene.initialize(self._llm_client or object(), provider_clients=self._provider_clients)
 
     def run(self, max_turns: int = 1) -> None:
         """Run experiment rounds (each 'turn' = one round)."""
@@ -612,8 +647,9 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
             "GAWorld tree build: gaworld_path=%s, params_keys=%s",
             gaworld_path, list(gaworld_params.keys()),
         )
+        gaworld_agents = _resolve_gaworld_agents(agent_config)
         config = ExperimentConfig(
-            agents=agent_config.get("agents", []),
+            agents=gaworld_agents,
             actions=gaworld_params.get("actions", []),
             parameters=gaworld_params,
             scenario_id="gaworld",

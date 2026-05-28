@@ -1043,6 +1043,62 @@
           "description": "本轮保留所有资源"
         }
       }
+    },
+    "gaworld": {
+      "name": "GAWorld 城市仿真",
+      "description": "包含 50 名杭州居民的多智能体生成式城市仿真。",
+      "parameters": {
+        "sim_days": {
+          "label": "模拟天数",
+          "description": "模拟运行的天数"
+        },
+        "agent_ids": {
+          "label": "智能体 ID",
+          "description": "逗号分隔的 ID 列表（留空则包含全部 50 个智能体）"
+        },
+        "seed": {
+          "label": "随机种子",
+          "description": "用于可重复性的种子值"
+        },
+        "intervention_enabled": {
+          "label": "启用对比干预",
+          "description": "同时运行基线和干预分支进行对比"
+        },
+        "intervention_event_name": {
+          "label": "干预事件名称",
+          "description": "政策干预的简短名称"
+        },
+        "intervention_event_description": {
+          "label": "干预事件描述",
+          "description": "政策干预的完整描述"
+        },
+        "intervention_day": {
+          "label": "干预开始天数",
+          "description": "干预生效的天数"
+        }
+      },
+      "actions": {
+        "work": {
+          "name": "工作",
+          "description": "智能体执行工作任务"
+        },
+        "social_interact": {
+          "name": "社交互动",
+          "description": "智能体与其他智能体互动"
+        },
+        "consume_media": {
+          "name": "消费媒体",
+          "description": "智能体阅读或观看新闻或社交媒体"
+        },
+        "move": {
+          "name": "移动",
+          "description": "智能体改变位置"
+        },
+        "rest": {
+          "name": "休息",
+          "description": "智能体在家或其他地点休息"
+        }
+      }
     }
   },
   "game_configs": {

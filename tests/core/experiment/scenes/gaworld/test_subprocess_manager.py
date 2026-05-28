@@ -9,6 +9,7 @@
 - test_kill_calls_terminate_on_windows checks kill calls terminate on Windows.
 - test_kill_preserves_output_directory_when_requested checks kill does not delete output when preserve_output is True.
 - test_launch_adds_gaworld_path_to_subprocess_pythonpath checks child imports can find GAWorld modules.
+- test_launch_adds_env_overrides_to_subprocess_environment checks caller-provided env vars are sent to GAWorld.
 - test_launch_forces_utf8_io_in_subprocess_environment checks child Python uses UTF-8 I/O.
 - test_launch_writes_subprocess_output_to_gaworld_log checks child output is captured to a run log.
 - test_launch_comparative_returns_two_manager_instances checks launch_comparative returns two launched managers.
@@ -26,7 +27,6 @@ from fos.core.experiment.scenes.gaworld.subprocess_manager import (
     GAWorldProcessError,
     GAWorldSubprocessManager,
     GAWorldTimeoutError,
-    _gaworld_package_dirs,
     _resolve_python_executable,
 )
 
@@ -138,6 +138,36 @@ def test_launch_adds_gaworld_path_to_subprocess_pythonpath(
     assert str(gaworld_path) in pythonpath_parts
     assert "existing_path" in pythonpath_parts
     assert json.loads(env["GAWORLD_CONFIG_OVERRIDES"]) == {"seed": 7}
+
+
+def test_launch_adds_env_overrides_to_subprocess_environment(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gaworld_path = tmp_path / "GAWorld"
+    output_dir = tmp_path / "out"
+    gaworld_path.mkdir()
+    (gaworld_path / "generative_city_sim.py").write_text("print('ok')", encoding="utf-8")
+    captured: dict[str, object] = {}
+
+    def _fake_popen(command: list[str], **kwargs: object) -> SimpleNamespace:
+        captured.update(kwargs)
+        return SimpleNamespace(poll=lambda: None)
+
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr("subprocess.Popen", _fake_popen)
+
+    manager = GAWorldSubprocessManager(
+        gaworld_path,
+        {},
+        output_dir,
+        env_overrides={"ANTHROPIC_API_KEY": "from-fos"},
+    )
+    manager.launch()
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert env["ANTHROPIC_API_KEY"] == "from-fos"
 
 
 def test_launch_writes_subprocess_output_to_gaworld_log(
