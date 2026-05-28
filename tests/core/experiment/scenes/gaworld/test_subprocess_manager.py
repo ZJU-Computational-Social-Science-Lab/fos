@@ -5,6 +5,7 @@
 - test_is_alive_true_when_poll_returns_none checks is_alive returns True when subprocess is running.
 - test_wait_for_day_returns_state_when_target_day_reached checks wait_for_day returns parsed state at target day.
 - test_wait_for_day_raises_process_error_when_process_exits checks wait_for_day raises process error if process exits unexpectedly.
+- test_wait_for_day_includes_log_tail_when_process_exits checks failure messages include GAWorld log output.
 - test_wait_for_day_raises_timeout_error_when_deadline_passes checks wait_for_day raises timeout while process stays alive.
 - test_kill_calls_terminate_on_windows checks kill calls terminate on Windows.
 - test_kill_preserves_output_directory_when_requested checks kill does not delete output when preserve_output is True.
@@ -66,6 +67,20 @@ def test_wait_for_day_raises_process_error_when_process_exits(tmp_path: Path) ->
     manager.process = SimpleNamespace(poll=lambda: 1)
 
     with pytest.raises(GAWorldProcessError, match="exited unexpectedly"):
+        manager.wait_for_day(day=1, timeout=0.05, poll_interval=0.01)
+
+
+def test_wait_for_day_includes_log_tail_when_process_exits(tmp_path: Path) -> None:
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+    (output_dir / "gaworld.log").write_text(
+        "first line\nmissing api key\nlast line",
+        encoding="utf-8",
+    )
+    manager = GAWorldSubprocessManager(tmp_path, {}, output_dir)
+    manager.process = SimpleNamespace(poll=lambda: 1)
+
+    with pytest.raises(GAWorldProcessError, match="missing api key"):
         manager.wait_for_day(day=1, timeout=0.05, poll_interval=0.01)
 
 
@@ -168,6 +183,38 @@ def test_launch_adds_env_overrides_to_subprocess_environment(
     env = captured["env"]
     assert isinstance(env, dict)
     assert env["ANTHROPIC_API_KEY"] == "from-fos"
+
+
+def test_launch_removes_gaworld_api_keys_from_subprocess_environment(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gaworld_path = tmp_path / "GAWorld"
+    output_dir = tmp_path / "out"
+    gaworld_path.mkdir()
+    (gaworld_path / "generative_city_sim.py").write_text("print('ok')", encoding="utf-8")
+    captured: dict[str, object] = {}
+
+    def _fake_popen(command: list[str], **kwargs: object) -> SimpleNamespace:
+        captured.update(kwargs)
+        return SimpleNamespace(poll=lambda: None)
+
+    monkeypatch.setenv("MINIMAX_API_KEY", "should-not-leak")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "should-not-leak")
+    monkeypatch.setattr("subprocess.Popen", _fake_popen)
+
+    manager = GAWorldSubprocessManager(
+        gaworld_path,
+        {},
+        output_dir,
+        env_removals={"MINIMAX_API_KEY", "ANTHROPIC_API_KEY"},
+    )
+    manager.launch()
+
+    env = captured["env"]
+    assert isinstance(env, dict)
+    assert "MINIMAX_API_KEY" not in env
+    assert "ANTHROPIC_API_KEY" not in env
 
 
 def test_launch_writes_subprocess_output_to_gaworld_log(

@@ -468,7 +468,10 @@ def test_launch_subprocess_does_not_inject_provider_api_key(tmp_path: Path, monk
     assert captured["env_overrides"] == {}
 
 
-def test_launch_subprocess_injects_dedicated_gaworld_api_key(tmp_path: Path, monkeypatch) -> None:
+def test_launch_subprocess_ignores_gaworld_api_key_and_uses_default_fos_ollama(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
     config = _make_config()
     config.parameters["output_dir"] = tmp_path / "gaworld-output"
     config.parameters["gaworld_path"] = tmp_path / "GAWorld"
@@ -497,20 +500,28 @@ def test_launch_subprocess_injects_dedicated_gaworld_api_key(tmp_path: Path, mon
     scene = GAWorldScene(config)
     scene._launch_subprocess()
 
-    assert captured["env_overrides"] == {"MINIMAX_API_KEY": "gaworld-key"}
+    llm = captured["config_overrides"]["llm"]
+    assert llm["providers"]["fos_ollama"]["type"] == "ollama"
+    assert llm["providers"]["fos_ollama"]["url"] == "http://127.0.0.1:11434/api/generate"
+    assert llm["providers"]["fos_ollama"]["model"] == "qwen3:4b-instruct-2507-q4_K_M"
+    assert captured["env_overrides"] == {}
+    assert set(captured["env_removals"]) >= {
+        "GAWORLD_LLM_API_KEY",
+        "MINIMAX_API_KEY",
+        "ANTHROPIC_AUTH_TOKEN",
+        "ANTHROPIC_API_KEY",
+    }
 
 
-def test_launch_subprocess_warns_when_no_gaworld_llm_key_exists(
-    tmp_path: Path,
-    monkeypatch,
-    caplog,
-) -> None:
+def test_launch_subprocess_defaults_to_fos_ollama_without_warning(tmp_path: Path, monkeypatch, caplog) -> None:
     config = _make_config()
     config.parameters["output_dir"] = tmp_path / "gaworld-output"
     config.parameters["gaworld_path"] = tmp_path / "GAWorld"
+    captured: dict[str, Any] = {}
 
     class FakeManager:
         def __init__(self, **kwargs: Any) -> None:
+            captured.update(kwargs)
             self.output_dir = kwargs["output_dir"]
 
         def launch(self) -> None:
@@ -531,7 +542,9 @@ def test_launch_subprocess_warns_when_no_gaworld_llm_key_exists(
     scene = GAWorldScene(config)
     scene._launch_subprocess()
 
-    assert "gaworld.warning.no_llm_key" in caplog.messages
+    llm = captured["config_overrides"]["llm"]
+    assert llm["routing"]["default"] == "fos_ollama"
+    assert "gaworld.warning.no_llm_key" not in caplog.messages
 
 
 def test_serialize_config_includes_skipped_days() -> None:

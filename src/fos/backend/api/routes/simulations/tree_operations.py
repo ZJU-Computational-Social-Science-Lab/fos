@@ -47,6 +47,7 @@ from .helpers import (
     broadcast_tree_event,
 )
 from fos.backend.services.simtree_runtime import SIM_TREE_REGISTRY
+from fos.backend.services.simtree_advance import run_simulator_for_advance
 from fos.backend.services.documents import composite_rag_retrieval, format_rag_context
 from fos.backend.dependencies import extract_bearer_token, resolve_current_user
 from fos.i18n import T
@@ -411,7 +412,18 @@ async def simulation_tree_advance_chain(
                 logger.info(f"[ADVANCE_CHAIN] Running simulator for node {cid}, max_turns={total_turns}")
                 try:
                     with log_time("SIM", sim_id=simulation_id, node=cid, turns=total_turns, step=_, op="advance_chain"):
-                        await asyncio.to_thread(simulator.run, max_turns=total_turns)
+                        run_error = await run_simulator_for_advance(simulator, max_turns=total_turns)
+                    if run_error is not None:
+                        node.setdefault("meta", {})["runtime_error"] = str(run_error)
+                        has_error_log = any(log.get("type") == "error" for log in node.get("logs", []))
+                        if not has_error_log and callable(getattr(simulator, "log_event", None)):
+                            simulator.log_event("error", {"message": str(run_error)})
+                        logger.warning(
+                            "[ADVANCE_CHAIN] Simulator runtime failed for node %s; returning child for log hydration",
+                            cid,
+                        )
+                        last = cid
+                        break
                     logger.info(f"[ADVANCE_CHAIN] Simulator run complete for node {cid}")
 
                     from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter

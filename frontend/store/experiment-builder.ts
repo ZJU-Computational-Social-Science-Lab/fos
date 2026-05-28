@@ -18,6 +18,7 @@ import {
   getAllScenarios,
   getScenario,
   getScenarioActions,
+  getScenarioDefaultAgents,
 } from '../services/scenarios';
 
 export interface LLMProvider {
@@ -38,6 +39,18 @@ export interface ManualAgentType {
   userProfile: string;
   properties: Record<string, unknown>;
   providerId?: number | null;
+}
+
+interface DefaultScenarioAgent {
+  id?: unknown;
+  name?: unknown;
+  profile?: unknown;
+  user_profile?: unknown;
+  role_prompt?: unknown;
+  rolePrompt?: unknown;
+  properties?: unknown;
+  provider_id?: unknown;
+  providerId?: unknown;
 }
 
 export interface ExperimentBuilderState {
@@ -106,6 +119,7 @@ interface ExperimentBuilderActions {
   addAgentType: (agentType: ManualAgentType) => void;
   removeAgentType: (id: string) => void;
   updateAgentType: (id: string, updates: Partial<ManualAgentType>) => void;
+  loadDefaultAgentsForScenario: (scenarioId: string, agentIds?: string) => Promise<void>;
   loadProviders: () => Promise<void>;
   setSelectedProviderId: (id: number | null) => void;
   getSelectedProviderId: () => number | null;
@@ -148,6 +162,30 @@ const getInitialState = (): ExperimentBuilderState => ({
 });
 
 const initialState: ExperimentBuilderState = getInitialState();
+
+const isPlainRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+
+const normalizeDefaultAgent = (agent: DefaultScenarioAgent): ManualAgentType => {
+  const properties = isPlainRecord(agent.properties) ? { ...agent.properties } : {};
+  const id = String(agent.id || uuidv4());
+  const label = String(agent.name || id);
+  const rolePrompt = String(agent.role_prompt || agent.rolePrompt || agent.profile || '');
+  const userProfile = String(agent.profile || agent.user_profile || '');
+  const providerIdValue = agent.provider_id ?? agent.providerId;
+  const providerId = typeof providerIdValue === 'number' ? providerIdValue : null;
+
+  return {
+    id,
+    label,
+    count: 1,
+    rolePrompt,
+    userProfile,
+    properties,
+    providerId,
+  };
+};
 
 export const STEPS = [
   { id: 1, title: 'Choose Scenario', description: 'Pick a preset or start blank' },
@@ -281,6 +319,27 @@ export const useExperimentBuilder = create<ExperimentBuilderState & ExperimentBu
         delete newErrors.agents;
       }
       return { agentTypes: types, validationErrors: newErrors };
+    });
+  },
+
+  loadDefaultAgentsForScenario: async (scenarioId, agentIds) => {
+    if (scenarioId !== 'gaworld') {
+      return;
+    }
+
+    const defaultAgents = await getScenarioDefaultAgents(scenarioId, agentIds);
+    const agentTypes = defaultAgents.map((agent) => normalizeDefaultAgent(agent));
+
+    set((state) => {
+      const newErrors = { ...state.validationErrors };
+      if (agentTypes.length > 0 && newErrors.agents) {
+        delete newErrors.agents;
+      }
+      return {
+        agentMode: 'manual',
+        agentTypes,
+        validationErrors: newErrors,
+      };
     });
   },
 

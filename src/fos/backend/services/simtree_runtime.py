@@ -24,7 +24,6 @@ from fos.i18n import T, get_request_locale
 
 
 _GAWORLD_PATH: str | None = _os.environ.get("GAWORLD_PATH")
-_GAWORLD_LLM_API_KEY: str | None = _os.environ.get("GAWORLD_LLM_API_KEY")
 _log = _logging.getLogger(__name__)
 logger = logging.getLogger(__name__)
 _logging_handler = logging.StreamHandler(sys.stdout)
@@ -33,7 +32,6 @@ _logging_handler.setFormatter(logging.Formatter('[SIMTREE RUNTIME] %(message)s')
 logger.addHandler(_logging_handler)
 _log.setLevel(_logging.INFO)
 _log.info(f"[GAWorld] GAWORLD_PATH resolved at import: {_GAWORLD_PATH!r}")
-_log.info(f"[GAWorld] GAWORLD_LLM_API_KEY present at import: {bool(_GAWORLD_LLM_API_KEY)}")
 
 def _normalize_language(value: str | None) -> str:
     lang = str(value or "").strip()
@@ -139,17 +137,11 @@ class ExperimentRunnerAdapter:
         for _ in range(max_turns):
             if self.scene.is_complete():
                 break
-            # scene.run_round is async, so we need to handle it properly
-            # When called from asyncio.to_thread(), we're in a thread with NO event loop
-            # When called directly (standalone), we can use asyncio.run()
             try:
-                loop = asyncio.get_running_loop()
-                # We're inside an async context - use run_until_complete
-                loop.run_until_complete(self.scene.run_round(self._emit_event))
-            except RuntimeError:
-                # No running loop - we're in a thread or standalone
-                # Use asyncio.run() to create a new event loop
-                asyncio.run(self.scene.run_round(self._emit_event))
+                self._run_scene_round()
+            except Exception as exc:
+                self._emit_runtime_error(exc)
+                raise
 
             # CYCLE PHASE FIX: Advance round counter and check for phase transitions
             # This is the ACTUAL code path used by the backend!
@@ -157,6 +149,26 @@ class ExperimentRunnerAdapter:
                 logger.info(f"[CYCLE PHASE FIX] Calling scene._advance_round() for {type(self.scene).__name__}")
                 self.scene._advance_round()
                 logger.info(f"[CYCLE PHASE FIX] Phase is now: {getattr(self.scene, 'cycle_phase', 'N/A')}, rounds_in_phase: {getattr(self.scene, 'rounds_in_cycle_phase', 'N/A')}")
+
+    def _run_scene_round(self) -> None:
+        """Run one async scene round from either a worker thread or direct call."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(self.scene.run_round(self._emit_event))
+            return
+
+        loop.run_until_complete(self.scene.run_round(self._emit_event))
+
+    def _emit_runtime_error(self, error: Exception) -> None:
+        """Send scene failures to the node log before raising them."""
+        self._emit_event(
+            "error",
+            {
+                "message": str(error),
+                "scene_type": getattr(self.scene, "TYPE", type(self.scene).__name__),
+            },
+        )
 
     def _emit_event(self, event_type: str, data: dict) -> None:
         """Collect events for SimTree and emit to log handler."""
@@ -650,7 +662,7 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
         gaworld_agents = _resolve_gaworld_agents(agent_config)
         config = ExperimentConfig(
             agents=gaworld_agents,
-            actions=gaworld_params.get("actions", []),
+            actions=inner_cfg.get("actions", gaworld_params.get("actions", [])),
             parameters=gaworld_params,
             scenario_id="gaworld",
             locale=inner_cfg.get("locale", "zh"),

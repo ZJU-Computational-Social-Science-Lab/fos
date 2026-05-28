@@ -31,9 +31,15 @@ from fos.core.experiment.scenes.gaworld.translator import GAWorldOutputTranslato
 
 logger = logging.getLogger(__name__)
 
-GAWORLD_LLM_ENV_KEYS = ("MINIMAX_API_KEY", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY")
-GAWORLD_DEDICATED_LLM_ENV_KEY = "GAWORLD_LLM_API_KEY"
+GAWORLD_LLM_ENV_KEYS = (
+    "GAWORLD_LLM_API_KEY",
+    "MINIMAX_API_KEY",
+    "ANTHROPIC_AUTH_TOKEN",
+    "ANTHROPIC_API_KEY",
+)
 FOS_OLLAMA_PROVIDER_NAME = "fos_ollama"
+DEFAULT_FOS_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+DEFAULT_FOS_OLLAMA_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
 
 
 @dataclass(frozen=True)
@@ -65,16 +71,11 @@ def _build_output_overrides(output_dir: Path) -> dict[str, Any]:
     }
 
 
-def _has_gaworld_llm_env_key() -> bool:
-    """Returns True when the current process already has a GAWorld LLM key."""
-    return any(bool(os.environ.get(key)) for key in GAWORLD_LLM_ENV_KEYS)
-
-
 def _ollama_generate_url(base_url: str) -> str:
     """Converts an Ollama server URL into GAWorld's generate endpoint URL."""
     clean_url = str(base_url or "").strip().rstrip("/")
     if not clean_url:
-        clean_url = "http://localhost:11434"
+        clean_url = DEFAULT_FOS_OLLAMA_BASE_URL
     if clean_url.endswith("/api/generate"):
         return clean_url
     if clean_url.endswith("/api"):
@@ -105,7 +106,15 @@ def _ollama_settings_from_env() -> OllamaProviderSettings | None:
     if dialect != "ollama" or not model:
         return None
     base_url = os.environ.get("LLM_BASE_URL", "").strip() or os.environ.get("OLLAMA_BASE_URL", "").strip()
-    return OllamaProviderSettings(base_url=base_url or "http://localhost:11434", model=model)
+    return OllamaProviderSettings(base_url=base_url or DEFAULT_FOS_OLLAMA_BASE_URL, model=model)
+
+
+def _default_ollama_settings() -> OllamaProviderSettings:
+    """Returns FOS's default local Ollama settings."""
+    return OllamaProviderSettings(
+        base_url=DEFAULT_FOS_OLLAMA_BASE_URL,
+        model=DEFAULT_FOS_OLLAMA_MODEL,
+    )
 
 
 def _build_ollama_config_overrides(settings: OllamaProviderSettings) -> dict[str, Any]:
@@ -201,22 +210,7 @@ class GAWorldScene(ExperimentScene):
             if settings is not None:
                 return settings
 
-        return _ollama_settings_from_env()
-
-    def _build_llm_env_overrides(self) -> dict[str, str]:
-        """Builds subprocess LLM env vars from GAWorld-specific environment only."""
-        dedicated_api_key = os.environ.get(GAWORLD_DEDICATED_LLM_ENV_KEY)
-        has_existing_gaworld_key = _has_gaworld_llm_env_key()
-
-        if dedicated_api_key:
-            logger.info("GAWorld injecting GAWORLD_LLM_API_KEY as MINIMAX_API_KEY.")
-            return {"MINIMAX_API_KEY": dedicated_api_key}
-        if has_existing_gaworld_key:
-            logger.info("GAWorld LLM API key already present in parent environment; inheriting it.")
-            return {}
-
-        logger.warning("gaworld.warning.no_llm_key")
-        return {}
+        return _ollama_settings_from_env() or _default_ollama_settings()
 
     def _launch_subprocess(self) -> None:
         profiles = load_profiles()
@@ -238,11 +232,9 @@ class GAWorldScene(ExperimentScene):
         if self._agent_ids:
             config_overrides["agent_ids"] = self._agent_ids
         ollama_settings = self._resolve_ollama_settings()
-        if ollama_settings is not None:
-            config_overrides.update(_build_ollama_config_overrides(ollama_settings))
-            env_overrides = {}
-        else:
-            env_overrides = self._build_llm_env_overrides()
+        config_overrides.update(_build_ollama_config_overrides(ollama_settings))
+        env_overrides: dict[str, str] = {}
+        env_removals = set(GAWORLD_LLM_ENV_KEYS)
 
         gaworld_path_str = (
             self.config.parameters.get("gaworld_path")
@@ -265,6 +257,7 @@ class GAWorldScene(ExperimentScene):
                 base_output_dir=output_dir,
                 config_overrides=config_overrides,
                 env_overrides=env_overrides,
+                env_removals=env_removals,
             )
             self._subprocess_manager = self._comparative_managers[1]
             return
@@ -275,6 +268,7 @@ class GAWorldScene(ExperimentScene):
             output_dir=output_dir,
             preserve_output=True,
             env_overrides=env_overrides,
+            env_removals=env_removals,
         )
         manager.launch()
         self._subprocess_manager = manager
