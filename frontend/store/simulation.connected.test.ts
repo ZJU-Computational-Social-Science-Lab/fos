@@ -15,9 +15,11 @@ vi.mock('../services/simulationTree', () => ({
 }));
 
 import { useSimulationStore } from '../store';
+import type { SimulationTemplate } from '../types';
 
 describe('Simulation Slice - Connected Experiment Payload', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     useSimulationStore.setState({
       simulations: [],
       currentSimulation: null,
@@ -34,53 +36,61 @@ describe('Simulation Slice - Connected Experiment Payload', () => {
       },
       selectedProviderId: null,
       currentProviderId: null,
-    } as any);
+    });
   });
 
   it('passes scenario_id and round_visibility at the top level of scene_config', async () => {
     const { createSimulation } = await import('../services/simulations');
+    const template: SimulationTemplate = {
+      id: 'experiment-template',
+      name: 'Public Goods Test',
+      description: 'Experiment',
+      category: 'custom',
+      sceneType: 'experiment',
+      agents: [],
+      defaultTimeConfig: {
+        baseTime: new Date().toISOString(),
+        unit: 'hour',
+        step: 1,
+      },
+      genericConfig: {
+        id: 'public-goods',
+        name: 'Public Goods',
+        description: 'Public goods experiment',
+        coreMechanics: [],
+        availableActions: [],
+        scenario_id: 'public_goods',
+        round_visibility: 'simultaneous',
+        parameters: {
+          initial_amount: 20,
+          multiplier: 1.5,
+        },
+        actions: [
+          {
+            action_type: 'choice',
+            name: 'Contribute',
+            description: 'Contribute some tokens to the pool',
+            parameters: [
+              {
+                name: 'amount',
+                type: 'integer',
+                description: 'How much to contribute',
+                required: true,
+                default: null,
+              },
+            ],
+          },
+        ],
+        environment: {
+          description: 'Public goods experiment',
+        },
+      },
+      defaultNetwork: {},
+    };
 
     useSimulationStore.getState().addSimulation(
       'Public Goods Test',
-      {
-        id: 'experiment-template',
-        name: 'Public Goods Test',
-        description: 'Experiment',
-        category: 'game_theory',
-        sceneType: 'experiment',
-        agents: [],
-        defaultTimeConfig: {
-          baseTime: new Date().toISOString(),
-          unit: 'hour',
-          step: 1,
-        },
-        genericConfig: {
-          description: 'Public goods experiment',
-          scenario_id: 'public_goods',
-          round_visibility: 'simultaneous',
-          parameters: {
-            initial_amount: 20,
-            multiplier: 1.5,
-          },
-          actions: [
-            {
-              action_type: 'choice',
-              name: 'Contribute',
-              description: 'Contribute some tokens to the pool',
-              parameters: [
-                {
-                  name: 'amount',
-                  type: 'integer',
-                  description: 'How much to contribute',
-                  required: true,
-                  default: null,
-                },
-              ],
-            },
-          ],
-        },
-        defaultNetwork: {},
-      } as any,
+      template,
       undefined,
       undefined,
     );
@@ -113,5 +123,80 @@ describe('Simulation Slice - Connected Experiment Payload', () => {
         ],
       },
     ]);
+  });
+
+  it('test_gaworld_launch_uses_gaworld_scene_type', async () => {
+    const { createSimulation } = await import('../services/simulations');
+    const template: SimulationTemplate = {
+      id: 'experiment-template',
+      name: 'GAWorld Test',
+      description: 'Generative city experiment',
+      category: 'custom',
+      sceneType: 'experiment',
+      agents: [
+        {
+          id: '34',
+          name: 'Xu Guilan',
+          role: 'Resident',
+          avatarUrl: '',
+          profile: 'Age: 42',
+          llmConfig: {
+            provider: 'mock',
+            model: 'mock',
+          },
+          properties: { residence: 'Hangzhou' },
+          history: {},
+          memory: [],
+          knowledgeBase: [],
+        },
+      ],
+      defaultTimeConfig: {
+        baseTime: new Date().toISOString(),
+        unit: 'hour',
+        step: 1,
+      },
+      genericConfig: {
+        id: 'gaworld',
+        name: 'GAWorld',
+        description: 'Generative city experiment',
+        coreMechanics: [],
+        availableActions: [],
+        scenario_id: 'gaworld',
+        round_visibility: 'simultaneous',
+        parameters: {
+          sim_days: 2,
+          agent_ids: '34',
+        },
+        actions: [
+          {
+            name: 'work',
+            description: 'Work',
+          },
+        ],
+        environment: {
+          description: 'Generative city experiment',
+        },
+      },
+      defaultNetwork: {},
+    };
+
+    useSimulationStore.getState().addSimulation(
+      'GAWorld Test',
+      template,
+      undefined,
+      undefined,
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(createSimulation).toHaveBeenCalledTimes(1);
+    const payload = vi.mocked(createSimulation).mock.calls[0][1];
+    expect(payload.scene_type).toBe('gaworld_scene');
+    expect(payload.scene_config.parameters).toEqual({
+      sim_days: 2,
+      agent_ids: '34',
+    });
+    expect(payload.agent_config.agents).toHaveLength(1);
   });
 });

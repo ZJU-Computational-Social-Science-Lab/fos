@@ -1,4 +1,22 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('../services/scenarios', () => ({
+  getAllScenarios: vi.fn(),
+  getScenario: vi.fn(),
+  getScenarioActions: vi.fn(),
+  getScenarioDefaultAgents: vi.fn(() => Promise.resolve([
+    {
+      id: '34',
+      name: 'Xu Guilan',
+      profile: 'Age: 42',
+      role_prompt: 'Real GAWorld profile',
+      properties: {
+        residence: 'Hangzhou',
+      },
+      llm_config: {},
+    },
+  ])),
+}));
 
 import { useExperimentBuilder } from './experiment-builder';
 
@@ -48,5 +66,24 @@ describe('Experiment Builder Store', () => {
     });
 
     expect(useExperimentBuilder.getState().roundVisibility).toBe('sequential');
+  });
+
+  it('test_gaworld_selection_loads_profile_agents', async () => {
+    await useExperimentBuilder.getState().loadDefaultAgentsForScenario('gaworld', '34');
+
+    expect(useExperimentBuilder.getState().agentMode).toBe('manual');
+    expect(useExperimentBuilder.getState().agentTypes).toEqual([
+      {
+        id: '34',
+        label: 'Xu Guilan',
+        count: 1,
+        rolePrompt: 'Real GAWorld profile',
+        userProfile: 'Age: 42',
+        properties: {
+          residence: 'Hangzhou',
+        },
+        providerId: null,
+      },
+    ]);
   });
 });

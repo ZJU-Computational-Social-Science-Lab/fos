@@ -2,6 +2,7 @@
 
 - _resolve_python_executable finds the right Python for the subprocess.
 - _gaworld_package_dirs locates the gaworld package for PYTHONPATH setup.
+- _read_log_tail reads the end of GAWorld's log for user-visible failures.
 - GAWorldProcessError is raised when the GAWorld process exits before work is done.
 - GAWorldTimeoutError is raised when waiting takes too long.
 - GAWorldSubprocessManager stores run settings and controls one GAWorld subprocess.
@@ -106,6 +107,18 @@ def _gaworld_package_dirs() -> list[str]:
     return dirs
 
 
+def _read_log_tail(log_path: Path, max_lines: int = 20) -> str:
+    """Read the last lines of a GAWorld log file if one exists."""
+    if not log_path.exists():
+        return ""
+    try:
+        lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        logger.exception("GAWorld: failed to read log tail from %s", log_path)
+        return ""
+    return "\n".join(lines[-max_lines:]).strip()
+
+
 @dataclass
 class GAWorldSubprocessManager:
     """Controls one GAWorld simulator process and its output folder."""
@@ -115,6 +128,7 @@ class GAWorldSubprocessManager:
     output_dir: Path
     preserve_output: bool = False
     env_overrides: dict[str, str] = field(default_factory=dict)
+    env_removals: set[str] = field(default_factory=set)
     process: subprocess.Popen[str] | Any | None = field(default=None, init=False)
 
     def launch(self) -> None:
@@ -126,17 +140,12 @@ class GAWorldSubprocessManager:
         python_exe = _resolve_python_executable()
         command = [python_exe, str(script_path), "run"]
         env = os.environ.copy()
+        for key in self.env_removals:
+            env.pop(key, None)
         env.update({key: value for key, value in self.env_overrides.items() if value})
         env["GAWORLD_CONFIG_OVERRIDES"] = json.dumps(self.config_overrides)
         env["PYTHONUTF8"] = "1"
         env["PYTHONIOENCODING"] = "utf-8"
-        logger.info(
-            "GAWorld env API keys present: ANTHROPIC_API_KEY=%s, MINIMAX_API_KEY=%s, "
-            "ANTHROPIC_AUTH_TOKEN=%s",
-            bool(env.get("ANTHROPIC_API_KEY")),
-            bool(env.get("MINIMAX_API_KEY")),
-            bool(env.get("ANTHROPIC_AUTH_TOKEN")),
-        )
 
         # Build PYTHONPATH: gaworld script dir + gaworld package dirs
         path_entries: list[str] = [str(self.gaworld_path)]
@@ -198,7 +207,11 @@ class GAWorldSubprocessManager:
             if self.process is not None:
                 exit_code = self.process.poll()
                 if exit_code is not None and exit_code != 0:
-                    raise GAWorldProcessError("gaworld.error.exited_unexpectedly: exited unexpectedly")
+                    log_tail = _read_log_tail(self.output_dir / "gaworld.log")
+                    detail = f"gaworld.error.exited_unexpectedly: exited unexpectedly with code {exit_code}"
+                    if log_tail:
+                        detail = f"{detail}\nGAWorld log tail:\n{log_tail}"
+                    raise GAWorldProcessError(detail)
 
             if state_path.exists():
                 state = json.loads(state_path.read_text(encoding="utf-8"))
@@ -233,6 +246,7 @@ class GAWorldSubprocessManager:
         base_output_dir: Path,
         config_overrides: dict[str, Any],
         env_overrides: dict[str, str] | None = None,
+        env_removals: set[str] | None = None,
     ) -> tuple[GAWorldSubprocessManager, GAWorldSubprocessManager]:
         """Starts baseline and treatment runs and returns both managers."""
         baseline_overrides = {
@@ -249,12 +263,14 @@ class GAWorldSubprocessManager:
             baseline_overrides,
             base_output_dir / "baseline",
             env_overrides=env_overrides or {},
+            env_removals=env_removals or set(),
         )
         treatment = cls(
             gaworld_path,
             treatment_overrides,
             base_output_dir / "treatment",
             env_overrides=env_overrides or {},
+            env_removals=env_removals or set(),
         )
         baseline.launch()
         treatment.launch()

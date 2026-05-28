@@ -140,6 +140,7 @@ export const Step2StarterTemplate: React.FC = () => {
     setScenarioParams,
     setRoundVisibility,
     setTurnOrder,
+    loadDefaultAgentsForScenario,
   } = useExperimentBuilder();
 
   const [localRoundVisibility, setLocalRoundVisibility] = useState<'simultaneous' | 'sequential'>('simultaneous');
@@ -202,6 +203,11 @@ export const Step2StarterTemplate: React.FC = () => {
 
   const handleParamChange = (key: string, value: string | number) => {
     setScenarioParams({ ...scenarioParams, [key]: value });
+    if (selectedScenarioData?.id === 'gaworld' && key === 'agent_ids') {
+      void loadDefaultAgentsForScenario('gaworld', String(value || '')).catch((error: unknown) => {
+        console.error('Failed to refresh GAWorld default agents:', error);
+      });
+    }
   };
 
   const handlePayoffChange = (value: {

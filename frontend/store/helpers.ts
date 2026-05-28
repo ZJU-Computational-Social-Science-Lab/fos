@@ -529,14 +529,10 @@ export const mapBackendEventsToLogs = (
 
       // Use summary if available (it contains action result info)
       if (summary) {
-        const standardizedSummary = buildTranslatedActionExecution(displayAgentName, actionName);
         const narrativeContent = formatExperimentNarrative(displayAgentName, narrativeText);
-        const parameterText = formatExperimentParameters(parameters) || extractSummaryParameterText(summary);
         const contentBase = narrativeContent
           ? narrativeContent
-          : parameterText
-            ? `${standardizedSummary} (${parameterText})`
-            : standardizedSummary;
+          : summary;
         const content = payoff !== null && payoff !== undefined
           ? `${contentBase}${pickText(` -> payoff=${payoff}`, ` -> 收益=${payoff}`)}`
           : contentBase;

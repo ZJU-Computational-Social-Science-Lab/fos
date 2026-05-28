@@ -509,6 +509,7 @@ export const createSimulationSlice: StateCreator<
             experiment: 'experiment_template'
           };
           const backendSceneType = mapSceneType[template.sceneType] || template.sceneType;
+          const isGAWorldScenario = template.genericConfig?.scenario_id === 'gaworld' || backendSceneType === 'gaworld_scene';
 
           // Determine if this is an experiment template (has structured actions)
           const isExperimentTemplate = backendSceneType === 'experiment_template' ||
@@ -575,7 +576,7 @@ export const createSimulationSlice: StateCreator<
           }
 
           const payload: any = {
-            scene_type: isExperimentTemplate ? 'experiment_template' : backendSceneType,
+            scene_type: isGAWorldScenario ? 'gaworld_scene' : isExperimentTemplate ? 'experiment_template' : backendSceneType,
             scene_config: sceneConfig,
             agent_config: {
               language: i18n.language || 'en',
@@ -612,7 +613,7 @@ export const createSimulationSlice: StateCreator<
             id: sim.id,
             name: name || sim.name,
             templateId: template.id,
-            scene_type: sim.scene_type || (isExperimentTemplate ? 'experiment_template' : backendSceneType),
+            scene_type: sim.scene_type || (isGAWorldScenario ? 'gaworld_scene' : isExperimentTemplate ? 'experiment_template' : backendSceneType),
             status: 'active',
             createdAt: new Date().toISOString().split('T')[0],
             timeConfig: finalTimeConfig,

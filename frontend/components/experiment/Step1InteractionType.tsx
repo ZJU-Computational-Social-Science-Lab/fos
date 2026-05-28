@@ -99,6 +99,7 @@ export const Step1InteractionType: React.FC = () => {
     selectedScenarioId,
     setSelectedScenarioId,
     setSelectedScenarioData,
+    loadDefaultAgentsForScenario,
     markStepComplete,
   } = useExperimentBuilder();
 
@@ -149,6 +150,11 @@ export const Step1InteractionType: React.FC = () => {
   const handleSelectScenario = (scenario: ScenarioData) => {
     setSelectedScenarioId(scenario.id);
     setSelectedScenarioData(scenario);
+    if (scenario.id === 'gaworld') {
+      void loadDefaultAgentsForScenario(scenario.id).catch((error: unknown) => {
+        console.error('Failed to load GAWorld default agents:', error);
+      });
+    }
     markStepComplete(1);
   };
 
