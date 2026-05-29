@@ -100,6 +100,20 @@ def test_wait_for_day_writes_live_diagnostic_snapshot_on_timeout(tmp_path: Path)
     memory_dir = output_dir / "memory"
     memory_dir.mkdir(parents=True)
     (output_dir / "gaworld.log").write_text("12:00:01 | rag_seed_script bootstrap", encoding="utf-8")
+    logs_dir = output_dir / "logs"
+    logs_dir.mkdir()
+    (logs_dir / "agent_1.log").write_text("agent still moving", encoding="utf-8")
+    work_dir = output_dir / "work"
+    work_dir.mkdir()
+    (work_dir / "queue.jsonl").write_text("{}", encoding="utf-8")
+    (memory_dir / "agent_1_schedule.json").write_text(
+        json.dumps([{"time": "06:30", "activity": "wake"}, {"time": "08:00", "activity": "work"}]),
+        encoding="utf-8",
+    )
+    (memory_dir / "agent_2_schedule.json").write_text(
+        json.dumps([{"time": "06:30", "activity": "wake"}, {"time": "09:00", "activity": "work"}]),
+        encoding="utf-8",
+    )
 
     manager = GAWorldSubprocessManager(tmp_path, {}, output_dir)
     manager.process = SimpleNamespace(poll=lambda: None)
@@ -115,6 +129,40 @@ def test_wait_for_day_writes_live_diagnostic_snapshot_on_timeout(tmp_path: Path)
     assert snapshot["state_file_exists"] is False
     assert "first_rag_bootstrap_s" in snapshot["observed_phases"]
     assert snapshot["log_tail"] == "12:00:01 | rag_seed_script bootstrap"
+    assert snapshot["log_mtime"] is not None
+    assert snapshot["log_age_s"] is not None
+    assert snapshot["latest_agent_log_age_s"] is not None
+    assert snapshot["schedule_tick_count"] == 3
+    assert snapshot["agent_schedule_count"] == 2
+    assert snapshot["paths"]["logs_dir"]["exists"] is True
+    assert snapshot["paths"]["work_dir"]["exists"] is True
+    assert snapshot["paths"]["real_work_queue"]["exists"] is True
+
+
+def test_wait_for_day_snapshot_marks_when_files_change(tmp_path: Path) -> None:
+    output_dir = tmp_path / "out"
+    memory_dir = output_dir / "memory"
+    memory_dir.mkdir(parents=True)
+    log_path = output_dir / "gaworld.log"
+    log_path.write_text("12:00:01 | start", encoding="utf-8")
+
+    manager = GAWorldSubprocessManager(tmp_path, {}, output_dir)
+    manager.process = SimpleNamespace(poll=lambda: None)
+    manager.launch_started_at = 0.0
+
+    with pytest.raises(GAWorldTimeoutError):
+        manager.wait_for_day(day=10, timeout=0.05, poll_interval=0.01)
+
+    first_snapshot = json.loads((output_dir / "gaworld_wait_status.json").read_text(encoding="utf-8"))
+    assert first_snapshot["observed_file_change"] in {True, False}
+
+    log_path.write_text("12:00:01 | start\n12:00:02 | moved", encoding="utf-8")
+
+    with pytest.raises(GAWorldTimeoutError):
+        manager.wait_for_day(day=10, timeout=0.05, poll_interval=0.01)
+
+    second_snapshot = json.loads((output_dir / "gaworld_wait_status.json").read_text(encoding="utf-8"))
+    assert second_snapshot["observed_file_change"] is True
 
 
 def test_wait_for_day_logs_progress_before_timeout(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:

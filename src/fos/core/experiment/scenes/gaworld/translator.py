@@ -36,7 +36,7 @@ class GAWorldOutputTranslator:
             agent_id = int(agent_data.get("id", -1))
             agent_name = self.agent_name_map.get(agent_id, str(agent_id))
             actions = agent_data.get("actions", [])
-            for action in actions:
+            for action in self._normalized_actions(actions):
                 action_type = str(action.get("type", ""))
                 mapped_action, parameters, summary, is_unknown = self._translate_action(action_type, action)
                 if is_unknown:
@@ -60,6 +60,25 @@ class GAWorldOutputTranslator:
             )
 
         return events
+
+    def _normalized_actions(self, actions: Any) -> list[dict[str, Any]]:
+        """Turns different GAWorld action payload shapes into one list of action dicts."""
+        if isinstance(actions, list):
+            return [action for action in actions if isinstance(action, dict)]
+
+        if isinstance(actions, dict):
+            normalized: list[dict[str, Any]] = []
+            for activity_name, options in actions.items():
+                normalized.append(
+                    {
+                        "type": str(activity_name),
+                        "description": str(activity_name),
+                        "options": list(options) if isinstance(options, list) else [options],
+                    }
+                )
+            return normalized
+
+        return []
 
     def _translate_action(
         self,

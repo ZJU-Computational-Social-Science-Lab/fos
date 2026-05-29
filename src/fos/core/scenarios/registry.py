@@ -723,6 +723,16 @@ GAWORLD: Dict[str, Any] = {
             "ui_hint": "number",
         },
         {
+            "id": "execution_profile",
+            "key": "execution_profile",
+            "label": "Execution Profile",
+            "description": "Choose whether GAWorld runs in fast, balanced, or full-fidelity mode.",
+            "type": "string",
+            "default": "fast",
+            "ui_hint": "select",
+            "options": ["fast", "balanced", "full_fidelity"],
+        },
+        {
             "id": "intervention_enabled",
             "key": "intervention_enabled",
             "label": "scenario_templates.gaworld.parameters.intervention_enabled.label",
