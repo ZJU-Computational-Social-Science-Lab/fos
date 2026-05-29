@@ -194,6 +194,35 @@ def test_run_round_emits_one_event_per_translated_event(monkeypatch) -> None:
     assert emitted[0][0] == "experiment_action"
 
 
+def test_run_round_uses_extended_gaworld_timeout(monkeypatch) -> None:
+    scene = GAWorldScene(_make_config())
+    captured: dict[str, Any] = {}
+
+    def _fake_launch() -> None:
+        def _wait_for_day(day: int, timeout: float = 0, **_kwargs: Any) -> dict[str, Any]:
+            captured["day"] = day
+            captured["timeout"] = timeout
+            return {"last_day": day}
+
+        scene._subprocess_manager = SimpleNamespace(
+            wait_for_day=_wait_for_day,
+            output_dir=Path("."),
+        )
+
+    monkeypatch.setattr(scene, "_launch_subprocess", _fake_launch)
+    monkeypatch.setattr(scene, "_read_day_data", lambda day_num: {"day": day_num, "agents": []})
+
+    scene.initialize(llm_client=object())
+    scene._translator = SimpleNamespace(
+        translate_day=lambda _day_data: [],
+        translate_state_updates=lambda _day_data: {},
+    )
+
+    asyncio.run(scene.run_round(lambda _event_type, _payload: None))
+
+    assert captured == {"day": 1, "timeout": 1800}
+
+
 def test_run_round_logs_gaworld_diagnostics(monkeypatch, caplog) -> None:
     scene = GAWorldScene(_make_config())
     caplog.set_level("INFO", logger=scene_module.__name__)
@@ -219,6 +248,7 @@ def test_run_round_logs_gaworld_diagnostics(monkeypatch, caplog) -> None:
     assert "GAWorld day 1 agents_data: {'day': 1, 'agents': []}" in caplog.messages
     assert "GAWorld day 1 translated 1 events" in caplog.messages
     assert "GAWorld emitted event: Alice work" in caplog.messages
+    assert any("GAWorld diagnostic snapshot file:" in message for message in caplog.messages)
 
 
 def test_run_round_skips_day_when_translation_key_missing(monkeypatch) -> None:
@@ -311,7 +341,10 @@ def test_launch_subprocess_passes_profiles_as_gaworld_csv_path(tmp_path: Path, m
     assert "profiles_csv" not in overrides
 
 
-def test_launch_subprocess_omits_empty_agent_ids_override(tmp_path: Path, monkeypatch) -> None:
+def test_launch_subprocess_uses_config_agent_ids_when_text_field_is_blank(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
     config = _make_config()
     config.parameters["agent_ids"] = ""
     config.parameters["output_dir"] = tmp_path / "gaworld-output"
@@ -333,7 +366,75 @@ def test_launch_subprocess_omits_empty_agent_ids_override(tmp_path: Path, monkey
     scene = GAWorldScene(config)
     scene._launch_subprocess()
 
-    assert "agent_ids" not in captured["config_overrides"]
+    assert captured["config_overrides"]["agent_ids"] == ["1", "2"]
+
+
+def test_launch_subprocess_uses_explicit_agent_ids_when_text_field_is_blank(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config = _make_config()
+    config.agents = [
+        {"id": "34", "name": "Xu Guilan"},
+        {"id": "35", "name": "Cai Derong"},
+    ]
+    config.parameters["agent_ids"] = ""
+    config.parameters["output_dir"] = tmp_path / "gaworld-output"
+    config.parameters["gaworld_path"] = tmp_path / "GAWorld"
+    captured: dict[str, Any] = {}
+    exported_profiles: list[list[str]] = []
+
+    class FakeManager:
+        def __init__(self, **kwargs: Any) -> None:
+            captured.update(kwargs)
+            self.output_dir = kwargs["output_dir"]
+
+        def launch(self) -> None:
+            captured["launched"] = True
+
+    def fake_export_profiles_csv(profiles: list[Any], _path: Path) -> None:
+        exported_profiles.append([profile.id for profile in profiles])
+
+    monkeypatch.setattr(scene_module, "load_profiles", lambda: [_make_profile("34"), _make_profile("35"), _make_profile("99")])
+    monkeypatch.setattr(scene_module, "export_profiles_csv", fake_export_profiles_csv)
+    monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
+
+    scene = GAWorldScene(config)
+    scene.initialize(llm_client=object())
+    scene._launch_subprocess()
+
+    assert captured["config_overrides"]["agent_ids"] == ["34", "35"]
+    assert exported_profiles == [["34", "35"]]
+
+
+def test_launch_subprocess_disables_local_environment_and_distributed_services(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config = _make_config()
+    config.parameters["output_dir"] = tmp_path / "gaworld-output"
+    config.parameters["gaworld_path"] = tmp_path / "GAWorld"
+    captured: dict[str, Any] = {}
+
+    class FakeManager:
+        def __init__(self, **kwargs: Any) -> None:
+            captured.update(kwargs)
+            self.output_dir = kwargs["output_dir"]
+
+        def launch(self) -> None:
+            captured["launched"] = True
+
+    monkeypatch.setattr(scene_module, "load_profiles", lambda: [_make_profile("1")])
+    monkeypatch.setattr(scene_module, "export_profiles_csv", lambda _profiles, _path: None)
+    monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
+
+    scene = GAWorldScene(config)
+    scene._launch_subprocess()
+
+    overrides = captured["config_overrides"]
+    assert overrides["environment_config_path"] == ""
+    assert overrides["external_environment_service"]["enabled"] is False
+    assert overrides["distributed"]["enabled"] is False
 
 
 def test_launch_subprocess_omits_empty_profiles_csv_override(tmp_path: Path, monkeypatch) -> None:

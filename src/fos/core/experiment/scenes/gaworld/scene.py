@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -40,6 +41,7 @@ GAWORLD_LLM_ENV_KEYS = (
 FOS_OLLAMA_PROVIDER_NAME = "fos_ollama"
 DEFAULT_FOS_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
 DEFAULT_FOS_OLLAMA_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
+GAWORLD_WAIT_TIMEOUT_S = 1800
 
 
 @dataclass(frozen=True)
@@ -49,6 +51,28 @@ class OllamaProviderSettings:
     base_url: str
     model: str
     timeout: int = 600
+
+
+def _normalize_selected_agent_ids(raw_agent_ids: Any, agents: list[dict[str, Any]]) -> list[str]:
+    """Chooses the requested GAWorld IDs from text first, then explicit agents."""
+    if isinstance(raw_agent_ids, str):
+        ids = [part.strip() for part in raw_agent_ids.split(",") if part.strip()]
+        if ids:
+            return ids
+    elif isinstance(raw_agent_ids, list):
+        ids = [str(agent_id).strip() for agent_id in raw_agent_ids if str(agent_id).strip()]
+        if ids:
+            return ids
+
+    resolved_ids: list[str] = []
+    for agent in agents:
+        raw_agent_id = agent.get("id")
+        if raw_agent_id is None:
+            continue
+        agent_id = str(raw_agent_id).strip()
+        if agent_id:
+            resolved_ids.append(agent_id)
+    return resolved_ids
 
 
 def _build_output_overrides(output_dir: Path) -> dict[str, Any]:
@@ -67,6 +91,21 @@ def _build_output_overrides(output_dir: Path) -> dict[str, Any]:
         },
         "visualization": {
             "output_dir": str(output_dir / "visualization"),
+        },
+    }
+
+
+def _build_hermetic_runtime_overrides() -> dict[str, Any]:
+    """Turns off local GAWorld services that FOS did not ask to use."""
+    return {
+        "environment_config_path": "",
+        "external_environment_service": {
+            "enabled": False,
+        },
+        "distributed": {
+            "enabled": False,
+            "local_agent_ids": [],
+            "peer_agent_ids": [],
         },
     }
 
@@ -149,11 +188,7 @@ class GAWorldScene(ExperimentScene):
         params = config.parameters or {}
         self.skipped_days: list[int] = []
         self._sim_days: int = int(params.get("sim_days", 0) or 0)
-        raw_agent_ids = params.get("agent_ids", [])
-        if isinstance(raw_agent_ids, str):
-            self._agent_ids = [part.strip() for part in raw_agent_ids.split(",") if part.strip()]
-        else:
-            self._agent_ids = [str(agent_id) for agent_id in raw_agent_ids if str(agent_id).strip()]
+        self._agent_ids = _normalize_selected_agent_ids(params.get("agent_ids", []), config.agents)
         self._seed: int = int(params.get("seed", 0) or 0)
         self._translator: GAWorldOutputTranslator | None = None
         self._subprocess_manager: GAWorldSubprocessManager | None = None
@@ -213,6 +248,7 @@ class GAWorldScene(ExperimentScene):
         return _ollama_settings_from_env() or _default_ollama_settings()
 
     def _launch_subprocess(self) -> None:
+        launch_started_at = time.perf_counter()
         profiles = load_profiles()
         if self._agent_ids:
             selected = set(self._agent_ids)
@@ -224,13 +260,13 @@ class GAWorldScene(ExperimentScene):
             "sim_days": self._sim_days,
             "seed": self._seed,
             **_build_output_overrides(output_dir),
+            **_build_hermetic_runtime_overrides(),
         }
         if profiles:
             profiles_path = temp_dir / "profiles.csv"
             export_profiles_csv(profiles, profiles_path)
             config_overrides["csv_path"] = str(profiles_path)
-        if self._agent_ids:
-            config_overrides["agent_ids"] = self._agent_ids
+        config_overrides["agent_ids"] = list(self._agent_ids)
         ollama_settings = self._resolve_ollama_settings()
         config_overrides.update(_build_ollama_config_overrides(ollama_settings))
         env_overrides: dict[str, str] = {}
@@ -247,6 +283,15 @@ class GAWorldScene(ExperimentScene):
             gaworld_path,
             self.config.parameters.get("gaworld_path"),
             os.environ.get("GAWORLD_PATH"),
+        )
+        logger.info(
+            "GAWorld launch config: agent_ids=%s, profile_count=%d, hermetic=%s, "
+            "external_environment_enabled=%s, distributed_enabled=%s",
+            self._agent_ids,
+            len(profiles),
+            True,
+            config_overrides["external_environment_service"]["enabled"],
+            config_overrides["distributed"]["enabled"],
         )
 
         if bool(self.config.parameters.get("intervention_enabled", False)):
@@ -272,6 +317,11 @@ class GAWorldScene(ExperimentScene):
         )
         manager.launch()
         self._subprocess_manager = manager
+        logger.info(
+            "GAWorld subprocess launch prepared in %.3fs for output_dir=%s",
+            time.perf_counter() - launch_started_at,
+            output_dir,
+        )
 
     async def run_round(self, event_emitter: Callable[[str, dict], None]) -> RoundResult:
         self.current_round += 1
@@ -283,14 +333,12 @@ class GAWorldScene(ExperimentScene):
                 output_dir = self._subprocess_manager.output_dir
                 logger.info(f"GAWorld output_dir: {output_dir}")
                 logger.info(f"GAWorld output_dir exists: {output_dir.exists()}")
-                if output_dir.exists():
-                    for root, _, files in os.walk(output_dir):
-                        for file_name in files:
-                            logger.info(f"GAWorld output file: {os.path.join(root, file_name)}")
+                logger.info(f"GAWorld output file: {output_dir / 'gaworld.log'}")
+                logger.info(f"GAWorld diagnostic snapshot file: {output_dir / 'gaworld_wait_status.json'}")
         if self._subprocess_manager is None or self._translator is None:
             raise RuntimeError("gaworld.error.not_initialized")
 
-        sim_state = self._subprocess_manager.wait_for_day(day_num, timeout=300)
+        sim_state = self._subprocess_manager.wait_for_day(day_num, timeout=GAWORLD_WAIT_TIMEOUT_S)
         logger.info(f"GAWorld day {day_num} sim_state: {sim_state}")
         day_data = self._read_day_data(day_num)
         logger.info(f"GAWorld day {day_num} agents_data: {day_data}")

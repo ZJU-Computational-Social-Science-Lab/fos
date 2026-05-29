@@ -25,7 +25,8 @@ import signal
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +39,22 @@ class GAWorldProcessError(RuntimeError):
 
 class GAWorldTimeoutError(RuntimeError):
     """Raised when waiting for GAWorld output reaches timeout."""
+
+
+@dataclass(frozen=True)
+class GAWorldWaitSnapshot:
+    """Stores the latest visible signs of life while FOS waits for GAWorld."""
+
+    status: str
+    target_day: int
+    elapsed_s: float
+    output_dir: str
+    log_path: str
+    state_path: str
+    state_file_exists: bool
+    last_day: int | None
+    observed_phases: dict[str, float]
+    log_tail: str
 
 
 def _resolve_python_executable() -> str:
@@ -119,6 +136,123 @@ def _read_log_tail(log_path: Path, max_lines: int = 20) -> str:
     return "\n".join(lines[-max_lines:]).strip()
 
 
+def _parse_log_clock_seconds(line: str, launch_started_at: float) -> float | None:
+    """Turns a log line clock time into seconds since launch."""
+    parts = line.split("|", 1)
+    if not parts:
+        return None
+    clock_text = parts[0].strip()
+    try:
+        log_clock = datetime.strptime(clock_text, "%H:%M:%S")
+    except ValueError:
+        return None
+
+    launch_dt = datetime.fromtimestamp(launch_started_at)
+    candidate = launch_dt.replace(
+        hour=log_clock.hour,
+        minute=log_clock.minute,
+        second=log_clock.second,
+        microsecond=0,
+    )
+    if candidate < launch_dt:
+        candidate += timedelta(days=1)
+    return (candidate - launch_dt).total_seconds()
+
+
+def _observed_phase_offsets(log_path: Path, launch_started_at: float | None) -> dict[str, float]:
+    """Finds rough GAWorld phase timings from known log markers."""
+    if launch_started_at is None or not log_path.exists():
+        return {}
+    markers = {
+        "first_rag_bootstrap_s": ("RAG 条目", "rag_seed_script bootstrap"),
+        "first_schedule_ready_s": ("[BasicRoutine]", "[TodayRoutine Day"),
+    }
+    observed: dict[str, float] = {}
+    try:
+        lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        logger.exception("GAWorld: failed to read phase timings from %s", log_path)
+        return {}
+
+    for line in lines:
+        for label, snippets in markers.items():
+            if label in observed:
+                continue
+            if any(snippet in line for snippet in snippets):
+                elapsed_s = _parse_log_clock_seconds(line, launch_started_at)
+                if elapsed_s is not None:
+                    observed[label] = round(elapsed_s, 3)
+    return observed
+
+
+def _read_last_day(state_path: Path) -> int | None:
+    """Reads the latest saved GAWorld day number when the state file exists."""
+    if not state_path.exists():
+        return None
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        logger.exception("GAWorld: failed to read state from %s", state_path)
+        return None
+    raw_last_day = state.get("last_day")
+    if raw_last_day is None:
+        return None
+    try:
+        return int(raw_last_day)
+    except (TypeError, ValueError):
+        logger.exception("GAWorld: invalid last_day in %s", state_path)
+        return None
+
+
+def _build_wait_snapshot(
+    output_dir: Path,
+    log_path: Path,
+    state_path: Path,
+    target_day: int,
+    launch_started_at: float | None,
+    status: str,
+) -> GAWorldWaitSnapshot:
+    """Builds one diagnostic snapshot that can be logged or written to disk."""
+    elapsed_s = 0.0 if launch_started_at is None else round(time.time() - launch_started_at, 3)
+    return GAWorldWaitSnapshot(
+        status=status,
+        target_day=target_day,
+        elapsed_s=elapsed_s,
+        output_dir=str(output_dir),
+        log_path=str(log_path),
+        state_path=str(state_path),
+        state_file_exists=state_path.exists(),
+        last_day=_read_last_day(state_path),
+        observed_phases=_observed_phase_offsets(log_path, launch_started_at),
+        log_tail=_read_log_tail(log_path),
+    )
+
+
+def _write_wait_snapshot(snapshot_path: Path, snapshot: GAWorldWaitSnapshot) -> None:
+    """Writes the latest wait snapshot to a JSON file for quick inspection."""
+    try:
+        snapshot_path.write_text(
+            json.dumps(asdict(snapshot), ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except OSError:
+        logger.exception("GAWorld: failed to write wait snapshot to %s", snapshot_path)
+
+
+def _format_timeout_detail(snapshot: GAWorldWaitSnapshot, snapshot_path: Path) -> str:
+    """Builds a timeout message that points to the saved diagnostic snapshot."""
+    detail = (
+        "gaworld.error.wait_timeout\n"
+        f"Snapshot: {snapshot_path}\n"
+        f"Elapsed: {snapshot.elapsed_s}s\n"
+        f"Last day: {snapshot.last_day}\n"
+        f"Observed phases: {snapshot.observed_phases}"
+    )
+    if snapshot.log_tail:
+        detail = f"{detail}\nGAWorld log tail:\n{snapshot.log_tail}"
+    return detail
+
+
 @dataclass
 class GAWorldSubprocessManager:
     """Controls one GAWorld simulator process and its output folder."""
@@ -130,6 +264,7 @@ class GAWorldSubprocessManager:
     env_overrides: dict[str, str] = field(default_factory=dict)
     env_removals: set[str] = field(default_factory=set)
     process: subprocess.Popen[str] | Any | None = field(default=None, init=False)
+    launch_started_at: float | None = field(default=None, init=False)
 
     def launch(self) -> None:
         """Starts the simulator process with config overrides in environment."""
@@ -137,6 +272,7 @@ class GAWorldSubprocessManager:
         if not script_path.exists():
             raise FileNotFoundError("gaworld.error.script_not_found")
 
+        self.launch_started_at = time.time()
         python_exe = _resolve_python_executable()
         command = [python_exe, str(script_path), "run"]
         env = os.environ.copy()
@@ -202,6 +338,9 @@ class GAWorldSubprocessManager:
         """Waits for sim_state.json to report last_day at or beyond target day."""
         deadline = time.time() + timeout
         state_path = self.output_dir / "memory" / "sim_state.json"
+        log_path = self.output_dir / "gaworld.log"
+        snapshot_path = self.output_dir / "gaworld_wait_status.json"
+        next_progress_log_at = time.time()
 
         while True:
             if self.process is not None:
@@ -216,10 +355,53 @@ class GAWorldSubprocessManager:
             if state_path.exists():
                 state = json.loads(state_path.read_text(encoding="utf-8"))
                 if int(state.get("last_day", -1)) >= day:
+                    if self.launch_started_at is not None:
+                        logger.info(
+                            "GAWorld wait_for_day reached day=%s in %.3fs with phases=%s",
+                            day,
+                            time.time() - self.launch_started_at,
+                            _observed_phase_offsets(log_path, self.launch_started_at),
+                        )
                     return state
 
+            snapshot = _build_wait_snapshot(
+                output_dir=self.output_dir,
+                log_path=log_path,
+                state_path=state_path,
+                target_day=day,
+                launch_started_at=self.launch_started_at,
+                status="waiting",
+            )
+            _write_wait_snapshot(snapshot_path, snapshot)
+            if time.time() >= next_progress_log_at:
+                logger.info(
+                    "GAWorld wait_for_day progress: day=%s elapsed=%.3fs last_day=%s phases=%s snapshot=%s",
+                    day,
+                    snapshot.elapsed_s,
+                    snapshot.last_day,
+                    snapshot.observed_phases,
+                    snapshot_path,
+                )
+                next_progress_log_at = time.time() + max(15.0, poll_interval)
+
             if time.time() > deadline:
-                raise GAWorldTimeoutError("gaworld.error.wait_timeout")
+                timeout_snapshot = _build_wait_snapshot(
+                    output_dir=self.output_dir,
+                    log_path=log_path,
+                    state_path=state_path,
+                    target_day=day,
+                    launch_started_at=self.launch_started_at,
+                    status="timed_out",
+                )
+                _write_wait_snapshot(snapshot_path, timeout_snapshot)
+                logger.warning(
+                    "GAWorld wait_for_day timed out for day=%s after %.3fs with phases=%s snapshot=%s",
+                    day,
+                    timeout,
+                    timeout_snapshot.observed_phases,
+                    snapshot_path,
+                )
+                raise GAWorldTimeoutError(_format_timeout_detail(timeout_snapshot, snapshot_path))
 
             time.sleep(poll_interval)
 
