@@ -437,6 +437,78 @@ def test_launch_subprocess_disables_local_environment_and_distributed_services(
     assert overrides["distributed"]["enabled"] is False
 
 
+def test_launch_subprocess_disables_optional_gaworld_extensions_and_real_work(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config = _make_config()
+    config.parameters["output_dir"] = tmp_path / "gaworld-output"
+    config.parameters["gaworld_path"] = tmp_path / "GAWorld"
+    captured: dict[str, Any] = {}
+
+    class FakeManager:
+        def __init__(self, **kwargs: Any) -> None:
+            captured.update(kwargs)
+            self.output_dir = kwargs["output_dir"]
+
+        def launch(self) -> None:
+            captured["launched"] = True
+
+    monkeypatch.setattr(scene_module, "load_profiles", lambda: [_make_profile("1")])
+    monkeypatch.setattr(scene_module, "export_profiles_csv", lambda _profiles, _path: None)
+    monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
+
+    scene = GAWorldScene(config)
+    scene._launch_subprocess()
+
+    overrides = captured["config_overrides"]
+    assert overrides["real_work"]["enabled"] is False
+    assert overrides["extensions"]["strict"] is False
+    assert overrides["extensions"]["hooks"] == {
+        "on_simulation_start": [],
+        "on_day_start": [],
+        "on_time_tick": [],
+        "on_agent_pre_step": [],
+        "on_agent_post_step": [],
+        "on_day_end": [],
+        "on_simulation_end": [],
+    }
+
+
+def test_launch_subprocess_routes_real_work_paths_under_fos_output_when_enabled(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config = _make_config()
+    output_dir = tmp_path / "gaworld-output"
+    config.parameters["output_dir"] = output_dir
+    config.parameters["gaworld_path"] = tmp_path / "GAWorld"
+    config.parameters["enable_gaworld_real_work"] = True
+    captured: dict[str, Any] = {}
+
+    class FakeManager:
+        def __init__(self, **kwargs: Any) -> None:
+            captured.update(kwargs)
+            self.output_dir = kwargs["output_dir"]
+
+        def launch(self) -> None:
+            captured["launched"] = True
+
+    monkeypatch.setattr(scene_module, "load_profiles", lambda: [_make_profile("1")])
+    monkeypatch.setattr(scene_module, "export_profiles_csv", lambda _profiles, _path: None)
+    monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
+
+    scene = GAWorldScene(config)
+    scene._launch_subprocess()
+
+    real_work = captured["config_overrides"]["real_work"]
+    assert real_work["enabled"] is True
+    assert real_work["queue_path"] == str(output_dir / "work" / "queue.jsonl")
+    assert real_work["artifacts_dir"] == str(output_dir / "work")
+    assert real_work["capabilities_cache"] == str(output_dir / "work" / "capabilities.json")
+    assert real_work["market"]["store_path"] == str(output_dir / "work" / "market.jsonl")
+
+
 def test_launch_subprocess_omits_empty_profiles_csv_override(tmp_path: Path, monkeypatch) -> None:
     config = _make_config()
     config.parameters["output_dir"] = tmp_path / "gaworld-output"

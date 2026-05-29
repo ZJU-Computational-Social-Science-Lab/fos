@@ -1,3 +1,15 @@
+"""This file lists scene templates and validates template-based scene input.
+
+- scene_config_template builds one frontend-friendly template for a scene type.
+- get_template_loader finds the folders where saved templates live.
+- load_all_templates reads user and system templates for the API.
+- list_scenes returns the scene list used by the builder screen.
+- list_templates returns saved templates grouped by source.
+- validate_template checks whether one template payload is valid.
+- build_scene_from_template turns one template payload into a runnable scene config.
+- get_template_schema returns the JSON schema for template validation.
+"""
+
 import json
 from pathlib import Path
 
@@ -7,9 +19,11 @@ from litestar.response import Response
 from pydantic import ValidationError
 
 from fos.core.agent import Agent
-from fos.i18n import T
+from fos.core.experiment.config import ExperimentConfig
+from fos.core.experiment.scene import ExperimentScene
 from fos.core.experiment.game_configs import create_council_config
 from fos.core.registry import SCENE_ACTIONS, SCENE_DESCRIPTIONS, SCENE_MAP, get_scene_class
+from fos.i18n import T
 from fos.templates.loader import TemplateLoader
 from fos.templates.schema import GenericTemplate, export_json_schema
 
@@ -32,6 +46,19 @@ DEFAULT_COUNCIL_DRAFT = (
 # Template directories
 USER_TEMPLATES_DIR = Path("templates")
 SYSTEM_TEMPLATES_DIR = Path(__file__).parent.parent.parent.parent / "templates"
+
+
+def _default_experiment_scene(scene_key: str, scene_cls: type[ExperimentScene]) -> ExperimentScene:
+    """Build one experiment-style scene instance with safe default config."""
+    return scene_cls(
+        ExperimentConfig(
+            agents=[],
+            actions=[],
+            parameters={},
+            description="",
+            scenario_id=scene_key,
+        )
+    )
 
 
 def scene_config_template(scene_key: str, scene_cls) -> dict:
@@ -92,8 +119,12 @@ def scene_config_template(scene_key: str, scene_cls) -> dict:
             "basic_actions": ["move", "speak_to"],
         }
 
-    scene = scene_cls("preview", "")
-    config_schema = scene.serialize_config() or {}
+    if isinstance(scene_cls, type) and issubclass(scene_cls, ExperimentScene):
+        scene = _default_experiment_scene(scene_key, scene_cls)
+        config_schema = scene.serialize_config() or {}
+    else:
+        scene = scene_cls("preview", "")
+        config_schema = scene.serialize_config() or {}
 
     if scene_key == "council_scene":
         config_schema = {

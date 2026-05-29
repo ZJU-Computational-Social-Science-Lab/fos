@@ -59,6 +59,36 @@ def test_unknown_action_maps_to_custom_and_records_warning() -> None:
     assert "mystery" in translator.warnings
 
 
+def test_translate_day_accepts_gaworld_action_map_shape() -> None:
+    translator = GAWorldOutputTranslator({50: "Xu Zhixia"})
+    day_data = {
+        "round": 1,
+        "agents": [
+            {
+                "id": 50,
+                "actions": {
+                    "晨间散步，观察社区公共设施使用情况": [
+                        "沿社区步道慢走，注意设施使用频率与人群流动",
+                        "保持距离观察，避免干扰居民正常活动",
+                    ],
+                    "睡觉": [
+                        "在床头放置一张手写便签，记录明日策展会议的议题要点",
+                    ],
+                },
+            }
+        ],
+    }
+
+    events = translator.translate_day(day_data)
+
+    assert len(events) == 2
+    assert events[0]["agent"] == "Xu Zhixia"
+    assert events[0]["action"] == "custom"
+    assert events[0]["parameters"] == {"raw_action": "晨间散步，观察社区公共设施使用情况"}
+    assert events[0]["summary"] == "晨间散步，观察社区公共设施使用情况"
+    assert events[1]["parameters"] == {"raw_action": "睡觉"}
+
+
 def test_translate_state_updates_returns_state_values_by_agent_name() -> None:
     translator = GAWorldOutputTranslator({1: "Alice"})
     day_data = {

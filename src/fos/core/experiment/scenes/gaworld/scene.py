@@ -7,6 +7,7 @@
 - _launch_subprocess prepares GAWorld input files and starts run managers.
 - _build_llm_env_overrides passes only GAWorld-specific LLM keys to GAWorld.
 - _build_output_overrides tells GAWorld where to save every output file.
+- _build_execution_profile_overrides picks the GAWorld runtime profile FOS uses.
 - run_round waits for one day, translates actions, updates state, and returns result.
 - _read_day_data loads one day of per-agent action and state files.
 - serialize_config adds GAWorld extra fields to base serialized scene data.
@@ -42,6 +43,8 @@ FOS_OLLAMA_PROVIDER_NAME = "fos_ollama"
 DEFAULT_FOS_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
 DEFAULT_FOS_OLLAMA_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
 GAWORLD_WAIT_TIMEOUT_S = 1800
+FAST_MODE_TIME_STEP_MINUTES = 120
+DEFAULT_EXECUTION_PROFILE = "fast"
 
 
 @dataclass(frozen=True)
@@ -95,8 +98,116 @@ def _build_output_overrides(output_dir: Path) -> dict[str, Any]:
     }
 
 
-def _build_hermetic_runtime_overrides() -> dict[str, Any]:
-    """Turns off local GAWorld services that FOS did not ask to use."""
+def _build_real_work_overrides(output_dir: Path, enabled: bool) -> dict[str, Any]:
+    """Builds real-work paths under the FOS run folder and sets its mode."""
+    work_dir = output_dir / "work"
+    return {
+        "enabled": enabled,
+        "queue_path": str(work_dir / "queue.jsonl"),
+        "artifacts_dir": str(work_dir),
+        "capabilities_cache": str(work_dir / "capabilities.json"),
+        "market": {
+            "enabled": enabled,
+            "store_path": str(work_dir / "market.jsonl"),
+        },
+    }
+
+
+def _build_low_fidelity_runtime_overrides(output_dir: Path) -> dict[str, Any]:
+    """Turns off expensive GAWorld behavior so FOS can finish days sooner."""
+    return {
+        "time_step_minutes": FAST_MODE_TIME_STEP_MINUTES,
+        "vector_db_top_k": 1,
+        "external_rag": {
+            "bootstrap": {
+                "enabled": False,
+            },
+        },
+        "interests": {
+            "enabled": False,
+        },
+        "news": {
+            "enabled": False,
+            "info_seek": {
+                "enabled": False,
+            },
+        },
+        "visualization": {
+            "output_dir": str(output_dir / "visualization"),
+            "enabled": False,
+        },
+        "routine_change": {
+            "enabled": False,
+        },
+        "daily_planning": {
+            "flexible": {
+                "enabled": True,
+                "min_items": 3,
+                "max_items": 4,
+                "max_time_shift_minutes": 60,
+                "min_gap_minutes": 60,
+                "allow_insertions": False,
+            },
+        },
+        "spontaneity": {
+            "enabled": False,
+        },
+        "memory": {
+            "consolidation": {
+                "enabled": False,
+            },
+            "decay": {
+                "enabled": False,
+            },
+            "skill_consolidation": {
+                "enabled": False,
+            },
+        },
+        "dynamic_behavior": {
+            "enabled": False,
+        },
+        "human_realism": {
+            "enabled": False,
+        },
+        "fos_fast_mode": {
+            "deterministic_cognition": True,
+            "skip_daily_summary": True,
+            "skip_daily_diary": True,
+        },
+    }
+
+
+def _build_balanced_runtime_overrides() -> dict[str, Any]:
+    """Keeps the main speedups without the most aggressive fast-mode shortcuts."""
+    return {
+        "time_step_minutes": FAST_MODE_TIME_STEP_MINUTES,
+        "external_rag": {"bootstrap": {"enabled": False}},
+        "news": {"enabled": False, "info_seek": {"enabled": False}},
+        "dynamic_behavior": {"enabled": False},
+        "human_realism": {"enabled": False},
+        "fos_fast_mode": {},
+    }
+
+
+def _normalize_execution_profile(raw_value: Any) -> str:
+    """Maps user input to one supported GAWorld execution profile."""
+    profile = str(raw_value or DEFAULT_EXECUTION_PROFILE).strip().lower()
+    if profile in {"fast", "balanced", "full_fidelity"}:
+        return profile
+    return DEFAULT_EXECUTION_PROFILE
+
+
+def _build_execution_profile_overrides(profile: str, output_dir: Path) -> dict[str, Any]:
+    """Returns runtime overrides for the selected GAWorld execution profile."""
+    if profile == "full_fidelity":
+        return {}
+    if profile == "balanced":
+        return _build_balanced_runtime_overrides()
+    return _build_low_fidelity_runtime_overrides(output_dir)
+
+
+def _build_hermetic_runtime_overrides(output_dir: Path, enable_real_work: bool = False) -> dict[str, Any]:
+    """Turns off optional GAWorld services unless FOS explicitly re-enables them."""
     return {
         "environment_config_path": "",
         "external_environment_service": {
@@ -107,6 +218,19 @@ def _build_hermetic_runtime_overrides() -> dict[str, Any]:
             "local_agent_ids": [],
             "peer_agent_ids": [],
         },
+        "extensions": {
+            "strict": False,
+            "hooks": {
+                "on_simulation_start": [],
+                "on_day_start": [],
+                "on_time_tick": [],
+                "on_agent_pre_step": [],
+                "on_agent_post_step": [],
+                "on_day_end": [],
+                "on_simulation_end": [],
+            },
+        },
+        "real_work": _build_real_work_overrides(output_dir, enabled=enable_real_work),
     }
 
 
@@ -256,11 +380,19 @@ class GAWorldScene(ExperimentScene):
 
         temp_dir = Path(tempfile.mkdtemp(prefix="gaworld_"))
         output_dir = Path(self.config.parameters.get("output_dir", temp_dir / "output"))
+        enable_real_work = bool(self.config.parameters.get("enable_gaworld_real_work", False))
+        execution_profile = _normalize_execution_profile(
+            self.config.parameters.get("execution_profile", DEFAULT_EXECUTION_PROFILE)
+        )
         config_overrides: dict[str, Any] = {
             "sim_days": self._sim_days,
             "seed": self._seed,
             **_build_output_overrides(output_dir),
-            **_build_hermetic_runtime_overrides(),
+            **_build_hermetic_runtime_overrides(
+                output_dir=output_dir,
+                enable_real_work=enable_real_work,
+            ),
+            **_build_execution_profile_overrides(execution_profile, output_dir),
         }
         if profiles:
             profiles_path = temp_dir / "profiles.csv"
