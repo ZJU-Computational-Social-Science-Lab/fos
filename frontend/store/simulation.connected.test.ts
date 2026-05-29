@@ -199,4 +199,126 @@ describe('Simulation Slice - Connected Experiment Payload', () => {
     });
     expect(payload.agent_config.agents).toHaveLength(1);
   });
+
+  it('keeps selected gaworld agent ids and infers agent_ids when the text field is blank', async () => {
+    const { createSimulation } = await import('../services/simulations');
+    const template: SimulationTemplate = {
+      id: 'experiment-template',
+      name: 'GAWorld Selected Agents',
+      description: 'Generative city experiment',
+      category: 'custom',
+      sceneType: 'experiment',
+      agents: [
+        {
+          id: '1',
+          name: 'Li Zeyu',
+          role: 'Resident',
+          avatarUrl: '',
+          profile: 'Age: 24',
+          llmConfig: {
+            provider: 'mock',
+            model: 'mock',
+          },
+          properties: { residence: 'Hangzhou' },
+          history: {},
+          memory: [],
+          knowledgeBase: [],
+        },
+        {
+          id: '2',
+          name: 'Zhou Wanqing',
+          role: 'Resident',
+          avatarUrl: '',
+          profile: 'Age: 26',
+          llmConfig: {
+            provider: 'mock',
+            model: 'mock',
+          },
+          properties: { residence: 'Hangzhou' },
+          history: {},
+          memory: [],
+          knowledgeBase: [],
+        },
+        {
+          id: '3',
+          name: 'Chen Yihang',
+          role: 'Resident',
+          avatarUrl: '',
+          profile: 'Age: 22',
+          llmConfig: {
+            provider: 'mock',
+            model: 'mock',
+          },
+          properties: { residence: 'Hangzhou' },
+          history: {},
+          memory: [],
+          knowledgeBase: [],
+        },
+        {
+          id: '4',
+          name: 'Xu Manting',
+          role: 'Resident',
+          avatarUrl: '',
+          profile: 'Age: 28',
+          llmConfig: {
+            provider: 'mock',
+            model: 'mock',
+          },
+          properties: { residence: 'Hangzhou' },
+          history: {},
+          memory: [],
+          knowledgeBase: [],
+        },
+      ],
+      defaultTimeConfig: {
+        baseTime: new Date().toISOString(),
+        unit: 'hour',
+        step: 1,
+      },
+      genericConfig: {
+        id: 'gaworld',
+        name: 'GAWorld',
+        description: 'Generative city experiment',
+        coreMechanics: [],
+        availableActions: [],
+        scenario_id: 'gaworld',
+        round_visibility: 'simultaneous',
+        parameters: {
+          sim_days: 2,
+          agent_ids: '',
+        },
+        actions: [
+          {
+            name: 'work',
+            description: 'Work',
+          },
+        ],
+        environment: {
+          description: 'Generative city experiment',
+        },
+      },
+      defaultNetwork: {},
+    };
+
+    useSimulationStore.getState().addSimulation(
+      'GAWorld Selected Agents',
+      template,
+      undefined,
+      undefined,
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(createSimulation).toHaveBeenCalledTimes(1);
+    const payload = vi.mocked(createSimulation).mock.calls[0][1];
+    expect(payload.scene_type).toBe('gaworld_scene');
+    expect(payload.scene_config.parameters.agent_ids).toBe('1,2,3,4');
+    expect(payload.agent_config.agents.map((agent: { id: string }) => agent.id)).toEqual([
+      '1',
+      '2',
+      '3',
+      '4',
+    ]);
+  });
 });

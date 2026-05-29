@@ -227,3 +227,36 @@ def test_gaworld_routing_replaces_placeholder_agents(monkeypatch: pytest.MonkeyP
     tree = simtree_runtime._build_tree_for_sim(sim_record, clients={})
 
     assert tree.nodes[tree.root]["sim"].scene.config.agents == fake_agents
+
+
+def test_gaworld_routing_keeps_explicit_agents_when_text_selection_is_blank(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Explicit GAWorld agents stay selected even when agent_ids text is blank."""
+    monkeypatch.setattr(simtree_runtime, "_GAWORLD_PATH", "C:/startup/gaworld")
+
+    sim_record = type(
+        "SimRecord",
+        (),
+        {
+            "id": "SIM-GAWORLD-5",
+            "scene_type": "gaworld_scene",
+            "scene_config": {"parameters": {"agent_ids": ""}},
+            "name": "GAWorld Explicit Agent Test",
+            "description": "",
+            "notes": "",
+            "agent_config": {
+                "agents": [
+                    {"id": "34", "name": "Xu Guilan", "properties": {"residence": "Hangzhou"}},
+                    {"id": "35", "name": "Cai Derong", "properties": {"residence": "Hangzhou"}},
+                    {"name": "Missing Id"},
+                ]
+            },
+        },
+    )()
+
+    tree = simtree_runtime._build_tree_for_sim(sim_record, clients={})
+
+    scene = tree.nodes[tree.root]["sim"].scene
+    assert [agent["id"] for agent in scene.config.agents[:2]] == ["34", "35"]
+    assert scene.config.parameters["agent_ids"] == ["34", "35"]

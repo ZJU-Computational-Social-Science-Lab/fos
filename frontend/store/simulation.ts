@@ -510,6 +510,12 @@ export const createSimulationSlice: StateCreator<
           };
           const backendSceneType = mapSceneType[template.sceneType] || template.sceneType;
           const isGAWorldScenario = template.genericConfig?.scenario_id === 'gaworld' || backendSceneType === 'gaworld_scene';
+          const inferGAWorldAgentIds = (): string[] => {
+            if (!isGAWorldScenario) return [];
+            return (finalAgents || [])
+              .map((agent: any) => String(agent?.id || '').trim())
+              .filter((agentId: string) => agentId.length > 0);
+          };
 
           // Determine if this is an experiment template (has structured actions)
           const isExperimentTemplate = backendSceneType === 'experiment_template' ||
@@ -553,7 +559,18 @@ export const createSimulationSlice: StateCreator<
           }
 
           if (template.genericConfig?.parameters) {
-            sceneConfig.parameters = template.genericConfig.parameters;
+            sceneConfig.parameters = { ...template.genericConfig.parameters };
+          }
+
+          if (isGAWorldScenario) {
+            const inferredAgentIds = inferGAWorldAgentIds();
+            const configuredAgentIds = String(sceneConfig.parameters?.agent_ids || '').trim();
+            if (!sceneConfig.parameters) {
+              sceneConfig.parameters = {};
+            }
+            if (!configuredAgentIds && inferredAgentIds.length > 0) {
+              sceneConfig.parameters.agent_ids = inferredAgentIds.join(',');
+            }
           }
 
           if (isExperimentTemplate && templateActions.length > 0) {
@@ -581,6 +598,7 @@ export const createSimulationSlice: StateCreator<
             agent_config: {
               language: i18n.language || 'en',
               agents: (finalAgents || []).map((a: any) => ({
+                id: a.id,
                 name: a.name,
                 profile: a.profile || a.rolePrompt,  // FIX: Fall back to rolePrompt if profile is undefined
                 rolePrompt: a.rolePrompt,            // ADD: Pass rolePrompt explicitly for experiment templates

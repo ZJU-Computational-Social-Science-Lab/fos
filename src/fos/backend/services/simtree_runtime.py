@@ -89,6 +89,29 @@ def _resolve_gaworld_agents(agent_config: dict) -> list[dict]:
     return profile_agents or agents
 
 
+def _resolve_gaworld_agent_ids(params: dict, agents: list[dict]) -> list[str]:
+    """Build the GAWorld agent ID list from params first, then explicit agents."""
+    raw_agent_ids = params.get("agent_ids", [])
+    if isinstance(raw_agent_ids, str):
+        ids = [part.strip() for part in raw_agent_ids.split(",") if part.strip()]
+        if ids:
+            return ids
+    elif isinstance(raw_agent_ids, list):
+        ids = [str(agent_id).strip() for agent_id in raw_agent_ids if str(agent_id).strip()]
+        if ids:
+            return ids
+
+    resolved_ids: list[str] = []
+    for agent in agents:
+        raw_agent_id = agent.get("id")
+        if raw_agent_id is None:
+            continue
+        agent_id = str(raw_agent_id).strip()
+        if agent_id:
+            resolved_ids.append(agent_id)
+    return resolved_ids
+
+
 class SimTreeRecord:
     def __init__(self, tree: SimTree):
         self.tree = tree
@@ -660,6 +683,7 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
             gaworld_path, list(gaworld_params.keys()),
         )
         gaworld_agents = _resolve_gaworld_agents(agent_config)
+        gaworld_params["agent_ids"] = _resolve_gaworld_agent_ids(gaworld_params, gaworld_agents)
         config = ExperimentConfig(
             agents=gaworld_agents,
             actions=inner_cfg.get("actions", gaworld_params.get("actions", [])),

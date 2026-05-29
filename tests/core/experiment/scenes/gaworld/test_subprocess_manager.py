@@ -95,6 +95,44 @@ def test_wait_for_day_raises_timeout_error_when_deadline_passes(tmp_path: Path) 
         manager.wait_for_day(day=10, timeout=0.05, poll_interval=0.01)
 
 
+def test_wait_for_day_writes_live_diagnostic_snapshot_on_timeout(tmp_path: Path) -> None:
+    output_dir = tmp_path / "out"
+    memory_dir = output_dir / "memory"
+    memory_dir.mkdir(parents=True)
+    (output_dir / "gaworld.log").write_text("12:00:01 | rag_seed_script bootstrap", encoding="utf-8")
+
+    manager = GAWorldSubprocessManager(tmp_path, {}, output_dir)
+    manager.process = SimpleNamespace(poll=lambda: None)
+    manager.launch_started_at = 0.0
+
+    with pytest.raises(GAWorldTimeoutError, match="gaworld_wait_status.json"):
+        manager.wait_for_day(day=10, timeout=0.05, poll_interval=0.01)
+
+    snapshot_path = output_dir / "gaworld_wait_status.json"
+    snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    assert snapshot["status"] == "timed_out"
+    assert snapshot["target_day"] == 10
+    assert snapshot["state_file_exists"] is False
+    assert "first_rag_bootstrap_s" in snapshot["observed_phases"]
+    assert snapshot["log_tail"] == "12:00:01 | rag_seed_script bootstrap"
+
+
+def test_wait_for_day_logs_progress_before_timeout(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    output_dir = tmp_path / "out"
+    (output_dir / "memory").mkdir(parents=True)
+    (output_dir / "gaworld.log").write_text("12:00:01 | rag_seed_script bootstrap", encoding="utf-8")
+
+    manager = GAWorldSubprocessManager(tmp_path, {}, output_dir)
+    manager.process = SimpleNamespace(poll=lambda: None)
+    manager.launch_started_at = 0.0
+    caplog.set_level("INFO")
+
+    with pytest.raises(GAWorldTimeoutError):
+        manager.wait_for_day(day=10, timeout=0.05, poll_interval=0.01)
+
+    assert any("GAWorld wait_for_day progress" in message for message in caplog.messages)
+
+
 def test_kill_calls_terminate_on_windows(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     called = {"terminate": False}
 
