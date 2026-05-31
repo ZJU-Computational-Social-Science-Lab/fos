@@ -1048,33 +1048,29 @@
       "name": "GAWorld 城市仿真",
       "description": "包含 50 名杭州居民的多智能体生成式城市仿真。",
       "parameters": {
-        "sim_days": {
-          "label": "模拟天数",
-          "description": "模拟运行的天数"
+        "execution_profile": {
+          "label": "起始模式",
+          "description": "先选择一个快速起始模式，再调整下方的城市系统。"
         },
-        "agent_ids": {
-          "label": "智能体 ID",
-          "description": "逗号分隔的 ID 列表（留空则包含全部 50 个智能体）"
+        "information_mode": {
+          "label": "信息",
+          "description": "城市里外部信息流动的程度。"
+        },
+        "daily_life_mode": {
+          "label": "日常生活",
+          "description": "日常安排是更固定还是更灵活。"
+        },
+        "people_mode": {
+          "label": "人群",
+          "description": "居民行为有多适应环境、多人性化。"
+        },
+        "memory_mode": {
+          "label": "记忆",
+          "description": "居民会把多少前几天的经历带到今天。"
         },
         "seed": {
           "label": "随机种子",
           "description": "用于可重复性的种子值"
-        },
-        "intervention_enabled": {
-          "label": "启用对比干预",
-          "description": "同时运行基线和干预分支进行对比"
-        },
-        "intervention_event_name": {
-          "label": "干预事件名称",
-          "description": "政策干预的简短名称"
-        },
-        "intervention_event_description": {
-          "label": "干预事件描述",
-          "description": "政策干预的完整描述"
-        },
-        "intervention_day": {
-          "label": "干预开始天数",
-          "description": "干预生效的天数"
         }
       },
       "actions": {

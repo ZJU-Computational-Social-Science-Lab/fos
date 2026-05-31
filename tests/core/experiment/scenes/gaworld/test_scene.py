@@ -20,6 +20,8 @@
 - test_launch_subprocess_injects_dedicated_gaworld_api_key checks GAWorld's own key is passed through.
 - test_launch_subprocess_warns_when_no_gaworld_llm_key_exists checks missing GAWorld keys are reported.
 - test_serialize_config_includes_skipped_days checks skipped days are returned in config serialization.
+- test_gaworld_scene_is_not_complete_without_a_setup_day_cap checks GAWorld no
+  longer stops because of a removed setup duration parameter.
 """
 
 from __future__ import annotations
@@ -43,7 +45,7 @@ def _make_config() -> ExperimentConfig:
             {"id": "2", "name": "Bob"},
         ],
         actions=[],
-        parameters={"sim_days": 2, "agent_ids": ["1", "2"], "seed": 7},
+        parameters={"seed": 7},
     )
 
 
@@ -81,6 +83,13 @@ def test_type_identifier_matches_expected_value() -> None:
 def test_constructor_starts_with_empty_skipped_days() -> None:
     scene = GAWorldScene(_make_config())
     assert scene.skipped_days == []
+
+
+def test_gaworld_scene_is_not_complete_without_a_setup_day_cap() -> None:
+    scene = GAWorldScene(_make_config())
+    scene.current_round = 100
+
+    assert scene.is_complete() is False
 
 
 def test_initialize_sets_translator_without_starting_subprocess(monkeypatch) -> None:

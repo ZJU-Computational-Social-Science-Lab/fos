@@ -1048,33 +1048,29 @@
       "name": "GAWorld City Simulation",
       "description": "Multi-agent generative city simulation with 50 Hangzhou residents.",
       "parameters": {
-        "sim_days": {
-          "label": "Simulation Days",
-          "description": "Number of days to simulate"
+        "execution_profile": {
+          "label": "Starting Point",
+          "description": "Choose a quick starter profile, then adjust the city systems below."
         },
-        "agent_ids": {
-          "label": "Agent IDs",
-          "description": "Comma-separated IDs to include (empty = all 50)"
+        "information_mode": {
+          "label": "Information",
+          "description": "How much outside information moves through the city."
+        },
+        "daily_life_mode": {
+          "label": "Daily Life",
+          "description": "How fixed or flexible daily routines are."
+        },
+        "people_mode": {
+          "label": "People",
+          "description": "How adaptive and human-like people behave."
+        },
+        "memory_mode": {
+          "label": "Memory",
+          "description": "How much people carry forward from previous days."
         },
         "seed": {
           "label": "Random Seed",
           "description": "Seed for reproducibility"
-        },
-        "intervention_enabled": {
-          "label": "Enable Comparative Intervention",
-          "description": "Run baseline and treatment branches side by side"
-        },
-        "intervention_event_name": {
-          "label": "Intervention Event Name",
-          "description": "Short name for the policy intervention"
-        },
-        "intervention_event_description": {
-          "label": "Intervention Event Description",
-          "description": "Full description of the policy intervention"
-        },
-        "intervention_day": {
-          "label": "Intervention Start Day",
-          "description": "Day number when the intervention takes effect"
         }
       },
       "actions": {
