@@ -2545,15 +2545,113 @@
       "action_2_description": "动作二说明",
       "custom_prompt": "自定义场景提示"
     },
-    "paramDescriptions": {
-      "cascade_mode": "选择是严格逐层传达，还是允许在传递中出现改写、冲突和截留。",
-      "distortion_strength": "只在失真模式下生效。数值越高，下层越可能明显改写原政策。",
-      "conflict_sensitivity": "只在失真模式下生效。数值越高，角色利益冲突越容易转化为抵触或偏离。",
-      "block_probability": "只在失真模式下生效。表示智能体直接不往下传、选择截留政策的基础概率。",
-      "num_agents_per_tier": "控制每一个层级自动生成多少个智能体。",
-      "policy_text": "仅用于设定第一轮的开场背景或情境，不会自动作为后续逐级传递时必须保留的原始政策。"
-    },
-    "payoffMatrix": {
+      "paramDescriptions": {
+        "cascade_mode": "选择是严格逐层传达，还是允许在传递中出现改写、冲突和截留。",
+        "distortion_strength": "只在失真模式下生效。数值越高，下层越可能明显改写原政策。",
+        "conflict_sensitivity": "只在失真模式下生效。数值越高，角色利益冲突越容易转化为抵触或偏离。",
+        "block_probability": "只在失真模式下生效。表示智能体直接不往下传、选择截留政策的基础概率。",
+        "num_agents_per_tier": "控制每一个层级自动生成多少个智能体。",
+        "policy_text": "仅用于设定第一轮的开场背景或情境，不会自动作为后续逐级传递时必须保留的原始政策。"
+      },
+      "gaworld": {
+        "startingPointTitle": "起始模式",
+        "startingPointHint": "先选择一个起始模式，再细调下面的城市系统。",
+        "citySystemsTitle": "城市系统",
+        "advancedTitle": "高级",
+        "seedLabel": "可重复种子",
+        "seedDescription": "使用相同种子可重复相同设置。",
+        "presets": {
+          "fast": {
+            "title": "快速",
+            "description": "适合快速试验的轻量城市运行。"
+          },
+          "balanced": {
+            "title": "平衡",
+            "description": "在速度和城市细节之间取中间值。"
+          },
+          "full_fidelity": {
+            "title": "完整",
+            "description": "细节最丰富的城市运行方式。"
+          }
+        },
+        "groups": {
+          "information": {
+            "title": "信息",
+            "description": "城市里外部信息流动的程度。"
+          },
+          "daily_life": {
+            "title": "日常生活",
+            "description": "日常安排是更固定还是更灵活。"
+          },
+          "people": {
+            "title": "人群",
+            "description": "居民行为有多适应环境、多人性化。"
+          },
+          "memory": {
+            "title": "记忆",
+            "description": "居民会把多少前几天的经历带到今天。"
+          }
+        },
+        "modes": {
+          "information": {
+            "off": {
+              "title": "关闭",
+              "description": "居民不会对外部信息源作出反应。"
+            },
+            "city_news": {
+              "title": "仅城市新闻",
+              "description": "居民会收到共享新闻，但不会主动搜索更多信息。"
+            },
+            "active_flow": {
+              "title": "主动信息流",
+              "description": "居民既会收到共享新闻，也会主动寻找更多信息。"
+            }
+          },
+          "daily_life": {
+            "stable_routines": {
+              "title": "稳定日程",
+              "description": "日常安排大多重复，变化较少。"
+            },
+            "some_variation": {
+              "title": "适度变化",
+              "description": "日常生活会有一些变化，但不会太混乱。"
+            },
+            "flexible_daily_life": {
+              "title": "灵活日常",
+              "description": "计划更容易变动，也更容易出现临时调整。"
+            }
+          },
+          "people": {
+            "simple_behavior": {
+              "title": "简单行为",
+              "description": "居民行为更基础、更可预测。"
+            },
+            "adaptive_behavior": {
+              "title": "适应行为",
+              "description": "居民会以适中的程度根据处境调整行为。"
+            },
+            "rich_human_behavior": {
+              "title": "丰富人性行为",
+              "description": "居民会展现更强的适应性和更丰富的人性细节。"
+            }
+          },
+          "memory": {
+            "in_the_moment": {
+              "title": "只看当下",
+              "description": "居民主要根据当天情况行动。"
+            },
+            "some_continuity": {
+              "title": "有些连续性",
+              "description": "居民会保留一部分最近几天的上下文。"
+            },
+            "rich_memory": {
+              "title": "丰富记忆",
+              "description": "居民会在多天之间形成更强的连续性。"
+            }
+          }
+        }
+      },
+      "payoffMatrix": {
       "howToRead": {
         "title": "如何阅读此矩阵：",
         "rows": "行",
@@ -3093,15 +3191,14 @@
     "gaworld": {
       "name": "GAWorld 城市仿真",
       "description": "包含 50 名杭州居民的多智能体生成式城市仿真。",
-      "parameters": {
-        "sim_days": { "label": "仿真天数", "description": "要仿真的天数" },
-        "agent_ids": { "label": "智能体 ID", "description": "要纳入的 ID（逗号分隔，留空表示全部 50 人）" },
-        "seed": { "label": "随机种子", "description": "" },
-        "intervention_enabled": { "label": "启用对照干预", "description": "" },
-        "intervention_event_name": { "label": "干预事件名称", "description": "政策干预的简短名称" },
-        "intervention_event_description": { "label": "干预事件描述", "description": "政策干预的完整描述" },
-        "intervention_day": { "label": "干预开始日", "description": "" }
-      },
+        "parameters": {
+          "execution_profile": { "label": "起始模式", "description": "先选择一个快速起始模式，再调整下方的城市系统。" },
+          "information_mode": { "label": "信息", "description": "城市里外部信息流动的程度。" },
+          "daily_life_mode": { "label": "日常生活", "description": "日常安排是更固定还是更灵活。" },
+          "people_mode": { "label": "人群", "description": "居民行为有多适应环境、多人性化。" },
+          "memory_mode": { "label": "记忆", "description": "居民会把多少前几天的经历带到今天。" },
+          "seed": { "label": "随机种子", "description": "使用相同种子可重复相同设置。" }
+        },
       "actions": {
         "work": { "name": "工作", "description": "智能体执行工作任务" },
         "social_interact": { "name": "社交互动", "description": "智能体与其他智能体互动" },

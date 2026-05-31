@@ -1,12 +1,12 @@
 /**
- * Tests for Step 4 GAWorld agent loading.
+ * Tests for the GAWorld population chooser in Step 4.
  *
- * Checks that Step 4 asks for GAWorld profile agents if the builder reaches the
- * agent screen without any agents already loaded.
+ * Checks that GAWorld waits for a population choice before loading residents
+ * and then requests the chosen cohort size.
  */
 
 import React from 'react';
-import { render, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Step4Agents } from '../Step4Agents';
@@ -18,7 +18,7 @@ vi.mock('../../../store/experiment-builder', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, options?: { defaultValue?: string; count?: number }) => options?.defaultValue || key,
   }),
 }));
 
@@ -48,7 +48,7 @@ describe('Step4Agents GAWorld defaults', () => {
     vi.restoreAllMocks();
   });
 
-  it('test_gaworld_step_four_loads_profile_agents_when_empty', async () => {
+  it('test_gaworld_step_four_shows_population_chooser_before_loading_agents', async () => {
     const loadDefaultAgentsForScenario = vi.fn(() => Promise.resolve());
     vi.mocked(useExperimentBuilder).mockReturnValue({
       agentMode: 'manual',
@@ -60,7 +60,7 @@ describe('Step4Agents GAWorld defaults', () => {
       llmProviders: [],
       selectedProviderId: null,
       setSelectedProviderId: vi.fn(),
-      scenarioParams: { agent_ids: '34,35' },
+      scenarioParams: {},
       setScenarioParams: vi.fn(),
       loadProviders: vi.fn(),
       getSelectedProviderId: vi.fn(() => null),
@@ -78,15 +78,14 @@ describe('Step4Agents GAWorld defaults', () => {
 
     render(<Step4Agents />);
 
-    await waitFor(() => {
-      expect(loadDefaultAgentsForScenario).toHaveBeenCalledWith('gaworld', '34,35');
-    });
+    expect(screen.getByText('Choose starting population')).toBeInTheDocument();
+    expect(screen.getByText(/GAWorld includes 50 residents/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Load residents' })).toBeInTheDocument();
+    expect(loadDefaultAgentsForScenario).not.toHaveBeenCalled();
   });
 
-  it('test_gaworld_step_four_retries_profile_agents_after_failed_load', async () => {
-    const loadDefaultAgentsForScenario = vi.fn()
-      .mockRejectedValueOnce(new Error('backend was not ready'))
-      .mockResolvedValueOnce(undefined);
+  it('test_gaworld_step_four_loads_recommended_population_when_requested', async () => {
+    const loadDefaultAgentsForScenario = vi.fn().mockResolvedValue(undefined);
     vi.mocked(useExperimentBuilder).mockReturnValue({
       agentMode: 'manual',
       setAgentMode: vi.fn(),
@@ -97,7 +96,7 @@ describe('Step4Agents GAWorld defaults', () => {
       llmProviders: [],
       selectedProviderId: null,
       setSelectedProviderId: vi.fn(),
-      scenarioParams: { agent_ids: '34,35' },
+      scenarioParams: {},
       setScenarioParams: vi.fn(),
       loadProviders: vi.fn(),
       getSelectedProviderId: vi.fn(() => null),
@@ -115,8 +114,57 @@ describe('Step4Agents GAWorld defaults', () => {
 
     render(<Step4Agents />);
 
+    fireEvent.click(screen.getByRole('button', { name: '10 residents' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Load residents' }));
+
     await waitFor(() => {
-      expect(loadDefaultAgentsForScenario).toHaveBeenCalledTimes(2);
+      expect(loadDefaultAgentsForScenario).toHaveBeenCalledTimes(1);
     });
+
+    const [, agentIds] = loadDefaultAgentsForScenario.mock.calls[0];
+    const selectedIds = String(agentIds).split(',');
+    expect(loadDefaultAgentsForScenario).toHaveBeenCalledWith('gaworld', expect.any(String));
+    expect(selectedIds).toHaveLength(10);
+  });
+
+  it('test_gaworld_step_four_loads_full_city_when_fifty_residents_are_selected', async () => {
+    const loadDefaultAgentsForScenario = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(useExperimentBuilder).mockReturnValue({
+      agentMode: 'manual',
+      setAgentMode: vi.fn(),
+      agentTypes: [],
+      addAgentType: vi.fn(),
+      removeAgentType: vi.fn(),
+      updateAgentType: vi.fn(),
+      llmProviders: [],
+      selectedProviderId: null,
+      setSelectedProviderId: vi.fn(),
+      scenarioParams: {},
+      setScenarioParams: vi.fn(),
+      loadProviders: vi.fn(),
+      getSelectedProviderId: vi.fn(() => null),
+      selectedScenarioId: 'gaworld',
+      selectedScenarioData: {
+        id: 'gaworld',
+        name: 'GAWorld',
+        category: 'generative_city',
+        description: 'GAWorld',
+        parameters: [],
+        actions: [],
+      },
+      loadDefaultAgentsForScenario,
+    } as ReturnType<typeof useExperimentBuilder>);
+
+    render(<Step4Agents />);
+
+    fireEvent.click(screen.getByRole('button', { name: '50 residents' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Load residents' }));
+
+    await waitFor(() => {
+      expect(loadDefaultAgentsForScenario).toHaveBeenCalledTimes(1);
+    });
+
+    const [, agentIds] = loadDefaultAgentsForScenario.mock.calls[0];
+    expect(String(agentIds).split(',')).toHaveLength(50);
   });
 });

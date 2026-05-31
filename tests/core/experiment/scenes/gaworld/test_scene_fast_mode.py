@@ -13,6 +13,12 @@
   fast-mode shortcuts.
 - test_launch_subprocess_uses_full_fidelity_execution_profile checks that the
   most faithful profile avoids fast-mode behavior overrides.
+- test_launch_subprocess_maps_information_mode_to_runtime_overrides checks the
+  beginner-friendly information control feeds GAWorld settings.
+- test_launch_subprocess_maps_memory_mode_to_runtime_overrides checks the
+  beginner-friendly memory control feeds GAWorld settings.
+- test_launch_subprocess_explicit_city_system_modes_override_preset_defaults
+  checks explicit city-system choices win over the starter preset.
 """
 
 from __future__ import annotations
@@ -31,7 +37,7 @@ def _make_config() -> ExperimentConfig:
         scenario_id="gaworld_scene",
         agents=[{"id": "1", "name": "Alice"}],
         actions=[],
-        parameters={"sim_days": 1, "agent_ids": ["1"], "seed": 7},
+        parameters={"seed": 7},
     )
 
 
@@ -245,3 +251,104 @@ def test_launch_subprocess_uses_full_fidelity_execution_profile(
     assert "dynamic_behavior" not in overrides
     assert "human_realism" not in overrides
     assert "fos_fast_mode" not in overrides
+
+
+def test_launch_subprocess_maps_information_mode_to_runtime_overrides(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config = _make_config()
+    config.parameters["information_mode"] = "active_flow"
+    config.parameters["output_dir"] = tmp_path / "gaworld-output"
+    config.parameters["gaworld_path"] = tmp_path / "GAWorld"
+    captured: dict[str, Any] = {}
+
+    class FakeManager:
+        def __init__(self, **kwargs: Any) -> None:
+            captured.update(kwargs)
+            self.output_dir = kwargs["output_dir"]
+
+        def launch(self) -> None:
+            captured["launched"] = True
+
+    monkeypatch.setattr(scene_module, "load_profiles", lambda: [_make_profile()])
+    monkeypatch.setattr(scene_module, "export_profiles_csv", lambda _profiles, _path: None)
+    monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
+
+    scene = GAWorldScene(config)
+    scene._launch_subprocess()
+
+    overrides = captured["config_overrides"]
+    assert overrides["news"]["enabled"] is True
+    assert overrides["news"]["info_seek"]["enabled"] is True
+    assert overrides["external_rag"]["bootstrap"]["enabled"] is True
+
+
+def test_launch_subprocess_maps_memory_mode_to_runtime_overrides(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config = _make_config()
+    config.parameters["memory_mode"] = "in_the_moment"
+    config.parameters["output_dir"] = tmp_path / "gaworld-output"
+    config.parameters["gaworld_path"] = tmp_path / "GAWorld"
+    captured: dict[str, Any] = {}
+
+    class FakeManager:
+        def __init__(self, **kwargs: Any) -> None:
+            captured.update(kwargs)
+            self.output_dir = kwargs["output_dir"]
+
+        def launch(self) -> None:
+            captured["launched"] = True
+
+    monkeypatch.setattr(scene_module, "load_profiles", lambda: [_make_profile()])
+    monkeypatch.setattr(scene_module, "export_profiles_csv", lambda _profiles, _path: None)
+    monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
+
+    scene = GAWorldScene(config)
+    scene._launch_subprocess()
+
+    overrides = captured["config_overrides"]
+    assert overrides["vector_db_top_k"] == 1
+    assert overrides["memory"]["consolidation"]["enabled"] is False
+    assert overrides["memory"]["decay"]["enabled"] is False
+    assert overrides["memory"]["skill_consolidation"]["enabled"] is False
+    assert overrides["fos_fast_mode"]["skip_daily_summary"] is True
+    assert overrides["fos_fast_mode"]["skip_daily_diary"] is True
+
+
+def test_launch_subprocess_explicit_city_system_modes_override_preset_defaults(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config = _make_config()
+    config.parameters["execution_profile"] = "fast"
+    config.parameters["information_mode"] = "active_flow"
+    config.parameters["people_mode"] = "rich_human_behavior"
+    config.parameters["output_dir"] = tmp_path / "gaworld-output"
+    config.parameters["gaworld_path"] = tmp_path / "GAWorld"
+    captured: dict[str, Any] = {}
+
+    class FakeManager:
+        def __init__(self, **kwargs: Any) -> None:
+            captured.update(kwargs)
+            self.output_dir = kwargs["output_dir"]
+
+        def launch(self) -> None:
+            captured["launched"] = True
+
+    monkeypatch.setattr(scene_module, "load_profiles", lambda: [_make_profile()])
+    monkeypatch.setattr(scene_module, "export_profiles_csv", lambda _profiles, _path: None)
+    monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
+
+    scene = GAWorldScene(config)
+    scene._launch_subprocess()
+
+    overrides = captured["config_overrides"]
+    assert overrides["news"]["enabled"] is True
+    assert overrides["news"]["info_seek"]["enabled"] is True
+    assert overrides["external_rag"]["bootstrap"]["enabled"] is True
+    assert overrides["interests"]["enabled"] is True
+    assert overrides["dynamic_behavior"]["enabled"] is True
+    assert overrides["human_realism"]["enabled"] is True

@@ -2596,15 +2596,113 @@
       "action_2_description": "Action 2 description",
       "custom_prompt": "Custom Scenario Prompt"
     },
-    "paramDescriptions": {
-      "cascade_mode": "Choose whether each level must relay the policy faithfully or may distort and block it during transmission.",
-      "distortion_strength": "Only used in distortion mode. Higher values make downstream rewrites of the policy more severe.",
-      "conflict_sensitivity": "Only used in distortion mode. Higher values make value conflicts more likely to become resistance or deviation.",
-      "block_probability": "Only used in distortion mode. The base probability that an agent withholds the policy instead of forwarding it.",
-      "num_agents_per_tier": "Controls how many agents are generated for each hierarchy level.",
-      "policy_text": "Used only to set the opening background or situation for round 1. It does not automatically become the protected source policy for later relay."
-    },
-    "payoffMatrix": {
+      "paramDescriptions": {
+        "cascade_mode": "Choose whether each level must relay the policy faithfully or may distort and block it during transmission.",
+        "distortion_strength": "Only used in distortion mode. Higher values make downstream rewrites of the policy more severe.",
+        "conflict_sensitivity": "Only used in distortion mode. Higher values make value conflicts more likely to become resistance or deviation.",
+        "block_probability": "Only used in distortion mode. The base probability that an agent withholds the policy instead of forwarding it.",
+        "num_agents_per_tier": "Controls how many agents are generated for each hierarchy level.",
+        "policy_text": "Used only to set the opening background or situation for round 1. It does not automatically become the protected source policy for later relay."
+      },
+      "gaworld": {
+        "startingPointTitle": "Starting point",
+        "startingPointHint": "Choose a starter mode, then fine-tune the city systems below.",
+        "citySystemsTitle": "City systems",
+        "advancedTitle": "Advanced",
+        "seedLabel": "Reproducibility seed",
+        "seedDescription": "Use the same seed to repeat the same setup.",
+        "presets": {
+          "fast": {
+            "title": "Fast",
+            "description": "A lightweight city run for quick iteration."
+          },
+          "balanced": {
+            "title": "Balanced",
+            "description": "A middle ground between speed and city detail."
+          },
+          "full_fidelity": {
+            "title": "Full",
+            "description": "The richest city run with the most detail."
+          }
+        },
+        "groups": {
+          "information": {
+            "title": "Information",
+            "description": "How much outside information moves through the city."
+          },
+          "daily_life": {
+            "title": "Daily Life",
+            "description": "How fixed or flexible daily routines are."
+          },
+          "people": {
+            "title": "People",
+            "description": "How adaptive and human-like people behave."
+          },
+          "memory": {
+            "title": "Memory",
+            "description": "How much people carry forward from previous days."
+          }
+        },
+        "modes": {
+          "information": {
+            "off": {
+              "title": "Off",
+              "description": "People do not react to outside information sources."
+            },
+            "city_news": {
+              "title": "City news only",
+              "description": "People receive shared news without active seeking."
+            },
+            "active_flow": {
+              "title": "Active information flow",
+              "description": "People receive shared news and actively seek more."
+            }
+          },
+          "daily_life": {
+            "stable_routines": {
+              "title": "Stable routines",
+              "description": "Daily plans mostly repeat with little variation."
+            },
+            "some_variation": {
+              "title": "Some variation",
+              "description": "Daily life changes sometimes without becoming chaotic."
+            },
+            "flexible_daily_life": {
+              "title": "Flexible daily life",
+              "description": "Plans shift often and leave room for more improvisation."
+            }
+          },
+          "people": {
+            "simple_behavior": {
+              "title": "Simple behavior",
+              "description": "People behave in a more basic and predictable way."
+            },
+            "adaptive_behavior": {
+              "title": "Adaptive behavior",
+              "description": "People respond to their situation in a moderate way."
+            },
+            "rich_human_behavior": {
+              "title": "Rich human behavior",
+              "description": "People show richer adaptation and human detail."
+            }
+          },
+          "memory": {
+            "in_the_moment": {
+              "title": "In-the-moment",
+              "description": "People mostly act on the current day."
+            },
+            "some_continuity": {
+              "title": "Some continuity",
+              "description": "People carry some recent context forward."
+            },
+            "rich_memory": {
+              "title": "Rich memory",
+              "description": "People build stronger continuity across days."
+            }
+          }
+        }
+      },
+      "payoffMatrix": {
       "howToRead": {
         "title": "How to read this matrix:",
         "rows": "Rows",
@@ -3103,15 +3201,14 @@
     "gaworld": {
       "name": "GAWorld City Simulation",
       "description": "Multi-agent generative city simulation with 50 Hangzhou residents.",
-      "parameters": {
-        "sim_days": { "label": "Simulation Days", "description": "Number of days to simulate" },
-        "agent_ids": { "label": "Agent IDs", "description": "Comma-separated IDs to include (empty = all 50)" },
-        "seed": { "label": "Random Seed", "description": "" },
-        "intervention_enabled": { "label": "Enable Comparative Intervention", "description": "" },
-        "intervention_event_name": { "label": "Intervention Event Name", "description": "Short name for the policy intervention" },
-        "intervention_event_description": { "label": "Intervention Event Description", "description": "Full description of the policy intervention" },
-        "intervention_day": { "label": "Intervention Start Day", "description": "" }
-      },
+        "parameters": {
+          "execution_profile": { "label": "Starting Point", "description": "Choose a quick starter profile, then adjust the city systems below." },
+          "information_mode": { "label": "Information", "description": "How much outside information moves through the city." },
+          "daily_life_mode": { "label": "Daily Life", "description": "How fixed or flexible daily routines are." },
+          "people_mode": { "label": "People", "description": "How adaptive and human-like people behave." },
+          "memory_mode": { "label": "Memory", "description": "How much people carry forward from previous days." },
+          "seed": { "label": "Random Seed", "description": "Use the same seed to repeat the same setup." }
+        },
       "actions": {
         "work": { "name": "Work", "description": "Agent performs work duties" },
         "social_interact": { "name": "Social Interact", "description": "Agent interacts with other agents" },

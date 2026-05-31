@@ -8,10 +8,12 @@
 - _build_llm_env_overrides passes only GAWorld-specific LLM keys to GAWorld.
 - _build_output_overrides tells GAWorld where to save every output file.
 - _build_execution_profile_overrides picks the GAWorld runtime profile FOS uses.
+- _build_city_system_runtime_overrides maps beginner city-system choices into
+  GAWorld runtime settings.
 - run_round waits for one day, translates actions, updates state, and returns result.
 - _read_day_data loads one day of per-agent action and state files.
 - serialize_config adds GAWorld extra fields to base serialized scene data.
-- is_complete reports when configured simulation days are done.
+- is_complete reports whether FOS should stop advancing the scene automatically.
 """
 
 from __future__ import annotations
@@ -28,6 +30,14 @@ from typing import Any, Callable
 from fos.core.experiment.runner import RoundResult
 from fos.core.experiment.scene import ExperimentScene
 from fos.core.experiment.scenes.gaworld.profiles import export_profiles_csv, load_profiles
+from fos.core.experiment.scenes.gaworld.runtime_modes import (
+    build_daily_life_overrides,
+    build_information_overrides,
+    build_memory_overrides,
+    build_people_overrides,
+    has_explicit_city_system_mode,
+    merge_nested_overrides,
+)
 from fos.core.experiment.scenes.gaworld.subprocess_manager import GAWorldSubprocessManager
 from fos.core.experiment.scenes.gaworld.translator import GAWorldOutputTranslator
 
@@ -44,6 +54,7 @@ DEFAULT_FOS_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
 DEFAULT_FOS_OLLAMA_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
 GAWORLD_WAIT_TIMEOUT_S = 1800
 FAST_MODE_TIME_STEP_MINUTES = 120
+DEFAULT_RUNTIME_SIM_DAYS = 365
 DEFAULT_EXECUTION_PROFILE = "fast"
 
 
@@ -206,6 +217,23 @@ def _build_execution_profile_overrides(profile: str, output_dir: Path) -> dict[s
     return _build_low_fidelity_runtime_overrides(output_dir)
 
 
+def _build_city_system_runtime_overrides(parameters: dict[str, Any]) -> dict[str, Any]:
+    """Builds runtime settings from beginner-facing city-system controls."""
+    overrides: dict[str, Any] = {}
+    builders = [
+        ("information_mode", build_information_overrides),
+        ("daily_life_mode", build_daily_life_overrides),
+        ("people_mode", build_people_overrides),
+        ("memory_mode", build_memory_overrides),
+    ]
+    for key, builder in builders:
+        if not has_explicit_city_system_mode(parameters, key):
+            continue
+        mode = str(parameters.get(key, "")).strip()
+        overrides = merge_nested_overrides(overrides, builder(mode))
+    return overrides
+
+
 def _build_hermetic_runtime_overrides(output_dir: Path, enable_real_work: bool = False) -> dict[str, Any]:
     """Turns off optional GAWorld services unless FOS explicitly re-enables them."""
     return {
@@ -311,7 +339,6 @@ class GAWorldScene(ExperimentScene):
         super().__init__(config)
         params = config.parameters or {}
         self.skipped_days: list[int] = []
-        self._sim_days: int = int(params.get("sim_days", 0) or 0)
         self._agent_ids = _normalize_selected_agent_ids(params.get("agent_ids", []), config.agents)
         self._seed: int = int(params.get("seed", 0) or 0)
         self._translator: GAWorldOutputTranslator | None = None
@@ -384,8 +411,8 @@ class GAWorldScene(ExperimentScene):
         execution_profile = _normalize_execution_profile(
             self.config.parameters.get("execution_profile", DEFAULT_EXECUTION_PROFILE)
         )
-        config_overrides: dict[str, Any] = {
-            "sim_days": self._sim_days,
+        config_overrides = {
+            "sim_days": DEFAULT_RUNTIME_SIM_DAYS,
             "seed": self._seed,
             **_build_output_overrides(output_dir),
             **_build_hermetic_runtime_overrides(
@@ -394,6 +421,10 @@ class GAWorldScene(ExperimentScene):
             ),
             **_build_execution_profile_overrides(execution_profile, output_dir),
         }
+        config_overrides = merge_nested_overrides(
+            config_overrides,
+            _build_city_system_runtime_overrides(self.config.parameters),
+        )
         if profiles:
             profiles_path = temp_dir / "profiles.csv"
             export_profiles_csv(profiles, profiles_path)
@@ -544,4 +575,4 @@ class GAWorldScene(ExperimentScene):
         return data
 
     def is_complete(self) -> bool:
-        return self.current_round >= self._sim_days
+        return False

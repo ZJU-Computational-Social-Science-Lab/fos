@@ -20,6 +20,8 @@ import type { Agent } from '../../types';
 import { applyLlmDistribution } from '../../utils/llmDistribution';
 import { Button } from '../ui/button';
 import { ChevronDown } from 'lucide-react';
+import GAWorldPopulationChooser from './GAWorldPopulationChooser';
+import { getGAWorldStarterCohortIds, RECOMMENDED_STARTER_POPULATION } from './gaworldStarterCohorts';
 
 type TierValue = string;
 
@@ -213,14 +215,13 @@ export const Step4Agents: React.FC = () => {
   const [importError, setImportError] = useState<string | null>(null);
   const [tierOrderDraft, setTierOrderDraft] = useState<string[]>(['top', 'mid', 'low']);
   const [llmAllocations, setLlmAllocations] = useState<LLMAllocation[]>([]);
-  const [defaultAgentRetryTick, setDefaultAgentRetryTick] = useState(0);
+  const [selectedGAWorldPopulation, setSelectedGAWorldPopulation] = useState<number>(RECOMMENDED_STARTER_POPULATION);
+  const [isLoadingGAWorldPopulation, setIsLoadingGAWorldPopulation] = useState(false);
 
   // ==================== Agent List UI State ====================
   const [isAgentListOpen, setIsAgentListOpen] = useState(false);
   const [expandedAgentId, setExpandedAgentId] = useState<string | null>(null);
   const agentListRef = useRef<HTMLDivElement>(null);
-  const defaultAgentLoadKeyRef = useRef<string | null>(null);
-  const defaultAgentLoadAttemptsRef = useRef<Record<string, number>>({});
 
   const scenarioId = selectedScenarioData?.id || selectedScenarioId || '';
   const showTierControls = isPolicyCascadeScenario(selectedScenarioData || { id: scenarioId });
@@ -233,44 +234,6 @@ export const Step4Agents: React.FC = () => {
   const hasPendingTierDraft =
     tierOrderDraft.length !== tierOrder.length ||
     tierOrderDraft.some((tier, index) => tier.trim().toLowerCase() !== String(tierOrder[index] || '').trim().toLowerCase());
-
-  useEffect(() => {
-    if (scenarioId !== 'gaworld' || agentTypes.length > 0) {
-      return;
-    }
-
-    const agentIds = String(scenarioParams?.agent_ids || '').trim();
-    const loadKey = `${scenarioId}:${agentIds}`;
-    if (defaultAgentLoadKeyRef.current === loadKey) {
-      return;
-    }
-
-    defaultAgentLoadKeyRef.current = loadKey;
-    const attempts = defaultAgentLoadAttemptsRef.current[loadKey] || 0;
-    void loadDefaultAgentsForScenario(
-      'gaworld',
-      agentIds || undefined,
-    )
-      .then(() => {
-        delete defaultAgentLoadAttemptsRef.current[loadKey];
-        setImportError(null);
-      })
-      .catch((error: unknown) => {
-        defaultAgentLoadKeyRef.current = null;
-        defaultAgentLoadAttemptsRef.current[loadKey] = attempts + 1;
-        console.error('Failed to load GAWorld default agents in Step 4:', error);
-        setImportError(`Failed to load GAWorld agents: ${error instanceof Error ? error.message : String(error)}`);
-        if (attempts < 2) {
-          setDefaultAgentRetryTick((tick) => tick + 1);
-        }
-      });
-  }, [
-    agentTypes.length,
-    defaultAgentRetryTick,
-    loadDefaultAgentsForScenario,
-    scenarioId,
-    scenarioParams?.agent_ids,
-  ]);
 
   useEffect(() => {
     if (!showTierControls) return;
@@ -423,6 +386,23 @@ export const Step4Agents: React.FC = () => {
       properties: showTierControls ? { tier: '' } : {},
       providerId: selectedProviderId,
     });
+  };
+
+  const handleLoadGAWorldPopulation = () => {
+    const agentIds = getGAWorldStarterCohortIds(selectedGAWorldPopulation).join(',');
+    setIsLoadingGAWorldPopulation(true);
+    void loadDefaultAgentsForScenario('gaworld', agentIds)
+      .then(() => {
+        setImportError(null);
+        setIsAgentListOpen(true);
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to load GAWorld starter residents:', error);
+        setImportError(`Failed to load GAWorld agents: ${error instanceof Error ? error.message : String(error)}`);
+      })
+      .finally(() => {
+        setIsLoadingGAWorldPopulation(false);
+      });
   };
 
   const handleUpdateTier = (id: string, tier: TierValue) => {
@@ -894,6 +874,15 @@ export const Step4Agents: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {scenarioId === 'gaworld' && agentMode === 'manual' && agentTypes.length === 0 && (
+        <GAWorldPopulationChooser
+          selectedCount={selectedGAWorldPopulation}
+          isLoading={isLoadingGAWorldPopulation}
+          onSelectCount={setSelectedGAWorldPopulation}
+          onLoadResidents={handleLoadGAWorldPopulation}
+        />
+      )}
 
       {showTierControls && (
         <div className="space-y-4">
