@@ -2557,8 +2557,6 @@
       "num_agents_per_tier": "控制每一个层级自动生成多少个智能体。",
       "policy_text": "仅用于设定第一轮的开场背景或情境，不会自动作为后续逐级传递时必须保留的原始政策。"
     },
-<<<<<<< Updated upstream
-=======
     "gaworld": {
       "startingPointTitle": "起始模式",
       "startingPointHint": "先选择一个起始模式，再细调下面的城市系统。",
@@ -2657,7 +2655,6 @@
         }
       }
     },
->>>>>>> Stashed changes
     "payoffMatrix": {
       "howToRead": {
         "title": "如何阅读此矩阵：",
@@ -3159,8 +3156,6 @@
     "primaryNav": "主导航",
     "switchToLight": "切换到日间模式",
     "switchToDark": "切换到夜间模式"
-<<<<<<< Updated upstream
-=======
   },
   "topologyExplorer": {
     "topologyExplorer": "????",
@@ -3477,6 +3472,5 @@
       "templateSavedSuccess": "已保存到你的个人预设模板。",
       "templateSavedFailed": "模拟已经创建成功，但保存个人预设模板失败。"
     }
->>>>>>> Stashed changes
   }
 }
