@@ -2573,8 +2573,6 @@
       "num_agents_per_tier": "Controls how many agents are generated for each hierarchy level.",
       "policy_text": "Used only to set the opening background or situation for round 1. It does not automatically become the protected source policy for later relay."
     },
-<<<<<<< Updated upstream
-=======
     "gaworld": {
       "startingPointTitle": "Starting point",
       "startingPointHint": "Choose a starter mode, then fine-tune the city systems below.",
@@ -2673,7 +2671,6 @@
         }
       }
     },
->>>>>>> Stashed changes
     "payoffMatrix": {
       "howToRead": {
         "title": "How to read this matrix:",
@@ -3168,8 +3165,6 @@
       "role": "Role",
       "profile": "No description"
     }
-<<<<<<< Updated upstream
-=======
   },
   "scenario_templates": {
     "gaworld": {
@@ -3452,6 +3447,5 @@
       "templateSavedSuccess": "Saved to your personal preset templates.",
       "templateSavedFailed": "The simulation was created, but saving the personal preset template failed."
     }
->>>>>>> Stashed changes
   }
 }
