@@ -1,6 +1,7 @@
 # CI requirements for fos — pinned versions from development environment
 # Runtime dependencies
 aiosqlite==0.20.0
+APScheduler==3.11.2
 alembic==1.18.4
 bcrypt==5.0.0
 celery==5.6.2
