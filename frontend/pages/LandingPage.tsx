@@ -1,3 +1,8 @@
+/**
+ * This page introduces the product and guides people to the main parts of the app.
+ * LandingPage shows the welcome areas, the preview media, the capability cards, the example scenes, and the final action choices.
+ */
+
 import { useEffect } from "react";
 import {
   Archive,
@@ -15,6 +20,7 @@ import {
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useThemeStore } from "../store/theme";
+import { getBilibiliEmbedUrl, isBilibiliConfigured } from "../config/video";
 
 import landingDemoVideo from "../assets/landing/landing-demo.mp4";
 import sceneBehaviorImage from "../assets/landing/scene-behavior.png";
@@ -270,18 +276,28 @@ export function LandingPage() {
 
           <div className="ss-landing__preview-grid">
             <div className="ss-landing__preview-stage ss-landing__preview-stage--video">
-              <video
-                className="ss-landing__preview-video"
-                src={landingDemoVideo}
-                autoPlay
-                muted
-                loop
-                playsInline
-                controls
-                preload="metadata"
-              >
-                {t("landing.preview.title")}
-              </video>
+              {isBilibiliConfigured() ? (
+                <iframe
+                  className="ss-landing__preview-video"
+                  src={getBilibiliEmbedUrl()}
+                  scrolling="no"
+                  border="none"
+                  frameBorder="0"
+                  allowFullScreen
+                  title={String(t("landing.preview.title"))}
+                />
+              ) : (
+                <video
+                  className="ss-landing__preview-video"
+                  src={landingDemoVideo}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  controls
+                  aria-label={String(t("landing.preview.title"))}
+                />
+              )}
             </div>
           </div>
         </div>
