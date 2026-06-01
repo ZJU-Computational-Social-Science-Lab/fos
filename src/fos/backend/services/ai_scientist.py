@@ -7,6 +7,8 @@ import json
 import re
 from typing import Any
 
+from fos.i18n import T
+
 
 @dataclass
 class TemplateSuggestion:
@@ -175,219 +177,219 @@ SCENARIO_KEYWORDS: dict[str, list[str]] = {
 
 DEFAULT_SCENARIO_ACTIONS: dict[str, list[dict[str, str]]] = {
     "public_goods": [
-        {"name": "contribute", "description": "Contribute some of your resources to the shared pool."},
-        {"name": "keep", "description": "Keep your resources for yourself."},
+        {"name": "contribute", "description": T("prompts.actions.ai_scientist.contribute")},
+        {"name": "keep", "description": T("prompts.actions.ai_scientist.keep")},
     ],
     "prisoners_dilemma": [
-        {"name": "cooperate", "description": "Choose the cooperative option."},
-        {"name": "defect", "description": "Choose the self-interested option."},
+        {"name": "cooperate", "description": T("prompts.actions.ai_scientist.cooperate")},
+        {"name": "defect", "description": T("prompts.actions.ai_scientist.defect")},
     ],
     "battle_of_the_sexes": [
-        {"name": "option_a", "description": "Coordinate on the first focal option."},
-        {"name": "option_b", "description": "Coordinate on the second focal option."},
+        {"name": "option_a", "description": T("prompts.actions.ai_scientist.option_a")},
+        {"name": "option_b", "description": T("prompts.actions.ai_scientist.option_b")},
     ],
     "stag_hunt": [
-        {"name": "stag", "description": "Choose the risky but high-payoff cooperative option."},
-        {"name": "hare", "description": "Choose the safer but lower-payoff option."},
+        {"name": "stag", "description": T("prompts.actions.ai_scientist.stag")},
+        {"name": "hare", "description": T("prompts.actions.ai_scientist.hare")},
     ],
     "coordination_game": [
-        {"name": "option_a", "description": "Choose the first focal option."},
-        {"name": "option_b", "description": "Choose the second focal option."},
+        {"name": "option_a", "description": T("prompts.actions.ai_scientist.option_a")},
+        {"name": "option_b", "description": T("prompts.actions.ai_scientist.option_b")},
     ],
     "policy_erosion": [
-        {"name": "transmit_faithfully", "description": "Pass the directive on exactly as received."},
-        {"name": "reinterpret_downward", "description": "Modify the directive while passing it down."},
-        {"name": "comply_directive", "description": "Implement the directive as instructed."},
-        {"name": "resist_quietly", "description": "Appear compliant while resisting in practice."},
+        {"name": "transmit_faithfully", "description": T("prompts.actions.ai_scientist.transmit_faithfully")},
+        {"name": "reinterpret_downward", "description": T("prompts.actions.ai_scientist.reinterpret_downward")},
+        {"name": "comply_directive", "description": T("prompts.actions.ai_scientist.comply_directive")},
+        {"name": "resist_quietly", "description": T("prompts.actions.ai_scientist.resist_quietly")},
     ],
     "social_norm_disruption": [
-        {"name": "comply_publicly", "description": "Openly accept and follow the new rule."},
-        {"name": "comply_covertly_resist", "description": "Formally comply but privately resist."},
-        {"name": "resist_openly", "description": "Openly resist the new rule."},
-        {"name": "persuade_others", "description": "Try to persuade others toward your position."},
+        {"name": "comply_publicly", "description": T("prompts.actions.ai_scientist.comply_publicly")},
+        {"name": "comply_covertly_resist", "description": T("prompts.actions.ai_scientist.comply_covertly_resist")},
+        {"name": "resist_openly", "description": T("prompts.actions.ai_scientist.resist_openly")},
+        {"name": "persuade_others", "description": T("prompts.actions.ai_scientist.persuade_others")},
     ],
     "echo_chamber": [
-        {"name": "express_opinion", "description": "Share your current view."},
-        {"name": "reinforce_ingroup", "description": "Amplify similar views within your group."},
-        {"name": "challenge_outgroup", "description": "Challenge opposing views."},
-        {"name": "disengage", "description": "Withdraw from engagement."},
+        {"name": "express_opinion", "description": T("prompts.actions.ai_scientist.express_opinion")},
+        {"name": "reinforce_ingroup", "description": T("prompts.actions.ai_scientist.reinforce_ingroup")},
+        {"name": "challenge_outgroup", "description": T("prompts.actions.ai_scientist.challenge_outgroup")},
+        {"name": "disengage", "description": T("prompts.actions.ai_scientist.disengage")},
     ],
     "resource_scarcity": [
-        {"name": "share_resources", "description": "Share some resources with others."},
-        {"name": "hoard", "description": "Keep resources for yourself."},
-        {"name": "propose_trade", "description": "Offer a trade or exchange."},
-        {"name": "form_contract", "description": "Propose a cooperative agreement."},
+        {"name": "share_resources", "description": T("prompts.actions.ai_scientist.share_resources")},
+        {"name": "hoard", "description": T("prompts.actions.ai_scientist.hoard")},
+        {"name": "propose_trade", "description": T("prompts.actions.ai_scientist.propose_trade")},
+        {"name": "form_contract", "description": T("prompts.actions.ai_scientist.form_contract")},
     ],
     "open_discussion": [
-        {"name": "speak", "description": "Say something to the group."},
+        {"name": "speak", "description": T("prompts.actions.ai_scientist.speak")},
     ],
     "council_chamber": [
-        {"name": "speak", "description": "Make a statement during deliberation."},
-        {"name": "vote_yes", "description": "Vote in favor of the proposal."},
-        {"name": "vote_no", "description": "Vote against the proposal."},
-        {"name": "abstain", "description": "Neither vote yes nor no."},
+        {"name": "speak", "description": T("prompts.actions.ai_scientist.speak")},
+        {"name": "vote_yes", "description": T("prompts.actions.ai_scientist.vote_yes")},
+        {"name": "vote_no", "description": T("prompts.actions.ai_scientist.vote_no")},
+        {"name": "abstain", "description": T("prompts.actions.ai_scientist.abstain")},
     ],
     "contagion": [
-        {"name": "move", "description": "Move to a nearby location."},
-        {"name": "speak", "description": "Interact with a nearby participant."},
+        {"name": "move", "description": T("prompts.actions.ai_scientist.move")},
+        {"name": "speak", "description": T("prompts.actions.ai_scientist.speak")},
     ],
 }
 
 CUSTOM_STRUCTURE_ACTIONS: dict[str, list[dict[str, str]]] = {
     "proposal_response_exchange": [
-        {"name": "propose_split", "description": "Propose how to divide or allocate the available resource."},
-        {"name": "approve_split", "description": "Approve the proposed split or allocation."},
-        {"name": "reject_split", "description": "Reject the proposal and block the allocation from taking effect."},
+        {"name": "propose_split", "description": T("prompts.actions.ai_scientist.propose_split")},
+        {"name": "approve_split", "description": T("prompts.actions.ai_scientist.approve_split")},
+        {"name": "reject_split", "description": T("prompts.actions.ai_scientist.reject_split")},
     ],
     "competitive_pressure_choice": [
-        {"name": "choose_compete", "description": "Choose the more competitive or forceful strategy."},
-        {"name": "choose_yield", "description": "Choose the more yielding or harm-avoidant strategy."},
+        {"name": "choose_compete", "description": T("prompts.actions.ai_scientist.choose_compete")},
+        {"name": "choose_yield", "description": T("prompts.actions.ai_scientist.choose_yield")},
     ],
     "shared_target_threshold": [
-        {"name": "contribute_to_target", "description": "Contribute resources toward the shared target."},
-        {"name": "keep_private_reserves", "description": "Keep resources for private use instead of contributing."},
-        {"name": "delegate_choice", "description": "Delegate the contribution decision to another actor or mechanism."},
+        {"name": "contribute_to_target", "description": T("prompts.actions.ai_scientist.contribute_to_target")},
+        {"name": "keep_private_reserves", "description": T("prompts.actions.ai_scientist.keep_private_reserves")},
+        {"name": "delegate_choice", "description": T("prompts.actions.ai_scientist.delegate_choice")},
     ],
     "majority_visibility_pressure": [
-        {"name": "align_with_visible_majority", "description": "Publicly align with the visible majority position."},
-        {"name": "state_independent_answer", "description": "State an independent answer even when it conflicts with the visible majority."},
+        {"name": "align_with_visible_majority", "description": T("prompts.actions.ai_scientist.align_with_visible_majority")},
+        {"name": "state_independent_answer", "description": T("prompts.actions.ai_scientist.state_independent_answer")},
     ],
     "threshold_adoption_process": [
-        {"name": "adopt_behavior", "description": "Adopt the behavior once enough others have already done so."},
-        {"name": "wait_for_more_adoption", "description": "Wait for additional adoption before joining."},
+        {"name": "adopt_behavior", "description": T("prompts.actions.ai_scientist.adopt_behavior")},
+        {"name": "wait_for_more_adoption", "description": T("prompts.actions.ai_scientist.wait_for_more_adoption")},
     ],
     "escalating_bidding": [
-        {"name": "increase_bid", "description": "Increase the current bid to stay in contention or reduce losses."},
-        {"name": "exit_bidding", "description": "Stop bidding and accept the current payoff or loss."},
+        {"name": "increase_bid", "description": T("prompts.actions.ai_scientist.increase_bid")},
+        {"name": "exit_bidding", "description": T("prompts.actions.ai_scientist.exit_bidding")},
     ],
     "attendance_capacity_avoidance": [
-        {"name": "attend", "description": "Go to the crowded venue, resource, or market this round."},
-        {"name": "stay_away", "description": "Stay away this round to avoid overcrowding."},
+        {"name": "attend", "description": T("prompts.actions.ai_scientist.attend")},
+        {"name": "stay_away", "description": T("prompts.actions.ai_scientist.stay_away")},
     ],
     "minority_side_choice": [
-        {"name": "choose_side_a", "description": "Choose the first side, direction, or venue."},
-        {"name": "choose_side_b", "description": "Choose the second side, direction, or venue."},
+        {"name": "choose_side_a", "description": T("prompts.actions.ai_scientist.choose_side_a")},
+        {"name": "choose_side_b", "description": T("prompts.actions.ai_scientist.choose_side_b")},
     ],
     "common_pool_extraction": [
-        {"name": "extract_resource", "description": "Take some amount from the shared finite resource pool."},
-        {"name": "restrain_extraction", "description": "Limit extraction to preserve the common resource."},
-        {"name": "monitor_or_sanction", "description": "Monitor usage or sanction over-extraction."},
+        {"name": "extract_resource", "description": T("prompts.actions.ai_scientist.extract_resource")},
+        {"name": "restrain_extraction", "description": T("prompts.actions.ai_scientist.restrain_extraction")},
+        {"name": "monitor_or_sanction", "description": T("prompts.actions.ai_scientist.monitor_or_sanction")},
     ],
     "sanctioning_public_goods": [
-        {"name": "contribute_to_public_pool", "description": "Contribute resources to the public pool."},
-        {"name": "withhold_contribution", "description": "Keep resources instead of contributing."},
-        {"name": "punish_free_rider", "description": "Spend resources to punish free riders after contributions are revealed."},
+        {"name": "contribute_to_public_pool", "description": T("prompts.actions.ai_scientist.contribute_to_public_pool")},
+        {"name": "withhold_contribution", "description": T("prompts.actions.ai_scientist.withhold_contribution")},
+        {"name": "punish_free_rider", "description": T("prompts.actions.ai_scientist.punish_free_rider")},
     ],
     "spatial_relocation_preference": [
-        {"name": "stay_put", "description": "Stay in the current location if the neighborhood is acceptable."},
-        {"name": "relocate", "description": "Move to a new empty location when the neighborhood is unsatisfactory."},
+        {"name": "stay_put", "description": T("prompts.actions.ai_scientist.stay_put")},
+        {"name": "relocate", "description": T("prompts.actions.ai_scientist.relocate")},
     ],
     "sequential_information_cascade": [
-        {"name": "follow_private_signal", "description": "Choose based on the private signal even if earlier choices differ."},
-        {"name": "follow_observed_majority", "description": "Ignore the private signal and follow the pattern set by earlier choosers."},
+        {"name": "follow_private_signal", "description": T("prompts.actions.ai_scientist.follow_private_signal")},
+        {"name": "follow_observed_majority", "description": T("prompts.actions.ai_scientist.follow_observed_majority")},
     ],
     "organizational_garbage_can": [
-        {"name": "attach_problem", "description": "Attach the current problem to an available decision opportunity."},
-        {"name": "attach_solution", "description": "Push an available solution into the current decision opportunity."},
-        {"name": "defer_or_drift", "description": "Let the issue drift unresolved until another opportunity appears."},
+        {"name": "attach_problem", "description": T("prompts.actions.ai_scientist.attach_problem")},
+        {"name": "attach_solution", "description": T("prompts.actions.ai_scientist.attach_solution")},
+        {"name": "defer_or_drift", "description": T("prompts.actions.ai_scientist.defer_or_drift")},
     ],
     "weighted_opinion_averaging": [
-        {"name": "update_belief", "description": "Update the current belief using a weighted average of neighbors' opinions."},
-        {"name": "hold_current_belief", "description": "Keep the current belief unchanged for this round."},
+        {"name": "update_belief", "description": T("prompts.actions.ai_scientist.update_belief")},
+        {"name": "hold_current_belief", "description": T("prompts.actions.ai_scientist.hold_current_belief")},
     ],
     "collective_motion_alignment": [
-        {"name": "align_heading", "description": "Adjust heading toward the average direction of nearby neighbors."},
-        {"name": "separate_to_avoid_collision", "description": "Move away slightly to avoid collisions with nearby agents."},
-        {"name": "cohere_with_group", "description": "Move toward the local group center to preserve flock cohesion."},
+        {"name": "align_heading", "description": T("prompts.actions.ai_scientist.align_heading")},
+        {"name": "separate_to_avoid_collision", "description": T("prompts.actions.ai_scientist.separate_to_avoid_collision")},
+        {"name": "cohere_with_group", "description": T("prompts.actions.ai_scientist.cohere_with_group")},
     ],
     "resource_search_trade_ecology": [
-        {"name": "move_and_harvest", "description": "Move through the environment and harvest local resources."},
-        {"name": "trade_resources", "description": "Trade resources with another nearby agent."},
-        {"name": "save_or_consume", "description": "Decide whether to consume, store, or invest current resources."},
+        {"name": "move_and_harvest", "description": T("prompts.actions.ai_scientist.move_and_harvest")},
+        {"name": "trade_resources", "description": T("prompts.actions.ai_scientist.trade_resources")},
+        {"name": "save_or_consume", "description": T("prompts.actions.ai_scientist.save_or_consume")},
     ],
     "recruitment_switching": [
-        {"name": "stay_with_current_option", "description": "Remain with the current source, restaurant, or market side."},
-        {"name": "switch_due_to_recruitment", "description": "Switch to the other option after random exploration or social recruitment."},
+        {"name": "stay_with_current_option", "description": T("prompts.actions.ai_scientist.stay_with_current_option")},
+        {"name": "switch_due_to_recruitment", "description": T("prompts.actions.ai_scientist.switch_due_to_recruitment")},
     ],
     "bystander_help_diffusion": [
-        {"name": "provide_help", "description": "Step in to provide help during the emergency or urgent event."},
-        {"name": "wait_for_others", "description": "Wait because others may intervene first or the situation is still ambiguous."},
+        {"name": "provide_help", "description": T("prompts.actions.ai_scientist.provide_help")},
+        {"name": "wait_for_others", "description": T("prompts.actions.ai_scientist.wait_for_others")},
     ],
     "authority_obedience_conflict": [
-        {"name": "comply_with_order", "description": "Comply with the authority's instruction despite growing discomfort."},
-        {"name": "refuse_order", "description": "Refuse to continue once the moral or perceived risk threshold is crossed."},
-        {"name": "withdraw_from_task", "description": "Exit the task entirely instead of continuing under authority pressure."},
+        {"name": "comply_with_order", "description": T("prompts.actions.ai_scientist.comply_with_order")},
+        {"name": "refuse_order", "description": T("prompts.actions.ai_scientist.refuse_order")},
+        {"name": "withdraw_from_task", "description": T("prompts.actions.ai_scientist.withdraw_from_task")},
     ],
     "intergroup_competition_superordinate_goal": [
-        {"name": "cooperate_with_ingroup", "description": "Strengthen coordination and identity within the local group."},
-        {"name": "compete_with_outgroup", "description": "Compete with the rival group over scarce rewards or status."},
-        {"name": "cooperate_across_groups", "description": "Coordinate across group boundaries to achieve a superordinate goal."},
+        {"name": "cooperate_with_ingroup", "description": T("prompts.actions.ai_scientist.cooperate_with_ingroup")},
+        {"name": "compete_with_outgroup", "description": T("prompts.actions.ai_scientist.compete_with_outgroup")},
+        {"name": "cooperate_across_groups", "description": T("prompts.actions.ai_scientist.cooperate_across_groups")},
     ],
     "social_comparison_adjustment": [
-        {"name": "compare_with_peers", "description": "Compare current opinion, performance, or status with similar peers."},
-        {"name": "adjust_self_evaluation", "description": "Adjust self-evaluation, confidence, or opinion after comparison."},
-        {"name": "hold_current_self_view", "description": "Maintain the current self-view despite comparison pressure."},
+        {"name": "compare_with_peers", "description": T("prompts.actions.ai_scientist.compare_with_peers")},
+        {"name": "adjust_self_evaluation", "description": T("prompts.actions.ai_scientist.adjust_self_evaluation")},
+        {"name": "hold_current_self_view", "description": T("prompts.actions.ai_scientist.hold_current_self_view")},
     ],
     "liquidity_run_coordination": [
-        {"name": "withdraw_early", "description": "Withdraw the deposit or claim liquidity before others do."},
-        {"name": "keep_deposit", "description": "Leave the deposit in place and continue holding the claim."},
+        {"name": "withdraw_early", "description": T("prompts.actions.ai_scientist.withdraw_early")},
+        {"name": "keep_deposit", "description": T("prompts.actions.ai_scientist.keep_deposit")},
     ],
     "asymmetric_quality_market": [
-        {"name": "quote_trade_price", "description": "Offer or accept a price under uncertain product quality."},
-        {"name": "certify_or_signal_quality", "description": "Use reputation, warranty, or certification to signal quality."},
-        {"name": "refuse_trade", "description": "Walk away from the trade when the terms do not reveal enough quality."},
+        {"name": "quote_trade_price", "description": T("prompts.actions.ai_scientist.quote_trade_price")},
+        {"name": "certify_or_signal_quality", "description": T("prompts.actions.ai_scientist.certify_or_signal_quality")},
+        {"name": "refuse_trade", "description": T("prompts.actions.ai_scientist.refuse_trade")},
     ],
     "adaptive_asset_market": [
-        {"name": "forecast_and_trade", "description": "Forecast the next price and place a trade using the current strategy."},
-        {"name": "switch_trading_rule", "description": "Switch to a different forecasting or trading rule after poor performance."},
-        {"name": "hold_position", "description": "Keep the current position or stay out of the market this round."},
+        {"name": "forecast_and_trade", "description": T("prompts.actions.ai_scientist.forecast_and_trade")},
+        {"name": "switch_trading_rule", "description": T("prompts.actions.ai_scientist.switch_trading_rule")},
+        {"name": "hold_position", "description": T("prompts.actions.ai_scientist.hold_position")},
     ],
     "noise_arbitrage_market": [
-        {"name": "trade_on_noise_signal", "description": "Trade on sentiment, rumor, or another noisy directional signal."},
-        {"name": "arbitrage_against_mispricing", "description": "Trade against price deviations from perceived fundamental value."},
-        {"name": "reduce_exposure", "description": "Reduce exposure when funding risk or crowd pressure becomes too high."},
+        {"name": "trade_on_noise_signal", "description": T("prompts.actions.ai_scientist.trade_on_noise_signal")},
+        {"name": "arbitrage_against_mispricing", "description": T("prompts.actions.ai_scientist.arbitrage_against_mispricing")},
+        {"name": "reduce_exposure", "description": T("prompts.actions.ai_scientist.reduce_exposure")},
     ],
     "insider_market_making": [
-        {"name": "submit_informed_order", "description": "Place an informed order while trying not to reveal private information too quickly."},
-        {"name": "submit_noise_order", "description": "Submit a random or uninformed order that adds background order flow."},
-        {"name": "update_market_quote", "description": "Update the market quote in response to the observed order flow."},
+        {"name": "submit_informed_order", "description": T("prompts.actions.ai_scientist.submit_informed_order")},
+        {"name": "submit_noise_order", "description": T("prompts.actions.ai_scientist.submit_noise_order")},
+        {"name": "update_market_quote", "description": T("prompts.actions.ai_scientist.update_market_quote")},
     ],
     "exploration_exploitation_learning": [
-        {"name": "explore_new_option", "description": "Try an uncertain new option, method, or project with long-run upside."},
-        {"name": "exploit_known_option", "description": "Use a reliable existing option with stable short-run returns."},
+        {"name": "explore_new_option", "description": T("prompts.actions.ai_scientist.explore_new_option")},
+        {"name": "exploit_known_option", "description": T("prompts.actions.ai_scientist.exploit_known_option")},
     ],
     "supply_chain_bullwhip": [
-        {"name": "place_replenishment_order", "description": "Place a replenishment order based on local inventory and downstream demand."},
-        {"name": "ship_available_inventory", "description": "Ship currently available inventory to the next downstream node."},
-        {"name": "hold_buffer_stock", "description": "Adjust local inventory buffers to manage delay and uncertainty."},
+        {"name": "place_replenishment_order", "description": T("prompts.actions.ai_scientist.place_replenishment_order")},
+        {"name": "ship_available_inventory", "description": T("prompts.actions.ai_scientist.ship_available_inventory")},
+        {"name": "hold_buffer_stock", "description": T("prompts.actions.ai_scientist.hold_buffer_stock")},
     ],
     "innovation_diffusion_marketing": [
-        {"name": "adopt_product", "description": "Adopt or purchase the innovation in the current period."},
-        {"name": "delay_adoption", "description": "Wait for more information, social proof, or compatibility before adopting."},
-        {"name": "promote_to_peers", "description": "Transmit adoption information through word of mouth or visible usage."},
+        {"name": "adopt_product", "description": T("prompts.actions.ai_scientist.adopt_product")},
+        {"name": "delay_adoption", "description": T("prompts.actions.ai_scientist.delay_adoption")},
+        {"name": "promote_to_peers", "description": T("prompts.actions.ai_scientist.promote_to_peers")},
     ],
     "common_pool_governance": [
-        {"name": "harvest_resource", "description": "Harvest from the common resource under the current local rules."},
-        {"name": "monitor_compliance", "description": "Monitor whether other users are following the shared governance rules."},
-        {"name": "sanction_rule_breaker", "description": "Apply a sanction when someone violates agreed extraction or access rules."},
+        {"name": "harvest_resource", "description": T("prompts.actions.ai_scientist.harvest_resource")},
+        {"name": "monitor_compliance", "description": T("prompts.actions.ai_scientist.monitor_compliance")},
+        {"name": "sanction_rule_breaker", "description": T("prompts.actions.ai_scientist.sanction_rule_breaker")},
     ],
     "collective_action_free_rider": [
-        {"name": "contribute_to_collective_action", "description": "Pay a cost to support the group's shared political or social objective."},
-        {"name": "free_ride_on_others", "description": "Avoid paying the contribution cost while hoping others still mobilize."},
-        {"name": "offer_selective_incentive", "description": "Provide selective incentives or penalties to increase participation."},
+        {"name": "contribute_to_collective_action", "description": T("prompts.actions.ai_scientist.contribute_to_collective_action")},
+        {"name": "free_ride_on_others", "description": T("prompts.actions.ai_scientist.free_ride_on_others")},
+        {"name": "offer_selective_incentive", "description": T("prompts.actions.ai_scientist.offer_selective_incentive")},
     ],
     "spatial_price_competition": [
-        {"name": "choose_market_position", "description": "Choose a location or product position in the competitive space."},
-        {"name": "set_price", "description": "Set a selling price while accounting for transport or mismatch costs."},
-        {"name": "buy_nearest_offer", "description": "Choose the nearest or most attractive offer as a consumer."},
+        {"name": "choose_market_position", "description": T("prompts.actions.ai_scientist.choose_market_position")},
+        {"name": "set_price", "description": T("prompts.actions.ai_scientist.set_price")},
+        {"name": "buy_nearest_offer", "description": T("prompts.actions.ai_scientist.buy_nearest_offer")},
     ],
     "reference_dependent_risk_choice": [
-        {"name": "choose_safe_option", "description": "Choose the safer or more certain option."},
-        {"name": "choose_risky_option", "description": "Choose the riskier option with more variance or upside."},
+        {"name": "choose_safe_option", "description": T("prompts.actions.ai_scientist.choose_safe_option")},
+        {"name": "choose_risky_option", "description": T("prompts.actions.ai_scientist.choose_risky_option")},
     ],
     "endowment_statusquo_exchange": [
-        {"name": "keep_endowed_item", "description": "Keep the endowed item or current allocation."},
-        {"name": "offer_exchange", "description": "Offer to exchange, buy, or sell despite the status quo."},
+        {"name": "keep_endowed_item", "description": T("prompts.actions.ai_scientist.keep_endowed_item")},
+        {"name": "offer_exchange", "description": T("prompts.actions.ai_scientist.offer_exchange")},
     ],
 }
 
@@ -570,47 +572,47 @@ STRUCTURE_DISPLAY_TEXTS: dict[str, dict[str, str]] = {
 CUSTOM_ACTION_LIBRARY: list[dict[str, Any]] = [
     {
         "name": "share_status_update",
-        "description": "Share incident status, state changes, or coordination updates with other agents.",
+        "description": T("prompts.actions.ai_scientist_custom.share_status_update"),
         "patterns": [r"状态同步", r"广播", r"共享内存", r"共享", r"告知", r"回复", r"同步更新", r"notify", r"share", r"broadcast", r"update"],
     },
     {
         "name": "reroute_traffic",
-        "description": "Reroute traffic flow away from the incident area and toward fallback corridors.",
+        "description": T("prompts.actions.ai_scientist_custom.reroute_traffic"),
         "patterns": [r"重定向", r"绕行", r"引导", r"疏导", r"开放应急车道", r"route", r"reroute", r"redirect", r"traffic"],
     },
     {
         "name": "request_signal_priority",
-        "description": "Request signal timing changes or priority access for emergency movement.",
+        "description": T("prompts.actions.ai_scientist_custom.request_signal_priority"),
         "patterns": [r"信号灯", r"信号优先", r"绿灯", r"配时", r"绿色通道", r"priority", r"signal", r"green corridor"],
     },
     {
         "name": "dispatch_response_resources",
-        "description": "Dispatch or reallocate emergency resources based on updated incident conditions.",
+        "description": T("prompts.actions.ai_scientist_custom.dispatch_response_resources"),
         "patterns": [r"救护车", r"消防车", r"警车", r"调度", r"出发", r"dispatch", r"resource", r"rescue"],
     },
     {
         "name": "inspect_hazard_zone",
-        "description": "Inspect, scan, or model the incident zone to assess hazards.",
+        "description": T("prompts.actions.ai_scientist_custom.inspect_hazard_zone"),
         "patterns": [r"侦察", r"热成像", r"气体传感器", r"确认", r"扫描", r"三维环境模型", r"inspect", r"scan", r"sensor"],
     },
     {
         "name": "establish_safety_perimeter",
-        "description": "Deploy barriers or expand isolation zones to protect people and infrastructure.",
+        "description": T("prompts.actions.ai_scientist_custom.establish_safety_perimeter"),
         "patterns": [r"路障", r"隔离区", r"封锁", r"扩大隔离区", r"isolation", r"barrier", r"perimeter", r"blockade"],
     },
     {
         "name": "mitigate_hazard",
-        "description": "Contain, absorb, or otherwise mitigate the hazardous material release.",
+        "description": T("prompts.actions.ai_scientist_custom.mitigate_hazard"),
         "patterns": [r"吸附", r"处置", r"泄漏", r"危险源", r"mitigate", r"contain", r"leak"],
     },
     {
         "name": "broadcast_public_guidance",
-        "description": "Push public guidance, route advice, or safety warnings to affected users.",
+        "description": T("prompts.actions.ai_scientist_custom.broadcast_public_guidance"),
         "patterns": [r"导航", r"电子屏", r"社交媒体", r"推送", r"个性化绕行", r"关闭门窗", r"public", r"guidance", r"alert"],
     },
     {
         "name": "replan_strategy",
-        "description": "Replan actions when conditions change, feedback arrives, or hazard levels escalate.",
+        "description": T("prompts.actions.ai_scientist_custom.replan_strategy"),
         "patterns": [r"调整", r"修正", r"升级", r"反馈循环", r"监测用户是否采纳", r"adaptive", r"replan", r"adjust"],
     },
 ]
@@ -784,7 +786,7 @@ def _localize_text(en_text: str, zh_text: str, language: str | None) -> str:
 def extract_json_block(raw_output: str) -> str:
     text = (raw_output or "").strip()
     if not text:
-        raise ValueError("Model returned empty output")
+        raise ValueError(T("error.ai_scientist.model_empty_output"))
 
     fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
     if fenced:
@@ -793,21 +795,21 @@ def extract_json_block(raw_output: str) -> str:
     start = text.find("{")
     end = text.rfind("}")
     if start == -1 or end == -1 or end <= start:
-        raise ValueError("Model output does not contain JSON object")
+        raise ValueError(T("error.ai_scientist.model_output_no_json"))
     return text[start:end + 1]
 
 
 def parse_llm_json(raw_output: str) -> dict[str, Any]:
     parsed = json.loads(extract_json_block(raw_output))
     if not isinstance(parsed, dict):
-        raise ValueError("Model JSON root must be an object")
+        raise ValueError(T("error.ai_scientist.model_json_not_object"))
     return parsed
 
 
 def repair_llm_json(raw_output: str) -> dict[str, Any]:
     text = (raw_output or "").strip()
     if not text:
-        raise ValueError("Model returned empty output")
+        raise ValueError(T("error.ai_scientist.model_empty_output"))
 
     candidates: list[str] = []
     if text:
@@ -830,7 +832,7 @@ def repair_llm_json(raw_output: str) -> dict[str, Any]:
         except Exception:
             continue
 
-    raise ValueError("Unable to repair model JSON output")
+    raise ValueError(T("error.ai_scientist.model_json_repair_failed"))
 
 
 def _normalize_match_text(text: str) -> str:
@@ -1991,23 +1993,43 @@ def _default_actions_for_structure(structure_type: str | None, language: str | N
         defaults = [
             {
                 "name": "reroute_traffic",
-                "description": "Redirect local flow toward safer or less congested routes.",
+                "description": _localize_text(
+                    "Redirect local flow toward safer or less congested routes.",
+                    "将局部流量重定向至更安全或更通畅的路线。",
+                    language,
+                ),
             },
             {
                 "name": "request_signal_priority",
-                "description": "Grant temporary signal priority for emergency movement.",
+                "description": _localize_text(
+                    "Grant temporary signal priority for emergency movement.",
+                    "为紧急通行授予临时信号优先权。",
+                    language,
+                ),
             },
             {
                 "name": "share_status_update",
-                "description": "Publish alerts or routing updates to nearby participants.",
+                "description": _localize_text(
+                    "Publish alerts or routing updates to nearby participants.",
+                    "向附近参与者发布警报或路线更新。",
+                    language,
+                ),
             },
             {
                 "name": "dispatch_response_resources",
-                "description": "Dispatch emergency resources based on the latest shared state.",
+                "description": _localize_text(
+                    "Dispatch emergency resources based on the latest shared state.",
+                    "根据最新共享状态调度应急资源。",
+                    language,
+                ),
             },
             {
                 "name": "inspect_hazard_zone",
-                "description": "Inspect the incident zone to confirm hazards and update the shared model.",
+                "description": _localize_text(
+                    "Inspect the incident zone to confirm hazards and update the shared model.",
+                    "检查事故区域以确认危险并更新共享模型。",
+                    language,
+                ),
             },
         ]
     return [
@@ -2813,19 +2835,19 @@ def _extract_agents(text: str, preferred_scenario_id: str | None) -> list[dict[s
     if preferred_scenario_id == "policy_erosion":
         per_tier = count or 5
         return [
-            {"label": "top tier officials", "description": "Highest-level actors issuing or relaying the policy.", "count": per_tier},
-            {"label": "middle managers", "description": "Intermediate actors interpreting and transmitting the policy.", "count": per_tier},
-            {"label": "frontline staff", "description": "Lowest-level actors implementing or resisting the directive.", "count": per_tier},
+            {"label": "top tier officials", "description": T("prompts.roles.top_tier_officials"), "count": per_tier},
+            {"label": "middle managers", "description": T("prompts.roles.middle_managers"), "count": per_tier},
+            {"label": "frontline staff", "description": T("prompts.roles.frontline_staff"), "count": per_tier},
         ]
 
     if preferred_scenario_id == "council_chamber":
         return [
-            {"label": "council members", "description": "Deliberators who debate and vote on the proposal.", "count": count or 5},
+            {"label": "council members", "description": T("prompts.roles.council_members"), "count": count or 5},
         ]
 
     if preferred_scenario_id == "prisoners_dilemma" or "prisoner" in lowered:
         return [
-            {"label": "players", "description": "Two players choosing between cooperation and defection.", "count": 2},
+            {"label": "players", "description": T("prompts.roles.prisoners_dilemma_players"), "count": 2},
         ]
 
     if any(term in lowered for term in ("manager", "official", "employee", "worker", "resident", "citizen", "household")):
@@ -2846,7 +2868,7 @@ def _extract_agents(text: str, preferred_scenario_id: str | None) -> list[dict[s
             return roles[:4]
 
     return [
-        {"label": "participants", "description": "Primary decision-making participants in the reconstructed experiment.", "count": count or 4},
+        {"label": "participants", "description": T("prompts.roles.default_participants"), "count": count or 4},
     ]
 
 
@@ -3961,7 +3983,7 @@ def normalize_llm_analysis_output(
     template_suggestions: list[TemplateSuggestion],
 ) -> dict[str, Any]:
     if not isinstance(primary, dict):
-        raise ValueError("Model analysis output must be an object")
+        raise ValueError(T("error.ai_scientist.model_analysis_not_object"))
 
     scenario_description = str(primary.get("scenario_description") or primary.get("scenario_summary") or "").strip()
     settings = primary.get("settings") or primary.get("setting_candidates") or []

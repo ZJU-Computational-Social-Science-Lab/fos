@@ -2573,6 +2573,107 @@
       "num_agents_per_tier": "Controls how many agents are generated for each hierarchy level.",
       "policy_text": "Used only to set the opening background or situation for round 1. It does not automatically become the protected source policy for later relay."
     },
+<<<<<<< Updated upstream
+=======
+    "gaworld": {
+      "startingPointTitle": "Starting point",
+      "startingPointHint": "Choose a starter mode, then fine-tune the city systems below.",
+      "citySystemsTitle": "City systems",
+      "advancedTitle": "Advanced",
+      "seedLabel": "Reproducibility seed",
+      "seedDescription": "Use the same seed to repeat the same setup.",
+      "presets": {
+        "fast": {
+          "title": "Fast",
+          "description": "A lightweight city run for quick iteration."
+        },
+        "balanced": {
+          "title": "Balanced",
+          "description": "A middle ground between speed and city detail."
+        },
+        "full_fidelity": {
+          "title": "Full",
+          "description": "The richest city run with the most detail."
+        }
+      },
+      "groups": {
+        "information": {
+          "title": "Information",
+          "description": "How much outside information moves through the city."
+        },
+        "daily_life": {
+          "title": "Daily Life",
+          "description": "How fixed or flexible daily routines are."
+        },
+        "people": {
+          "title": "People",
+          "description": "How adaptive and human-like people behave."
+        },
+        "memory": {
+          "title": "Memory",
+          "description": "How much people carry forward from previous days."
+        }
+      },
+      "modes": {
+        "information": {
+          "off": {
+            "title": "Off",
+            "description": "People do not react to outside information sources."
+          },
+          "city_news": {
+            "title": "City news only",
+            "description": "People receive shared news without active seeking."
+          },
+          "active_flow": {
+            "title": "Active information flow",
+            "description": "People receive shared news and actively seek more."
+          }
+        },
+        "daily_life": {
+          "stable_routines": {
+            "title": "Stable routines",
+            "description": "Daily plans mostly repeat with little variation."
+          },
+          "some_variation": {
+            "title": "Some variation",
+            "description": "Daily life changes sometimes without becoming chaotic."
+          },
+          "flexible_daily_life": {
+            "title": "Flexible daily life",
+            "description": "Plans shift often and leave room for more improvisation."
+          }
+        },
+        "people": {
+          "simple_behavior": {
+            "title": "Simple behavior",
+            "description": "People behave in a more basic and predictable way."
+          },
+          "adaptive_behavior": {
+            "title": "Adaptive behavior",
+            "description": "People respond to their situation in a moderate way."
+          },
+          "rich_human_behavior": {
+            "title": "Rich human behavior",
+            "description": "People show richer adaptation and human detail."
+          }
+        },
+        "memory": {
+          "in_the_moment": {
+            "title": "In-the-moment",
+            "description": "People mostly act on the current day."
+          },
+          "some_continuity": {
+            "title": "Some continuity",
+            "description": "People carry some recent context forward."
+          },
+          "rich_memory": {
+            "title": "Rich memory",
+            "description": "People build stronger continuity across days."
+          }
+        }
+      }
+    },
+>>>>>>> Stashed changes
     "payoffMatrix": {
       "howToRead": {
         "title": "How to read this matrix:",
@@ -3067,5 +3168,290 @@
       "role": "Role",
       "profile": "No description"
     }
+<<<<<<< Updated upstream
+=======
+  },
+  "scenario_templates": {
+    "gaworld": {
+      "name": "GAWorld City Simulation",
+      "description": "Multi-agent generative city simulation with 50 Hangzhou residents.",
+      "parameters": {
+        "execution_profile": {
+          "label": "Starting Point",
+          "description": "Choose a quick starter profile, then adjust the city systems below."
+        },
+        "information_mode": {
+          "label": "Information",
+          "description": "How much outside information moves through the city."
+        },
+        "daily_life_mode": {
+          "label": "Daily Life",
+          "description": "How fixed or flexible daily routines are."
+        },
+        "people_mode": {
+          "label": "People",
+          "description": "How adaptive and human-like people behave."
+        },
+        "memory_mode": {
+          "label": "Memory",
+          "description": "How much people carry forward from previous days."
+        },
+        "seed": {
+          "label": "Random Seed",
+          "description": "Use the same seed to repeat the same setup."
+        }
+      },
+      "actions": {
+        "work": {
+          "name": "Work",
+          "description": "Agent performs work duties"
+        },
+        "social_interact": {
+          "name": "Social Interact",
+          "description": "Agent interacts with other agents"
+        },
+        "consume_media": {
+          "name": "Consume Media",
+          "description": "Agent reads or watches news or social media"
+        },
+        "move": {
+          "name": "Move",
+          "description": "Agent changes location"
+        },
+        "rest": {
+          "name": "Rest",
+          "description": "Agent rests at home or other location"
+        }
+      }
+    }
+  },
+  "dashboardDesk": {
+    "eyebrow": "Desk overview",
+    "title": "Dashboard Desk",
+    "subtitle": "Launch new experiments, revisit active runs, and manage your scenario workspace from one place.",
+    "launchExperiment": "Launch experiment",
+    "openArchive": "Open archive",
+    "providerMissing": "Provider setup required",
+    "providerWarningTitle": "Connect a provider before running simulations",
+    "providerWarningBody": "Add at least one model provider so experiments can run and save results correctly.",
+    "recommendationSetup": "Set up providers",
+    "recommendations": "Recommended next steps",
+    "recommendationsHint": "Use these quick actions to start, explore scenes, and review experiment outcomes.",
+    "recommendationNew": "Start a new experiment",
+    "newExperimentHint": "Open the experiment builder and configure a fresh run.",
+    "recommendationScenes": "Browse scene library",
+    "sceneLibraryHint": "Review available scenario types and pick one to begin.",
+    "recommendationNetwork": "Design network setup",
+    "networkHint": "Prepare agent relationships and simulation structure before launch.",
+    "recommendationAnalyze": "Analyze saved outcomes",
+    "analyzeHint": "Open archived simulations and inspect previous experiment results.",
+    "scenarioEntry": "Scenario entry",
+    "scenarioEntryHint": "Select a scenario template and adjust details before launching.",
+    "openScenarioLibrary": "Open scenario library",
+    "currentExperiment": "Current experiment",
+    "noRecent": "No recent experiment",
+    "currentExperimentHint": "Continue your latest simulation or begin a new one if no active run exists.",
+    "providerReady": "Provider ready",
+    "recentChanges": "Recent changes",
+    "continueLabel": "Continue experiment",
+    "activeStatus": {
+      "active": "Active",
+      "archived": "Archived",
+      "completed": "Completed",
+      "failed": "Failed",
+      "draft": "Draft",
+      "unknown": "Unknown"
+    }
+  },
+  "createExperiment": {
+    "entry": {
+      "badge": "Experiment Entry",
+      "title": "How do you want to create this experiment?",
+      "subtitle": "Choose a preset template to move quickly, or enter the AI-assisted custom flow to extract a new scene and action set from a research question or abstract.",
+      "enter": "Enter",
+      "workflow": "Workflow",
+      "handoff": "Return at Step 2",
+      "standardFlow": "Standard flow",
+      "aiAssisted": "AI-assisted",
+      "guidance": "Entry guidance",
+      "footer": "Preset templates keep the existing FOS setup intact. Custom creation runs an AI-assisted extraction pass first, then hands the result back to the standard builder.",
+      "preset": {
+        "title": "Preset templates",
+        "description": "Open the standard FOS template selection and continue with the existing creation workflow."
+      },
+      "custom": {
+        "title": "Custom experiment",
+        "description": "Use AI to turn a research question or paper abstract into a reviewable scene description and action set."
+      }
+    },
+    "customBuilder": {
+      "badge": "AI social scientist",
+      "title": "Create a custom experiment from research text",
+      "subtitle": "Paste a research question, abstract, or methods section. The assistant extracts a draft scene, candidate actions, possible agents, and key variables for review before handing control back to the standard builder.",
+      "inputLabel": "Research question or abstract",
+      "inputPlaceholder": "Paste a paper abstract, methods section, or the research question you want to model.",
+      "analyze": "Analyze text",
+      "saveTemplateToggle": "Save to my preset templates after creation",
+      "analysisFailed": "Failed to analyze the research text.",
+      "back": "Back to entry",
+      "uploadFile": "Upload file",
+      "clearDraft": "Clear draft",
+      "uploadFileTypeError": "Upload a .txt, .pdf, .doc, or .docx file.",
+      "uploadSuccess": "Uploaded and extracted text from {{name}}",
+      "uploadFailed": "Failed to upload file",
+      "uploadNoText": "The file was uploaded but no readable text was extracted.",
+      "enterTextFirst": "Enter text or upload a file before analyzing.",
+      "inputHint": "Paste an abstract, methods section, or upload a PDF / Word file. Image-based PDFs are OCR'd automatically.",
+      "sourceFileLabel": "Source file",
+      "sourceFile": "Source file: {{name}}",
+      "pageCount": "{{count}} pages",
+      "pageShort": "p. {{page}}",
+      "extractionMethodOcr": "OCR",
+      "extractionMethodManual": "Manual text",
+      "extractionMethodPdf": "PDF text extraction",
+      "extractionMethodGhostscript": "PDF text extraction",
+      "extractionMethodUnknown": "Text extraction",
+      "sceneTitle": "Draft scene description",
+      "templateNameLabel": "Experiment scene name",
+      "templateNamePlaceholder": "Name this experiment scene",
+      "templateNameHint": "This name is used in the builder and, if saving is enabled, as the name of your personal preset template.",
+      "scenePlaceholder": "Edit the scene description before continuing.",
+      "sceneEditorHint": "This draft becomes the scenario description that gets passed into the main builder.",
+      "semanticSchemaTitle": "Semantic schema",
+      "semanticSchemaHint": "This is the structured experiment skeleton inferred from the source before the editable draft was generated.",
+      "noSemanticSchema": "Run analysis to see the extracted experiment schema here.",
+      "schemaResearchGoal": "Research goal",
+      "schemaSetting": "Setting / environment",
+      "schemaParticipants": "Participants / agent roles",
+      "schemaDecisionContext": "Decision context",
+      "schemaChoices": "Per-round choices",
+      "schemaPayoffRules": "Payoff / feedback rules",
+      "schemaConstraints": "Constraints / termination",
+      "schemaInformationStructure": "Information structure",
+      "schemaInteractionTopology": "Interaction topology",
+      "schemaInterventions": "Interventions / treatments",
+      "schemaOutcomes": "Observed outcomes",
+      "schemaKeyVariables": "Key variables",
+      "modeRecommended": "Preset-assisted path",
+      "modeCustom": "Custom path",
+      "settingsTitle": "Draft scenario settings",
+      "settingsSubtitle": "Review key-value setup items extracted from the text.",
+      "addSetting": "Add setting",
+      "settingKeyPlaceholder": "Setting key",
+      "settingValuePlaceholder": "Setting value",
+      "settingReasonPlaceholder": "Why does this setting belong in the reconstructed experiment?",
+      "noSettings": "No settings extracted yet.",
+      "variablesTitle": "Key variables",
+      "variablesHint": "These are the terms the assistant thinks matter most for the experiment setup.",
+      "noVariables": "No key variables detected yet.",
+      "variablePlaceholder": "Variable name",
+      "addVariable": "Add variable",
+      "reviewFlagsTitle": "Assumptions and gaps",
+      "assumptionsTitle": "Current assumptions",
+      "noAssumptions": "No extra assumptions reported.",
+      "missingInfoTitle": "Information for you to confirm",
+      "noMissingInfo": "No obvious gaps reported.",
+      "analysisWarningsTitle": "System warnings",
+      "actionsTitle": "Candidate action set",
+      "actionsSubtitle": "Keep, edit, or remove the choices agents can make each round.",
+      "actionsHelperText": "Keep only the decisions that truly belong in each interaction round. Restore the analyzed action set anytime if manual edits drift too far.",
+      "addAction": "Add action",
+      "actionDescriptionPlaceholder": "Explain what this choice means in the experiment.",
+      "noActions": "No actions detected yet.",
+      "agentsTitle": "Candidate agents",
+      "agentsSubtitle": "These are the roles the assistant thinks may participate. Select the ones you want to carry into step 4 as editable drafts.",
+      "agentsHelperText": "Named roles from the source should usually survive into the final experiment. Restore them here if the draft becomes too generic.",
+      "addAgent": "Add agent",
+      "agentDescriptionPlaceholder": "Describe this agent role.",
+      "noAgents": "No candidate agents detected yet.",
+      "reviewTitle": "Review before continuing",
+      "reviewSubtitle": "Once approved, the extracted scene, settings, actions, and agents are loaded into the standard FOS builder and the flow continues at the network step.",
+      "reviewScene": "Scene",
+      "reviewActions": "Actions",
+      "reviewAgents": "Agents",
+      "reviewFallback": "No scene summary available yet.",
+      "continue": "Approve and continue",
+      "continueHint": "Once approved, the draft is written into the standard experiment builder so you can still confirm parameters, actions, agents, and network settings manually from Step 2 onward.",
+      "reviewBeforeContinue": "Review the scenario, actions, and agents before continuing.",
+      "applyFailed": "Failed to apply the generated draft.",
+      "toggleSelection": "Toggle selection",
+      "validationNotesTitle": "Validation notes",
+      "validationNotesHint": "Open this section when you need to inspect extraction evidence, document quality, or source support.",
+      "supportingPassagesTitle": "Supporting passages",
+      "evidenceChecklistTitle": "Why the system suggested this draft",
+      "confidenceLabel": "Confidence: {{score}}%",
+      "reviewRecommended": "The system found a plausible mapping, but you should review the candidate templates before continuing.",
+      "builderPathMergedTitle": "Choose how to enter the standard Builder",
+      "showAllTemplates": "Show all built-in preset templates",
+      "hideAllTemplates": "Hide remaining built-in presets",
+      "templateGenericReason": "Choose this preset if you want to map the current draft into an existing built-in scenario structure.",
+      "noSourceSections": "Upload a document or run analysis to see extracted sections here.",
+      "noEvidence": "Run analysis to collect supporting snippets from the source.",
+      "evidenceSnippetLabel": "Evidence snippet",
+      "documentInsightsTitle": "Document extraction snapshot",
+      "documentInsightsHint": "Check whether the source extraction itself looks clean before trusting the reconstructed experiment draft.",
+      "documentTitleLabel": "Extracted title",
+      "documentAbstractLabel": "Extracted abstract",
+      "documentSectionsLabel": "Weighted sections",
+      "documentPageQualityLabel": "Avg page quality",
+      "documentOcrLabel": "OCR used",
+      "documentReferencesLabel": "References stripped",
+      "documentFigureCaptionsLabel": "Figure captions",
+      "documentTableCaptionsLabel": "Table captions",
+      "pagePreviewTitle": "OCR / Page extraction preview",
+      "pageLabel": "Page {{page}}",
+      "emptyPage": "No text extracted from this page.",
+      "builderPathTitle": "Return path to the standard builder",
+      "recognitionModeTitle": "Recognition mode",
+      "recognitionModeHint": "Choose whether to use backend-only deterministic recognition or a configured provider model before analyzing the source.",
+      "modeDeterministicTitle": "Deterministic recognition",
+      "modeDeterministicShort": "Backend-only recognition with no provider call and no token cost, but weaker on complex papers.",
+      "modeDeterministicBody": "This mode relies on backend preprocessing, rule extraction, and template matching. It never calls a provider, so it costs no tokens and works well when your configured model is weak, but recognition on complex papers is more limited.",
+      "modeProviderTitle": "Provider-powered recognition",
+      "modeProviderShort": "Model-powered recognition with stronger understanding, but it uses tokens or local inference resources.",
+      "modeProviderBody": "This mode uses your configured model to understand the experiment, recommend templates, and generate the editable draft. Strong models work much better here, but they will consume tokens or local inference resources.",
+      "modeCurrentLabel": "Current mode",
+      "providerSelectLabel": "Recognition model",
+      "providerMissing": "No configured model is available yet. Finish the LLM setup in Settings first.",
+      "providerRequired": "Select a configured model before running provider-powered recognition.",
+      "providerBuiltIn": "built-in endpoint",
+      "useCustomTitle": "Stay in custom scenario mode",
+      "useCustomDescription": "Use the reconstructed scene and action set directly, then continue from Step 2 in the standard builder.",
+      "useRecommendedTitle": "Map into a preset scenario",
+      "useRecommendedDisabled": "No strong preset match was found for this source.",
+      "templateSuggestionTitle": "Recommended preset",
+      "prefillParamsTitle": "Detected parameter hints",
+      "fieldRepairTitle": "Field-by-field repair",
+      "fieldRepairHint": "Review one field at a time. Restore the analyzed draft for a single field or pull back specific evidence-backed suggestions without resetting the whole page.",
+      "fieldRepairBadge": "Evidence-backed edits",
+      "fieldRepairScenarioHint": "Restore the extracted scenario summary if your edited narrative drifted too far from the source.",
+      "fieldRepairSettingsHint": "Recover missing setup rows one at a time instead of rebuilding the whole schema manually.",
+      "fieldRepairActionsHint": "Bring back extracted decision options or add one missing action at a time.",
+      "fieldRepairAgentsHint": "Recover named roles from the source instead of retyping them if the draft became too generic.",
+      "fieldRepairVariablesHint": "Pull important variables back from the analysis when they disappear from the editable list.",
+      "reextractField": "Re-extract field",
+      "reextractingField": "Re-extractingâ€¦",
+      "reextractFailed": "Failed to re-extract this field.",
+      "restoreField": "Restore extracted",
+      "settingsHelperText": "These rows become editable builder parameters. Restore the extracted set if a manual edit wiped out too much.",
+      "settingsCollapsedHint": "These extracted scenario settings are optional here. Open this section only when you want to refine additional Builder parameters.",
+      "settingReasonResearchGoal": "Recovered from the source research goal.",
+      "settingReasonSetting": "Recovered from the environment or setup description.",
+      "settingReasonPayoff": "Recovered from the payoff, loss, or feedback rules.",
+      "settingReasonConstraints": "Recovered from explicit source constraints or termination conditions.",
+      "settingReasonInfo": "Recovered from how information visibility is described in the source.",
+      "settingReasonTopology": "Recovered from the source interaction topology.",
+      "settingReasonStructure": "Recovered from the inferred interaction structure.",
+      "schemaInteractionStructure": "Interaction structure",
+      "templateSuggestion": {
+        "title": "Template suggestion",
+        "body": "This input looks similar to {{template}}. You can jump to the matching preset template instead of continuing with a custom build.",
+        "useTemplate": "Use template"
+      },
+      "scenarioName": "Custom AI-generated scenario",
+      "templateSavedSuccess": "Saved to your personal preset templates.",
+      "templateSavedFailed": "The simulation was created, but saving the personal preset template failed."
+    }
+>>>>>>> Stashed changes
   }
 }
