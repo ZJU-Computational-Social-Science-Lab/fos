@@ -1,3 +1,8 @@
+/**
+ * This page introduces the product and guides people to the main parts of the app.
+ * LandingPage shows the welcome areas, the preview media, the capability cards, the example scenes, and the final action choices.
+ */
+
 import { useEffect } from "react";
 import {
   Archive,
@@ -17,6 +22,7 @@ import { useTranslation } from "react-i18next";
 import { useThemeStore } from "../store/theme";
 import { getBilibiliEmbedUrl, isBilibiliConfigured } from "../config/video";
 
+import landingDemoVideo from "../assets/landing/landing-demo.mp4";
 import sceneBehaviorImage from "../assets/landing/scene-behavior.png";
 import sceneInstitutionImage from "../assets/landing/scene-institution.png";
 import sceneInterventionImage from "../assets/landing/scene-intervention.png";
@@ -281,9 +287,16 @@ export function LandingPage() {
                   title={String(t("landing.preview.title"))}
                 />
               ) : (
-                <div className="ss-landing__preview-placeholder">
-                  <p>{t("landing.preview.configureVideo")}</p>
-                </div>
+                <video
+                  className="ss-landing__preview-video"
+                  src={landingDemoVideo}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  controls
+                  aria-label={String(t("landing.preview.title"))}
+                />
               )}
             </div>
           </div>
