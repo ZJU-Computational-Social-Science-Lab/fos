@@ -11,6 +11,7 @@ from . import (
     simulations,
     search_providers,
     llm,  # LLM related routes
+    ai_scientist,
     experiments,  # Simulation experiment routes (A/B testing)
     experiment_templates,  # Experiment template management routes
     uploads,
@@ -30,6 +31,7 @@ router = Router(
         providers.router,
         search_providers.router,
         llm.router,
+        ai_scientist.router,
         experiments.router,
         experiment_templates.router,  # Experiment template CRUD and run
         uploads.router,

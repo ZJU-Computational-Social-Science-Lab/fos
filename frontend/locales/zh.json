@@ -8,107 +8,12 @@
     "agents": "智能体",
     "none": "（无）",
     "cancel": "取消",
+    "remove": "删除",
     "next": "下一步",
     "back": "返回",
-    "previous": "上一页",
-    "overview": "??",
-    "status": "??",
-    "increase": "增加",
-    "decrease": "减少",
-    "actions": "??",
-    "autosave": "????"
+    "previous": "上一页"
   },
   "brand": "FOS",
-  "controlRoom": {
-    "controlPanelKicker": "æŽ§åˆ¶å®¤",
-    "controlPanelTitle": "æ¨¡æ‹ŸæŽ§åˆ¶é¢æ¿",
-    "controlPanelSubtitle": "è¿è¡Œã€�é…ç½®ã€�åˆ†æ”¯å’Œå¯¼å‡ºä½ çš„æ¨¡æ‹Ÿæµç¨‹ã€‚",
-    "primaryActionsTitle": "ä¸»è¦æ“ä½œ",
-    "primaryActionsCopy": "ä½¿ç”¨å…³é”®æŽ§åˆ¶æ¥æŽ¨è¿›ã€�åˆ†æ”¯ã€�å¯¹æ¯”å¹¶æŸ¥çœ‹æ¨¡æ‹Ÿè¿›å±•ã€‚",
-    "continueSimulation": "ç»§ç»­æ¨¡æ‹Ÿ",
-    "advanceCopy": "ä»Žå½“å‰é€‰ä¸­çš„èŠ‚ç‚¹æŽ¨è¿›ä¸€æ­¥ã€‚",
-    "createBranchPrimary": "åˆ›å»ºåˆ†æ”¯",
-    "createBranchSidebarCopy": "ä»Žé€‰ä¸­èŠ‚ç‚¹çŠ¶æ€åˆ›å»ºæ–°åˆ†æ”¯ã€‚",
-    "compareModeCopy": "å¼€å¯å¯¹æ¯”æ¨¡å¼ä»¥è¯„ä¼°åˆ†æ”¯å·®å¼‚ã€‚",
-    "viewDetails": "æŸ¥çœ‹è¯¦æƒ…",
-    "experimentDesignCopy": "æ‰“å¼€å®žéªŒæž„å»ºå™¨å¹¶è°ƒæ•´æ ¸å¿ƒè®¾ç½®ã€‚",
-    "exportCopy": "å¯¼å‡ºå½“å‰æ¨¡æ‹Ÿè¾“å‡ºå’Œäº§ç‰©ã€‚",
-    "researchNote": "ç ”ç©¶æç¤ºï¼šç”Ÿæˆè¿›è¡Œä¸­æ—¶ï¼Œåˆ†æ”¯å’Œå¯¹æ¯”æ“ä½œå¯èƒ½å—é™ã€‚",
-    "configurationTitle": "é…ç½®",
-    "configurationCopy": "è°ƒæ•´æä¾›å•†ã€�ç½‘ç»œã€�æ—¶é—´ã€�çŸ¥è¯†å’Œåˆ†æžè®¾ç½®ã€‚",
-    "activeProvider": "å½“å‰æä¾›å•†",
-    "networkCopy": "æ‰“å¼€ç½‘ç»œç¼–è¾‘å™¨ä»¥æ›´æ–°å…³ç³»ã€‚",
-    "timeCopy": "ç¼–è¾‘æ¨¡æ‹Ÿæ—¶é—´æŽ§åˆ¶å’ŒæŽ¨è¿›è§„åˆ™ã€‚",
-    "knowledgeCopy": "ç®¡ç†å¯ä¾›æ™ºèƒ½ä½“ä½¿ç”¨çš„å…¨å±€çŸ¥è¯†ã€‚",
-    "analyticsCopy": "æ‰“å¼€æ¨¡æ‹ŸæŒ‡æ ‡åˆ†æžè§†å›¾ã€‚",
-    "outputTitle": "è¾“å‡º",
-    "outputCopy": "ç”ŸæˆæŠ¥å‘Šã€�å¯¼å‡ºæ•°æ®å¹¶ä¿å­˜å¯å¤ç”¨æ¨¡æ¿ã€‚",
-    "reportCopy": "ä¸ºå½“å‰ç»“æžœæ‰“å¼€æŠ¥å‘Šç”Ÿæˆå™¨ã€‚",
-    "templateCopy": "å°†å½“å‰è®¾ç½®ä¿å­˜ä¸ºå¯å¤ç”¨æ¨¡æ¿ã€‚",
-    "branchToolsTitle": "åˆ†æ”¯å·¥å…·",
-    "branchToolsCopy": "ç®¡ç†åˆ†æ”¯ä¸“ç”¨æŽ§åˆ¶å’Œå¯è§æ€§ã€‚",
-    "showBranchDetails": "æ˜¾ç¤ºåˆ†æ”¯è¯¦æƒ…",
-    "hideBranchDetails": "éšè—åˆ†æ”¯è¯¦æƒ…",
-    "branchRelationsCopy": "åˆ‡æ¢æ‰€é€‰èŠ‚ç‚¹çš„åˆ†æ”¯å…³ç³»è¯¦æƒ…ã€‚",
-    "startNodeLabel": "èµ·å§‹",
-    "valueUnavailable": "â€”",
-    "currentPath": "当前路径",
-    "statusCurrent": "当前",
-    "modeGlobal": "全局",
-    "modeFocused": "聚焦",
-    "modeCompare": "对比",
-    "currentNodeConfiguration": "当前节点配置",
-    "nodeIdLabel": "节点 ID",
-    "branchRelations": "分支关系",
-    "branchCountsInline": "父级 {{parent}} · 同级 {{siblings}} · 子级 {{children}}",
-    "branchRelationsHint": "展示当前节点与附近分支的连接关系。",
-    "hostIntervention": "主持干预",
-    "roleObservation": "角色观察",
-    "hostInterventionDesk": "主持干预控制台",
-    "hostInterventionCopy": "通过环境建议、系统广播和属性编辑直接干预当前仿真节点。",
-    "focusedAgent": "聚焦智能体",
-    "compareHint": "对比模式已开启。选择智能体以检查分支间行为差异。",
-    "compareActive": "对比已开启",
-    "clearFocus": "清除聚焦",
-    "memoryCount": "记忆",
-    "knowledgeCount": "知识",
-    "propertyCount": "属性",
-    "lastObserved": "最近观察",
-    "noFocusedAgent": "暂无聚焦智能体",
-    "noFocusedAgentHint": "选择活跃角色或分组以查看其最新上下文。",
-    "observeRole": "观察活跃角色",
-    "collectionRepresentative": "代表",
-    "roleCollections": "角色分组",
-    "roleDirectorySearch": "搜索分组、成员、活动",
-    "noDirectoryResults": "没有角色匹配当前搜索。",
-    "memberRoster": "成员列表",
-    "removeNode": "????",
-    "noChildBranches": "?????"
-  },
-  "simulationWorkspace": {
-    "running": "è¿è¡Œä¸­...",
-    "compare": "å¯¹æ¯”",
-    "compareExit": "é€€å‡ºå¯¹æ¯”æ¨¡å¼",
-    "titleFallback": "未命名模拟",
-    "subtitleFallback": "暂无场景摘要。",
-    "experiment": "å®žéªŒæž„å»ºå™¨",
-    "export": "å¯¼å‡º",
-    "provider": "æä¾›å•†",
-    "noProvider": "æœªé€‰æ‹©æä¾›å•†",
-    "network": "ç½‘ç»œ",
-    "time": "æ—¶é—´",
-    "knowledge": "çŸ¥è¯†",
-    "analytics": "åˆ†æž",
-    "report": "æŠ¥å‘Š",
-    "template": "æ¨¡æ¿",
-    "developerTools": "å¼€å‘è€…å·¥å…·",
-    "sync": "åŒæ­¥",
-    "reset": "é‡ç½®æ¨¡æ‹Ÿ",
-    "delete": "åˆ é™¤æ¨¡æ‹Ÿ",
-    "metrics": {
-      "worldTime": "世界时间"
-    }
-  },
   "nav": {
     "dashboard": "仪表盘",
     "new": "新建",
@@ -120,6 +25,196 @@
     "login": "登录",
     "register": "注册",
     "signout": "退出"
+  },
+  "createExperiment": {
+    "entry": {
+      "badge": "创建入口",
+      "title": "你想如何创建这个实验？",
+      "subtitle": "可以直接进入预设模板，或者进入 AI 辅助自定义流程，把研究问题或论文摘要提取成新的场景描述和动作集。",
+      "enter": "进入",
+      "workflow": "流程概览",
+      "handoff": "第 2 步回归主线",
+      "standardFlow": "标准流程",
+      "aiAssisted": "AI 辅助",
+      "guidance": "进入说明",
+      "footer": "预设模板会沿用现有 FOS 创建流程。自定义创建会先经过 AI 提取，再把结果交回标准向导继续编辑和运行。",
+      "preset": {
+        "title": "预设模板",
+        "description": "打开标准 FOS 模板选择页，继续沿用现有的创建流程。"
+      },
+      "custom": {
+        "title": "自定义实验",
+        "description": "使用 AI 将研究问题或论文摘要转换为可审查的场景描述和动作集。"
+      }
+    },
+    "customBuilder": {
+      "badge": "AI 社会科学家",
+      "title": "从研究文本创建自定义实验",
+      "subtitle": "粘贴研究问题、论文摘要或方法部分，系统会提取场景草案、候选动作、可能的智能体和关键变量，供你在继续前审查修改。",
+      "inputLabel": "研究问题或论文摘要",
+      "inputPlaceholder": "粘贴论文摘要、方法部分，或你想建模的研究问题。",
+      "analyze": "分析文本",
+      "saveTemplateToggle": "创建后保存到我的预设模板",
+      "analysisFailed": "研究文本分析失败。",
+      "back": "返回入口",
+      "uploadFile": "上传文件",
+      "clearDraft": "一键清空",
+      "uploadFileTypeError": "请上传 .txt、.pdf、.doc 或 .docx 文件。",
+      "uploadSuccess": "已上传并提取 {{name}} 的文本",
+      "uploadFailed": "文件上传失败",
+      "uploadNoText": "文件已上传，但未提取到可读取文本。",
+      "enterTextFirst": "请先输入文本或上传文件，再开始分析。",
+      "inputHint": "粘贴摘要、方法部分或上传 PDF / Word 文件。图片型 PDF 会自动走 OCR。",
+      "sourceFileLabel": "来源文件",
+      "sourceFile": "来源文件：{{name}}",
+      "pageCount": "{{count}} 页",
+      "pageShort": "第 {{page}} 页",
+      "extractionMethodOcr": "OCR 识别",
+      "extractionMethodManual": "手动输入",
+      "extractionMethodPdf": "PDF 文本提取",
+      "extractionMethodGhostscript": "PDF 文本提取",
+      "extractionMethodUnknown": "文本提取",
+      "sceneTitle": "场景草案",
+      "templateNameLabel": "实验场景名字",
+      "templateNamePlaceholder": "给这个实验场景起一个名字",
+      "templateNameHint": "这个名字会带入后续 Builder；如果你开启了保存，也会作为你的个人预设模板名称。",
+      "scenePlaceholder": "继续前可以先编辑场景描述。",
+      "sceneEditorHint": "这里是送回主线 builder 之前的场景说明草稿。",
+      "semanticSchemaTitle": "实验语义骨架",
+      "semanticSchemaHint": "这是系统先从原文中抽取出的结构化实验骨架，再基于它生成下面可编辑的草案。",
+      "noSemanticSchema": "运行分析后，这里会显示提取出的实验语义骨架。",
+      "schemaResearchGoal": "研究目标",
+      "schemaSetting": "场景 / 环境",
+      "schemaParticipants": "参与者 / 智能体角色",
+      "schemaDecisionContext": "决策上下文",
+      "schemaChoices": "每轮可选动作",
+      "schemaPayoffRules": "收益 / 反馈规则",
+      "schemaConstraints": "约束 / 终止条件",
+      "schemaInformationStructure": "信息结构",
+      "schemaInteractionTopology": "交互拓扑",
+      "schemaInterventions": "干预 / 处理",
+      "schemaOutcomes": "观测结果",
+      "schemaKeyVariables": "关键变量",
+      "modeRecommended": "预设映射路径",
+      "modeCustom": "自定义路径",
+      "settingsTitle": "场景设定草案",
+      "settingsSubtitle": "审阅从文本中提取的关键设定项（键值对）。",
+      "addSetting": "新增设定",
+      "settingKeyPlaceholder": "设定键",
+      "settingValuePlaceholder": "设定值",
+      "settingReasonPlaceholder": "说明为什么这个设定属于重建后的实验。",
+      "noSettings": "暂未提取出设定项。",
+      "variablesTitle": "关键变量",
+      "variablesHint": "这些是系统认为对实验设置最重要的术语。",
+      "noVariables": "暂未识别出关键变量。",
+      "variablePlaceholder": "变量名称",
+      "addVariable": "新增变量",
+      "reviewFlagsTitle": "假设与缺口",
+      "assumptionsTitle": "当前假设",
+      "noAssumptions": "暂未报告额外假设。",
+      "missingInfoTitle": "待你确认的信息",
+      "noMissingInfo": "暂未发现明显缺口。",
+      "analysisWarningsTitle": "系统警告",
+      "actionsTitle": "候选动作集",
+      "actionsSubtitle": "保留、编辑或删除智能体每轮可以做出的选择。",
+      "actionsHelperText": "只保留真正属于每轮交互的决策动作。如果手动修改偏离太多，可以随时恢复分析得到的动作集。",
+      "addAction": "新增动作",
+      "actionDescriptionPlaceholder": "解释这个选择在实验中的含义。",
+      "noActions": "暂未识别出动作。",
+      "agentsTitle": "候选智能体",
+      "agentsSubtitle": "这些是系统判断可能参与实验的角色。你可以勾选需要带入第 4 步的草稿。",
+      "agentsHelperText": "原文里的具名角色通常应该保留到最终实验中；如果草案变得过于泛化，可以在这里恢复它们。",
+      "addAgent": "新增智能体",
+      "agentDescriptionPlaceholder": "描述这个智能体角色。",
+      "noAgents": "暂未识别出候选智能体。",
+      "reviewTitle": "继续前复核",
+      "reviewSubtitle": "确认后，提取出的场景、设定、动作和角色会写入标准 FOS 向导，并从网络步骤继续。",
+      "reviewScene": "场景",
+      "reviewActions": "动作",
+      "reviewAgents": "智能体",
+      "reviewFallback": "暂时还没有场景摘要。",
+      "continue": "审批并继续",
+      "continueHint": "确认后，草案会写入标准实验创建流程，并从第 2 步继续人工确认参数、动作、智能体和网络。",
+      "reviewBeforeContinue": "请先确认场景、动作和智能体后再继续。",
+      "applyFailed": "应用草案到主流程失败。",
+      "toggleSelection": "切换选择",
+      "validationNotesTitle": "校对依据",
+      "validationNotesHint": "需要追查抽取依据、文档质量或原文证据时，再展开这一部分。",
+      "supportingPassagesTitle": "关键来源片段",
+      "evidenceChecklistTitle": "系统为何这样建议",
+      "confidenceLabel": "置信度：{{score}}%",
+      "reviewRecommended": "系统找到了一个看起来合理的映射，但继续前仍建议你复核候选模板。",
+      "builderPathMergedTitle": "选择进入标准 Builder 的方式",
+      "showAllTemplates": "展开全部系统内置预设模板",
+      "hideAllTemplates": "收起其余系统内置预设模板",
+      "templateGenericReason": "如果你想把当前草案映射到一个已有的系统预设结构，可以选择这个模板。",
+      "noSourceSections": "上传文档或运行分析后，这里会显示提取出的关键段落。",
+      "noEvidence": "运行分析后，这里会显示支撑当前草案的关键证据片段。",
+      "evidenceSnippetLabel": "证据片段",
+      "documentInsightsTitle": "文档抽取快照",
+      "documentInsightsHint": "在相信重建出来的实验草案之前，先检查原始文档抽取本身是否干净、完整。",
+      "documentTitleLabel": "提取标题",
+      "documentAbstractLabel": "提取摘要",
+      "documentSectionsLabel": "加权章节数",
+      "documentPageQualityLabel": "平均页面质量",
+      "documentOcrLabel": "是否使用 OCR",
+      "documentReferencesLabel": "是否剥离参考文献",
+      "documentFigureCaptionsLabel": "图注数量",
+      "documentTableCaptionsLabel": "表注数量",
+      "pagePreviewTitle": "OCR / 页面提取预览",
+      "pageLabel": "第 {{page}} 页",
+      "emptyPage": "这一页没有提取到文本。",
+      "builderPathTitle": "回到标准 Builder 的方式",
+      "recognitionModeTitle": "识别模式",
+      "recognitionModeHint": "开始分析前，先选择使用纯后端硬识别，还是调用已配置的 Provider 模型进行识别。",
+      "modeDeterministicTitle": "硬识别模式",
+      "modeDeterministicShort": "只用后端识别，不调用 Provider，也不消耗 token，但复杂论文的识别能力更弱。",
+      "modeDeterministicBody": "该模式主要依靠后端预处理、规则抽取和模板匹配，不会调用任何 Provider，因此不消耗 token，适合本地小模型能力较弱的情况，但对复杂论文的识别能力会更有限。",
+      "modeProviderTitle": "接入 Provider 智能识别",
+      "modeProviderShort": "调用已配置模型进行识别，理解能力更强，但会消耗 token 或本地推理资源。",
+      "modeProviderBody": "该模式会调用你已经配置的模型来完成实验理解、模板推荐和草案生成。模型越强，识别效果通常越好，但会消耗相应 token 或本地推理资源。",
+      "modeCurrentLabel": "当前模式",
+      "providerSelectLabel": "识别模型",
+      "providerMissing": "当前没有可用模型，请先到设置页完成 LLM 配置。",
+      "providerRequired": "运行 Provider 智能识别前，请先选择一个已配置模型。",
+      "providerBuiltIn": "内置端点",
+      "useCustomTitle": "保留为自定义场景",
+      "useCustomDescription": "直接使用当前重建出的场景和动作集，再从标准 builder 的第 2 步继续。",
+      "useRecommendedTitle": "映射到一个预设场景",
+      "useRecommendedDisabled": "当前没有足够强的预设模板匹配。",
+      "templateSuggestionTitle": "推荐预设",
+      "prefillParamsTitle": "识别到的参数提示",
+      "fieldRepairTitle": "逐字段修复",
+      "fieldRepairHint": "按字段逐项复核。你可以只恢复某一个字段的分析结果，或回填某条有证据支撑的建议，而不用重置整页。",
+      "fieldRepairBadge": "有证据支撑的编辑",
+      "fieldRepairScenarioHint": "如果你修改后的场景描述偏离原文太多，可以恢复系统提取的场景摘要。",
+      "fieldRepairSettingsHint": "缺失的设定项可以一条一条补回，不必手动重建整套参数。",
+      "fieldRepairActionsHint": "可以逐条恢复提取出的动作，或者一次补回一个缺失动作。",
+      "fieldRepairAgentsHint": "如果草案里的角色被简化得太泛，可以从原文中恢复具名角色，而不必重打。",
+      "fieldRepairVariablesHint": "当可编辑列表里丢掉关键变量时，可以从分析结果里把它们拉回来。",
+      "reextractField": "重新抽取该字段",
+      "reextractingField": "重新抽取中…",
+      "reextractFailed": "重新抽取该字段失败。",
+      "restoreField": "恢复提取结果",
+      "settingsHelperText": "这些行会进入后续构建器的可编辑参数列表。如果手动修改删掉太多，可以直接恢复提取结果。",
+      "settingsCollapsedHint": "这一部分是额外的场景设定草案。只有在你需要细调 Builder 参数时再展开查看即可。",
+      "settingReasonResearchGoal": "根据原文中的研究目标恢复。",
+      "settingReasonSetting": "根据环境或实验设置描述恢复。",
+      "settingReasonPayoff": "根据收益、损失或反馈规则恢复。",
+      "settingReasonConstraints": "根据原文里的显式约束或终止条件恢复。",
+      "settingReasonInfo": "根据信息可见性相关描述恢复。",
+      "settingReasonTopology": "根据原文里的交互拓扑恢复。",
+      "settingReasonStructure": "根据推断出的交互结构恢复。",
+      "schemaInteractionStructure": "交互结构",
+      "templateSuggestion": {
+        "title": "模板建议",
+        "body": "这段输入看起来与 {{template}} 相似。你可以直接跳转到匹配的预设模板，而不是继续自定义创建。",
+        "useTemplate": "使用该模板"
+      },
+      "scenarioName": "自定义 AI 生成场景",
+      "templateSavedSuccess": "已保存到你的个人预设模板。",
+      "templateSavedFailed": "模拟已经创建成功，但保存个人预设模板失败。"
+    }
   },
   "landing": {
     "hero": {
@@ -268,7 +363,6 @@
       "spatial": "空间/网格",
       "social_deduction": "社会推理",
       "sociology": "社会学",
-      "generative_city": "生成城市",
       "custom": "自定义"
     },
     "sociology": {
@@ -341,12 +435,6 @@
         "description": "一个社会推理游戏，村民试图识别隐藏在他们中间的狼人，而狼人则在夜间试图消灭村民。"
       }
     },
-    "generative_city": {
-      "gaworld": {
-        "name": "GAWorld 城市仿真",
-        "description": "包含 50 名杭州居民的多智能体生成式城市仿真。"
-      }
-    },
     "custom": {
       "custom": {
         "name": "自定义场景",
@@ -365,35 +453,20 @@
       "providers": "提供商",
       "llmProviders": "模型提供商",
       "searchProviders": "搜索提供商",
-      "files": "文件管理",
-      "dataSources": "数据源"
-    },
-    "tabHints": {
-      "profile": "身份与工作空间归属",
-      "security": "会话访问与退出控制",
-      "providersLlm": "模型与接口配置",
-      "providersSearch": "搜索与检索提供商",
-      "files": "文件上传与存储整理",
-      "dataSources": "配置外部数据源"
+      "files": "文件管理"
     },
     "profile": {
       "email": "邮箱",
       "username": "用户名",
       "fullName": "姓名",
-      "organization": "组织",
-      "consistencyHint": "保持研究者身份信息在实验、导出结果与共享工作空间中的一致性。"
-    },
-    "workspaceStatus": {
-      "authenticatedAccess": "已验证的工作空间访问",
-      "profileReuse": "身份信息会复用于已保存实验"
+      "organization": "组织"
     },
     "security": {
       "signoutAll": "退出所有会话",
       "placeholder": "这里将展示双因素认证和密码重置流程。",
       "sessionsTitle": "会话控制",
       "controlTitle": "访问姿态",
-      "controlHint": "这里仍然连接 FOS 真实的认证会话与 token 刷新链路。",
-      "authFlowNote": "认证流程仍然连接到 Future of Society 当前后端与 token 刷新链路。"
+      "controlHint": "这里仍然连接 FOS 真实的认证会话与 token 刷新链路。"
     },
     "providers": {
       "title": "提供商集成",
@@ -418,7 +491,6 @@
       "searchTab": "搜索提供商",
       "setSearchProvider": "配置搜索提供商",
       "searchTitle": "搜索提供商",
-      "searchAlignmentHint": "让检索服务与同一个研究工作空间和访问模型保持一致。",
       "fields": {
         "label": "名称",
         "provider": "提供商",
@@ -440,7 +512,6 @@
       "loading": "加载中…",
       "error": "无法加载提供商。",
       "none": "还没有添加任何提供商。",
-      "costHintAriaLabel": "LLM 费用提示",
       "capabilities": {
         "title": "能力与费用速查",
         "hint": "按用途选模型：便宜的用于回合推理，昂贵的用于报告和总结。",
@@ -461,35 +532,6 @@
         "includeDomains": "包含域名（逗号分隔）",
         "excludeDomains": "排除域名（逗号分隔）",
         "active": "当前"
-      },
-      "providerForm": {
-        "newLlmTitle": "?? LLM",
-        "editLlmTitle": "?? LLM ? {{name}}",
-        "geminiAccessConfig": "Google Gemini ??????",
-        "openaiCompatibleAccessConfig": "OpenAI Compatible ??????",
-        "llmNameRequired": "LLM ?? *",
-        "llmNamePlaceholder": "??OpenAI ??? / Gemini ??",
-        "providerTypeRequired": "Provider ?? *",
-        "baseUrlRequired": "Base URL *",
-        "apiKeyRequired": "API Key *",
-        "advancedSettings": "????",
-        "exampleDecimal07": "??0.7",
-        "exampleDecimal10": "??1.0",
-        "exampleMaxTokens": "??4096",
-        "responseFormat": "????",
-        "exampleJsonObject": "??json_object",
-        "exampleTimeoutMs": "??60000",
-        "customEndpoint": "Custom Endpoint",
-        "headersMetadata": "Headers / Metadata",
-        "optional": "??",
-        "advancedHint": "????????????????",
-        "defaultModel": "????",
-        "save": "??",
-        "saving": "???...",
-        "temperature": "Temperature",
-        "topP": "Top P",
-        "maxTokens": "?? Tokens",
-        "timeoutMs": "Timeout (ms)"
       }
     },
     "files": {
@@ -500,11 +542,6 @@
       "loading": "正在加载文件…",
       "error": "无法加载文件。",
       "empty": "没有上传文件。",
-      "emptyHint": "上传的研究文件会在关联到实验后显示在这里。",
-      "metrics": {
-        "files": "文件数量",
-        "orphanScan": "孤立文件扫描"
-      },
       "table": {
         "filename": "文件名",
         "size": "大小",
@@ -522,128 +559,6 @@
       "byte": "字节",
       "kb": "KB",
       "mb": "GB"
-    },
-    "dataSource": {
-      "title": "数据源管理",
-      "listTitle": "数据源列表",
-      "addTitle": "添加数据源",
-      "editTitle": "编辑数据源",
-      "table": {
-        "name": "名称",
-        "eventType": "事件类型",
-        "pollInterval": "轮询间隔",
-        "status": "状态",
-        "actions": "操作",
-        "seconds": "秒"
-      },
-      "form": {
-        "name": "名称",
-        "apiUrl": "API 地址",
-        "authType": "认证方式",
-        "authNone": "无",
-        "authBearer": "Bearer Token",
-        "authApiKey": "API Key",
-        "authToken": "令牌/密钥",
-        "pollInterval": "轮询间隔（秒）",
-        "eventType": "事件类型",
-        "eventTypeMarket": "市场",
-        "eventTypePolicy": "政策",
-        "eventTypeNews": "新闻",
-        "eventTypeCustom": "自定义",
-        "scope": "作用域",
-        "scopeGlobal": "全局",
-        "scopeSimulation": "按仿真",
-        "simulationId": "仿真 ID",
-        "fieldMapping": "字段映射",
-        "titleField": "标题字段",
-        "contentField": "内容字段",
-        "timestampField": "时间戳字段",
-        "urlField": "URL 字段",
-        "test": "测试连接",
-        "testConnection": "测试连接",
-        "pollNow": "立即轮询",
-        "save": "保存",
-        "cancel": "取消",
-        "browseTemplates": "浏览模板",
-        "hideTemplates": "收起模板",
-        "invalidPollInterval": "轮询间隔必须在 60~86400 秒之间"
-      },
-      "status": {
-        "running": "运行中",
-        "paused": "已暂停",
-        "error": "错误",
-        "neverRun": "从未运行"
-      },
-      "message": {
-        "testSuccess": "连接成功",
-        "testFailed": "连接失败",
-        "saveSuccess": "保存成功",
-        "deleteSuccess": "删除成功",
-        "operationFailed": "操作失败，请重试"
-      },
-      "confirm": {
-        "delete": "确认删除",
-        "deleteMessage": "确定要删除此数据源吗？此操作不可撤销。"
-      },
-      "empty": "暂无数据源",
-      "emptyHint": "点击上方「添加」按钮配置您的第一个数据源",
-      "actions": {
-        "poll": "立即轮询",
-        "edit": "编辑",
-        "pause": "暂停",
-        "resume": "恢复",
-        "delete": "删除"
-      }
-    },
-    "dataSourceTemplate": {
-      "category": {
-        "market": "市场/金融",
-        "news": "新闻",
-        "social": "社交",
-        "crypto": "加密货币",
-        "policy": "政策/政府",
-        "custom": "自定义"
-      },
-      "yahooFinance": {
-        "name": "Yahoo Finance",
-        "description": "实时股票行情和市场新闻",
-        "hint": "无需认证，返回股票报价。请根据实际查询调整 items_path 路径。"
-      },
-      "alphavantage": {
-        "name": "Alpha Vantage",
-        "description": "免费股票 API（每分钟5次请求）",
-        "hint": "请到 alphavantage.co 获取免费 API Key。DEMO Key 功能受限。"
-      },
-      "coingecko": {
-        "name": "CoinGecko",
-        "description": "加密货币价格和市场数据（免费，无需认证）",
-        "hint": "无需认证。频率限制 10-30次/分钟。用于加密货币价格事件。"
-      },
-      "newsapi": {
-        "name": "NewsAPI",
-        "description": "来自数千个来源的全球新闻",
-        "hint": "请到 newsapi.org 获取免费 API Key。DEMO Key 只能获取 The Guardian 的新闻。"
-      },
-      "hackernews": {
-        "name": "Hacker News",
-        "description": "科技新闻和创业讨论（免费，无需认证）",
-        "hint": "此接口返回故事 ID。如需完整故事内容，请使用 hacker-news Firebase API。"
-      },
-      "reddit": {
-        "name": "Reddit",
-        "description": "社交媒体帖子和讨论（公开内容无需认证）",
-        "hint": "公开接口无需认证。频率限制约60次/分钟。适合社会舆情分析。"
-      },
-      "govcn": {
-        "name": "中国政府网",
-        "description": "政府公告和政策发布",
-        "hint": "无需认证。请根据实际 API 返回结构调整 items_path。"
-      },
-      "webhook": {
-        "name": "Webhook（自定义）",
-        "description": "通过 POST 接收外部事件推送",
-        "hint": "设置 poll_interval_seconds=0 可禁用自动轮询。通过 POST /api/events/external 手动推送事件。"
-      }
     }
   },
   "wizard": {
@@ -1255,9 +1170,6 @@
     "report": "分析报告",
     "export": "导出",
     "analytics": "统计",
-    "more": "更多",
-    "moreActions": "更多操作",
-    "resizeRail": "调整侧栏宽度",
     "provider": "提供商",
     "selectProvider": "选择提供商",
     "noProvider": "暂无提供商",
@@ -1286,16 +1198,13 @@
     "autoAdvance": "自动推进",
     "stop": "停止",
     "enterSteps": "输入步数",
-    "advanceControls": "推进控制",
     "advancingProgress": "第 {{current}} 步，共 {{total}} 步",
     "autoAdvanceStopped": "自动推进停止于第 {{current}} 步（共 {{total}} 步）",
     "autoAdvanceError": "自动推进错误：{{error}}",
     "autoAdvanceComplete": "自动推进完成 {{count}} 步",
     "tabs": {
-      "workspace": "工作区",
-      "agents": "智能体",
-      "intervention": "干预",
-      "analyse": "分析"
+      "timeline": "时间线",
+      "agents": "智能体"
     }
   },
   "components": {
@@ -1333,8 +1242,6 @@
       "noUploadedDocs": "暂无上传文档",
       "textChunks": "个文本块",
       "shortTermMemory": "短期记忆",
-      "activeNow": "当前活跃",
-      "noRecentActivity": "暂无最新活动。",
       "memoryTypes": {
         "thought": "思考",
         "assistant": "助手回复",
@@ -1406,85 +1313,6 @@
       "publicOpinion": "公众舆论",
       "disableDynamicEvents": "禁用动态环境事件",
       "enableDynamicEvents": "启用动态环境事件"
-    },
-    "event": {
-      "panel": {
-        "title": "外部事件"
-      },
-      "tab": {
-        "all": "全部",
-        "dataSources": "数据源",
-        "policy": "政策",
-        "market": "市场",
-        "news": "新闻",
-        "manual": "手动"
-      },
-      "severity": {
-        "low": "低",
-        "medium": "中",
-        "high": "高",
-        "critical": "严重"
-      },
-      "loading": "加载事件中...",
-      "empty": "暂无事件",
-      "emptyHint": "检测到外部事件后将显示在此处",
-      "refresh": "刷新",
-      "viewSource": "查看来源",
-      "apply": "应用",
-      "addTitle": "添加事件",
-      "addEvent": "添加事件",
-      "form": {
-        "title": "标题",
-        "titlePlaceholder": "输入事件标题",
-        "content": "内容",
-        "contentPlaceholder": "输入事件内容",
-        "severity": "严重程度",
-        "url": "来源链接",
-        "optional": "可选",
-        "add": "添加",
-        "cancel": "取消",
-        "saving": "添加中"
-      },
-      "lastUpdate": "更新于"
-    },
-    "rule": {
-      "config": {
-        "title": "事件规则",
-        "name": "规则名称",
-        "description": "描述",
-        "conditions": "条件",
-        "addCondition": "添加条件",
-        "cooldown": "冷却时间（秒）",
-        "eventType": "事件类型",
-        "severity": "严重程度",
-        "titleTemplate": "标题模板",
-        "contentTemplate": "内容模板",
-        "newRule": "新规则",
-        "noRules": "暂无规则",
-        "noRulesHint": "添加规则以自动触发事件",
-        "addRule": "添加规则"
-      }
-    },
-    "customApi": {
-      "title": "自定义 API 数据源",
-      "name": "数据源名称",
-      "apiUrl": "API 地址",
-      "pollInterval": "轮询间隔（分钟）",
-      "authType": "认证方式",
-      "authNone": "无",
-      "authBearer": "Bearer 令牌",
-      "authApiKey": "API 密钥",
-      "authToken": "令牌/密钥",
-      "fieldMapping": "字段映射",
-      "titleField": "标题字段",
-      "contentField": "内容字段",
-      "timestampField": "时间戳字段",
-      "severityField": "严重程度字段",
-      "newSource": "新数据源",
-      "noSources": "暂无自定义 API 数据源",
-      "noSourcesHint": "添加自定义 API 以拉取外部事件",
-      "addSource": "添加 API 数据源",
-      "test": "测试连接"
     },
     "experimentDesignModal": {
       "title": "因果干预实验设计",
@@ -1694,10 +1522,7 @@
       "enterNewValue": "输入新值",
       "updateProperty": "更新属性",
       "broadcastSent": "广播已发送给智能体",
-      "broadcastFailed": "广播发送失败",
-      "externalEvents": "外部事件",
-      "ruleConfig": "规则配置",
-      "new": "新功能"
+      "broadcastFailed": "广播发送失败"
     },
     "initialEventsModal": {
       "title": "初始事件编辑器",
@@ -1790,18 +1615,7 @@
     },
     "sidebar": {
       "agents": "智能体",
-      "agentWatch": "智能体观察",
-      "hostControl": "主持控制",
-      "overviewHint": "观察角色活动，或打开主持干预控制。"
-    },
-    "interventionTab": {
-      "hostControl": "主持控制",
-      "designExperimentHint": "在干预页面里设置平行分支、干预方案与实验运行。",
-      "openDesigner": "打开实验设计器"
-    },
-    "analyseTab": {
-      "overview": "总览",
-      "compareDiff": "对比差异"
+      "hostControl": "主持控制"
     },
     "networkEditorModal": {
       "title": "社交网络拓扑",
@@ -1986,9 +1800,6 @@
         "modelIdPlaceholder": "如：gpt-4-turbo",
         "provider": "Provider",
         "protocolType": "协议类型",
-        "protocolOpenai": "OpenAI",
-        "protocolGoogle": "Google",
-        "protocolCustom": "自定义",
         "capabilities": "能力标签",
         "contextWindow": "上下文长度",
         "maxTokens": "最大令牌数",
@@ -2013,8 +1824,6 @@
         "newModelTitle": "新增模型",
         "newModel": "新增模型",
         "modelName": "模型显示名",
-        "modelId": "模型 ID",
-        "provider": "Provider",
         "protocol": "协议",
         "capabilities": "能力",
         "context": "上下文",
@@ -2038,12 +1847,6 @@
         "name": "Provider 名称",
         "namePlaceholder": "如：My OpenAI",
         "type": "Provider 类型",
-        "typeOpenaiCompatible": "OpenAI Compatible",
-        "typeDeepseek": "DeepSeek",
-        "typeOpenrouter": "OpenRouter",
-        "typeAzureOpenai": "Azure OpenAI",
-        "typeGoogleGemini": "Google Gemini",
-        "typeCustom": "自定义",
         "defaultModel": "默认模型",
         "defaultModelPlaceholder": "如：gpt-4-turbo",
         "baseUrl": "Base URL",
@@ -2349,8 +2152,6 @@
         "logsCount": "日志数",
         "rawEvents": "原始事件",
         "title": "右侧摘要栏",
-        "statusKicker": "状态摘要",
-        "headerSubtitle": "只保留最关键配置与操作入口。",
         "hideTitle": "收起右侧摘要",
         "simConfigTitle": "实验配置摘要",
         "worldRulesTitle": "世界规则",
@@ -2368,15 +2169,10 @@
         "openReport": "导出报告",
         "exportResults": "导出结果",
         "openResearchLogs": "打开研究日志",
-        "settings": "系统设置",
-        "pauseNote": "暂停 / 终止逻辑仍保留在系统设置与后续实验控制中，这里先保留当前稳定能力。"
+        "settings": "系统设置"
       },
       "topologyModal": {
         "title": "实验拓扑结构",
-        "kicker": "完整拓扑结构",
-        "subtitle": "在完整拓扑视图中查看全部节点与分支，并直接打开实验配置与网络配置。",
-        "closeAriaLabel": "关闭拓扑结构",
-        "emptyPath": "—",
         "currentPath": "当前路径",
         "currentNode": "当前节点",
         "branches": "分支数量",
@@ -2652,6 +2448,8 @@
       "chooseScenario": "选择场景",
       "selectTemplate": "选择一个场景模板来开始构建您的实验",
       "retry": "重试",
+      "personalTemplateBadge": "个人模板",
+      "deletePersonalTemplate": "删除个人模板",
       "scenariosCount": "{{count}} 个场景",
       "strategic_decisions": {
         "title": "战略决策",
@@ -2751,113 +2549,15 @@
       "action_2_description": "动作二说明",
       "custom_prompt": "自定义场景提示"
     },
-      "paramDescriptions": {
-        "cascade_mode": "选择是严格逐层传达，还是允许在传递中出现改写、冲突和截留。",
-        "distortion_strength": "只在失真模式下生效。数值越高，下层越可能明显改写原政策。",
-        "conflict_sensitivity": "只在失真模式下生效。数值越高，角色利益冲突越容易转化为抵触或偏离。",
-        "block_probability": "只在失真模式下生效。表示智能体直接不往下传、选择截留政策的基础概率。",
-        "num_agents_per_tier": "控制每一个层级自动生成多少个智能体。",
-        "policy_text": "仅用于设定第一轮的开场背景或情境，不会自动作为后续逐级传递时必须保留的原始政策。"
-      },
-      "gaworld": {
-        "startingPointTitle": "起始模式",
-        "startingPointHint": "先选择一个起始模式，再细调下面的城市系统。",
-        "citySystemsTitle": "城市系统",
-        "advancedTitle": "高级",
-        "seedLabel": "可重复种子",
-        "seedDescription": "使用相同种子可重复相同设置。",
-        "presets": {
-          "fast": {
-            "title": "快速",
-            "description": "适合快速试验的轻量城市运行。"
-          },
-          "balanced": {
-            "title": "平衡",
-            "description": "在速度和城市细节之间取中间值。"
-          },
-          "full_fidelity": {
-            "title": "完整",
-            "description": "细节最丰富的城市运行方式。"
-          }
-        },
-        "groups": {
-          "information": {
-            "title": "信息",
-            "description": "城市里外部信息流动的程度。"
-          },
-          "daily_life": {
-            "title": "日常生活",
-            "description": "日常安排是更固定还是更灵活。"
-          },
-          "people": {
-            "title": "人群",
-            "description": "居民行为有多适应环境、多人性化。"
-          },
-          "memory": {
-            "title": "记忆",
-            "description": "居民会把多少前几天的经历带到今天。"
-          }
-        },
-        "modes": {
-          "information": {
-            "off": {
-              "title": "关闭",
-              "description": "居民不会对外部信息源作出反应。"
-            },
-            "city_news": {
-              "title": "仅城市新闻",
-              "description": "居民会收到共享新闻，但不会主动搜索更多信息。"
-            },
-            "active_flow": {
-              "title": "主动信息流",
-              "description": "居民既会收到共享新闻，也会主动寻找更多信息。"
-            }
-          },
-          "daily_life": {
-            "stable_routines": {
-              "title": "稳定日程",
-              "description": "日常安排大多重复，变化较少。"
-            },
-            "some_variation": {
-              "title": "适度变化",
-              "description": "日常生活会有一些变化，但不会太混乱。"
-            },
-            "flexible_daily_life": {
-              "title": "灵活日常",
-              "description": "计划更容易变动，也更容易出现临时调整。"
-            }
-          },
-          "people": {
-            "simple_behavior": {
-              "title": "简单行为",
-              "description": "居民行为更基础、更可预测。"
-            },
-            "adaptive_behavior": {
-              "title": "适应行为",
-              "description": "居民会以适中的程度根据处境调整行为。"
-            },
-            "rich_human_behavior": {
-              "title": "丰富人性行为",
-              "description": "居民会展现更强的适应性和更丰富的人性细节。"
-            }
-          },
-          "memory": {
-            "in_the_moment": {
-              "title": "只看当下",
-              "description": "居民主要根据当天情况行动。"
-            },
-            "some_continuity": {
-              "title": "有些连续性",
-              "description": "居民会保留一部分最近几天的上下文。"
-            },
-            "rich_memory": {
-              "title": "丰富记忆",
-              "description": "居民会在多天之间形成更强的连续性。"
-            }
-          }
-        }
-      },
-      "payoffMatrix": {
+    "paramDescriptions": {
+      "cascade_mode": "选择是严格逐层传达，还是允许在传递中出现改写、冲突和截留。",
+      "distortion_strength": "只在失真模式下生效。数值越高，下层越可能明显改写原政策。",
+      "conflict_sensitivity": "只在失真模式下生效。数值越高，角色利益冲突越容易转化为抵触或偏离。",
+      "block_probability": "只在失真模式下生效。表示智能体直接不往下传、选择截留政策的基础概率。",
+      "num_agents_per_tier": "控制每一个层级自动生成多少个智能体。",
+      "policy_text": "仅用于设定第一轮的开场背景或情境，不会自动作为后续逐级传递时必须保留的原始政策。"
+    },
+    "payoffMatrix": {
       "howToRead": {
         "title": "如何阅读此矩阵：",
         "rows": "行",
@@ -3358,98 +3058,5 @@
     "primaryNav": "主导航",
     "switchToLight": "切换到日间模式",
     "switchToDark": "切换到夜间模式"
-  },
-  "topologyExplorer": {
-    "topologyExplorer": "????",
-    "subtitle": "??????????????????",
-    "returnToExperiment": "????",
-    "leftRailLabel": "????",
-    "overview": "????",
-    "overviewHint": "????????????????",
-    "openInControlRoom": "???????",
-    "exitComparePrep": "??????",
-    "prepareCompare": "????",
-    "searchNodes": "????",
-    "branchStateFilters": "??????",
-    "selectionSummary": "????",
-    "activeBranch": "????",
-    "compareBranch": "????",
-    "selectedBranchDetail": "??????",
-    "detailHint": "???????????????",
-    "branchDepth": "????",
-    "childBranches": "???",
-    "parentBranch": "???",
-    "branchState": "????",
-    "visibleNodes": "????",
-    "branchActions": "????",
-    "compareReady": "?????",
-    "compareReadyHint": "????????????????",
-    "immediateChildren": "?????",
-    "valueUnavailable": "?",
-    "status": {
-      "running": "???",
-      "completed": "???",
-      "failed": "??",
-      "pending": "???"
-    }
-  },
-  "scenario_templates": {
-    "gaworld": {
-      "name": "GAWorld 城市仿真",
-      "description": "包含 50 名杭州居民的多智能体生成式城市仿真。",
-        "parameters": {
-          "execution_profile": { "label": "起始模式", "description": "先选择一个快速起始模式，再调整下方的城市系统。" },
-          "information_mode": { "label": "信息", "description": "城市里外部信息流动的程度。" },
-          "daily_life_mode": { "label": "日常生活", "description": "日常安排是更固定还是更灵活。" },
-          "people_mode": { "label": "人群", "description": "居民行为有多适应环境、多人性化。" },
-          "memory_mode": { "label": "记忆", "description": "居民会把多少前几天的经历带到今天。" },
-          "seed": { "label": "随机种子", "description": "使用相同种子可重复相同设置。" }
-        },
-      "actions": {
-        "work": { "name": "工作", "description": "智能体执行工作任务" },
-        "social_interact": { "name": "社交互动", "description": "智能体与其他智能体互动" },
-        "consume_media": { "name": "消费媒体", "description": "智能体阅读或观看新闻或社交媒体" },
-        "move": { "name": "移动", "description": "智能体改变位置" },
-        "rest": { "name": "休息", "description": "智能体在家或其他地点休息" }
-      }
-    }
-  },
-  "dashboardDesk": {
-    "eyebrow": "?????",
-    "title": "??????",
-    "subtitle": "????????????????????????????????",
-    "launchExperiment": "????",
-    "openArchive": "????",
-    "providerMissing": "????????",
-    "providerWarningTitle": "????????????",
-    "providerWarningBody": "?????????????????????????????",
-    "recommendationSetup": "??????",
-    "recommendations": "?????",
-    "recommendationsHint": "?????????????????????????",
-    "recommendationNew": "?????",
-    "newExperimentHint": "?????????????????",
-    "recommendationScenes": "?????",
-    "sceneLibraryHint": "????????????????",
-    "recommendationNetwork": "??????",
-    "networkHint": "?????????????????",
-    "recommendationAnalyze": "??????",
-    "analyzeHint": "?????????????????",
-    "scenarioEntry": "????",
-    "scenarioEntryHint": "???????????????????",
-    "openScenarioLibrary": "?????",
-    "currentExperiment": "????",
-    "noRecent": "??????",
-    "currentExperimentHint": "??????????????????????????????",
-    "providerReady": "??????",
-    "recentChanges": "????",
-    "continueLabel": "????",
-    "activeStatus": {
-      "active": "???",
-      "archived": "???",
-      "completed": "???",
-      "failed": "??",
-      "draft": "??",
-      "unknown": "??"
-    }
   }
 }

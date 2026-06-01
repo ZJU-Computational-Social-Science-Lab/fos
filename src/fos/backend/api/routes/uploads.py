@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import re
-import shutil
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -22,6 +21,7 @@ from litestar.params import Body
 from ...core.config import get_settings
 from ...core.database import get_session
 from ...dependencies import extract_bearer_token, resolve_current_user
+from ...services.research_ingest import extract_document_payload
 from ....i18n import T
 
 
@@ -70,12 +70,14 @@ ALLOWED_CONTENT_TYPES = {
     "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/plain",
 }
 
 DOC_CONTENT_TYPES = {
     "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/plain",
 }
 
 
@@ -142,49 +144,6 @@ def _decode_data_url(data_url: str):
     except Exception:
         raise HTTPException(status_code=400, detail=T("api.errors.uploads.invalid_base64_payload"))
     return mime.lower(), data
-
-
-def _extract_doc_text(path: Path, content_type: str, enable_ocr: bool, ocr_lang: str | None) -> str:
-    if content_type == "application/pdf":
-        try:
-            import pdfplumber
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=T("api.errors.uploads.pdfplumber_not_installed")) from exc
-
-        with pdfplumber.open(path) as pdf:
-            pages = [page.extract_text() or "" for page in pdf.pages]
-        text = "\n".join([p for p in pages if p]).strip()
-        if text:
-            return text
-        if not enable_ocr:
-            return ""
-        if shutil.which("tesseract") is None:
-            raise HTTPException(status_code=500, detail=T("api.errors.uploads.tesseract_not_available"))
-        try:
-            import pytesseract
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=T("api.errors.uploads.pytesseract_not_installed")) from exc
-        # OCR every page as an image at a modest DPI to avoid huge memory use
-        with pdfplumber.open(path) as pdf:
-            texts: list[str] = []
-            for page in pdf.pages:
-                img = page.to_image(resolution=200).original
-                texts.append(pytesseract.image_to_string(img, lang=ocr_lang or "eng"))
-        return "\n".join(texts).strip()
-
-    if content_type in {
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    }:
-        try:
-            import docx
-        except Exception as exc:
-            raise HTTPException(status_code=500, detail=T("api.errors.uploads.python_docx_not_installed")) from exc
-        doc = docx.Document(path)
-        paragraphs = [p.text for p in doc.paragraphs if p.text]
-        return "\n".join(paragraphs).strip()
-
-    return ""
 
 
 @post("/", tags=["uploads"])
@@ -289,9 +248,36 @@ async def upload_image(
     public_url = f"{public_base.rstrip('/')}/{dest.name}"
 
     extracted_text = None
-    use_ocr = bool(settings.upload_enable_ocr or ocr)
+    extraction_method = None
+    extraction_warnings: list[str] = []
+    extracted_pages: list[dict] = []
+    extracted_sections: list[dict] = []
+    extracted_title = None
+    extracted_abstract = None
+    extracted_figure_captions: list[str] = []
+    extracted_table_captions: list[str] = []
+    extracted_document_quality: dict | None = None
+    page_count = None
+    use_ocr = bool(settings.upload_enable_ocr or ocr or content_type == "application/pdf")
     if content_type in DOC_CONTENT_TYPES:
-        extracted_text = _extract_doc_text(dest, content_type, use_ocr, settings.upload_ocr_lang)
+        payload = extract_document_payload(
+            dest,
+            content_type,
+            enable_ocr=use_ocr,
+            ocr_lang=settings.upload_ocr_lang,
+            source_language=request.headers.get("X-Language"),
+        )
+        extracted_text = payload["text"] or None
+        extracted_title = payload.get("title") or None
+        extracted_abstract = payload.get("abstract") or None
+        extraction_method = payload["extraction_method"] or None
+        extraction_warnings = payload["warnings"] or []
+        extracted_pages = payload["pages"] or []
+        extracted_sections = payload["sections"] or []
+        extracted_figure_captions = payload.get("figure_captions") or []
+        extracted_table_captions = payload.get("table_captions") or []
+        extracted_document_quality = payload.get("document_quality") or None
+        page_count = payload["page_count"]
 
     return {
         "url": public_url,
@@ -299,6 +285,16 @@ async def upload_image(
         "size": written,
         "content_type": content_type,
         "extracted_text": extracted_text,
+        "extracted_title": extracted_title,
+        "extracted_abstract": extracted_abstract,
+        "extraction_method": extraction_method,
+        "extraction_warnings": extraction_warnings,
+        "page_count": page_count,
+        "extracted_pages": extracted_pages,
+        "extracted_sections": extracted_sections,
+        "extracted_figure_captions": extracted_figure_captions,
+        "extracted_table_captions": extracted_table_captions,
+        "extracted_document_quality": extracted_document_quality,
     }
 
 

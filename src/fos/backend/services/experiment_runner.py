@@ -447,7 +447,8 @@ async def cancel_run(run_id: int) -> bool:
             return False
         if getattr(run, "task_id", None):
             try:
-                celery_app.control.revoke(run.task_id, terminate=True)
+                if celery_app is not None:
+                    celery_app.control.revoke(run.task_id, terminate=True)
             except Exception:
                 # best-effort
                 pass

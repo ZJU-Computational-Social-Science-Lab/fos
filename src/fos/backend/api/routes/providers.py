@@ -87,6 +87,7 @@ def _serialize_provider(provider: ProviderConfig) -> ProviderBase:
         base_url=provider.base_url,
         has_api_key=bool(provider.api_key),
         is_active=bool((provider.config or {}).get("active")),
+        is_default=bool((provider.config or {}).get("active")),
         last_test_status=provider.last_test_status,
         last_tested_at=provider.last_tested_at,
         last_error=provider.last_error,

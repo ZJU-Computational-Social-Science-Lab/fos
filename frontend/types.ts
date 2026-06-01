@@ -24,6 +24,36 @@ export interface UploadedAsset {
   size: number;
   content_type: string;
   extracted_text?: string | null;
+  extracted_title?: string | null;
+  extracted_abstract?: string | null;
+  extraction_method?: string | null;
+  extraction_warnings?: string[];
+  page_count?: number | null;
+  extracted_figure_captions?: string[];
+  extracted_table_captions?: string[];
+  extracted_document_quality?: {
+    section_count?: number;
+    has_title?: boolean;
+    has_abstract?: boolean;
+    has_references?: boolean;
+    ocr_used?: boolean;
+    strong_extraction?: boolean;
+    average_page_quality?: number;
+    warnings?: string[];
+    char_count?: number;
+  } | null;
+  extracted_pages?: Array<{
+    page_number: number;
+    text: string;
+    method: string;
+    char_count: number;
+  }>;
+  extracted_sections?: Array<{
+    id: string;
+    title: string;
+    excerpt: string;
+    page?: number | null;
+  }>;
 }
 
 export interface EngineConfig {

@@ -37,6 +37,12 @@ const AdminPage = lazy(() =>
 const CreateExperimentPage = lazy(() =>
   import("./pages/CreateExperimentPage").then((m) => ({ default: m.CreateExperimentPage }))
 );
+const CreateExperimentPresetPage = lazy(() =>
+  import("./pages/CreateExperimentPresetPage").then((m) => ({ default: m.CreateExperimentPresetPage }))
+);
+const CreateExperimentCustomPage = lazy(() =>
+  import("./pages/CreateExperimentCustomPage").then((m) => ({ default: m.CreateExperimentCustomPage }))
+);
 const DocsPage = lazy(() =>
   import("./pages/DocsPage").then((m) => ({ default: m.DocsPage }))
 );
@@ -110,6 +116,28 @@ const App: React.FC = () => {
             <RequireAuth>
               <Layout navVariant="product">
                 <CreateExperimentPage />
+              </Layout>
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="/simulations/create/preset"
+          element={
+            <RequireAuth>
+              <Layout navVariant="product">
+                <CreateExperimentPresetPage />
+              </Layout>
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="/simulations/create/custom"
+          element={
+            <RequireAuth>
+              <Layout navVariant="product">
+                <CreateExperimentCustomPage />
               </Layout>
             </RequireAuth>
           }

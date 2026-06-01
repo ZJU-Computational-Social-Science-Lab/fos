@@ -96,6 +96,8 @@ class ExperimentAction(BaseModel):
 
 class ExperimentSettings(BaseModel):
     """Schema for experiment settings."""
+    model_config = ConfigDict(extra="allow")
+
     scenario_id: str = Field(
         default="custom",
         description="Scenario type identifier (e.g., 'prisoners_dilemma', 'stag_hunt', 'public_goods')"

@@ -27,11 +27,13 @@ import { Step6Structure } from './Step6Structure';
 interface ExperimentBuilderProps {
   onComplete?: (config: unknown) => void;
   onCancel?: () => void;
+  onBackFromStep2?: () => void;
 }
 
 export const ExperimentBuilder: React.FC<ExperimentBuilderProps> = ({
   onComplete,
   onCancel,
+  onBackFromStep2,
 }) => {
   const { t } = useTranslation();
   const {
@@ -52,6 +54,10 @@ export const ExperimentBuilder: React.FC<ExperimentBuilderProps> = ({
   };
 
   const handleBack = () => {
+    if (currentStep === 2 && onBackFromStep2) {
+      onBackFromStep2();
+      return;
+    }
     prevStep();
   };
 
