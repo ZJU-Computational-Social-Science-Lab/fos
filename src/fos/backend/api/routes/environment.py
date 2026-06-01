@@ -1,15 +1,27 @@
-from typing import Dict, Any, List
+"""
+This file exposes the host environment routes.
+
+Each function here does one small job:
+- `_parse_node_id_param` reads an optional node id from the request.
+- suggestion endpoints expose grounded environment suggestions.
+- event endpoints list, create, apply, and seed external events.
+- rules endpoints keep the simple in-memory rule list for now.
+"""
+
+from typing import Any
 import logging
-from datetime import datetime
 from litestar import Router, get, post
 from litestar.connection import Request
 from litestar.exceptions import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 import sqlalchemy.orm
 
 from fos.i18n import T
 from fos.backend.core.database import get_session
 from fos.backend.dependencies import extract_bearer_token, resolve_current_user
+from fos.backend.services.external_event_application import (
+    apply_external_event_record,
+    create_external_event_record,
+)
 from fos.backend.services.environment_suggestion_service import (
     get_simulation_state,
     generate_environment_suggestions,
@@ -17,7 +29,7 @@ from fos.backend.services.environment_suggestion_service import (
     dismiss_suggestions,
 )
 from fos.core.event_queue import EventQueue
-from fos.core.external_event import ExternalEvent, EventFilter, ExternalEventType, EventSource, Severity
+from fos.core.external_event import ExternalEvent, ExternalEventType, EventSource, Severity
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +48,7 @@ def _parse_node_id_param(request: Request) -> int | None:
 async def get_suggestion_status(
     simulation_id: str,
     request: Request,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Check if environment suggestions are available for the current turn."""
     token = extract_bearer_token(request)
     async with get_session() as session:
@@ -69,7 +81,7 @@ async def get_suggestion_status(
 async def generate_suggestions(
     simulation_id: str,
     request: Request,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate environment event suggestions based on current simulation context."""
     token = extract_bearer_token(request)
     async with get_session() as session:
@@ -92,9 +104,9 @@ async def generate_suggestions(
 @post("/simulations/{simulation_id:str}/events/environment")
 async def apply_environment_event(
     simulation_id: str,
-    data: Dict[str, Any],
+    data: dict[str, Any],
     request: Request,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Apply an environment event to the simulation."""
     token = extract_bearer_token(request)
     async with get_session() as session:
@@ -115,7 +127,7 @@ async def apply_environment_event(
 async def dismiss_suggestions_endpoint(
     simulation_id: str,
     request: Request,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Dismiss environment suggestions for the current interval."""
     token = extract_bearer_token(request)
     async with get_session() as session:
@@ -131,22 +143,22 @@ async def dismiss_suggestions_endpoint(
 _rules_store: list[Any] = []
 
 @get("/rules")
-async def get_rules(request: Request) -> Dict[str, Any]:
+async def get_rules(request: Request) -> dict[str, Any]:
     """Get all configured rules."""
     token = extract_bearer_token(request)
     async with get_session() as session:
-        current_user = await resolve_current_user(session, token)
+        await resolve_current_user(session, token)
     return {"rules": _rules_store}
 
 @post("/rules")
 async def save_rules(
-    data: Dict[str, Any],
+    data: dict[str, Any],
     request: Request,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Save/replace all rules."""
     token = extract_bearer_token(request)
     async with get_session() as session:
-        current_user = await resolve_current_user(session, token)
+        await resolve_current_user(session, token)
     global _rules_store
     _rules_store = data.get("rules", [])
     return {"saved": len(_rules_store)}
@@ -182,7 +194,7 @@ async def get_external_events(
     status: str | None = "pending",
     limit: int = 50,
     source: str | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Get external events for a simulation from DB.
 
     Args:
@@ -195,7 +207,7 @@ async def get_external_events(
     """
     token = extract_bearer_token(request)
     async with get_session() as session:
-        current_user = await resolve_current_user(session, token)
+        await resolve_current_user(session, token)
 
         from sqlalchemy import select, desc
         from fos.backend.models.external_event_record import ExternalEventRecord
@@ -212,8 +224,6 @@ async def get_external_events(
         if min_severity:
             severity_order = {"low": 1, "medium": 2, "high": 3, "critical": 4}
             min_level = severity_order.get(min_severity, 0)
-            # Filter events with severity >= min_level
-            from sqlalchemy import func
             stmt = stmt.where(
                 ExternalEventRecord.severity.in_(
                     [k for k, v in severity_order.items() if v >= min_level]
@@ -251,10 +261,10 @@ async def get_external_events(
 
 @post("/events/external")
 async def add_external_event(
-    data: Dict[str, Any],
+    data: dict[str, Any],
     request: Request,
     simulation_id: str | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Add an external event to DB.
 
     This endpoint allows manual injection of events or forwarding
@@ -262,29 +272,19 @@ async def add_external_event(
     """
     token = extract_bearer_token(request)
     async with get_session() as session:
-        current_user = await resolve_current_user(session, token)
+        await resolve_current_user(session, token)
 
-        from fos.backend.models.external_event_record import ExternalEventRecord
-        from datetime import datetime
-
-        record = ExternalEventRecord(
-            simulation_id=simulation_id,
-            event_type=data.get("event_type", "manual"),
-            source=data.get("source", "manual"),
-            title=data.get("title", ""),
-            content=data.get("content", ""),
-            severity=data.get("severity", "medium"),
-            url=data.get("url"),
-            raw_data=data.get("metadata", {}),
-            event_timestamp=datetime.fromisoformat(data["timestamp"]) if data.get("timestamp") else datetime.utcnow(),
-            status="pending",
-        )
-        session.add(record)
         try:
-            await session.commit()
-        except Exception as e:
-            logger.error(f"Failed to persist external event: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail="Failed to save event to database")
+            record = await create_external_event_record(
+                session,
+                simulation_id=simulation_id.upper() if simulation_id else None,
+                payload=data,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except Exception as exc:
+            logger.error("Failed to persist external event: %s", exc, exc_info=True)
+            raise HTTPException(status_code=500, detail=T("api.errors.external_event_save_failed")) from exc
 
         return {
             "success": True,
@@ -293,16 +293,40 @@ async def add_external_event(
         }
 
 
+@post("/events/external/{event_id:str}/apply")
+async def apply_saved_external_event(
+    event_id: str,
+    request: Request,
+    simulation_id: str,
+) -> dict[str, Any]:
+    """Apply one saved external event row to the selected simulation node."""
+    token = extract_bearer_token(request)
+    async with get_session() as session:
+        current_user = await resolve_current_user(session, token)
+        node_id = _parse_node_id_param(request)
+        try:
+            result = await apply_external_event_record(
+                simulation_id,
+                event_id,
+                db=session,
+                user_id=current_user.id,
+                node_id=node_id,
+            )
+            return result
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @post("/events/seed")
 async def seed_demo_events(
     request: Request,
     simulation_id: str | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Seed demo events for testing the event panel UI."""
     try:
         token = extract_bearer_token(request)
         async with get_session() as session:
-            current_user = await resolve_current_user(session, token)
+            await resolve_current_user(session, token)
 
         queue = _get_simulation_queue(simulation_id) if simulation_id else _get_default_queue()
         logger.info(f"Seed auth OK, queue created, simulation_id={simulation_id}")
@@ -394,6 +418,7 @@ router = Router(
         save_rules,
         get_external_events,
         add_external_event,
+        apply_saved_external_event,
         seed_demo_events,
     ],
 )
