@@ -30,7 +30,7 @@ _embedding_model = None
 
 
 def _resolve_embedding_backend() -> str:
-    backend = (os.getenv("SOCIALSIM4_EMBEDDING_BACKEND") or "sentence-transformers").strip().lower()
+    backend = (os.getenv("FOS_EMBEDDING_BACKEND") or "sentence-transformers").strip().lower()
     if backend not in {"sentence-transformers", "ollama"}:
         raise RuntimeError(T("Unsupported embedding backend: {backend}", backend=backend))
     return backend
@@ -39,7 +39,7 @@ def _resolve_embedding_backend() -> str:
 def _resolve_embedding_device() -> str:
     import torch
 
-    requested = (os.getenv("SOCIALSIM4_EMBEDDING_DEVICE") or "cuda").strip().lower()
+    requested = (os.getenv("FOS_EMBEDDING_DEVICE") or "cuda").strip().lower()
     if requested == "cuda":
         if not torch.cuda.is_available():
             raise RuntimeError(T("api.errors.cuda_not_available"))
@@ -52,14 +52,14 @@ def _resolve_embedding_device() -> str:
 
 
 def _resolve_embedding_model_source() -> str:
-    local_path = (os.getenv("SOCIALSIM4_EMBEDDING_MODEL_PATH") or "").strip()
+    local_path = (os.getenv("FOS_EMBEDDING_MODEL_PATH") or "").strip()
     if local_path:
         return local_path
     return 'all-MiniLM-L6-v2'
 
 
 def _resolve_ollama_embedding_model() -> str:
-    model = (os.getenv("SOCIALSIM4_OLLAMA_EMBED_MODEL") or "nomic-embed-text:latest").strip()
+    model = (os.getenv("FOS_OLLAMA_EMBED_MODEL") or "nomic-embed-text:latest").strip()
     if not model:
         raise RuntimeError(T("api.errors.ollama_embed_model_required"))
     return model

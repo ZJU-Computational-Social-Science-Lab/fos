@@ -1,7 +1,7 @@
 """
 LLM Prompt Testing Framework.
 
-This framework provides comprehensive testing of LLM prompts across all SocialSim4
+This framework provides comprehensive testing of LLM prompts across all FOS
 interaction patterns, with support for multiple models, scenarios, and iterative
 prompt improvement.
 

@@ -228,7 +228,7 @@ async def run_variants_parallel(simulation_id: str, node_ids: List[int], turns: 
 
 # In-memory map to track running ExperimentRun tasks: run_id -> asyncio.Task
 _RUN_TASKS: dict[int, asyncio.Task] = {}
-_USE_CELERY_EXPERIMENTS = str(os.environ.get("SOCIALSIM4_USE_CELERY_EXPERIMENTS") or "").strip().lower() in {"1", "true", "yes", "on"}
+_USE_CELERY_EXPERIMENTS = str(os.environ.get("FOS_USE_CELERY_EXPERIMENTS") or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 async def start_experiment_run_background(simulation_id: str, exp_id: str, turns: int) -> int:

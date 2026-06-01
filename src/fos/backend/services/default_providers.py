@@ -25,7 +25,7 @@ DEFAULT_ACTIVE_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
 
 def get_default_ollama_base_url() -> str:
     return (
-        os.getenv("SOCIALSIM4_OLLAMA_BASE_URL")
+        os.getenv("FOS_OLLAMA_BASE_URL")
         or os.getenv("OLLAMA_BASE_URL")
         or "http://localhost:11434"
     ).rstrip("/")

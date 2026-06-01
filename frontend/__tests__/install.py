@@ -118,9 +118,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Verify we're in the right directory
-    if not (REPO / "src" / "socialsim4").exists():
-        print("ERROR: Run this script from the Social-Sim-server root directory.")
-        print(f"       (Could not find src/socialsim4/ in {REPO.absolute()})")
+    if not (REPO / "src" / "fos").exists():
+        print("ERROR: Run this script from the FOS root directory.")
+        print(f"       (Could not find src/fos/ in {REPO.absolute()})")
         sys.exit(1)
 
     install(dry=args.dry_run)

@@ -1,2 +1,2 @@
-"""Backend package for SocialSim4."""
+"""Backend package for FOS (Future of Society)."""
 

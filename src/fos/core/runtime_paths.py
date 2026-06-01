@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 def get_runtime_debug_dir(*parts: str) -> Path:
-    configured = os.getenv("SOCIALSIM4_DEBUG_LOG_DIR")
+    configured = os.getenv("FOS_DEBUG_LOG_DIR")
     if configured:
         root = Path(configured)
     elif Path("/app/test_results").exists():

@@ -1,4 +1,4 @@
-"""Core configuration constants for SocialSim4.
+"""Core configuration constants for FOS (Future of Society).
 
 Prototype-stage: minimal globals toggled at simulation build time.
 """

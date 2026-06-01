@@ -1,5 +1,5 @@
 """
-Scenarios module for SocialSim4.
+Scenarios module for FOS (Future of Society).
 
 Provides scenario definitions, action libraries, and utilities for
 managing experiment scenarios.

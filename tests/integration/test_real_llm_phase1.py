@@ -35,22 +35,22 @@ class CapturingLLMClient:
 
 
 def _real_llm_config():
-    if os.environ.get("SOCIALSIM_TEST_REAL_LLM") != "1":
-        pytest.skip("SOCIALSIM_TEST_REAL_LLM is not set")
+    if os.environ.get("FOS_TEST_REAL_LLM") != "1":
+        pytest.skip("FOS_TEST_REAL_LLM is not set")
 
-    provider = os.environ.get("SOCIALSIM_TEST_LLM_PROVIDER", "ollama")
+    provider = os.environ.get("FOS_TEST_LLM_PROVIDER", "ollama")
     if provider != "ollama":
         pytest.skip(
-            "Phase 1 real-LLM tests are Ollama-only. Set SOCIALSIM_TEST_LLM_PROVIDER=ollama "
+            "Phase 1 real-LLM tests are Ollama-only. Set FOS_TEST_LLM_PROVIDER=ollama "
             "or omit it to use the Ollama default."
         )
 
-    model = os.environ.get("SOCIALSIM_TEST_LLM_MODEL", "")
+    model = os.environ.get("FOS_TEST_LLM_MODEL", "")
     if not model:
-        pytest.skip("SOCIALSIM_TEST_LLM_MODEL is not set. Choose a locally installed Ollama model.")
+        pytest.skip("FOS_TEST_LLM_MODEL is not set. Choose a locally installed Ollama model.")
 
     base_url = (
-        os.environ.get("SOCIALSIM_TEST_LLM_BASE_URL")
+        os.environ.get("FOS_TEST_LLM_BASE_URL")
         or os.environ.get("OLLAMA_BASE_URL")
         or "http://localhost:11434"
     )
@@ -59,8 +59,8 @@ def _real_llm_config():
         dialect="ollama",
         model=model,
         base_url=base_url,
-        temperature=float(os.environ.get("SOCIALSIM_TEST_LLM_TEMPERATURE", "0.1")),
-        max_tokens=int(os.environ.get("SOCIALSIM_TEST_LLM_MAX_TOKENS", "256")),
+        temperature=float(os.environ.get("FOS_TEST_LLM_TEMPERATURE", "0.1")),
+        max_tokens=int(os.environ.get("FOS_TEST_LLM_MAX_TOKENS", "256")),
     )
 
 

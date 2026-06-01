@@ -1,5 +1,5 @@
 """
-Action library definitions for SocialSim4 scenarios.
+Action library definitions for FOS scenarios.
 
 Provides categorized action sets that scenarios can reference.
 Each category contains actions relevant to that domain.
