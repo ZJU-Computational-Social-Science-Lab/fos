@@ -69,3 +69,5 @@ _write_scene.py
 
 # Local dev scripts
 *.cmd
+.mcp.json
+opencode.json

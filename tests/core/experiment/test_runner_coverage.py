@@ -58,6 +58,19 @@ def _make_runner(
     )
 
 
+def _make_non_pairwise_game_config() -> GameConfig:
+    """Create a simple game where every agent should act each round."""
+    return GameConfig(
+        name="group_test_game",
+        description="A simple test game for turn order checks.",
+        action_type="discrete",
+        actions=["cooperate", "defect"],
+        action_descriptions={"cooperate": "Cooperate", "defect": "Defect"},
+        grouping_mode="group",
+        payoff_type="none",
+    )
+
+
 # --- Prompt Building ---
 
 
@@ -171,7 +184,11 @@ class TestTurnLoop:
         """In simultaneous mode, all agents are prompted."""
         agents = _make_agents(("A", "B", "C"))
         client = _mock_llm_client()
-        runner = _make_runner(agents=agents, llm_client=client)
+        runner = _make_runner(
+            agents=agents,
+            game_config=_make_non_pairwise_game_config(),
+            llm_client=client,
+        )
 
         result = await runner._run_simultaneous_round(round_num=1)
 
@@ -186,6 +203,7 @@ class TestTurnLoop:
         client = _mock_llm_client()
         runner = _make_runner(
             agents=agents,
+            game_config=_make_non_pairwise_game_config(),
             llm_client=client,
             round_visibility="sequential",
         )
