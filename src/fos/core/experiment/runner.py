@@ -281,7 +281,16 @@ class ExperimentRunner:
                 break
 
     def _get_pairs_for_round(self, round_num: int) -> List[tuple[str, str]] | None:
-        """Find the pairs that should play in this round."""
+        """Find the pairs that should play in this round.
+
+        Pairing sources (in priority order):
+        1. InformationModel with pair scope and a pairing_fn
+        2. Default sequential pairing when the game uses pairwise payoffs
+           (grouping_mode="pairwise" AND payoff_type is not "none")
+
+        When payoff_type is "none", pairing is skipped — every agent
+        participates regardless of grouping_mode.
+        """
         if (
             self.information_model
             and self.information_model.scope_type == "pair"
@@ -292,17 +301,21 @@ class ExperimentRunner:
                 round_num,
             )
 
-        if self.game_config.grouping_mode != "pairwise":
-            return None
+        # Default pairing only when the game actually calculates pairwise payoffs.
+        # Games with payoff_type="none" never need pairing — all agents play.
+        if (
+            self.game_config.grouping_mode == "pairwise"
+            and self.game_config.payoff_type not in ("none",)
+        ):
+            agent_names = [agent.name for agent in self.agents]
+            if len(agent_names) < 2:
+                return None
+            return [
+                (agent_names[i], agent_names[i + 1])
+                for i in range(0, len(agent_names) - 1, 2)
+            ]
 
-        agent_names = [agent.name for agent in self.agents]
-        if len(agent_names) < 2:
-            return None
-
-        return [
-            (agent_names[i], agent_names[i + 1])
-            for i in range(0, len(agent_names) - 1, 2)
-        ]
+        return None
 
     def _get_active_agent_names_for_pairs(self, pairs: List[tuple[str, str]] | None) -> set[str] | None:
         """List which agents should act when a round uses pairs."""
@@ -447,14 +460,14 @@ class ExperimentRunner:
             ]
 
         # Cap concurrent LLM calls so the model server is not overwhelmed.
-        # Tune via SOCIALSIM_LLM_CONCURRENCY env var (default 10).
-        max_concurrent = int(os.environ.get("SOCIALSIM_LLM_CONCURRENCY", "10"))
+        # Tune via FOS_LLM_CONCURRENCY env var (default 10).
+        max_concurrent = int(os.environ.get("FOS_LLM_CONCURRENCY", "10"))
         semaphore = asyncio.Semaphore(max_concurrent)
 
         # Circuit breaker: if N consecutive agents fail, the LLM provider is
         # likely down. Fail-fast remaining agents instead of each one independently
-        # timing out. Tune via SOCIALSIM_CIRCUIT_BREAKER env var (default 5).
-        circuit_threshold = int(os.environ.get("SOCIALSIM_CIRCUIT_BREAKER", "5"))
+        # timing out. Tune via FOS_CIRCUIT_BREAKER env var (default 5).
+        circuit_threshold = int(os.environ.get("FOS_CIRCUIT_BREAKER", "5"))
         consecutive_failures = 0
 
         async def _prompt_with_limit(agent):

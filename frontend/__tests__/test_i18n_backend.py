@@ -27,7 +27,7 @@ import pytest
 
 # ── Paths ──────────────────────────────────────────────────────────────────
 ROOT       = Path(__file__).parent.parent
-SRC        = ROOT / "src" / "socialsim4"
+SRC        = ROOT / "src" / "fos"
 LOCALES    = SRC / "locales"
 EN_JSON    = LOCALES / "en.json"
 ZH_JSON    = LOCALES / "zh.json"
@@ -45,7 +45,7 @@ SAFE_PATTERNS = [
     re.compile(r"^(GET|POST|PUT|DELETE|PATCH)$"), # HTTP methods
     re.compile(r"^application/"),                 # MIME types
     re.compile(r"^\w+Error$"),                    # exception class names
-    re.compile(r"^socialsim4\."),                 # module paths
+    re.compile(r"^fos\."),                        # module paths
     re.compile(r"^\w+\.\w+$"),                    # dotted identifiers (config keys)
 ]
 
@@ -157,7 +157,7 @@ def test_no_hardcoded_http_detail_strings(http_detail_violations):
 
     FIX: Replace  detail="Tree node not found"
             with  detail=T("api.errors.tree.node_not_found")
-    and add the key to src/socialsim4/locales/en.json + zh.json.
+    and add the key to src/fos/locales/en.json + zh.json.
     """
     if not http_detail_violations:
         return
@@ -303,7 +303,7 @@ def test_all_t_keys_exist_in_en_locale(t_key_violations):
     WHY: When T() can't find a key it silently returns the key string itself
     (e.g. "api.errors.tree.node_not_found") as user-facing text.
 
-    FIX: Add the missing key to src/socialsim4/locales/en.json.
+    FIX: Add the missing key to src/fos/locales/en.json.
     """
     en_flat = load_json_flat(EN_JSON)
     missing = {
@@ -327,7 +327,7 @@ def test_all_t_keys_exist_in_zh_locale(t_key_violations):
     WHY: Missing zh.json entries cause T() to fall back to the key string
     when locale='zh', so Chinese users see raw key names instead of text.
 
-    FIX: Add the missing key to src/socialsim4/locales/zh.json.
+    FIX: Add the missing key to src/fos/locales/zh.json.
     """
     missing = {
         label: locs for label, locs in t_key_violations.items()

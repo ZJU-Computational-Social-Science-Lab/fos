@@ -2,7 +2,7 @@
 Grid map classes for spatial simulation scenes.
 
 Provides a sparse-tile grid with named locations, A* pathfinding, and
-serialization. Extracted from the socialsim4 VillageScene; display/render
+serialization. Extracted from the legacy VillageScene; display/render
 methods that depend on the legacy Agent class are intentionally omitted.
 
 Contains: MapLocation, Tile, GameMap

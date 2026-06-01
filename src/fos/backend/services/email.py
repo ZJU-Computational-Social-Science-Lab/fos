@@ -38,15 +38,15 @@ class EmailSender:
         return True
 
     async def send_verification_email(self, recipient: str, verification_link: str) -> bool:
-        subject = "Verify your SocialSim4 account"
+        subject = "Verify your FOS account"
         body_text = (
-            "Welcome to SocialSim4!\n\n"
+            "Welcome to FOS!\n\n"
             "Click the link below to verify your email address:\n"
             f"{verification_link}\n\n"
             "If you did not create an account, you can ignore this message."
         )
         body_html = (
-            "<p>Welcome to SocialSim4!</p>"
+            "<p>Welcome to FOS!</p>"
             "<p>Click the link below to verify your email address:</p>"
             f"<p><a href='{verification_link}'>Verify your email</a></p>"
             "<p>If you did not create an account, you can ignore this message.</p>"

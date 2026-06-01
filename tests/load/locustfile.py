@@ -1,9 +1,9 @@
 """
-Locust load testing suite for Social-Sim platform.
+Locust load testing suite for FOS platform.
 
 Simulates realistic user workflows: browsing, authentication,
 dashboard usage, simulation management, and API interactions.
-Run with: locust -f tests/load/locustfile.py --host https://mo.zju.edu.cn/css/socialsim
+Run with: locust -f tests/load/locustfile.py --host https://mo.zju.edu.cn/css/fos
 
 Contains: SocialSimVisitor, SocialSimUser, SocialSimPowerUser
 """

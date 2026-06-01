@@ -9,9 +9,9 @@ cd C:\Users\Justin\Documents\ZJU_Work\fos
 
 ### Step 2: Activate conda environment
 ```cmd
-conda activate socialsim
+conda activate fos
 ```
-*(If socialsim doesn't exist, create it first: `conda create -n socialsim python=3.12 -y`)*
+*(If fos doesn't exist, create it first: `conda create -n fos python=3.12 -y`)*
 
 ### Step 3: Set PYTHONPATH
 ```cmd

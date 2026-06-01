@@ -1,12 +1,12 @@
-# SocialSim4 Translation Template
+# FOS Translation Template
 # Copyright (C) 2025
-# This file is distributed under the same license as the SocialSim4 package.
+# This file is distributed under the same license as the FOS package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: SocialSim4 1.0\n"
+"Project-Id-Version: FOS 1.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2025-02-24 00:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"

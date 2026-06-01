@@ -12,7 +12,7 @@ _DANGEROUS_DB_PASSWORDS = {"fos", "postgres", "password", "admin"}
 
 class Settings(BaseSettings):
     debug: bool = False
-    app_name: str = "SocialSim4 Backend"
+    app_name: str = "FOS Backend"
     api_prefix: str = "/api"
     backend_root_path: str = ""
     frontend_dist_path: str | None = None
@@ -78,7 +78,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         extra="ignore",
-        env_prefix="SOCIALSIM4_",
+        env_prefix="FOS_",
         env_file=".env",
         env_file_encoding="utf-8",
     )
@@ -107,7 +107,7 @@ class Settings(BaseSettings):
         if jwt_key.lower() in _DANGEROUS_JWT_KEYS:
             errors.append(
                 "JWT_SIGNING_KEY is set to a known default value. "
-                "Generate a secure key (e.g., openssl rand -hex 32) and set SOCIALSIM4_JWT_SIGNING_KEY."
+                "Generate a secure key (e.g., openssl rand -hex 32) and set FOS_JWT_SIGNING_KEY."
             )
         elif len(jwt_key) < 32:
             errors.append(

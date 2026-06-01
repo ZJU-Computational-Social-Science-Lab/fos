@@ -6,25 +6,14 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useExperimentBuilder } from '../../store/experiment-builder';
 import { getAllScenarios, ScenarioData } from '../../services/scenarios';
-import {
-  deleteExperimentTemplate,
-  listExperimentTemplates,
-  mapExperimentTemplateToScenario,
-  type PersonalTemplateScenarioData,
-} from '../../services/experiment-templates';
-
-type SelectableScenario = ScenarioData | PersonalTemplateScenarioData;
 
 interface ScenarioCardProps {
-  scenario: SelectableScenario;
+  scenario: ScenarioData;
   selected: boolean;
   onClick: () => void;
-  onDelete?: () => void;
-  deleting?: boolean;
   t: any;
 }
 
@@ -34,6 +23,7 @@ const CATEGORY_ORDER = [
   'spatial',
   'social_deduction',
   'sociology',
+  'generative_city',
   'custom',
 ] as const;
 
@@ -43,6 +33,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   spatial: '#f59e0b',
   social_deduction: '#ef4444',
   sociology: '#ec4899',
+  generative_city: '#8b5cf6',
   custom: '#6b7280',
 };
 
@@ -50,8 +41,6 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({
   scenario,
   selected,
   onClick,
-  onDelete,
-  deleting = false,
   t,
 }) => {
   // Build translation key for scenario name/description
@@ -62,62 +51,45 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({
   const translatedName = t(scenarioNameKey, scenario.name);
   const translatedDesc = t(scenarioDescKey, scenario.description);
 
-  const isPersonalTemplate = 'templateSource' in scenario && scenario.templateSource === 'user_template';
-
   return (
-    <div
+    <button
+      onClick={onClick}
       className={`
-        relative rounded-lg border-2 transition-all
-        ${selected ? 'shadow-sm' : 'hover:shadow-sm'}
+        p-4 text-left border-2 rounded-lg transition-all w-full
+        ${selected
+          ? 'shadow-sm'
+          : 'hover:shadow-sm'
+        }
       `}
       style={selected
         ? { background: 'var(--ss-accent-warm-soft)', borderColor: 'var(--ss-brand-primary)', boxShadow: '0 0 0 2px var(--ss-brand-soft)' }
         : { background: 'var(--ss-page-surface)', borderColor: 'var(--ss-border)' }
       }
     >
-      <button onClick={onClick} className="w-full p-4 text-left">
-        <div className="flex items-start gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="mb-1 flex items-center gap-2">
-              <h3 className="font-semibold truncate pr-2" style={{ color: 'var(--ss-heading)' }}>
-                {translatedName}
-              </h3>
-            </div>
-            <p className="text-sm line-clamp-2" style={{ color: 'var(--ss-text)' }}>
-              {translatedDesc}
-            </p>
+      <div className="flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-semibold truncate" style={{ color: 'var(--ss-heading)' }}>
+              {translatedName}
+            </h3>
           </div>
-          <div className="ml-2 flex-shrink-0">
-            {selected ? (
-              <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'var(--ss-brand-primary)' }}>
-                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-            ) : (
-              <div className="w-6 h-6 rounded-full border-2" style={{ borderColor: 'var(--ss-border-strong)' }} />
-            )}
-          </div>
+          <p className="text-sm line-clamp-2" style={{ color: 'var(--ss-text)' }}>
+            {translatedDesc}
+          </p>
         </div>
-      </button>
-
-      {isPersonalTemplate && onDelete ? (
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onDelete();
-          }}
-          disabled={deleting}
-          className="absolute right-3 top-3 rounded-lg border p-1.5 transition disabled:opacity-60"
-          style={{ borderColor: 'var(--ss-border)', background: 'var(--ss-surface)', color: 'var(--ss-text-muted)' }}
-          title={t('experimentBuilder.step1.deletePersonalTemplate', { defaultValue: 'Delete template' })}
-          aria-label={t('experimentBuilder.step1.deletePersonalTemplate', { defaultValue: 'Delete template' })}
-        >
-          <Trash2 size={14} />
-        </button>
-      ) : null}
-    </div>
+        <div className="ml-2 flex-shrink-0">
+          {selected ? (
+            <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'var(--ss-brand-primary)' }}>
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          ) : (
+            <div className="w-6 h-6 rounded-full border-2" style={{ borderColor: 'var(--ss-border-strong)' }} />
+          )}
+        </div>
+      </div>
+    </button>
   );
 };
 
@@ -127,27 +99,21 @@ export const Step1InteractionType: React.FC = () => {
     selectedScenarioId,
     setSelectedScenarioId,
     setSelectedScenarioData,
-    setScenarioParams,
     markStepComplete,
   } = useExperimentBuilder();
 
-  const [scenarios, setScenarios] = useState<SelectableScenario[]>([]);
+  const [scenarios, setScenarios] = useState<ScenarioData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
-  const [deletingTemplateId, setDeletingTemplateId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchScenarios = async () => {
       setLoading(true);
       setError(null);
       try {
-        const [scenarioData, templateData] = await Promise.all([
-          getAllScenarios(),
-          listExperimentTemplates().catch(() => ({ templates: [], count: 0 })),
-        ]);
-        const personalTemplates = templateData.templates.map(mapExperimentTemplateToScenario);
-        setScenarios([...scenarioData, ...personalTemplates]);
+        const data = await getAllScenarios();
+        setScenarios(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch scenarios');
       } finally {
@@ -180,12 +146,9 @@ export const Step1InteractionType: React.FC = () => {
     }
   }, [selectedScenarioId, scenarios]);
 
-  const handleSelectScenario = (scenario: SelectableScenario) => {
+  const handleSelectScenario = (scenario: ScenarioData) => {
     setSelectedScenarioId(scenario.id);
     setSelectedScenarioData(scenario);
-    if ('templateSource' in scenario && scenario.templateSource === 'user_template') {
-      setScenarioParams({ ...(scenario.templateSettings || {}) });
-    }
     markStepComplete(1);
   };
 
@@ -194,12 +157,8 @@ export const Step1InteractionType: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const [scenarioData, templateData] = await Promise.all([
-          getAllScenarios(),
-          listExperimentTemplates().catch(() => ({ templates: [], count: 0 })),
-        ]);
-        const personalTemplates = templateData.templates.map(mapExperimentTemplateToScenario);
-        setScenarios([...scenarioData, ...personalTemplates]);
+        const data = await getAllScenarios();
+        setScenarios(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch scenarios');
       } finally {
@@ -208,21 +167,6 @@ export const Step1InteractionType: React.FC = () => {
     };
 
     fetchScenarios();
-  };
-
-  const handleDeleteTemplate = async (scenario: PersonalTemplateScenarioData) => {
-    setDeletingTemplateId(scenario.templateId);
-    try {
-      await deleteExperimentTemplate(scenario.templateId);
-      setScenarios((current) => current.filter((item) => item.id !== scenario.id));
-      if (selectedScenarioId === scenario.id) {
-        setSelectedScenarioId(null);
-        setSelectedScenarioData(null);
-        setScenarioParams({});
-      }
-    } finally {
-      setDeletingTemplateId(null);
-    }
   };
 
   return (
@@ -318,16 +262,6 @@ export const Step1InteractionType: React.FC = () => {
                         scenario={scenario}
                         selected={selectedScenarioId === scenario.id}
                         onClick={() => handleSelectScenario(scenario)}
-                        onDelete={
-                          'templateSource' in scenario && scenario.templateSource === 'user_template'
-                            ? () => void handleDeleteTemplate(scenario)
-                            : undefined
-                        }
-                        deleting={
-                          'templateSource' in scenario && scenario.templateSource === 'user_template'
-                            ? deletingTemplateId === scenario.templateId
-                            : false
-                        }
                         t={t}
                       />
                     ))}

@@ -28,7 +28,7 @@ from typing import Generator
 import pytest
 
 ROOT    = Path(__file__).parent.parent
-SRC     = ROOT / "src" / "socialsim4"
+SRC     = ROOT / "src" / "fos"
 EN_JSON = SRC / "locales" / "en.json"
 ZH_JSON = SRC / "locales" / "zh.json"
 

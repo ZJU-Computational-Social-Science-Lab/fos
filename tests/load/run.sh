@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run all k6 load test scenarios against the SocialSim platform.
+# Run all k6 load test scenarios against the FOS platform.
 #
 # Usage:
 #   ./tests/load/run.sh --target http://your-server:8090
@@ -114,7 +114,7 @@ echo "All tests complete. Reports in: $OUT_DIR"
 echo ""
 echo "Next steps:"
 echo "  1. Check Docker logs for timing entries:"
-echo "     docker logs socialsim-app 2>&1 | grep '\[LLM\]\|\[SIM\]\|\[WS\]\|\[DB\]'"
+echo "     docker logs fos-app 2>&1 | grep '\[LLM\]\|\[SIM\]\|\[WS\]\|\[DB\]'"
 echo ""
 echo "  2. Compare baseline vs concurrent metrics"
 echo ""

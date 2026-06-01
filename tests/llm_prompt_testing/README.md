@@ -1,6 +1,6 @@
 # LLM Prompt Testing Framework
 
-Comprehensive testing framework for validating LLM prompts across all SocialSim4 interaction patterns.
+Comprehensive testing framework for validating LLM prompts across all FOS interaction patterns.
 
 ## Quick Start
 

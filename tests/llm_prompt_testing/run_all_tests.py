@@ -180,7 +180,7 @@ def generate_final_report() -> None:
 def main():
     """Main entry point for the test framework."""
     parser = argparse.ArgumentParser(
-        description="LLM Prompt Testing Framework for SocialSim4"
+        description="LLM Prompt Testing Framework for FOS"
     )
 
     parser.add_argument(

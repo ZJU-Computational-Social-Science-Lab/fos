@@ -1,5 +1,5 @@
 """
-Internationalization (i18n) support for SocialSim4.
+Internationalization (i18n) support for FOS (Future of Society).
 
 Provides translation utilities for backend code using JSON-based locale files.
 Supports English and Chinese languages with fallback to English.

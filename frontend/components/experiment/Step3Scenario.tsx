@@ -46,7 +46,6 @@ interface ActionToggleCardProps {
   description: string;
   selected: boolean;
   onToggle: () => void;
-  testId?: string;
   isCustom?: boolean;
   onRemove?: () => void;
   removeLabel?: string;
@@ -57,14 +56,12 @@ const ActionToggleCard: React.FC<ActionToggleCardProps> = ({
   description,
   selected,
   onToggle,
-  testId,
   isCustom = false,
   onRemove,
   removeLabel,
 }) => {
   return (
     <div
-      data-testid={testId}
       className="p-4 border-2 rounded-lg transition-all"
       style={selected
         ? { background: 'var(--ss-accent-warm-soft)', borderColor: 'var(--ss-brand-primary)' }
@@ -179,43 +176,6 @@ export const Step3Scenario: React.FC = () => {
     return translated || fallback;
   };
 
-  const getAiScientistOverrides = (): ActionDef[] => {
-    const raw = scenarioParams.ai_scientist_action_overrides;
-    if (!Array.isArray(raw)) return [];
-    return raw
-      .filter((item): item is { name?: unknown; description?: unknown } => Boolean(item) && typeof item === 'object')
-      .map((item) => ({
-        name: String(item.name || '').trim(),
-        description: String(item.description || item.name || '').trim(),
-      }))
-      .filter((item) => item.name.length > 0);
-  };
-
-  const getParameterizedActionOverrides = (): ActionDef[] => {
-    if (!selectedScenarioData) return [];
-
-    const pairs = [
-      {
-        name: String(scenarioParams.action_1_name || scenarioParams.action_1 || '').trim(),
-        description: String(scenarioParams.action_1_description || '').trim(),
-      },
-      {
-        name: String(scenarioParams.action_2_name || scenarioParams.action_2 || '').trim(),
-        description: String(scenarioParams.action_2_description || '').trim(),
-      },
-    ].filter((item) => item.name.length > 0);
-
-    if (pairs.length === 0) return [];
-
-    return pairs.map((item, index) => ({
-      name: item.name,
-      description:
-        item.description ||
-        selectedScenarioData.actions?.[index]?.description ||
-        t('experimentBuilder.actions.chooseAction', { action: item.name }),
-    }));
-  };
-
   // Check if actions are dynamically generated
   const generatorParam = selectedScenarioData?.parameters?.find(
     (p) => p.generates_actions === true
@@ -277,14 +237,8 @@ export const Step3Scenario: React.FC = () => {
       } else {
         // Use category_actions if available, otherwise use scenario.actions
         const isPolicyCascadeScenario = isPolicyCascadeScenarioData(selectedScenarioData);
-        const aiOverrides = getAiScientistOverrides();
-        const parameterizedOverrides = getParameterizedActionOverrides();
         const rawActions =
-          aiOverrides.length > 0
-            ? aiOverrides
-            : parameterizedOverrides.length > 0
-              ? parameterizedOverrides
-              : (selectedScenarioData.category_actions || selectedScenarioData.actions || []);
+          selectedScenarioData.category_actions || selectedScenarioData.actions || [];
         const actionsToShow = isPolicyCascadeScenario
           ? buildPolicySceneActions()
           : rawActions;
@@ -386,7 +340,6 @@ export const Step3Scenario: React.FC = () => {
               description={isPolicyCascadeScenario ? action.description : getActionDescription(action.name, action.description)}
               selected={selectedActionIds.includes(action.name)}
               onToggle={() => handleToggleAction(action.name)}
-              testId={`builder-action-card-${action.name}`}
               isCustom={action.isCustom}
               onRemove={action.isCustom ? () => handleRemoveCustomAction(action.name) : undefined}
               removeLabel={t('experimentBuilder.step3.removeAction')}
