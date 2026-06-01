@@ -6,8 +6,9 @@
  * and run experiments using the new structured action system.
  */
 
-import { apiGet, apiPost } from './client';
+import { apiDelete, apiGet, apiPost } from './client';
 import i18n from '../i18n';
+import type { ScenarioData } from './scenarios';
 
 // =============================================================================
 // Types
@@ -46,6 +47,7 @@ export interface TemplateAction {
   action_type: string;
   name: string;
   description: string;
+  custom_action_name?: string;
   parameters?: ActionParameter[];
 }
 
@@ -63,7 +65,29 @@ export interface ActionParameter {
  * Template settings
  */
 export interface TemplateSettings {
+  scenario_id?: string;
   round_visibility: 'simultaneous' | 'sequential';
+  max_rounds?: number;
+  [key: string]: unknown;
+}
+
+export interface ExperimentTemplateRecord {
+  id: number;
+  name: string;
+  description: string;
+  actions: Array<{
+    name: string;
+    description?: string;
+    parameters?: ActionParameter[];
+  }>;
+  settings: TemplateSettings;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ListExperimentTemplatesResponse {
+  templates: ExperimentTemplateRecord[];
+  count: number;
 }
 
 /**
@@ -143,8 +167,16 @@ export async function fetchAvailableActionTypes(): Promise<AvailableActionsRespo
  */
 export async function createExperimentTemplate(
   data: CreateTemplateRequest
-): Promise<any> {
-  return apiPost<any>('/experiment-templates/templates', data);
+): Promise<ExperimentTemplateRecord> {
+  return apiPost<ExperimentTemplateRecord>('/experiment-templates/templates', data);
+}
+
+/**
+ * List experiment templates for current user.
+ * GET /api/experiment-templates/templates
+ */
+export async function listExperimentTemplates(): Promise<ListExperimentTemplatesResponse> {
+  return apiGet<ListExperimentTemplatesResponse>('/experiment-templates/templates');
 }
 
 /**
@@ -162,5 +194,39 @@ export async function runExperiment(
  * DELETE /api/experiment-templates/templates/:id
  */
 export async function deleteExperimentTemplate(id: number): Promise<void> {
-  return apiPost<void>(`/experiment-templates/templates/${id}`, undefined);
+  return apiDelete<void>(`/experiment-templates/templates/${id}`);
+}
+
+export interface PersonalTemplateScenarioData extends ScenarioData {
+  templateSource: 'user_template';
+  templateId: number;
+  templateSettings: TemplateSettings;
+}
+
+export function mapExperimentTemplateToScenario(template: ExperimentTemplateRecord): PersonalTemplateScenarioData {
+  const roundVisibility = template.settings?.round_visibility === 'simultaneous'
+    ? 'simultaneous'
+    : 'sequential';
+
+  return {
+    id: `user-template:${template.id}`,
+    name: template.name,
+    category: 'custom',
+    description: template.description,
+    interaction_mode: roundVisibility,
+    display_type: 'params',
+    parameters: [],
+    actions: template.actions.map((action) => ({
+      name: action.name,
+      description: action.description || action.name,
+    })),
+    category_actions: template.actions.map((action) => ({
+      name: action.name,
+      description: action.description || action.name,
+    })),
+    default_action_ids: template.actions.map((action) => action.name),
+    templateSource: 'user_template',
+    templateId: template.id,
+    templateSettings: template.settings || { round_visibility: roundVisibility },
+  };
 }

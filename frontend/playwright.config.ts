@@ -13,12 +13,25 @@
  */
 
 import { defineConfig } from '@playwright/test';
+import { existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
+import os from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const repoRoot = resolve(__dirname, '..');
+const backendPython = process.env.FOS_PLAYWRIGHT_PYTHON || process.env.PYTHON || 'python';
+const playwrightOutputDir = resolve(os.tmpdir(), 'fos-playwright-results');
+const playwrightReportPath = resolve(os.tmpdir(), 'fos-playwright-report.json');
+const pythonPath = resolve(repoRoot, 'src');
+const backendCommand = process.platform === 'win32'
+  ? `set PYTHONPATH=${pythonPath}&& "${backendPython}" -m uvicorn fos.backend.main:app --host 127.0.0.1 --port 8000`
+  : `PYTHONPATH="${pythonPath}" "${backendPython}" -m uvicorn fos.backend.main:app --host 127.0.0.1 --port 8000`;
+const chromeExecutable = process.platform === 'win32'
+  ? resolve(process.env.LOCALAPPDATA || '', 'Google', 'Chrome', 'Application', 'chrome.exe')
+  : '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const browserChannel = existsSync(chromeExecutable) ? 'chrome' : undefined;
 
 export default defineConfig({
   globalSetup: resolve(__dirname, 'e2e/global-setup.ts'),
@@ -29,19 +42,20 @@ export default defineConfig({
   expect: {
     timeout: 30_000,
   },
+  outputDir: playwrightOutputDir,
   reporter: [
     ['list'],
-    ['json', { outputFile: 'e2e/collected-results/playwright-report.json' }],
+    ['json', { outputFile: playwrightReportPath }],
   ],
   use: {
     baseURL: 'http://127.0.0.1:5173',
     trace: 'on-first-retry',
-    video: 'retain-on-failure',
+    video: 'off',
     screenshot: 'only-on-failure',
   },
   webServer: [
     {
-      command: resolve(repoRoot, 'start-backend-e2e.cmd'),
+      command: backendCommand,
       cwd: repoRoot,
       url: 'http://127.0.0.1:8000/api/health',
       reuseExistingServer: true,
@@ -60,6 +74,7 @@ export default defineConfig({
       name: 'en',
       use: {
         browserName: 'chromium',
+        channel: browserChannel,
         locale: 'en',
       },
     },
@@ -67,6 +82,7 @@ export default defineConfig({
       name: 'zh',
       use: {
         browserName: 'chromium',
+        channel: browserChannel,
         locale: 'zh',
       },
     },

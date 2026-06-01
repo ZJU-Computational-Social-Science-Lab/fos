@@ -694,9 +694,6 @@ class ExperimentScene:
         logger.debug(f"[FOLLOWUP] scenario_id={self.config.scenario_id}, action_names={action_names}")
         logger.debug(f"[FOLLOWUP] is_discussion={self.config.scenario_id in discussion_scenarios}")
 
-        if self.config.scenario_id == "custom":
-            return followup_modes
-
         if self.config.scenario_id in discussion_scenarios:
             # Map any speak-like action to plain_text mode
             for action_name in action_names:
@@ -808,6 +805,22 @@ class ExperimentScene:
             return ""
 
         lines = []
+
+        research_question = str(params.get("research_question", "") or "").strip()
+        if research_question:
+            lines.append(f"Research question: {research_question}")
+
+        key_variables = params.get("ai_scientist_key_variables") or []
+        if isinstance(key_variables, list) and key_variables:
+            lines.append("Key variables: " + ", ".join(str(item) for item in key_variables if str(item).strip()))
+
+        assumptions = params.get("ai_scientist_assumptions") or []
+        if isinstance(assumptions, list) and assumptions:
+            lines.append("Researcher review notes: " + " ".join(str(item) for item in assumptions if str(item).strip()))
+
+        missing_information = params.get("ai_scientist_missing_information") or []
+        if isinstance(missing_information, list) and missing_information:
+            lines.append("Open questions to keep in mind: " + " ".join(str(item) for item in missing_information if str(item).strip()))
 
         if scenario_id == "social_norm_disruption":
             norm_description = params.get("norm_description", "")

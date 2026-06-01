@@ -18,11 +18,17 @@ from .core.database import engine
 from .db.base import Base
 from .middleware import LocaleMiddleware
 from .api.routes.health import set_app_start_time
-from .services.polling_service import PollingService
+
+try:
+    from .services.polling_service import PollingService
+except ModuleNotFoundError:
+    PollingService = None
 
 
 async def _start_polling_service() -> None:
     """Start the PollingService to load enabled data sources and register poll jobs."""
+    if PollingService is None:
+        return
     polling_service = PollingService.get_instance()
     await polling_service.start()
 
@@ -148,10 +154,13 @@ def create_app() -> Litestar:
             methods = route.methods or ["WS"]
             print(f"[litestar] {sorted(methods)} {route.path}")
 
+    on_startup = [set_app_start_time, _prepare_database, _initialize_vector_store, _start_polling_service, _log_routes]
+    on_shutdown = [PollingService.get_instance().shutdown] if PollingService is not None else []
+
     app_kwargs: dict = {
         "route_handlers": [base_router],
-        "on_startup": [set_app_start_time, _prepare_database, _initialize_vector_store, _start_polling_service, _log_routes],
-        "on_shutdown": [PollingService.get_instance().shutdown],
+        "on_startup": on_startup,
+        "on_shutdown": on_shutdown,
         "cors_config": cors_config,
         "debug": settings.debug,
         "openapi_config": OpenAPIConfig(title=settings.app_name, version="1.0.0"),

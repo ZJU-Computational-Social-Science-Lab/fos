@@ -84,6 +84,16 @@ const PromptPreviewPanel: React.FC<PromptPreviewPanelProps> = ({
     return key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
+  const formatParamValue = (value: unknown): string => {
+    if (Array.isArray(value)) {
+      return value.map((item) => (typeof item === 'string' ? item : JSON.stringify(item))).join(', ');
+    }
+    if (value && typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+    return String(value);
+  };
+
   // Build formatted scenario description for PUBLIC_GOODS
   const getFormattedScenario = () => {
     if (scenarioId === 'public_goods') {
@@ -118,7 +128,15 @@ const PromptPreviewPanel: React.FC<PromptPreviewPanelProps> = ({
   // Determine which parameters to show
   const getDisplayParams = () => {
     if (scenarioId === 'custom') {
-      return [];
+      const hiddenKeys = new Set([
+        'custom_prompt',
+        'turn_ordering',
+        'ai_scientist_evidence',
+        'ai_scientist_source_sections',
+        'ai_scientist_action_overrides',
+        'ai_scientist_source_excerpt',
+      ]);
+      return Object.entries(scenarioParams).filter(([key]) => !hiddenKeys.has(key));
     }
     if (scenarioId === 'public_goods') {
       const excludedKeys = [
@@ -194,19 +212,19 @@ const PromptPreviewPanel: React.FC<PromptPreviewPanelProps> = ({
 
         {/* Section 2: Scenario */}
         <div className="mb-4">
-          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>{t('experimentBuilder.promptPreview.scenarioLabel')}</div>
+          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>Scenario:</div>
           {formattedScenario || (
-            <span className="italic" style={{ color: 'var(--ss-text-subtle)' }}>{t('experimentBuilder.promptPreview.noScenarioDescription')}</span>
+            <span className="italic" style={{ color: 'var(--ss-text-subtle)' }}>No scenario description provided</span>
           )}
         </div>
 
         {/* Section 2b: Additional Parameters */}
         {displayParams.length > 0 && (
           <div className="mb-4">
-            <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>{t('experimentBuilder.promptPreview.additionalParametersLabel')}</div>
+            <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>Additional Parameters:</div>
             <div className="pl-2">
               {displayParams.map(([key, value]) => (
-                <div key={key}>- {formatParamKey(key)}: {String(value)}</div>
+                <div key={key}>- {formatParamKey(key)}: {formatParamValue(value)}</div>
               ))}
             </div>
           </div>
@@ -214,27 +232,27 @@ const PromptPreviewPanel: React.FC<PromptPreviewPanelProps> = ({
 
         {scenarioId === 'custom' && (
           <div className="mb-4">
-            <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>{t('experimentBuilder.promptPreview.turnOrderingLabel')}</div>
+            <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>Turn Ordering:</div>
             <div className="pl-2">{customTurnOrdering}</div>
-            <div className="font-semibold mt-3 mb-1" style={{ color: 'var(--ss-heading)' }}>{t('experimentBuilder.promptPreview.networkLabel')}</div>
-            <div className="pl-2">{t('experimentBuilder.promptPreview.connectionsCount', { count: networkEdges })}</div>
+            <div className="font-semibold mt-3 mb-1" style={{ color: 'var(--ss-heading)' }}>Network:</div>
+            <div className="pl-2">{networkEdges} connection{networkEdges === 1 ? '' : 's'}</div>
           </div>
         )}
 
         {/* Section 3: Available Actions */}
         <div className="mb-4">
-          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>{t('experimentBuilder.promptPreview.availableActionsLabel')}</div>
+          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>Available actions:</div>
           {displayActions.length > 0 ? (
             <div className="pl-2">{actionsList}</div>
           ) : (
-            <span className="italic" style={{ color: 'var(--ss-text-subtle)' }}>{t('experimentBuilder.promptPreview.noActionsSelected')}</span>
+            <span className="italic" style={{ color: 'var(--ss-text-subtle)' }}>No actions selected</span>
           )}
         </div>
 
         {/* Section 4: Context */}
         <div className="mb-4">
-          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>{t('experimentBuilder.promptPreview.contextLabel')}</div>
-          <div className="pl-2">{t('experimentBuilder.promptPreview.firstRoundContext')}</div>
+          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>Context:</div>
+          <div className="pl-2">This is the first round.</div>
         </div>
 
         {/* Section 5: Output Format */}
@@ -242,22 +260,22 @@ const PromptPreviewPanel: React.FC<PromptPreviewPanelProps> = ({
           className="pt-3 mt-3"
           style={{ borderTop: '1px solid var(--ss-border)' }}
         >
-          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>{t('experimentBuilder.promptPreview.yourResponseLabel')}</div>
+          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>Your Response:</div>
           {displayActions.length > 0 ? (
             scenarioId === 'custom' ? (
               <div className="pl-2">
-                {`{"action": "speak", "message": "..."}`}
-                <br />
-                {`{"action": "skip", "message": null}`}
+                {displayActions.map((action) => (
+                  <div key={action.name}>{`{"action": "${action.name}", "message": ${action.name.toLowerCase().includes('speak') ? '"..."' : 'null'}}`}</div>
+                ))}
               </div>
             ) : (
               <div className="pl-2">
-                {t('experimentBuilder.promptPreview.respondWithOnlyJson')} {`{{"action": <${actionsForResponse}>}}`}
+                Respond with only JSON: {`{{"action": <${actionsForResponse}>}}`}
               </div>
             )
           ) : (
             <div className="pl-2 italic" style={{ color: 'var(--ss-text-subtle)' }}>
-              {t('experimentBuilder.promptPreview.addActionsStep3Hint')}
+              Add actions in Step 3 to see the response format
             </div>
           )}
         </div>
@@ -440,7 +458,7 @@ export const Step6Structure: React.FC = () => {
               className="flex items-center justify-center h-full rounded-lg"
               style={{ background: 'var(--ss-page-surface)', color: 'var(--ss-text-subtle)' }}
             >
-              {t('experimentBuilder.promptPreview.selectAgentTypeToPreview')}
+              Select an agent type to preview
             </div>
           )}
         </div>

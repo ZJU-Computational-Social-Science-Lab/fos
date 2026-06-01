@@ -12,7 +12,6 @@ import { ChevronDown } from 'lucide-react';
 import { useExperimentBuilder } from '../../store/experiment-builder';
 import ParameterField from './ParameterField';
 import { ActionEditor } from './ActionEditor';
-import GAWorldScenarioPanel from './GAWorldScenarioPanel';
 import { ResourceConfig } from './ResourceConfig';
 
 const DISTORTION_ONLY_PARAM_KEYS = new Set([
@@ -141,7 +140,6 @@ export const Step2StarterTemplate: React.FC = () => {
     setScenarioParams,
     setRoundVisibility,
     setTurnOrder,
-    loadDefaultAgentsForScenario,
   } = useExperimentBuilder();
 
   const [localRoundVisibility, setLocalRoundVisibility] = useState<'simultaneous' | 'sequential'>('simultaneous');
@@ -204,11 +202,6 @@ export const Step2StarterTemplate: React.FC = () => {
 
   const handleParamChange = (key: string, value: string | number) => {
     setScenarioParams({ ...scenarioParams, [key]: value });
-    if (selectedScenarioData?.id === 'gaworld' && key === 'agent_ids') {
-      void loadDefaultAgentsForScenario('gaworld', String(value || '')).catch((error: unknown) => {
-        console.error('Failed to refresh GAWorld default agents:', error);
-      });
-    }
   };
 
   const handlePayoffChange = (value: {
@@ -350,6 +343,7 @@ export const Step2StarterTemplate: React.FC = () => {
             {t('experimentBuilder.paramLabels.custom_prompt')}
           </label>
           <textarea
+            data-testid="builder-step2-custom-prompt"
             id="custom-scenario-prompt"
             value={scenarioDescription}
             onChange={handleDescriptionChange}
@@ -385,7 +379,6 @@ export const Step2StarterTemplate: React.FC = () => {
   }
 
   const hasParameters = selectedScenarioData.parameters.length > 0;
-  const isGAWorldScenario = selectedScenarioData.id === 'gaworld';
   const cascadeMode = String(
     scenarioParams.cascade_mode
       ?? selectedScenarioData.parameters.find((param) => param.key === 'cascade_mode')?.default
@@ -434,6 +427,7 @@ export const Step2StarterTemplate: React.FC = () => {
           {t('experimentBuilder.step2.scenarioDescriptionLabel')}
         </label>
         <textarea
+          data-testid="builder-step2-description"
           id="scenario-description"
           value={scenarioDescription}
           onChange={handleDescriptionChange}
@@ -482,11 +476,6 @@ export const Step2StarterTemplate: React.FC = () => {
           actionA={String(scenarioParams.action_1_name || selectedScenarioData.actions?.[0]?.name || 'Action 1')}
           actionB={String(scenarioParams.action_2_name || selectedScenarioData.actions?.[1]?.name || 'Action 2')}
           onChange={handlePayoffChange}
-        />
-      ) : isGAWorldScenario ? (
-        <GAWorldScenarioPanel
-          scenarioParams={scenarioParams}
-          setScenarioParams={setScenarioParams}
         />
       ) : hasParameters ? (
         <div className="space-y-4">

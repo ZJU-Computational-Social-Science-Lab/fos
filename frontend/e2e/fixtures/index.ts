@@ -21,9 +21,25 @@ type E2EFixtures = {
 
 export const test = base.extend<E2EFixtures>({
   locale: ['en', { option: true }],
-  authedPage: async ({ page, locale }, use) => {
+  authedPage: async ({ page, locale, request }, use) => {
     const email = process.env.E2E_EMAIL || 'test@test.com.cn';
     const password = process.env.E2E_PASSWORD || 'test';
+    const username = process.env.E2E_USERNAME || 'e2e_research_import';
+
+    const registerResponse = await request.post('/api/auth/register', {
+      data: {
+        organization: 'FOS E2E',
+        email,
+        username,
+        full_name: 'FOS E2E User',
+        phone_number: '+8613800000000',
+        password,
+      },
+    });
+
+    if (![201, 400].includes(registerResponse.status())) {
+      throw new Error(`Unexpected register status: ${registerResponse.status()}`);
+    }
 
     // Set language preference before any navigation
     await page.addInitScript((lang) => {
