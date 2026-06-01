@@ -28,10 +28,10 @@ PRISONERS_DILEMMA: Dict[str, Any] = {
         "rows": ["Cooperate", "Defect"],
         "cols": ["Cooperate", "Defect"],
         "cells": {
-            "cooperate_cooperate": {"row": 1, "col": 1},
-            "cooperate_defect": {"row": 5, "col": 0},
-            "defect_cooperate": {"row": 0, "col": 5},
-            "defect_defect": {"row": 3, "col": 3},
+            "cooperate_cooperate": {"row": 3, "col": 3},
+            "cooperate_defect": {"row": 0, "col": 5},
+            "defect_cooperate": {"row": 5, "col": 0},
+            "defect_defect": {"row": 1, "col": 1},
         }
     },
     "description_template": "Two agents choose between {action_1} or {action_2}. Payoff depends on both choices.",
