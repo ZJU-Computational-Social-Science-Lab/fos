@@ -17,6 +17,8 @@ from typing import Any
 
 from fos.core.external_event import ExternalEvent, ExternalEventType, Severity
 
+from fos.i18n import T
+
 logger = logging.getLogger(__name__)
 
 _INACTIVE_ACTIONS = {"yield", "skip", "wait", "pass", "observe", "monitor"}
@@ -284,7 +286,7 @@ class EnvironmentAgent:
             suggestions.append(
                 {
                     "event_type": "notification",
-                    "description": "Resources look tight in the latest state. Inject a notice about shortages, rationing, or a fresh supply channel so the next round reacts to real pressure.",
+                    "description": T("prompts.env_agent.resource_pressure"),
                     "severity": "moderate",
                     "grounding": f"Resource pressure is {analysis['resource_pressure']:.2f}.",
                 }
@@ -294,7 +296,7 @@ class EnvironmentAgent:
             suggestions.append(
                 {
                     "event_type": "notification",
-                    "description": "Recent rounds look stable. If you want to probe the simulation, inject a small outside notice and observe whether the current pattern holds.",
+                    "description": T("prompts.env_agent.stable_probing"),
                     "severity": "mild",
                     "grounding": "No strong instability signal was found in the latest finished rounds.",
                 }

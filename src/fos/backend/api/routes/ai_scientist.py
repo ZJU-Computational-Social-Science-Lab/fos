@@ -19,6 +19,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from fos.i18n import T
+
 from fos.core.llm import create_llm_client
 from fos.core.llm_config import LLMConfig, guess_supports_vision
 from fos.core.scenarios import get_all_scenarios
@@ -159,7 +161,7 @@ async def _select_provider_optional(
         )
         provider = result.scalars().first()
         if provider is None:
-            raise HTTPException(status_code=400, detail="Selected provider was not found")
+            raise HTTPException(status_code=400, detail=T("api.errors.ai_scientist_selected_provider_not_found"))
         return provider
 
     result = await session.execute(
@@ -435,7 +437,7 @@ async def analyze_research_text(request: Request, data: AnalyzeRequest) -> Analy
             if provider is None:
                 raise HTTPException(
                     status_code=400,
-                    detail="No active provider found. Configure an LLM provider before running document recognition.",
+                    detail=T("api.errors.ai_scientist_no_active_provider"),
                 )
 
             try:
@@ -507,7 +509,7 @@ async def analyze_research_text(request: Request, data: AnalyzeRequest) -> Analy
                 logger.warning("AI scientist LLM extraction failed: %s", exc)
                 raise HTTPException(
                     status_code=502,
-                    detail=f"LLM recognition failed. Check the configured provider and model output format. {exc}",
+                    detail=T("api.errors.ai_scientist_llm_recognition_failed", error=str(exc)),
                 ) from exc
     else:
         warnings.append("Ran deterministic recognition mode without provider assistance.")

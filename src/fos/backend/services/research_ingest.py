@@ -19,6 +19,8 @@ from urllib import error as urllib_error
 from urllib import request as urllib_request
 import xml.etree.ElementTree as ET
 
+from fos.i18n import T
+
 
 _GS_CANDIDATES = ("/usr/local/bin/gs", shutil.which("gs"))
 _TEXTUTIL_CANDIDATES = ("/usr/bin/textutil", shutil.which("textutil"))
@@ -51,7 +53,7 @@ def _run_command(cmd: list[str], *, timeout: int = 180, check: bool = True) -> s
         stderr = (result.stderr or "").strip()
         stdout = (result.stdout or "").strip()
         detail = stderr or stdout or f"exit code {result.returncode}"
-        raise RuntimeError(f"Command failed: {' '.join(cmd)} ({detail})")
+        raise RuntimeError(T("error.research_ingest.command_failed", cmd=" ".join(cmd), detail=detail))
     return result.stdout or ""
 
 
@@ -243,7 +245,7 @@ def _extract_pdf_text_with_ghostscript(path: Path) -> list[ExtractedPage]:
 def _render_pdf_pages(path: Path) -> list[Path]:
     gs = _pick_existing(_GS_CANDIDATES)
     if not gs:
-        raise RuntimeError("Ghostscript is not available for PDF rendering")
+        raise RuntimeError(T("error.research_ingest.ghostscript_not_available"))
 
     tmpdir = Path(tempfile.mkdtemp(prefix="fos-pdf-ocr-"))
     output_pattern = tmpdir / "page-%03d.png"
@@ -262,14 +264,14 @@ def _render_pdf_pages(path: Path) -> list[Path]:
     )
     pages = sorted(tmpdir.glob("page-*.png"))
     if not pages:
-        raise RuntimeError("Ghostscript did not render any PDF pages")
+        raise RuntimeError(T("error.research_ingest.ghostscript_no_pages"))
     return pages
 
 
 def _ocr_image(path: Path, ocr_lang: str) -> str:
     tesseract = _pick_existing(_TESSERACT_CANDIDATES)
     if not tesseract:
-        raise RuntimeError("Tesseract is not available")
+        raise RuntimeError(T("error.research_ingest.tesseract_not_available"))
     return _normalize_text(
         _run_command([tesseract, str(path), "stdout", "-l", ocr_lang], timeout=180)
     )

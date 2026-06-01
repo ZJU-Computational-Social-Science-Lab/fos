@@ -2557,6 +2557,107 @@
       "num_agents_per_tier": "控制每一个层级自动生成多少个智能体。",
       "policy_text": "仅用于设定第一轮的开场背景或情境，不会自动作为后续逐级传递时必须保留的原始政策。"
     },
+<<<<<<< Updated upstream
+=======
+    "gaworld": {
+      "startingPointTitle": "起始模式",
+      "startingPointHint": "先选择一个起始模式，再细调下面的城市系统。",
+      "citySystemsTitle": "城市系统",
+      "advancedTitle": "高级",
+      "seedLabel": "可重复种子",
+      "seedDescription": "使用相同种子可重复相同设置。",
+      "presets": {
+        "fast": {
+          "title": "快速",
+          "description": "适合快速试验的轻量城市运行。"
+        },
+        "balanced": {
+          "title": "平衡",
+          "description": "在速度和城市细节之间取中间值。"
+        },
+        "full_fidelity": {
+          "title": "完整",
+          "description": "细节最丰富的城市运行方式。"
+        }
+      },
+      "groups": {
+        "information": {
+          "title": "信息",
+          "description": "城市里外部信息流动的程度。"
+        },
+        "daily_life": {
+          "title": "日常生活",
+          "description": "日常安排是更固定还是更灵活。"
+        },
+        "people": {
+          "title": "人群",
+          "description": "居民行为有多适应环境、多人性化。"
+        },
+        "memory": {
+          "title": "记忆",
+          "description": "居民会把多少前几天的经历带到今天。"
+        }
+      },
+      "modes": {
+        "information": {
+          "off": {
+            "title": "关闭",
+            "description": "居民不会对外部信息源作出反应。"
+          },
+          "city_news": {
+            "title": "仅城市新闻",
+            "description": "居民会收到共享新闻，但不会主动搜索更多信息。"
+          },
+          "active_flow": {
+            "title": "主动信息流",
+            "description": "居民既会收到共享新闻，也会主动寻找更多信息。"
+          }
+        },
+        "daily_life": {
+          "stable_routines": {
+            "title": "稳定日程",
+            "description": "日常安排大多重复，变化较少。"
+          },
+          "some_variation": {
+            "title": "适度变化",
+            "description": "日常生活会有一些变化，但不会太混乱。"
+          },
+          "flexible_daily_life": {
+            "title": "灵活日常",
+            "description": "计划更容易变动，也更容易出现临时调整。"
+          }
+        },
+        "people": {
+          "simple_behavior": {
+            "title": "简单行为",
+            "description": "居民行为更基础、更可预测。"
+          },
+          "adaptive_behavior": {
+            "title": "适应行为",
+            "description": "居民会以适中的程度根据处境调整行为。"
+          },
+          "rich_human_behavior": {
+            "title": "丰富人性行为",
+            "description": "居民会展现更强的适应性和更丰富的人性细节。"
+          }
+        },
+        "memory": {
+          "in_the_moment": {
+            "title": "只看当下",
+            "description": "居民主要根据当天情况行动。"
+          },
+          "some_continuity": {
+            "title": "有些连续性",
+            "description": "居民会保留一部分最近几天的上下文。"
+          },
+          "rich_memory": {
+            "title": "丰富记忆",
+            "description": "居民会在多天之间形成更强的连续性。"
+          }
+        }
+      }
+    },
+>>>>>>> Stashed changes
     "payoffMatrix": {
       "howToRead": {
         "title": "如何阅读此矩阵：",
@@ -3058,5 +3159,324 @@
     "primaryNav": "主导航",
     "switchToLight": "切换到日间模式",
     "switchToDark": "切换到夜间模式"
+<<<<<<< Updated upstream
+=======
+  },
+  "topologyExplorer": {
+    "topologyExplorer": "????",
+    "subtitle": "??????????????????",
+    "returnToExperiment": "????",
+    "leftRailLabel": "????",
+    "overview": "????",
+    "overviewHint": "????????????????",
+    "openInControlRoom": "???????",
+    "exitComparePrep": "??????",
+    "prepareCompare": "????",
+    "searchNodes": "????",
+    "branchStateFilters": "??????",
+    "selectionSummary": "????",
+    "activeBranch": "????",
+    "compareBranch": "????",
+    "selectedBranchDetail": "??????",
+    "detailHint": "???????????????",
+    "branchDepth": "????",
+    "childBranches": "???",
+    "parentBranch": "???",
+    "branchState": "????",
+    "visibleNodes": "????",
+    "branchActions": "????",
+    "compareReady": "?????",
+    "compareReadyHint": "????????????????",
+    "immediateChildren": "?????",
+    "valueUnavailable": "?",
+    "status": {
+      "running": "???",
+      "completed": "???",
+      "failed": "??",
+      "pending": "???"
+    }
+  },
+  "scenario_templates": {
+    "gaworld": {
+      "name": "GAWorld 城市仿真",
+      "description": "包含 50 名杭州居民的多智能体生成式城市仿真。",
+      "parameters": {
+        "execution_profile": {
+          "label": "起始模式",
+          "description": "先选择一个快速起始模式，再调整下方的城市系统。"
+        },
+        "information_mode": {
+          "label": "信息",
+          "description": "城市里外部信息流动的程度。"
+        },
+        "daily_life_mode": {
+          "label": "日常生活",
+          "description": "日常安排是更固定还是更灵活。"
+        },
+        "people_mode": {
+          "label": "人群",
+          "description": "居民行为有多适应环境、多人性化。"
+        },
+        "memory_mode": {
+          "label": "记忆",
+          "description": "居民会把多少前几天的经历带到今天。"
+        },
+        "seed": {
+          "label": "随机种子",
+          "description": "使用相同种子可重复相同设置。"
+        }
+      },
+      "actions": {
+        "work": {
+          "name": "工作",
+          "description": "智能体执行工作任务"
+        },
+        "social_interact": {
+          "name": "社交互动",
+          "description": "智能体与其他智能体互动"
+        },
+        "consume_media": {
+          "name": "消费媒体",
+          "description": "智能体阅读或观看新闻或社交媒体"
+        },
+        "move": {
+          "name": "移动",
+          "description": "智能体改变位置"
+        },
+        "rest": {
+          "name": "休息",
+          "description": "智能体在家或其他地点休息"
+        }
+      }
+    }
+  },
+  "dashboardDesk": {
+    "eyebrow": "?????",
+    "title": "??????",
+    "subtitle": "????????????????????????????????",
+    "launchExperiment": "????",
+    "openArchive": "????",
+    "providerMissing": "????????",
+    "providerWarningTitle": "????????????",
+    "providerWarningBody": "?????????????????????????????",
+    "recommendationSetup": "??????",
+    "recommendations": "?????",
+    "recommendationsHint": "?????????????????????????",
+    "recommendationNew": "?????",
+    "newExperimentHint": "?????????????????",
+    "recommendationScenes": "?????",
+    "sceneLibraryHint": "????????????????",
+    "recommendationNetwork": "??????",
+    "networkHint": "?????????????????",
+    "recommendationAnalyze": "??????",
+    "analyzeHint": "?????????????????",
+    "scenarioEntry": "????",
+    "scenarioEntryHint": "???????????????????",
+    "openScenarioLibrary": "?????",
+    "currentExperiment": "????",
+    "noRecent": "??????",
+    "currentExperimentHint": "??????????????????????????????",
+    "providerReady": "??????",
+    "recentChanges": "????",
+    "continueLabel": "????",
+    "activeStatus": {
+      "active": "???",
+      "archived": "???",
+      "completed": "???",
+      "failed": "??",
+      "draft": "??",
+      "unknown": "??"
+    }
+  },
+  "createExperiment": {
+    "entry": {
+      "badge": "创建入口",
+      "title": "你想如何创建这个实验？",
+      "subtitle": "可以直接进入预设模板，或者进入 AI 辅助自定义流程，把研究问题或论文摘要提取成新的场景描述和动作集。",
+      "enter": "进入",
+      "workflow": "流程概览",
+      "handoff": "第 2 步回归主线",
+      "standardFlow": "标准流程",
+      "aiAssisted": "AI 辅助",
+      "guidance": "进入说明",
+      "footer": "预设模板会沿用现有 FOS 创建流程。自定义创建会先经过 AI 提取，再把结果交回标准向导继续编辑和运行。",
+      "preset": {
+        "title": "预设模板",
+        "description": "打开标准 FOS 模板选择页，继续沿用现有的创建流程。"
+      },
+      "custom": {
+        "title": "自定义实验",
+        "description": "使用 AI 将研究问题或论文摘要转换为可审查的场景描述和动作集。"
+      }
+    },
+    "customBuilder": {
+      "badge": "AI 社会科学家",
+      "title": "从研究文本创建自定义实验",
+      "subtitle": "粘贴研究问题、论文摘要或方法部分，系统会提取场景草案、候选动作、可能的智能体和关键变量，供你在继续前审查修改。",
+      "inputLabel": "研究问题或论文摘要",
+      "inputPlaceholder": "粘贴论文摘要、方法部分，或你想建模的研究问题。",
+      "analyze": "分析文本",
+      "saveTemplateToggle": "创建后保存到我的预设模板",
+      "analysisFailed": "研究文本分析失败。",
+      "back": "返回入口",
+      "uploadFile": "上传文件",
+      "clearDraft": "一键清空",
+      "uploadFileTypeError": "请上传 .txt、.pdf、.doc 或 .docx 文件。",
+      "uploadSuccess": "已上传并提取 {{name}} 的文本",
+      "uploadFailed": "文件上传失败",
+      "uploadNoText": "文件已上传，但未提取到可读取文本。",
+      "enterTextFirst": "请先输入文本或上传文件，再开始分析。",
+      "inputHint": "粘贴摘要、方法部分或上传 PDF / Word 文件。图片型 PDF 会自动走 OCR。",
+      "sourceFileLabel": "来源文件",
+      "sourceFile": "来源文件：{{name}}",
+      "pageCount": "{{count}} 页",
+      "pageShort": "第 {{page}} 页",
+      "extractionMethodOcr": "OCR 识别",
+      "extractionMethodManual": "手动输入",
+      "extractionMethodPdf": "PDF 文本提取",
+      "extractionMethodGhostscript": "PDF 文本提取",
+      "extractionMethodUnknown": "文本提取",
+      "sceneTitle": "场景草案",
+      "templateNameLabel": "实验场景名字",
+      "templateNamePlaceholder": "给这个实验场景起一个名字",
+      "templateNameHint": "这个名字会带入后续 Builder；如果你开启了保存，也会作为你的个人预设模板名称。",
+      "scenePlaceholder": "继续前可以先编辑场景描述。",
+      "sceneEditorHint": "这里是送回主线 builder 之前的场景说明草稿。",
+      "semanticSchemaTitle": "实验语义骨架",
+      "semanticSchemaHint": "这是系统先从原文中抽取出的结构化实验骨架，再基于它生成下面可编辑的草案。",
+      "noSemanticSchema": "运行分析后，这里会显示提取出的实验语义骨架。",
+      "schemaResearchGoal": "研究目标",
+      "schemaSetting": "场景 / 环境",
+      "schemaParticipants": "参与者 / 智能体角色",
+      "schemaDecisionContext": "决策上下文",
+      "schemaChoices": "每轮可选动作",
+      "schemaPayoffRules": "收益 / 反馈规则",
+      "schemaConstraints": "约束 / 终止条件",
+      "schemaInformationStructure": "信息结构",
+      "schemaInteractionTopology": "交互拓扑",
+      "schemaInterventions": "干预 / 处理",
+      "schemaOutcomes": "观测结果",
+      "schemaKeyVariables": "关键变量",
+      "modeRecommended": "预设映射路径",
+      "modeCustom": "自定义路径",
+      "settingsTitle": "场景设定草案",
+      "settingsSubtitle": "审阅从文本中提取的关键设定项（键值对）。",
+      "addSetting": "新增设定",
+      "settingKeyPlaceholder": "设定键",
+      "settingValuePlaceholder": "设定值",
+      "settingReasonPlaceholder": "说明为什么这个设定属于重建后的实验。",
+      "noSettings": "暂未提取出设定项。",
+      "variablesTitle": "关键变量",
+      "variablesHint": "这些是系统认为对实验设置最重要的术语。",
+      "noVariables": "暂未识别出关键变量。",
+      "variablePlaceholder": "变量名称",
+      "addVariable": "新增变量",
+      "reviewFlagsTitle": "假设与缺口",
+      "assumptionsTitle": "当前假设",
+      "noAssumptions": "暂未报告额外假设。",
+      "missingInfoTitle": "待你确认的信息",
+      "noMissingInfo": "暂未发现明显缺口。",
+      "analysisWarningsTitle": "系统警告",
+      "actionsTitle": "候选动作集",
+      "actionsSubtitle": "保留、编辑或删除智能体每轮可以做出的选择。",
+      "actionsHelperText": "只保留真正属于每轮交互的决策动作。如果手动修改偏离太多，可以随时恢复分析得到的动作集。",
+      "addAction": "新增动作",
+      "actionDescriptionPlaceholder": "解释这个选择在实验中的含义。",
+      "noActions": "暂未识别出动作。",
+      "agentsTitle": "候选智能体",
+      "agentsSubtitle": "这些是系统判断可能参与实验的角色。你可以勾选需要带入第 4 步的草稿。",
+      "agentsHelperText": "原文里的具名角色通常应该保留到最终实验中；如果草案变得过于泛化，可以在这里恢复它们。",
+      "addAgent": "新增智能体",
+      "agentDescriptionPlaceholder": "描述这个智能体角色。",
+      "noAgents": "暂未识别出候选智能体。",
+      "reviewTitle": "继续前复核",
+      "reviewSubtitle": "确认后，提取出的场景、设定、动作和角色会写入标准 FOS 向导，并从网络步骤继续。",
+      "reviewScene": "场景",
+      "reviewActions": "动作",
+      "reviewAgents": "智能体",
+      "reviewFallback": "暂时还没有场景摘要。",
+      "continue": "审批并继续",
+      "continueHint": "确认后，草案会写入标准实验创建流程，并从第 2 步继续人工确认参数、动作、智能体和网络。",
+      "reviewBeforeContinue": "请先确认场景、动作和智能体后再继续。",
+      "applyFailed": "应用草案到主流程失败。",
+      "toggleSelection": "切换选择",
+      "validationNotesTitle": "校对依据",
+      "validationNotesHint": "需要追查抽取依据、文档质量或原文证据时，再展开这一部分。",
+      "supportingPassagesTitle": "关键来源片段",
+      "evidenceChecklistTitle": "系统为何这样建议",
+      "confidenceLabel": "置信度：{{score}}%",
+      "reviewRecommended": "系统找到了一个看起来合理的映射，但继续前仍建议你复核候选模板。",
+      "builderPathMergedTitle": "选择进入标准 Builder 的方式",
+      "showAllTemplates": "展开全部系统内置预设模板",
+      "hideAllTemplates": "收起其余系统内置预设模板",
+      "templateGenericReason": "如果你想把当前草案映射到一个已有的系统预设结构，可以选择这个模板。",
+      "noSourceSections": "上传文档或运行分析后，这里会显示提取出的关键段落。",
+      "noEvidence": "运行分析后，这里会显示支撑当前草案的关键证据片段。",
+      "evidenceSnippetLabel": "证据片段",
+      "documentInsightsTitle": "文档抽取快照",
+      "documentInsightsHint": "在相信重建出来的实验草案之前，先检查原始文档抽取本身是否干净、完整。",
+      "documentTitleLabel": "提取标题",
+      "documentAbstractLabel": "提取摘要",
+      "documentSectionsLabel": "加权章节数",
+      "documentPageQualityLabel": "平均页面质量",
+      "documentOcrLabel": "是否使用 OCR",
+      "documentReferencesLabel": "是否剥离参考文献",
+      "documentFigureCaptionsLabel": "图注数量",
+      "documentTableCaptionsLabel": "表注数量",
+      "pagePreviewTitle": "OCR / 页面提取预览",
+      "pageLabel": "第 {{page}} 页",
+      "emptyPage": "这一页没有提取到文本。",
+      "builderPathTitle": "回到标准 Builder 的方式",
+      "recognitionModeTitle": "识别模式",
+      "recognitionModeHint": "开始分析前，先选择使用纯后端硬识别，还是调用已配置的 Provider 模型进行识别。",
+      "modeDeterministicTitle": "硬识别模式",
+      "modeDeterministicShort": "只用后端识别，不调用 Provider，也不消耗 token，但复杂论文的识别能力更弱。",
+      "modeDeterministicBody": "该模式主要依靠后端预处理、规则抽取和模板匹配，不会调用任何 Provider，因此不消耗 token，适合本地小模型能力较弱的情况，但对复杂论文的识别能力会更有限。",
+      "modeProviderTitle": "接入 Provider 智能识别",
+      "modeProviderShort": "调用已配置模型进行识别，理解能力更强，但会消耗 token 或本地推理资源。",
+      "modeProviderBody": "该模式会调用你已经配置的模型来完成实验理解、模板推荐和草案生成。模型越强，识别效果通常越好，但会消耗相应 token 或本地推理资源。",
+      "modeCurrentLabel": "当前模式",
+      "providerSelectLabel": "识别模型",
+      "providerMissing": "当前没有可用模型，请先到设置页完成 LLM 配置。",
+      "providerRequired": "运行 Provider 智能识别前，请先选择一个已配置模型。",
+      "providerBuiltIn": "内置端点",
+      "useCustomTitle": "保留为自定义场景",
+      "useCustomDescription": "直接使用当前重建出的场景和动作集，再从标准 builder 的第 2 步继续。",
+      "useRecommendedTitle": "映射到一个预设场景",
+      "useRecommendedDisabled": "当前没有足够强的预设模板匹配。",
+      "templateSuggestionTitle": "推荐预设",
+      "prefillParamsTitle": "识别到的参数提示",
+      "fieldRepairTitle": "逐字段修复",
+      "fieldRepairHint": "按字段逐项复核。你可以只恢复某一个字段的分析结果，或回填某条有证据支撑的建议，而不用重置整页。",
+      "fieldRepairBadge": "有证据支撑的编辑",
+      "fieldRepairScenarioHint": "如果你修改后的场景描述偏离原文太多，可以恢复系统提取的场景摘要。",
+      "fieldRepairSettingsHint": "缺失的设定项可以一条一条补回，不必手动重建整套参数。",
+      "fieldRepairActionsHint": "可以逐条恢复提取出的动作，或者一次补回一个缺失动作。",
+      "fieldRepairAgentsHint": "如果草案里的角色被简化得太泛，可以从原文中恢复具名角色，而不必重打。",
+      "fieldRepairVariablesHint": "当可编辑列表里丢掉关键变量时，可以从分析结果里把它们拉回来。",
+      "reextractField": "重新抽取该字段",
+      "reextractingField": "重新抽取中…",
+      "reextractFailed": "重新抽取该字段失败。",
+      "restoreField": "恢复提取结果",
+      "settingsHelperText": "这些行会进入后续构建器的可编辑参数列表。如果手动修改删掉太多，可以直接恢复提取结果。",
+      "settingsCollapsedHint": "这一部分是额外的场景设定草案。只有在你需要细调 Builder 参数时再展开查看即可。",
+      "settingReasonResearchGoal": "根据原文中的研究目标恢复。",
+      "settingReasonSetting": "根据环境或实验设置描述恢复。",
+      "settingReasonPayoff": "根据收益、损失或反馈规则恢复。",
+      "settingReasonConstraints": "根据原文里的显式约束或终止条件恢复。",
+      "settingReasonInfo": "根据信息可见性相关描述恢复。",
+      "settingReasonTopology": "根据原文里的交互拓扑恢复。",
+      "settingReasonStructure": "根据推断出的交互结构恢复。",
+      "schemaInteractionStructure": "交互结构",
+      "templateSuggestion": {
+        "title": "模板建议",
+        "body": "这段输入看起来与 {{template}} 相似。你可以直接跳转到匹配的预设模板，而不是继续自定义创建。",
+        "useTemplate": "使用该模板"
+      },
+      "scenarioName": "自定义 AI 生成场景",
+      "templateSavedSuccess": "已保存到你的个人预设模板。",
+      "templateSavedFailed": "模拟已经创建成功，但保存个人预设模板失败。"
+    }
+>>>>>>> Stashed changes
   }
 }

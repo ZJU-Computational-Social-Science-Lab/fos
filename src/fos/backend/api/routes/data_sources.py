@@ -19,6 +19,8 @@ from fos.backend.core.database import get_session
 from fos.backend.dependencies import extract_bearer_token, resolve_current_user
 from fos.backend.models.data_source import DataSource
 
+from fos.i18n import T
+
 logger = logging.getLogger(__name__)
 
 
@@ -95,7 +97,7 @@ async def get_data_source(
         source = result.scalar_one_or_none()
 
         if not source:
-            raise HTTPException(status_code=404, detail="Data source not found")
+            raise HTTPException(status_code=404, detail=T("api.errors.data_source_not_found"))
 
         return {"data_source": _source_to_dict(source)}
 
@@ -116,7 +118,7 @@ async def update_data_source(
         source = result.scalar_one_or_none()
 
         if not source:
-            raise HTTPException(status_code=404, detail="Data source not found")
+            raise HTTPException(status_code=404, detail=T("api.errors.data_source_not_found"))
 
         for key in [
             "name",
@@ -154,7 +156,7 @@ async def delete_data_source(
         source = result.scalar_one_or_none()
 
         if not source:
-            raise HTTPException(status_code=404, detail="Data source not found")
+            raise HTTPException(status_code=404, detail=T("api.errors.data_source_not_found"))
 
         await session.delete(source)
         await session.commit()
@@ -177,7 +179,7 @@ async def test_data_source(
         source = result.scalar_one_or_none()
 
         if not source:
-            raise HTTPException(status_code=404, detail="Data source not found")
+            raise HTTPException(status_code=404, detail=T("api.errors.data_source_not_found"))
 
     # Perform actual HTTP test
     auth_headers = {}
@@ -217,7 +219,7 @@ async def poll_data_source(
         source = result.scalar_one_or_none()
 
         if not source:
-            raise HTTPException(status_code=404, detail="Data source not found")
+            raise HTTPException(status_code=404, detail=T("api.errors.data_source_not_found"))
 
         # Call the polling service
         service = ExternalEventService()

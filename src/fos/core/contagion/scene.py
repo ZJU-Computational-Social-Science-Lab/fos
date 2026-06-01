@@ -136,7 +136,7 @@ class ContagionScene(ExperimentScene):
             },
             output_field="action",
             payoff_type="none",
-            grouping_mode="pairwise",
+            grouping_mode="individual",
         )
 
     def _build_payoff_summary(self) -> str:

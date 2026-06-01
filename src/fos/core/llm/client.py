@@ -94,7 +94,7 @@ class LLMClient:
         self.provider = provider
 
         # Timeout and retry settings (environment-driven defaults)
-        self.timeout_s = float(os.getenv("LLM_TIMEOUT_S", "30"))
+        self.timeout_s = float(os.getenv("LLM_TIMEOUT_S", "300"))
         self.max_retries = int(os.getenv("LLM_MAX_RETRIES", "2"))
         self.retry_backoff_s = float(os.getenv("LLM_RETRY_BACKOFF_S", "1.0"))
 
