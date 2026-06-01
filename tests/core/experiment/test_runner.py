@@ -501,7 +501,7 @@ async def test_paired_mode_creates_n_over_2_pairs(mock_llm_client):
 
 @pytest.mark.asyncio
 async def test_odd_count_paired_one_agent_sits_out(mock_llm_client):
-    """In paired mode with odd number of agents, one sits out."""
+    """In paired mode with odd number of agents, one sits out without an action entry."""
     # Create 3 agents
     agents = [
         ExperimentAgent(
@@ -523,8 +523,98 @@ async def test_odd_count_paired_one_agent_sits_out(mock_llm_client):
     results = await runner.run(max_rounds=1)
 
     assert len(results) == 1
-    # All 3 agents should have action results (1 pair + 1 sat out)
-    assert len(results[0].actions) == 3
-    # One agent should have skipped
-    skipped_count = sum(1 for a in results[0].actions if a.skipped)
-    assert skipped_count == 1
+    assert len(results[0].actions) == 2
+    assert all(not action.skipped for action in results[0].actions)
+    assert results[0].completed is True
+
+
+@pytest.mark.asyncio
+async def test_simultaneous_pairwise_odd_agent_is_not_prompted_or_recorded():
+    """In simultaneous pairwise mode, the unpaired agent does not run."""
+    agents = [
+        ExperimentAgent(name="Alice", properties={}, llm_config=LLMConfig(dialect="mock")),
+        ExperimentAgent(name="Bob", properties={}, llm_config=LLMConfig(dialect="mock")),
+        ExperimentAgent(name="Charlie", properties={}, llm_config=LLMConfig(dialect="mock")),
+    ]
+    info_model = InformationModel(
+        scope_type="pair",
+        pairing_fn=lambda _agents, _round_num: [("Alice", "Bob")],
+        recent_window=3,
+        primacy_keep=False,
+    )
+    runner = ExperimentRunner(
+        agents=agents,
+        game_config=PRISONERS_DILEMMA,
+        llm_client=Mock(),
+        round_visibility="simultaneous",
+        information_model=info_model,
+    )
+
+    prompted_agents = []
+
+    async def fake_prompt(agent, round_num):
+        prompted_agents.append(agent.name)
+        return ActionResult(
+            success=True,
+            action_name="cooperate",
+            parameters={},
+            summary=f"{agent.name} chose cooperate",
+            agent_name=agent.name,
+            round_num=round_num,
+        )
+
+    runner._prompt_agent = fake_prompt
+
+    result = await runner._run_simultaneous_round(1)
+
+    assert prompted_agents == ["Alice", "Bob"]
+    assert [action.agent_name for action in result.actions] == ["Alice", "Bob"]
+    assert "Charlie" not in result.payoffs
+    assert result.completed is True
+
+    round_events = runner.context_manager.get_round_events(1)
+    assert [event.agent_name for event in round_events] == ["Alice", "Bob"]
+
+
+@pytest.mark.asyncio
+async def test_paired_mode_odd_agent_is_not_prompted_or_recorded():
+    """In paired mode, the unpaired agent does not run."""
+    agents = [
+        ExperimentAgent(name="Alice", properties={}, llm_config=LLMConfig(dialect="mock")),
+        ExperimentAgent(name="Bob", properties={}, llm_config=LLMConfig(dialect="mock")),
+        ExperimentAgent(name="Charlie", properties={}, llm_config=LLMConfig(dialect="mock")),
+    ]
+    runner = ExperimentRunner(
+        agents=agents,
+        game_config=PRISONERS_DILEMMA,
+        llm_client=Mock(),
+        round_visibility="paired",
+    )
+    runner.turn_order = None
+
+    prompted_agents = []
+
+    async def fake_prompt(agent, round_num):
+        prompted_agents.append(agent.name)
+        return ActionResult(
+            success=True,
+            action_name="cooperate",
+            parameters={},
+            summary=f"{agent.name} chose cooperate",
+            agent_name=agent.name,
+            round_num=round_num,
+        )
+
+    runner._prompt_agent = fake_prompt
+
+    with patch("random.shuffle", side_effect=lambda values: None):
+        result = await runner._run_paired_round(1)
+
+    assert prompted_agents == ["Alice", "Bob"]
+    assert [action.agent_name for action in result.actions] == ["Alice", "Bob"]
+    assert all(not action.skipped for action in result.actions)
+    assert "Charlie" not in (result.payoffs or {})
+    assert result.completed is True
+
+    round_events = runner.context_manager.get_round_events(1)
+    assert [event.agent_name for event in round_events] == ["Alice", "Bob"]

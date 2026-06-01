@@ -280,6 +280,40 @@ class ExperimentRunner:
                 })
                 break
 
+    def _get_pairs_for_round(self, round_num: int) -> List[tuple[str, str]] | None:
+        """Find the pairs that should play in this round."""
+        if (
+            self.information_model
+            and self.information_model.scope_type == "pair"
+            and self.information_model.pairing_fn
+        ):
+            return self.information_model.pairing_fn(
+                [agent.name for agent in self.agents],
+                round_num,
+            )
+
+        if self.game_config.grouping_mode != "pairwise":
+            return None
+
+        agent_names = [agent.name for agent in self.agents]
+        if len(agent_names) < 2:
+            return None
+
+        return [
+            (agent_names[i], agent_names[i + 1])
+            for i in range(0, len(agent_names) - 1, 2)
+        ]
+
+    def _get_active_agent_names_for_pairs(self, pairs: List[tuple[str, str]] | None) -> set[str] | None:
+        """List which agents should act when a round uses pairs."""
+        if pairs is None:
+            return None
+        active_agents: set[str] = set()
+        for agent1_name, agent2_name in pairs:
+            active_agents.add(agent1_name)
+            active_agents.add(agent2_name)
+        return active_agents
+
     def _calculate_scores(self, round_actions: List[ActionResult], pairs: List[tuple] = None) -> Dict[str, int | float]:
         """Calculate and update scores based on game outcomes using PayoffEngine.
 
@@ -404,6 +438,13 @@ class ExperimentRunner:
         Agents cannot see each other's choices for this round.
         """
         actions = []
+        pairs = self._get_pairs_for_round(round_num)
+        active_agent_names = self._get_active_agent_names_for_pairs(pairs)
+        agents_to_prompt = self.agents
+        if active_agent_names is not None:
+            agents_to_prompt = [
+                agent for agent in self.agents if agent.name in active_agent_names
+            ]
 
         # Cap concurrent LLM calls so the model server is not overwhelmed.
         # Tune via SOCIALSIM_LLM_CONCURRENCY env var (default 10).
@@ -450,7 +491,7 @@ class ExperimentRunner:
             return result
 
         # Run all agents concurrently up to max_concurrent.
-        tasks = [_prompt_with_limit(agent) for agent in self.agents]
+        tasks = [_prompt_with_limit(agent) for agent in agents_to_prompt]
         action_results = await asyncio.gather(*tasks, return_exceptions=True)
 
         for result in action_results:
@@ -463,22 +504,6 @@ class ExperimentRunner:
 
         # Calculate scores - use InformationModel's pairing_fn if available so
         # n-agent games calculate per-pair payoffs correctly.
-        pairs = None
-        if (self.information_model and
-                self.information_model.scope_type == "pair" and
-                self.information_model.pairing_fn):
-            pairs = self.information_model.pairing_fn(
-                [a.name for a in self.agents], round_num
-            )
-        # Fallback: Create default pairs for pairwise grouping_mode
-        elif self.game_config.grouping_mode == "pairwise":
-            agent_names = [a.name for a in self.agents]
-            if len(agent_names) >= 2:
-                # For 2 agents: single pair
-                # For 4+ agents: pair sequentially (A-B, C-D, etc.)
-                pairs = []
-                for i in range(0, len(agent_names) - 1, 2):
-                    pairs.append((agent_names[i], agent_names[i + 1]))
         round_payoffs = self._calculate_scores(actions, pairs=pairs)
 
         # CRITICAL: Store last_contribution for show_average_contribution display setting
@@ -515,7 +540,7 @@ class ExperimentRunner:
         return RoundResult(
             round_num=round_num,
             actions=actions,
-            completed=len(actions) == len(self.agents),
+            completed=len(actions) == len(agents_to_prompt),
             payoffs=round_payoffs if round_payoffs else None
         )
 
@@ -527,8 +552,15 @@ class ExperimentRunner:
         to subsequent agents via the context_manager.
         """
         actions = []
+        pairs = self._get_pairs_for_round(round_num)
+        active_agent_names = self._get_active_agent_names_for_pairs(pairs)
+        agents_to_prompt = self.agents
+        if active_agent_names is not None:
+            agents_to_prompt = [
+                agent for agent in self.agents if agent.name in active_agent_names
+            ]
 
-        for agent in self.agents:
+        for agent in agents_to_prompt:
             result = await self._prompt_agent(agent, round_num)
             actions.append(result)
             # Record action to agent's history
@@ -545,7 +577,7 @@ class ExperimentRunner:
                 )
 
         # Calculate scores based on actions
-        round_payoffs = self._calculate_scores(actions)
+        round_payoffs = self._calculate_scores(actions, pairs=pairs)
 
         # CRITICAL: Store last_contribution for show_average_contribution display setting
         if self.scene and hasattr(self.scene, 'state'):
@@ -560,7 +592,7 @@ class ExperimentRunner:
         return RoundResult(
             round_num=round_num,
             actions=actions,
-            completed=len(actions) == len(self.agents),
+            completed=len(actions) == len(agents_to_prompt),
             payoffs=round_payoffs if round_payoffs else None
         )
 
@@ -580,9 +612,13 @@ class ExperimentRunner:
 
         # Create a mapping from name to agent
         agent_map = {agent.name: agent for agent in self.agents}
+        pairs = self._get_pairs_for_round(round_num)
+        active_agent_names = self._get_active_agent_names_for_pairs(pairs)
 
         actions = []
         for agent_name in self.turn_order:
+            if active_agent_names is not None and agent_name not in active_agent_names:
+                continue
             agent = agent_map[agent_name]
             result = await self._prompt_agent(agent, round_num)
             actions.append(result)
@@ -601,13 +637,6 @@ class ExperimentRunner:
 
         # Calculate scores - use InformationModel's pairing_fn if available so
         # n-agent games calculate per-pair payoffs correctly.
-        pairs = None
-        if (self.information_model and
-                self.information_model.scope_type == "pair" and
-                self.information_model.pairing_fn):
-            pairs = self.information_model.pairing_fn(
-                [a.name for a in self.agents], round_num
-            )
         round_payoffs = self._calculate_scores(actions, pairs=pairs)
 
         # CRITICAL: Store last_contribution for show_average_contribution display setting
@@ -623,7 +652,9 @@ class ExperimentRunner:
         return RoundResult(
             round_num=round_num,
             actions=actions,
-            completed=len(actions) == len(self.agents),
+            completed=len(actions) == len(
+                [name for name in self.turn_order if active_agent_names is None or name in active_agent_names]
+            ),
             payoffs=round_payoffs if round_payoffs else None
         )
 
@@ -689,24 +720,6 @@ class ExperimentRunner:
                 # Record action to agent's history
                 self._record_action_to_agent(result)
 
-        # Handle sat-out agent (they don't act this round)
-        if sat_out:
-            # Add a skipped action for the sat-out agent
-            sat_out_agent = agent_map[sat_out]
-            skipped_result = ActionResult(
-                success=False,
-                action_name="",
-                parameters={},
-                summary=f"{sat_out} sat out this round (odd number of agents)",
-                agent_name=sat_out,
-                round_num=round_num,
-                skipped=True,
-                error="Sat out due to odd number of agents"
-            )
-            all_actions.append(skipped_result)
-            # Record skipped action to agent's history
-            self._record_action_to_agent(skipped_result)
-
         # Calculate scores based on actions (for paired mode, scores are calculated per-pair)
         round_payoffs = self._calculate_scores(all_actions, pairs=pairs)
 
@@ -748,7 +761,7 @@ class ExperimentRunner:
         return RoundResult(
             round_num=round_num,
             actions=all_actions,
-            completed=len([a for a in all_actions if not a.skipped]) == len(self.agents),
+            completed=len(all_actions) == len(pairs) * 2,
             payoffs=round_payoffs if round_payoffs else None
         )
 

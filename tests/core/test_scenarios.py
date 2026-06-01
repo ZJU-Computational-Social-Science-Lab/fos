@@ -68,6 +68,17 @@ def test_prisoners_dilemma_structure():
     assert len(scenario["actions"]) == 2
 
 
+def test_prisoners_dilemma_matrix_matches_standard_payoffs():
+    """Prisoner's Dilemma should reward defection against a cooperator."""
+    scenario = get_scenario("prisoners_dilemma")
+    cells = scenario["matrix_meta"]["cells"]
+
+    assert cells["cooperate_cooperate"] == {"row": 3, "col": 3}
+    assert cells["cooperate_defect"] == {"row": 0, "col": 5}
+    assert cells["defect_cooperate"] == {"row": 5, "col": 0}
+    assert cells["defect_defect"] == {"row": 1, "col": 1}
+
+
 def test_custom_scenario_empty_actions():
     """Custom scenario should have default speak/skip actions."""
     scenario = get_scenario("custom")
