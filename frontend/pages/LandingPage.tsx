@@ -22,7 +22,6 @@ import { useTranslation } from "react-i18next";
 import { useThemeStore } from "../store/theme";
 import { getBilibiliEmbedUrl, isBilibiliConfigured } from "../config/video";
 
-import landingDemoVideo from "../assets/landing/landing-demo.mp4";
 import sceneBehaviorImage from "../assets/landing/scene-behavior.png";
 import sceneInstitutionImage from "../assets/landing/scene-institution.png";
 import sceneInterventionImage from "../assets/landing/scene-intervention.png";
@@ -287,16 +286,9 @@ export function LandingPage() {
                   title={String(t("landing.preview.title"))}
                 />
               ) : (
-                <video
-                  className="ss-landing__preview-video"
-                  src={landingDemoVideo}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  controls
-                  aria-label={String(t("landing.preview.title"))}
-                />
+                <div className="ss-landing__preview-video ss-landing__preview-placeholder">
+                  <p>{t("landing.preview.comingSoon")}</p>
+                </div>
               )}
             </div>
           </div>
