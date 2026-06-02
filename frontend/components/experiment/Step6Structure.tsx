@@ -212,16 +212,16 @@ const PromptPreviewPanel: React.FC<PromptPreviewPanelProps> = ({
 
         {/* Section 2: Scenario */}
         <div className="mb-4">
-          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>Scenario:</div>
+          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>{t('experimentBuilder.step6.scenario')}</div>
           {formattedScenario || (
-            <span className="italic" style={{ color: 'var(--ss-text-subtle)' }}>No scenario description provided</span>
+            <span className="italic" style={{ color: 'var(--ss-text-subtle)' }}>{t('experimentBuilder.step6.noScenarioDescription')}</span>
           )}
         </div>
 
         {/* Section 2b: Additional Parameters */}
         {displayParams.length > 0 && (
           <div className="mb-4">
-            <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>Additional Parameters:</div>
+            <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>{t('experimentBuilder.step6.additionalParameters')}</div>
             <div className="pl-2">
               {displayParams.map(([key, value]) => (
                 <div key={key}>- {formatParamKey(key)}: {formatParamValue(value)}</div>
@@ -232,27 +232,27 @@ const PromptPreviewPanel: React.FC<PromptPreviewPanelProps> = ({
 
         {scenarioId === 'custom' && (
           <div className="mb-4">
-            <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>Turn Ordering:</div>
+            <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>{t('experimentBuilder.step6.turnOrdering')}</div>
             <div className="pl-2">{customTurnOrdering}</div>
-            <div className="font-semibold mt-3 mb-1" style={{ color: 'var(--ss-heading)' }}>Network:</div>
+            <div className="font-semibold mt-3 mb-1" style={{ color: 'var(--ss-heading)' }}>{t('experimentBuilder.step6.network')}</div>
             <div className="pl-2">{networkEdges} connection{networkEdges === 1 ? '' : 's'}</div>
           </div>
         )}
 
         {/* Section 3: Available Actions */}
         <div className="mb-4">
-          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>Available actions:</div>
+          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>{t('experimentBuilder.step6.availableActions')}</div>
           {displayActions.length > 0 ? (
             <div className="pl-2">{actionsList}</div>
           ) : (
-            <span className="italic" style={{ color: 'var(--ss-text-subtle)' }}>No actions selected</span>
+            <span className="italic" style={{ color: 'var(--ss-text-subtle)' }}>{t('experimentBuilder.step6.noActionsSelected')}</span>
           )}
         </div>
 
         {/* Section 4: Context */}
         <div className="mb-4">
-          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>Context:</div>
-          <div className="pl-2">This is the first round.</div>
+          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>{t('experimentBuilder.step6.context')}</div>
+          <div className="pl-2">{t('experimentBuilder.step6.firstRound')}</div>
         </div>
 
         {/* Section 5: Output Format */}
@@ -260,7 +260,7 @@ const PromptPreviewPanel: React.FC<PromptPreviewPanelProps> = ({
           className="pt-3 mt-3"
           style={{ borderTop: '1px solid var(--ss-border)' }}
         >
-          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>Your Response:</div>
+          <div className="font-semibold mb-1" style={{ color: 'var(--ss-heading)' }}>{t('experimentBuilder.step6.yourResponse')}</div>
           {displayActions.length > 0 ? (
             scenarioId === 'custom' ? (
               <div className="pl-2">

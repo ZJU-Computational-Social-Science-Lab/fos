@@ -50,6 +50,8 @@ function extractTKeys(source: string): string[] {
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(source)) !== null) {
     const key = match[1];
+    // Skip dynamic template-literal keys (contain ${...}) — resolved at runtime
+    if (key.includes('${')) continue;
     if (key.includes('.') || key.includes('_')) {
       keys.push(key);
     }
@@ -96,7 +98,7 @@ describe('Audit: t() keys should exist in locale files', () => {
 
 describe('Audit: zh.json values may be untranslated', () => {
   it('all zh.json values contain Chinese characters or are whitelisted', () => {
-    const allowedEnglish = new Set(['brand', 'landing.hero.line1', 'landing.hero.line2', 'landing.hero.accent']);
+    const allowedEnglish = new Set(['brand', 'landing.hero.line1', 'landing.hero.line2', 'landing.hero.accent', 'auth.login.badge', 'components.initialEventsModal.audioUrlPlaceholder', 'components.initialEventsModal.videoUrlPlaceholder']);
     const zhChars = /[\u4e00-\u9fff]/;
     const englishWords = /\b[a-zA-Z]{4,}\b/g;
     const suspicious: string[] = [];

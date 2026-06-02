@@ -74,6 +74,8 @@ function extractTKeys(source: string): string[] {
   let m: RegExpExecArray | null;
   while ((m = re.exec(source)) !== null) {
     const key = m[1];
+    // Skip dynamic template-literal keys (contain ${...}) — resolved at runtime
+    if (key.includes('${')) continue;
     // Filter out strings that look like sentences (have spaces and start with uppercase)
     // We only want dotted/underscored i18n keys
     if (key.includes('.') || key.includes('_')) {
@@ -326,6 +328,9 @@ describe('zh.json values must be Chinese (not untranslated English)', () => {
     'landing.hero.line1',   // "Future of Society" brand tagline
     'landing.hero.line2',
     'landing.hero.accent',
+    'auth.login.badge',     // "Social Systems Laboratory" — proper noun / brand
+    'components.initialEventsModal.audioUrlPlaceholder', // URL placeholder
+    'components.initialEventsModal.videoUrlPlaceholder', // URL placeholder
   ]);
 
   const ZH_CHAR_RE = /[\u4e00-\u9fff]/;
