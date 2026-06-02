@@ -3,35 +3,26 @@ WORKDIR /app/frontend
 
 ARG FRONTEND_BASE_URL=/
 ARG VITE_API_BASE_URL
+ARG VITE_BILIBILI_VIDEO_BVID
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 
 COPY frontend ./
 ENV FRONTEND_BASE_URL=${FRONTEND_BASE_URL}
-RUN FRONTEND_BASE_URL=${FRONTEND_BASE_URL} VITE_API_BASE_URL=${VITE_API_BASE_URL} npm run build
+RUN FRONTEND_BASE_URL=${FRONTEND_BASE_URL} VITE_API_BASE_URL=${VITE_API_BASE_URL} VITE_BILIBILI_VIDEO_BVID=${VITE_BILIBILI_VIDEO_BVID} npm run build
 
-FROM python:latest AS backend
-ARG FRONTEND_BASE_URL=/
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DEFAULT_TIMEOUT=1000 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+# Use the existing socialsim-new-app image as base to reuse installed packages.
+# Tag it first: docker tag socialsim-new-app fos-build-base
+FROM fos-build-base AS backend
 
 WORKDIR /app
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential libpq-dev
 
 COPY pyproject.toml README.md ./
 COPY requirements.txt ./
 
-# Install dependencies from the requirements file provided by the repo
-RUN pip install --no-cache-dir --default-timeout=${PIP_DEFAULT_TIMEOUT} -r requirements.txt \
-    && pip install --no-cache-dir lxml-html-clean
-
-RUN groupadd -g 1000 appuser \
-    && useradd -m -u 1000 -g 1000 -s /bin/bash appuser
+# Only install packages not already present in the base image
+RUN pip install --no-cache-dir --default-timeout=1000 -r requirements.txt || true \
+    && pip install --no-cache-dir lxml-html-clean || true
 
 COPY src ./src
 COPY scripts ./scripts
@@ -44,11 +35,6 @@ COPY docker/backend-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 ENV FOS_FRONTEND_DIST_PATH=/app/frontend/dist
-
-RUN pip uninstall -y poetry \
-    && apt-get purge -y build-essential \
-    && apt-get autoremove -y --purge \
-    && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 8000
 
