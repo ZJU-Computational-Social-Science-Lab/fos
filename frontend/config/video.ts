@@ -7,7 +7,7 @@
 export const VIDEO_CONFIG = {
   bilibili: {
     baseUrl: "https://player.bilibili.com/player.html",
-    bvId: import.meta.env.VITE_BILIBILI_VIDEO_BVID || "",
+    bvId: import.meta.env.VITE_BILIBILI_VIDEO_BVID || "BV1TeXFByEP8",
   },
 } as const;
 
