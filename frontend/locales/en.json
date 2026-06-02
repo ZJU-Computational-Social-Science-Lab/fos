@@ -11,7 +11,15 @@
     "remove": "Remove",
     "next": "Next",
     "back": "Back",
-    "previous": "Previous"
+    "previous": "Previous",
+    "actions": "Actions",
+    "autosave": "Autosave",
+    "close": "Close",
+    "colon": ":",
+    "decrease": "Decrease",
+    "increase": "Increase",
+    "overview": "Overview",
+    "status": "Status"
   },
   "brand": "FOS",
   "nav": {
@@ -24,7 +32,9 @@
     "admin": "Admin",
     "login": "Login",
     "register": "Register",
-    "signout": "Sign out"
+    "signout": "Sign out",
+    "create": "Create",
+    "workbench": "Workbench"
   },
   "createExperiment": {
     "entry": {
@@ -193,7 +203,7 @@
       "fieldRepairAgentsHint": "Recover named roles from the source instead of retyping them if the draft became too generic.",
       "fieldRepairVariablesHint": "Pull important variables back from the analysis when they disappear from the editable list.",
       "reextractField": "Re-extract field",
-      "reextractingField": "Re-extracting…",
+      "reextractingField": "Re-extractingâ€¦",
       "reextractFailed": "Failed to re-extract this field.",
       "restoreField": "Restore extracted",
       "settingsHelperText": "These rows become editable builder parameters. Restore the extracted set if a manual edit wiped out too much.",
@@ -363,6 +373,7 @@
       "spatial": "Spatial / Grid-Based",
       "social_deduction": "Social Deduction",
       "sociology": "Sociology",
+      "generative_city": "GA World",
       "custom": "Custom"
     },
     "sociology": {
@@ -453,20 +464,23 @@
       "providers": "Providers",
       "llmProviders": "LLM providers",
       "searchProviders": "Search providers",
-      "files": "File Management"
+      "files": "File Management",
+      "dataSources": "Data Sources"
     },
     "profile": {
       "email": "Email",
       "username": "Username",
       "fullName": "Full name",
-      "organization": "Organization"
+      "organization": "Organization",
+      "consistencyHint": "Model consistency affects how deterministically the model responds."
     },
     "security": {
       "signoutAll": "Sign out of all sessions",
       "placeholder": "Two-factor authentication and password reset flows will appear here.",
       "sessionsTitle": "Session control",
       "controlTitle": "Access posture",
-      "controlHint": "This workspace still uses the real FOS auth session and token refresh behavior."
+      "controlHint": "This workspace still uses the real FOS auth session and token refresh behavior.",
+      "authFlowNote": "Authentication flow configuration."
     },
     "providers": {
       "title": "Provider integrations",
@@ -532,7 +546,44 @@
         "includeDomains": "Include Domains (comma-separated)",
         "excludeDomains": "Exclude Domains (comma-separated)",
         "active": "Active"
-      }
+      },
+      "costHintAriaLabel": "Cost information",
+      "providerForm": {
+        "advancedHint": "Advanced settings for provider configuration",
+        "advancedSettings": "Advanced Settings",
+        "apiKeyPlaceholder": "Enter API key...",
+        "apiKeyRequired": "API key is required",
+        "baseUrlPlaceholder": "Enter base URL...",
+        "baseUrlRequired": "Base URL is required",
+        "customEndpoint": "Custom Endpoint",
+        "defaultModel": "Default Model",
+        "defaultModelPlaceholderGemini": "e.g. gemini-2.0-flash",
+        "defaultModelPlaceholderOpenai": "e.g. gpt-4o",
+        "editLlmTitle": "Edit LLM Configuration",
+        "exampleDecimal07": "e.g. 0.7",
+        "exampleDecimal10": "e.g. 1.0",
+        "exampleJsonObject": "e.g. {\"type\": \"json_object\"}",
+        "exampleMaxTokens": "e.g. 4096",
+        "exampleTimeoutMs": "e.g. 60000",
+        "geminiAccessConfig": "Gemini Access Config",
+        "headersMetadata": "Headers / Metadata",
+        "hideApiKey": "Hide API key",
+        "llmNamePlaceholder": "Enter LLM name...",
+        "llmNameRequired": "LLM name is required",
+        "maxTokens": "Max Tokens",
+        "newLlmTitle": "Add LLM Configuration",
+        "openaiCompatibleAccessConfig": "OpenAI-Compatible Access Config",
+        "optional": "Optional",
+        "providerTypeRequired": "Provider type is required",
+        "responseFormat": "Response Format",
+        "save": "Save",
+        "saving": "Saving...",
+        "showApiKey": "Show API key",
+        "temperature": "Temperature",
+        "timeoutMs": "Timeout (ms)",
+        "topP": "Top P"
+      },
+      "searchAlignmentHint": "Configure search alignment providers."
     },
     "files": {
       "title": "File Management",
@@ -558,7 +609,84 @@
       "deleteAllOrphansConfirm": "Delete all {{count}} orphaned files?",
       "byte": "B",
       "kb": "KB",
-      "mb": "GB"
+      "mb": "GB",
+      "emptyHint": "No files uploaded yet.",
+      "metrics": {
+        "files": "Files",
+        "orphanScan": "Orphan scan"
+      }
+    },
+    "dataSource": {
+      "actions": {
+        "delete": "Delete",
+        "edit": "Edit",
+        "pause": "Pause",
+        "poll": "Poll",
+        "resume": "Resume"
+      },
+      "addTitle": "Add Data Source",
+      "confirm": {
+        "deleteMessage": "Are you sure you want to delete this data source?"
+      },
+      "editTitle": "Edit Data Source",
+      "empty": "No data sources",
+      "emptyHint": "Add a data source to get started.",
+      "form": {
+        "apiUrl": "API URL",
+        "authToken": "Auth Token",
+        "authType": "Authentication Type",
+        "browseTemplates": "Browse templates",
+        "cancel": "Cancel",
+        "contentField": "Content Field",
+        "eventType": "Event Type",
+        "eventTypeCustom": "Custom",
+        "eventTypeMarket": "Market",
+        "eventTypeNews": "News",
+        "eventTypePolicy": "Policy",
+        "fieldMapping": "Field Mapping",
+        "hideTemplates": "Hide templates",
+        "name": "Name",
+        "pollInterval": "Poll Interval",
+        "save": "Save",
+        "scope": "Scope",
+        "scopeGlobal": "Global",
+        "scopeSimulation": "Simulation",
+        "simulationId": "Simulation ID",
+        "timestampField": "Timestamp Field",
+        "titleField": "Title Field",
+        "urlField": "URL Field"
+      },
+      "message": {
+        "invalidPollInterval": "Please enter a valid poll interval.",
+        "operationFailed": "Operation failed",
+        "saveFailed": "Failed to save data source"
+      },
+      "status": {
+        "error": "Error",
+        "paused": "Paused",
+        "running": "Running"
+      },
+      "table": {
+        "actions": "Actions",
+        "eventType": "Event Type",
+        "name": "Name",
+        "pollInterval": "Poll Interval",
+        "seconds": "seconds",
+        "status": "Status"
+      },
+      "title": "Data Sources"
+    },
+    "tabHints": {
+      "dataSources": "External data sources",
+      "files": "Uploaded files",
+      "profile": "Profile settings",
+      "providersLlm": "LLM providers",
+      "providersSearch": "Search providers",
+      "security": "Security settings"
+    },
+    "workspaceStatus": {
+      "authenticatedAccess": "Authenticated access",
+      "profileReuse": "Profile reuse"
     }
   },
   "wizard": {
@@ -785,7 +913,8 @@
         "young": "18-30",
         "middle": "31-50",
         "senior": "51+"
-      }
+      },
+      "tierLabel": "Tier"
     },
     "llmDistribution": {
       "title": "LLM Distribution",
@@ -1204,8 +1333,15 @@
     "autoAdvanceComplete": "Auto-advance completed {{count}} steps",
     "tabs": {
       "timeline": "Timeline",
-      "agents": "Agents"
-    }
+      "agents": "Agents",
+      "analyse": "Analyse",
+      "workspace": "Workspace",
+      "intervention": "Intervention"
+    },
+    "advanceControls": "Advance Controls",
+    "more": "More",
+    "moreActions": "More Actions",
+    "resizeRail": "Resize Rail"
   },
   "components": {
     "agentPanel": {
@@ -1247,7 +1383,11 @@
         "assistant": "Assistant reply",
         "user": "User input",
         "system": "System"
-      }
+      },
+      "activeNow": "Active now",
+      "noRecentActivity": "No recent activity",
+      "profileLabel": "Profile",
+      "roleLabel": "Role"
     },
     "copyButton": {
       "copy": "Copy",
@@ -1410,7 +1550,11 @@
       "paramWithinGroupConnectivity": "Within-Group Connectivity",
       "paramBridgeConnections": "Bridge Connections",
       "customEdgesPlaceholder": "Enter custom edges, e.g.: 0-1, 1-2, 2-3",
-      "networkEdgeCountHint": "{{count}} edges configured"
+      "networkEdgeCountHint": "{{count}} edges configured",
+      "configureScenarioParameters": "Configure scenario parameters",
+      "scenarioDescriptionPlaceholder": "Enter scenario description...",
+      "scenarioParamsPlaceholder": "Configure parameters...",
+      "unknownKeys": "Unknown keys"
     },
     "exportModal": {
       "title": "Export Data",
@@ -1426,7 +1570,8 @@
       "hintAgentDataJson": "Includes complete agent memory, historical status curves, and all other data.",
       "cancel": "Cancel",
       "generating": "Generating...",
-      "confirmExport": "Confirm Export"
+      "confirmExport": "Confirm Export",
+      "exportFailed": "Export failed"
     },
     "globalKnowledgePanel": {
       "title": "Global Knowledge Base",
@@ -1522,7 +1667,16 @@
       "enterNewValue": "Enter new value",
       "updateProperty": "Update Property",
       "broadcastSent": "Broadcast sent to agents",
-      "broadcastFailed": "Failed to send broadcast"
+      "broadcastFailed": "Failed to send broadcast",
+      "allAgentsLog": "All Agents Log",
+      "externalEvents": "External Events",
+      "globalBroadcastLog": "Global Broadcast Log",
+      "injectNoticeOnly": "Inject notice only",
+      "new": "New",
+      "privateBroadcastLog": "Private Broadcast Log",
+      "recipientHint": "Select recipients",
+      "recipientsLog": "Recipients Log",
+      "ruleConfig": "Rule Configuration"
     },
     "initialEventsModal": {
       "title": "Initial Event Editor",
@@ -1564,7 +1718,13 @@
       "showingRecords": "Showing {{count}} records (current branch)",
       "filterActive": "Filter active",
       "audioLink": "Audio link",
-      "videoLink": "Video link"
+      "videoLink": "Video link",
+      "agentOutputProgress": "Agent output progress",
+      "fullSize": "Full size",
+      "logAttachment": "Log attachment",
+      "noActivityYet": "No activity yet",
+      "setupGroup": "Setup",
+      "stepGroup": "Step"
     },
     "multimodalInput": {
       "cropAndUploadSuccess": "Crop and upload successful",
@@ -1615,7 +1775,9 @@
     },
     "sidebar": {
       "agents": "Agents",
-      "hostControl": "Host Control"
+      "hostControl": "Host Control",
+      "agentWatch": "Agent Watch",
+      "overviewHint": "Overview of simulation state"
     },
     "networkEditorModal": {
       "title": "Social Network Topology",
@@ -1667,7 +1829,12 @@
       "zoomOut": "Zoom out",
       "resetView": "Reset view",
       "nodes": "nodes",
-      "edges": "edges"
+      "edges": "edges",
+      "addLink": "Add Link",
+      "manualLinks": "Manual Links",
+      "noLinks": "No links configured",
+      "selectSource": "Select source",
+      "selectTarget": "Select target"
     },
     "networkGraph": {
       "emptyState": "No network to display"
@@ -1991,7 +2158,10 @@
         "openReport": "Open report",
         "exportResults": "Export results",
         "openResearchLogs": "Open research logs",
-        "settings": "Settings"
+        "settings": "Settings",
+        "headerSubtitle": "Simulation summary",
+        "pauseNote": "Simulation paused",
+        "statusKicker": "Status"
       },
       "topologyModal": {
         "title": "Simulation topology",
@@ -2009,7 +2179,11 @@
         "networkConfig": "Network config",
         "branchFromNode": "Branch from current node",
         "exitCompare": "Exit compare",
-        "enterCompare": "Enter compare"
+        "enterCompare": "Enter compare",
+        "closeAriaLabel": "Close topology modal",
+        "emptyPath": "No path selected",
+        "kicker": "Topology",
+        "subtitle": "Topology structure view"
       }
     },
     "llmConsole": {
@@ -2053,7 +2227,10 @@
         "enableModel": "Enable this model",
         "setDefault": "Set as default model",
         "save": "Save",
-        "saving": "Saving..."
+        "saving": "Saving...",
+        "protocolCustom": "Custom",
+        "protocolGoogle": "Google",
+        "protocolOpenai": "OpenAI"
       },
       "registry": {
         "searchPlaceholder": "Search model name or ID...",
@@ -2081,7 +2258,9 @@
         "setDefaultTitle": "Set as default",
         "confirmDelete": "Delete this model?",
         "deleteTitle": "Delete",
-        "showingCount": "Showing {{filtered}} / {{total}} models"
+        "showingCount": "Showing {{filtered}} / {{total}} models",
+        "modelId": "Model ID",
+        "provider": "Provider"
       },
       "providerForm": {
         "editTitle": "Edit Provider",
@@ -2096,7 +2275,13 @@
         "apiKey": "API Key",
         "apiKeyPlaceholder": "Paste your API key",
         "save": "Save",
-        "saving": "Saving..."
+        "saving": "Saving...",
+        "typeAzureOpenai": "Azure OpenAI",
+        "typeCustom": "Custom",
+        "typeDeepseek": "DeepSeek",
+        "typeGoogleGemini": "Google Gemini",
+        "typeOpenaiCompatible": "OpenAI Compatible",
+        "typeOpenrouter": "OpenRouter"
       },
       "providerPanel": {
         "title": "Provider Management",
@@ -2188,6 +2373,68 @@
       "noSnapshots": "No snapshots yet. Save one to get started.",
       "hint": {
         "snapshotDescription": "Snapshots save the full tree state. Restoring refreshes the page to that tree state."
+      }
+    },
+    "analyseTab": {
+      "compareDiff": "Compare diff",
+      "overview": "Overview"
+    },
+    "event": {
+      "addFailed": "Failed to add event",
+      "addTitle": "Add Event",
+      "apply": "Apply",
+      "applyFailed": "Failed to apply event",
+      "empty": "No events",
+      "emptyHint": "Events will appear here when available.",
+      "fetchFailed": "Failed to fetch events",
+      "form": {
+        "add": "Add",
+        "cancel": "Cancel",
+        "content": "Content",
+        "contentPlaceholder": "Enter event content...",
+        "optional": "Optional",
+        "saving": "Saving...",
+        "severity": "Severity",
+        "title": "Title",
+        "titlePlaceholder": "Enter event title...",
+        "url": "URL"
+      },
+      "lastUpdate": "Last update",
+      "loading": "Loading events...",
+      "panel": {
+        "title": "Events"
+      },
+      "refresh": "Refresh",
+      "severity": {
+        "critical": "Critical",
+        "high": "High",
+        "low": "Low",
+        "medium": "Medium"
+      },
+      "tab": {
+        "dataSources": "Data Sources"
+      },
+      "viewSource": "View source"
+    },
+    "interventionTab": {
+      "hostControl": "Host Control"
+    },
+    "rule": {
+      "config": {
+        "addCondition": "Add Condition",
+        "addRule": "Add Rule",
+        "conditions": "Conditions",
+        "contentTemplate": "Content Template",
+        "cooldown": "Cooldown",
+        "description": "Description",
+        "eventType": "Event Type",
+        "name": "Name",
+        "newRule": "New Rule",
+        "noRules": "No rules configured",
+        "noRulesHint": "Add a rule to get started.",
+        "severity": "Severity",
+        "title": "Rule Configuration",
+        "titleTemplate": "Title Template"
       }
     }
   },
@@ -2367,15 +2614,15 @@
     "batchExperimentStarted": "Batch experiment \"{{name}}\" started",
     "comparisonAnalysisFailed": "Comparison analysis failed",
     "selectedNodeNotFound": "Selected node not found in the simulation tree. Please try refreshing the simulation.",
-    "localDemoComparison": "Local demo: two timelines differ in events and agent attributes (demo only).",
-    "timeAdvancedTo": "Time advanced to",
-    "offlineModeNoAction": "offline mode, no actual action performed",
+    "localDemoComparison": "Local demo comparison",
+    "timeAdvancedTo": "Time advanced to round {{round}}",
+    "offlineModeNoAction": "Cannot perform this action in offline mode",
     "branchCreated": "Branch created",
-    "parallelRun": "Parallel Run",
+    "parallelRun": "Parallel run",
     "createdBranch": "Created branch",
-    "parallelScenario": "parallel scenario",
-    "branchCreatedLocalMode": "Branch created (local mode)",
-    "cannotBranchFromRoot": "Cannot create branch from root node",
+    "parallelScenario": "Parallel scenario",
+    "branchCreatedLocalMode": "Branch created in local mode",
+    "cannotBranchFromRoot": "Cannot branch from root node",
     "cannotFindParentNode": "Cannot find parent node",
     "simulationReport": "Simulation Experiment Analysis Report",
     "generatedAt": "Generated at",
@@ -2466,7 +2713,7 @@
       "personalTemplateBadge": "Personal",
       "deletePersonalTemplate": "Delete personal template",
       "scenariosCount": "{{count}} scenarios",
-      "noScenariosAvailable": "No scenarios available",
+      "noScenariosAvailable": "No scenarios available for this interaction type.",
       "strategic_decisions": {
         "title": "Strategic Decisions",
         "description": "Study situations where outcomes depend on what others choose",
@@ -2840,7 +3087,9 @@
           "label": "Announce Policy Adjustment",
           "description": "Announce a policy change to the group"
         }
-      }
+      },
+      "selectionMode": "Selection Mode",
+      "manualSelection": "Manual Selection"
     },
     "step4": {
       "title": "Agent setup",
@@ -2930,7 +3179,17 @@
       "importInfo": "Imports are appended to the current agent registry. Extra columns become editable agent properties.",
       "importSuccess": "Imported {{count}} agents from {{file}}.",
       "generationLlmProvider": "Generation LLM Provider",
-      "generationLlmProviderHint": "Select a provider for AI-generated agent profiles"
+      "generationLlmProviderHint": "Select a provider for AI-generated agent profiles",
+      "gaworld": {
+        "loadResidents": "Load Residents",
+        "loadingResidents": "Loading residents...",
+        "populationHint": "Select a population configuration for the GA World scenario.",
+        "populationOptionFull": "Full Population",
+        "populationOptionLabel": "Population",
+        "populationOptionStarter": "Starter Population",
+        "populationTitle": "Population",
+        "recommended": "Recommended"
+      }
     },
     "step5": {
       "networkPresets": "Network Presets",
@@ -2984,12 +3243,24 @@
       "instructions": "Instructions",
       "instructionSelect": "Select a preset to generate a network",
       "instructionDrag": "Drag nodes to rearrange",
-      "instructionZoom": "Scroll to zoom, drag to pan"
+      "instructionZoom": "Scroll to zoom, drag to pan",
+      "manualLinks": "Manual Links",
+      "noLinks": "No links configured"
     },
     "step6": {
       "noAgentsDefined": "No Agents Defined",
       "goBackToStep4": "Go back to Step 4 to add agents to your experiment.",
-      "totalAgentsTypes": "{{agents}} total agents across {{types}} types"
+      "totalAgentsTypes": "{{agents}} total agents across {{types}} types",
+      "scenario": "Scenario:",
+      "noScenarioDescription": "No scenario description provided",
+      "additionalParameters": "Additional Parameters:",
+      "turnOrdering": "Turn Ordering:",
+      "network": "Network:",
+      "availableActions": "Available actions:",
+      "noActionsSelected": "No actions selected",
+      "context": "Context:",
+      "firstRound": "This is the first round.",
+      "yourResponse": "Your Response:"
     },
     "progressBar": {
       "steps": {
@@ -3064,7 +3335,15 @@
       "action_generic": "{{agent}} performed: {{action}}",
       "public_goods_contribution": "{{agent}} decided to {{action}} {{amount}} {{resource}}",
       "round_summary": "Round {{round}} complete",
-      "payoff_result": "{{agent}} received {{payoff}} points"
+      "payoff_result": "{{agent}} received {{payoff}} points",
+      "diff": {
+        "added": "Added",
+        "debugCollapse": "Collapse debug info",
+        "debugExpand": "Expand debug info",
+        "description": "State diff",
+        "modified": "Modified",
+        "removed": "Removed"
+      }
     },
     "results": {
       "round_title": "Round {{round}} Results",
@@ -3258,194 +3537,194 @@
       "unknown": "Unknown"
     }
   },
-  "createExperiment": {
-    "entry": {
-      "badge": "Experiment Entry",
-      "title": "How do you want to create this experiment?",
-      "subtitle": "Choose a preset template to move quickly, or enter the AI-assisted custom flow to extract a new scene and action set from a research question or abstract.",
-      "enter": "Enter",
-      "workflow": "Workflow",
-      "handoff": "Return at Step 2",
-      "standardFlow": "Standard flow",
-      "aiAssisted": "AI-assisted",
-      "guidance": "Entry guidance",
-      "footer": "Preset templates keep the existing FOS setup intact. Custom creation runs an AI-assisted extraction pass first, then hands the result back to the standard builder.",
-      "preset": {
-        "title": "Preset templates",
-        "description": "Open the standard FOS template selection and continue with the existing creation workflow."
-      },
-      "custom": {
-        "title": "Custom experiment",
-        "description": "Use AI to turn a research question or paper abstract into a reviewable scene description and action set."
-      }
-    },
-    "customBuilder": {
-      "badge": "AI social scientist",
-      "title": "Create a custom experiment from research text",
-      "subtitle": "Paste a research question, abstract, or methods section. The assistant extracts a draft scene, candidate actions, possible agents, and key variables for review before handing control back to the standard builder.",
-      "inputLabel": "Research question or abstract",
-      "inputPlaceholder": "Paste a paper abstract, methods section, or the research question you want to model.",
-      "analyze": "Analyze text",
-      "saveTemplateToggle": "Save to my preset templates after creation",
-      "analysisFailed": "Failed to analyze the research text.",
-      "back": "Back to entry",
-      "uploadFile": "Upload file",
-      "clearDraft": "Clear draft",
-      "uploadFileTypeError": "Upload a .txt, .pdf, .doc, or .docx file.",
-      "uploadSuccess": "Uploaded and extracted text from {{name}}",
-      "uploadFailed": "Failed to upload file",
-      "uploadNoText": "The file was uploaded but no readable text was extracted.",
-      "enterTextFirst": "Enter text or upload a file before analyzing.",
-      "inputHint": "Paste an abstract, methods section, or upload a PDF / Word file. Image-based PDFs are OCR'd automatically.",
-      "sourceFileLabel": "Source file",
-      "sourceFile": "Source file: {{name}}",
-      "pageCount": "{{count}} pages",
-      "pageShort": "p. {{page}}",
-      "extractionMethodOcr": "OCR",
-      "extractionMethodManual": "Manual text",
-      "extractionMethodPdf": "PDF text extraction",
-      "extractionMethodGhostscript": "PDF text extraction",
-      "extractionMethodUnknown": "Text extraction",
-      "sceneTitle": "Draft scene description",
-      "templateNameLabel": "Experiment scene name",
-      "templateNamePlaceholder": "Name this experiment scene",
-      "templateNameHint": "This name is used in the builder and, if saving is enabled, as the name of your personal preset template.",
-      "scenePlaceholder": "Edit the scene description before continuing.",
-      "sceneEditorHint": "This draft becomes the scenario description that gets passed into the main builder.",
-      "semanticSchemaTitle": "Semantic schema",
-      "semanticSchemaHint": "This is the structured experiment skeleton inferred from the source before the editable draft was generated.",
-      "noSemanticSchema": "Run analysis to see the extracted experiment schema here.",
-      "schemaResearchGoal": "Research goal",
-      "schemaSetting": "Setting / environment",
-      "schemaParticipants": "Participants / agent roles",
-      "schemaDecisionContext": "Decision context",
-      "schemaChoices": "Per-round choices",
-      "schemaPayoffRules": "Payoff / feedback rules",
-      "schemaConstraints": "Constraints / termination",
-      "schemaInformationStructure": "Information structure",
-      "schemaInteractionTopology": "Interaction topology",
-      "schemaInterventions": "Interventions / treatments",
-      "schemaOutcomes": "Observed outcomes",
-      "schemaKeyVariables": "Key variables",
-      "modeRecommended": "Preset-assisted path",
-      "modeCustom": "Custom path",
-      "settingsTitle": "Draft scenario settings",
-      "settingsSubtitle": "Review key-value setup items extracted from the text.",
-      "addSetting": "Add setting",
-      "settingKeyPlaceholder": "Setting key",
-      "settingValuePlaceholder": "Setting value",
-      "settingReasonPlaceholder": "Why does this setting belong in the reconstructed experiment?",
-      "noSettings": "No settings extracted yet.",
-      "variablesTitle": "Key variables",
-      "variablesHint": "These are the terms the assistant thinks matter most for the experiment setup.",
-      "noVariables": "No key variables detected yet.",
-      "variablePlaceholder": "Variable name",
-      "addVariable": "Add variable",
-      "reviewFlagsTitle": "Assumptions and gaps",
-      "assumptionsTitle": "Current assumptions",
-      "noAssumptions": "No extra assumptions reported.",
-      "missingInfoTitle": "Information for you to confirm",
-      "noMissingInfo": "No obvious gaps reported.",
-      "analysisWarningsTitle": "System warnings",
-      "actionsTitle": "Candidate action set",
-      "actionsSubtitle": "Keep, edit, or remove the choices agents can make each round.",
-      "actionsHelperText": "Keep only the decisions that truly belong in each interaction round. Restore the analyzed action set anytime if manual edits drift too far.",
-      "addAction": "Add action",
-      "actionDescriptionPlaceholder": "Explain what this choice means in the experiment.",
-      "noActions": "No actions detected yet.",
-      "agentsTitle": "Candidate agents",
-      "agentsSubtitle": "These are the roles the assistant thinks may participate. Select the ones you want to carry into step 4 as editable drafts.",
-      "agentsHelperText": "Named roles from the source should usually survive into the final experiment. Restore them here if the draft becomes too generic.",
-      "addAgent": "Add agent",
-      "agentDescriptionPlaceholder": "Describe this agent role.",
-      "noAgents": "No candidate agents detected yet.",
-      "reviewTitle": "Review before continuing",
-      "reviewSubtitle": "Once approved, the extracted scene, settings, actions, and agents are loaded into the standard FOS builder and the flow continues at the network step.",
-      "reviewScene": "Scene",
-      "reviewActions": "Actions",
-      "reviewAgents": "Agents",
-      "reviewFallback": "No scene summary available yet.",
-      "continue": "Approve and continue",
-      "continueHint": "Once approved, the draft is written into the standard experiment builder so you can still confirm parameters, actions, agents, and network settings manually from Step 2 onward.",
-      "reviewBeforeContinue": "Review the scenario, actions, and agents before continuing.",
-      "applyFailed": "Failed to apply the generated draft.",
-      "toggleSelection": "Toggle selection",
-      "validationNotesTitle": "Validation notes",
-      "validationNotesHint": "Open this section when you need to inspect extraction evidence, document quality, or source support.",
-      "supportingPassagesTitle": "Supporting passages",
-      "evidenceChecklistTitle": "Why the system suggested this draft",
-      "confidenceLabel": "Confidence: {{score}}%",
-      "reviewRecommended": "The system found a plausible mapping, but you should review the candidate templates before continuing.",
-      "builderPathMergedTitle": "Choose how to enter the standard Builder",
-      "showAllTemplates": "Show all built-in preset templates",
-      "hideAllTemplates": "Hide remaining built-in presets",
-      "templateGenericReason": "Choose this preset if you want to map the current draft into an existing built-in scenario structure.",
-      "noSourceSections": "Upload a document or run analysis to see extracted sections here.",
-      "noEvidence": "Run analysis to collect supporting snippets from the source.",
-      "evidenceSnippetLabel": "Evidence snippet",
-      "documentInsightsTitle": "Document extraction snapshot",
-      "documentInsightsHint": "Check whether the source extraction itself looks clean before trusting the reconstructed experiment draft.",
-      "documentTitleLabel": "Extracted title",
-      "documentAbstractLabel": "Extracted abstract",
-      "documentSectionsLabel": "Weighted sections",
-      "documentPageQualityLabel": "Avg page quality",
-      "documentOcrLabel": "OCR used",
-      "documentReferencesLabel": "References stripped",
-      "documentFigureCaptionsLabel": "Figure captions",
-      "documentTableCaptionsLabel": "Table captions",
-      "pagePreviewTitle": "OCR / Page extraction preview",
-      "pageLabel": "Page {{page}}",
-      "emptyPage": "No text extracted from this page.",
-      "builderPathTitle": "Return path to the standard builder",
-      "recognitionModeTitle": "Recognition mode",
-      "recognitionModeHint": "Choose whether to use backend-only deterministic recognition or a configured provider model before analyzing the source.",
-      "modeDeterministicTitle": "Deterministic recognition",
-      "modeDeterministicShort": "Backend-only recognition with no provider call and no token cost, but weaker on complex papers.",
-      "modeDeterministicBody": "This mode relies on backend preprocessing, rule extraction, and template matching. It never calls a provider, so it costs no tokens and works well when your configured model is weak, but recognition on complex papers is more limited.",
-      "modeProviderTitle": "Provider-powered recognition",
-      "modeProviderShort": "Model-powered recognition with stronger understanding, but it uses tokens or local inference resources.",
-      "modeProviderBody": "This mode uses your configured model to understand the experiment, recommend templates, and generate the editable draft. Strong models work much better here, but they will consume tokens or local inference resources.",
-      "modeCurrentLabel": "Current mode",
-      "providerSelectLabel": "Recognition model",
-      "providerMissing": "No configured model is available yet. Finish the LLM setup in Settings first.",
-      "providerRequired": "Select a configured model before running provider-powered recognition.",
-      "providerBuiltIn": "built-in endpoint",
-      "useCustomTitle": "Stay in custom scenario mode",
-      "useCustomDescription": "Use the reconstructed scene and action set directly, then continue from Step 2 in the standard builder.",
-      "useRecommendedTitle": "Map into a preset scenario",
-      "useRecommendedDisabled": "No strong preset match was found for this source.",
-      "templateSuggestionTitle": "Recommended preset",
-      "prefillParamsTitle": "Detected parameter hints",
-      "fieldRepairTitle": "Field-by-field repair",
-      "fieldRepairHint": "Review one field at a time. Restore the analyzed draft for a single field or pull back specific evidence-backed suggestions without resetting the whole page.",
-      "fieldRepairBadge": "Evidence-backed edits",
-      "fieldRepairScenarioHint": "Restore the extracted scenario summary if your edited narrative drifted too far from the source.",
-      "fieldRepairSettingsHint": "Recover missing setup rows one at a time instead of rebuilding the whole schema manually.",
-      "fieldRepairActionsHint": "Bring back extracted decision options or add one missing action at a time.",
-      "fieldRepairAgentsHint": "Recover named roles from the source instead of retyping them if the draft became too generic.",
-      "fieldRepairVariablesHint": "Pull important variables back from the analysis when they disappear from the editable list.",
-      "reextractField": "Re-extract field",
-      "reextractingField": "Re-extractingâ€¦",
-      "reextractFailed": "Failed to re-extract this field.",
-      "restoreField": "Restore extracted",
-      "settingsHelperText": "These rows become editable builder parameters. Restore the extracted set if a manual edit wiped out too much.",
-      "settingsCollapsedHint": "These extracted scenario settings are optional here. Open this section only when you want to refine additional Builder parameters.",
-      "settingReasonResearchGoal": "Recovered from the source research goal.",
-      "settingReasonSetting": "Recovered from the environment or setup description.",
-      "settingReasonPayoff": "Recovered from the payoff, loss, or feedback rules.",
-      "settingReasonConstraints": "Recovered from explicit source constraints or termination conditions.",
-      "settingReasonInfo": "Recovered from how information visibility is described in the source.",
-      "settingReasonTopology": "Recovered from the source interaction topology.",
-      "settingReasonStructure": "Recovered from the inferred interaction structure.",
-      "schemaInteractionStructure": "Interaction structure",
-      "templateSuggestion": {
-        "title": "Template suggestion",
-        "body": "This input looks similar to {{template}}. You can jump to the matching preset template instead of continuing with a custom build.",
-        "useTemplate": "Use template"
-      },
-      "scenarioName": "Custom AI-generated scenario",
-      "templateSavedSuccess": "Saved to your personal preset templates.",
-      "templateSavedFailed": "The simulation was created, but saving the personal preset template failed."
+  "controlRoom": {
+    "activeProvider": "Active Provider",
+    "advanceCopy": "Advance simulation",
+    "analyticsCopy": "Analytics",
+    "branchCountsInline": "Branch counts",
+    "branchRelations": "Branch Relations",
+    "branchRelationsCopy": "Branch relations",
+    "branchRelationsHint": "View branch relationships",
+    "branchSafeHint": "Branching is safe — original timeline is preserved.",
+    "branchToolsCopy": "Branch tools",
+    "branchToolsTitle": "Branch Tools",
+    "branchType": "Branch Type",
+    "branchTypeParallel": "Parallel",
+    "childBranches": "Child Branches",
+    "clearFocus": "Clear focus",
+    "collectionRepresentative": "Collection representative",
+    "compareActive": "Compare active",
+    "compareHint": "Compare branches side by side",
+    "compareModeCopy": "Compare mode",
+    "configurationCopy": "Configuration",
+    "configurationTitle": "Configuration",
+    "continueSimulation": "Continue Simulation",
+    "controlPanelKicker": "Control Panel",
+    "controlPanelSubtitle": "Manage your simulation",
+    "controlPanelTitle": "Control Panel",
+    "createAndRun": "Create & Run",
+    "createBranchDialogCopy": "Create a new branch from this point in the simulation.",
+    "createBranchDialogKicker": "Create Branch",
+    "createBranchDialogTitle": "Create Branch",
+    "createBranchPrimary": "Create Branch",
+    "createBranchSidebarCopy": "Create a branch to explore an alternate path.",
+    "currentNodeConfiguration": "Current node configuration",
+    "currentPath": "Current Path",
+    "experimentDesignCopy": "Experiment design",
+    "exportCopy": "Export",
+    "focusedAgent": "Focused Agent",
+    "globalStageTitle": "Global Stage",
+    "hideBranchDetails": "Hide branch details",
+    "hostIntervention": "Host Intervention",
+    "hostInterventionCopy": "Host intervention",
+    "hostInterventionDesk": "Host Intervention Desk",
+    "inheritCurrentState": "Inherit current state",
+    "inheritCurrentStateEnabled": "Enabled",
+    "inheritCurrentStateFixed": "Fixed",
+    "knowledgeCopy": "Knowledge",
+    "knowledgeCount": "Knowledge count",
+    "lastObserved": "Last observed",
+    "memberRoster": "Member Roster",
+    "memoryCount": "Memory count",
+    "modeCompare": "Compare",
+    "modeFocused": "Focused",
+    "modeGlobal": "Global",
+    "networkCopy": "Network",
+    "noChildBranches": "No child branches",
+    "noDirectoryResults": "No results found",
+    "noFocusedAgent": "No agent focused",
+    "noFocusedAgentHint": "Select an agent to observe.",
+    "noParentBranch": "No parent branch",
+    "noSiblingBranches": "No sibling branches",
+    "nodeIdLabel": "Node ID",
+    "observationSecondaryCopy": "Observe agent behavior and outputs",
+    "observeRole": "Observe Role",
+    "openFullBranchMap": "Open full branch map",
+    "outputCopy": "Output",
+    "outputTitle": "Output",
+    "parentBranch": "Parent Branch",
+    "pathManagerTitle": "Path Manager",
+    "primaryActionsCopy": "Primary actions",
+    "primaryActionsTitle": "Primary Actions",
+    "propertyCount": "Property count",
+    "removeNode": "Remove node",
+    "reportCopy": "Report",
+    "researchNote": "Research note",
+    "returnToParentBranch": "Return to Parent Branch",
+    "roleCollections": "Role Collections",
+    "roleDirectorySearch": "Search roles...",
+    "roleObservation": "Role Observation",
+    "roundNodeLabel": "Round",
+    "selectedNodeHint": "Selected node details",
+    "showBranchDetails": "Show branch details",
+    "siblingBranches": "Sibling Branches",
+    "sourceNode": "Source Node",
+    "startNodeLabel": "Start",
+    "statusCurrent": "Current",
+    "templateCopy": "Template",
+    "timeCopy": "Time",
+    "valueUnavailable": "N/A",
+    "viewDetails": "View Details",
+    "workspaceKicker": "Workspace",
+    "workspaceSubtitle": "Simulation workspace"
+  },
+  "customApi": {
+    "addSource": "Add Source",
+    "apiUrl": "API URL",
+    "authApiKey": "API Key",
+    "authBearer": "Bearer Token",
+    "authNone": "None",
+    "authToken": "Auth Token",
+    "authType": "Authentication Type",
+    "contentField": "Content Field",
+    "fieldMapping": "Field Mapping",
+    "name": "Name",
+    "newSource": "New Source",
+    "noSources": "No sources configured",
+    "noSourcesHint": "Add a data source to get started.",
+    "pollInterval": "Poll Interval",
+    "severityField": "Severity Field",
+    "test": "Test",
+    "timestampField": "Timestamp Field",
+    "title": "Custom API",
+    "titleField": "Title Field"
+  },
+  "experiment": {
+    "actionSelector": {
+      "addAction": "Add Action",
+      "availableLabel": "Available Actions",
+      "fallbackCooperate": "Cooperate",
+      "fallbackCooperateDesc": "Cooperate with other agents",
+      "fallbackDefect": "Defect",
+      "fallbackDefectDesc": "Defect against other agents",
+      "fallbackWarning": "Using fallback action",
+      "loadError": "Failed to load actions",
+      "loading": "Loading actions...",
+      "noneAvailable": "No actions available",
+      "selectAction": "Select an action",
+      "selectPrompt": "Choose an action to add"
     }
+  },
+  "simulationWorkspace": {
+    "analytics": "Analytics",
+    "branch": "Branch",
+    "compare": "Compare",
+    "compareExit": "Exit Compare",
+    "delete": "Delete",
+    "developerTools": "Developer Tools",
+    "experiment": "Experiment",
+    "export": "Export",
+    "knowledge": "Knowledge",
+    "loadingBody": "Loading simulation...",
+    "loadingTitle": "Loading",
+    "metrics": {
+      "branch": "Branch",
+      "worldTime": "World Time"
+    },
+    "network": "Network",
+    "noProvider": "No provider configured",
+    "provider": "Provider",
+    "report": "Report",
+    "reset": "Reset",
+    "running": "Running",
+    "subtitleFallback": "Simulation in progress",
+    "sync": "Sync",
+    "template": "Template",
+    "time": "Time",
+    "titleFallback": "Simulation"
+  },
+  "topologyExplorer": {
+    "activeBranch": "Active Branch",
+    "branchActions": "Branch Actions",
+    "branchDepth": "Branch Depth",
+    "branchState": "Branch State",
+    "branchStateFilters": "Branch State Filters",
+    "childBranches": "Child Branches",
+    "compareBranch": "Compare Branch",
+    "compareReady": "Compare Ready",
+    "compareReadyHint": "Select another branch to compare.",
+    "detailHint": "Click a branch to see details.",
+    "exitComparePrep": "Exit Compare Preparation",
+    "immediateChildren": "Immediate Children",
+    "leftRailLabel": "Topology",
+    "openInControlRoom": "Open in Control Room",
+    "overview": "Overview",
+    "overviewHint": "Overview of the simulation topology.",
+    "parentBranch": "Parent Branch",
+    "prepareCompare": "Prepare Compare",
+    "returnToExperiment": "Return to Experiment",
+    "searchNodes": "Search nodes...",
+    "selectedBranchDetail": "Selected Branch Detail",
+    "selectionSummary": "Selection Summary",
+    "status": {
+      "completed": "Completed",
+      "failed": "Failed",
+      "pending": "Pending",
+      "running": "Running"
+    },
+    "subtitle": "Simulation Topology Explorer",
+    "topologyExplorer": "Topology Explorer",
+    "valueUnavailable": "N/A",
+    "visibleNodes": "Visible Nodes"
   }
 }
