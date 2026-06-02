@@ -23,7 +23,7 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential libpq-dev
 
-COPY pyproject.toml poetry.lock README.md ./
+COPY pyproject.toml README.md ./
 COPY requirements.txt ./
 
 # Install dependencies from the requirements file provided by the repo
