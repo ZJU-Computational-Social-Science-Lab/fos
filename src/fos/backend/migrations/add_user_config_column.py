@@ -4,13 +4,16 @@ import asyncio
 
 from sqlalchemy import text
 
-from fos.backend.core.config import settings
 from fos.backend.core.database import engine
+
+
+def _is_sqlite() -> bool:
+    return "sqlite" in engine.dialect.name
 
 
 async def migrate() -> None:
     async with engine.begin() as conn:
-        if settings.database_url.startswith("sqlite"):
+        if _is_sqlite():
             result = await conn.execute(text("PRAGMA table_info('users')"))
             columns = {row[1] for row in result.fetchall()}
         else:
@@ -23,7 +26,7 @@ async def migrate() -> None:
             columns = {row[0] for row in result.fetchall()}
 
         if "config" not in columns:
-            if settings.database_url.startswith("sqlite"):
+            if _is_sqlite():
                 await conn.execute(
                     text("ALTER TABLE users ADD COLUMN config JSON DEFAULT '{}'")
                 )
