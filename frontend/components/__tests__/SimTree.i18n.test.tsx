@@ -15,7 +15,7 @@ import { resetLanguage, switchLanguage } from '../../test-utils/i18n';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
-      const language = (globalThis as { i18n: { language: 'en' | 'zh' } }).i18n.language;
+      const language = (globalThis as unknown as { i18n: { language: 'en' | 'zh' } }).i18n.language;
       const translations: Record<'en' | 'zh', Record<string, string>> = {
         en: {
           'components.simTree.title': 'Simulation Tree',

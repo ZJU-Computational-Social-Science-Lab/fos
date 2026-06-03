@@ -261,7 +261,8 @@
       "cta": "查看实时引擎",
       "overlayLabel": "节点活动",
       "overlayBranch": "分支 A-12",
-      "overlayBody": "第 4 次干预后，系统逻辑稳定度维持在 89.4%。"
+      "overlayBody": "第 4 次干预后，系统逻辑稳定度维持在 89.4%。",
+      "comingSoon": "即将上线"
     },
     "capabilities": {
       "title": "核心研究能力",
@@ -585,7 +586,50 @@
         "timeoutMs": "超时 (毫秒)",
         "topP": "Top P"
       },
-      "searchAlignmentHint": "配置搜索对齐提供商。"
+      "searchAlignmentHint": "配置搜索对齐提供商。",
+      "management": {
+        "pageTitle": "LLM 配置",
+        "pageSubtitle": "统一管理 OpenAI Compatible 与 Google Gemini 的模型访问配置",
+        "addLlm": "新增 LLM",
+        "searchPlaceholder": "搜索 LLM 名称 / 类型 / URL",
+        "llmCount": "{{count}} 个 LLM",
+        "noMatchingLlm": "没有匹配的 LLM 配置",
+        "noLlmYet": "还没有 LLM 配置，先新增一个开始使用",
+        "supportsOpenaiAndGemini": "支持 OpenAI Compatible 与 Google Gemini 两类模型接入。",
+        "costNote": {
+          "title": "费用提示",
+          "subtitle": "以下是常见模型公开定价示例，实际费用以供应商最新账单为准。",
+          "model": "模型",
+          "inputPrice": "输入价格",
+          "outputPrice": "输出价格"
+        },
+        "status": {
+          "connected": "已连接",
+          "failed": "失败",
+          "testing": "测试中",
+          "untested": "未测试"
+        },
+        "card": {
+          "default": "默认",
+          "defaultModel": "默认模型",
+          "lastTest": "最近测试",
+          "testConnection": "测试连接",
+          "edit": "编辑",
+          "setDefault": "设默认",
+          "delete": "删除"
+        },
+        "deleteDialog": {
+          "title": "删除 LLM 配置",
+          "confirmMessage": "确认删除 <strong>{{name}}</strong> 的 LLM 配置？此操作无法撤销。",
+          "cancel": "取消",
+          "deleting": "删除中…",
+          "delete": "删除"
+        },
+        "testStatus": {
+          "success": "连接成功",
+          "failed": "连接失败"
+        }
+      }
     },
     "files": {
       "title": "文件管理",

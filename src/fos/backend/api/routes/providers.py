@@ -28,10 +28,9 @@ from fos.i18n import T
 
 from ...core.database import get_session
 from ...dependencies import extract_bearer_token, resolve_current_user
-from ...models.user import ProviderConfig
+from ...models.user import ProviderConfig, User
 from ...schemas.common import Message
 from ...schemas.provider import ProviderBase, ProviderCreate, ProviderUpdate
-from ...services.default_providers import ensure_default_ollama_providers
 from ...services.provider_dialect import normalize_provider_dialect
 
 
@@ -100,8 +99,6 @@ async def list_providers(request: Request) -> list[ProviderBase]:
     token = extract_bearer_token(request)
     async with get_session() as session:
         current_user = await resolve_current_user(session, token)
-        if await ensure_default_ollama_providers(session, current_user.id):
-            await session.commit()
         result = await session.execute(
             select(ProviderConfig).where(ProviderConfig.user_id == current_user.id)
         )
@@ -179,8 +176,27 @@ async def delete_provider(request: Request, provider_id: int) -> None:
         provider = await session.get(ProviderConfig, provider_id)
         if provider is None or provider.user_id != current_user.id:
             raise HTTPException(status_code=403, detail=T("api.errors.provider_not_authorized"))
+
+        is_ollama = normalize_provider_dialect(provider.provider) == "ollama"
+        model_name = (provider.model or "").strip()
+
         await session.delete(provider)
         await session.commit()
+
+        if is_ollama and model_name:
+            try:
+                user_row = await session.get(User, current_user.id)
+                user_config = dict(user_row.config or {}) if user_row else {}
+                excluded = list(user_config.get("excluded_ollama_models", []))
+                if model_name not in excluded:
+                    excluded.append(model_name)
+                    user_config["excluded_ollama_models"] = excluded
+                    if user_row:
+                        user_row.config = user_config
+                        await session.commit()
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to update excluded_ollama_models: {e}")
 
 
 @post("/{provider_id:int}/test")
