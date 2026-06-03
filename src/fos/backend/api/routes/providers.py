@@ -100,7 +100,7 @@ async def list_providers(request: Request) -> list[ProviderBase]:
     token = extract_bearer_token(request)
     async with get_session() as session:
         current_user = await resolve_current_user(session, token)
-        if await ensure_default_ollama_providers(session, current_user.id):
+        if await ensure_default_ollama_providers(session, current_user.id, current_user):
             await session.commit()
         result = await session.execute(
             select(ProviderConfig).where(ProviderConfig.user_id == current_user.id)
@@ -179,8 +179,21 @@ async def delete_provider(request: Request, provider_id: int) -> None:
         provider = await session.get(ProviderConfig, provider_id)
         if provider is None or provider.user_id != current_user.id:
             raise HTTPException(status_code=403, detail=T("api.errors.provider_not_authorized"))
+
+        is_ollama = normalize_provider_dialect(provider.provider) == "ollama"
+        model_name = (provider.model or "").strip()
+
         await session.delete(provider)
         await session.commit()
+
+        if is_ollama and model_name:
+            user_config = dict(current_user.config or {})
+            excluded = list(user_config.get("excluded_ollama_models", []))
+            if model_name not in excluded:
+                excluded.append(model_name)
+                user_config["excluded_ollama_models"] = excluded
+                current_user.config = user_config
+                await session.commit()
 
 
 @post("/{provider_id:int}/test")

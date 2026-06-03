@@ -45,7 +45,7 @@ vi.mock("../../store", () => ({
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => {
-    const language = (globalThis as { i18n: { language: Language } }).i18n.language;
+    const language = (globalThis as unknown as { i18n: { language: Language } }).i18n.language;
     const translations: Record<Language, Record<string, string>> = {
       en: {
         "components.workspace.summaryRail.title": "Simulation Snapshot",
@@ -77,7 +77,7 @@ vi.mock("react-i18next", () => ({
     };
     return {
       t: (key: string) => translations[language][key] ?? key,
-      i18n: (globalThis as { i18n: { language: Language } }).i18n,
+      i18n: (globalThis as unknown as { i18n: { language: Language } }).i18n,
     };
   },
 }));

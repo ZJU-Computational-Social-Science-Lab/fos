@@ -89,7 +89,7 @@ def _build_provider_name(model: str, existing_names: set[str]) -> str:
         index += 1
 
 
-async def ensure_default_ollama_providers(session: AsyncSession, user_id: int) -> bool:
+async def ensure_default_ollama_providers(session: AsyncSession, user_id: int, user=None) -> bool:
     result = await session.execute(
         select(ProviderConfig).where(ProviderConfig.user_id == user_id)
     )
@@ -101,7 +101,12 @@ async def ensure_default_ollama_providers(session: AsyncSession, user_id: int) -
         if (provider.provider or "").lower() == "ollama" and provider.model
     }
 
+    excluded_models: set[str] = set()
+    if user and hasattr(user, "config") and user.config:
+        excluded_models = set(user.config.get("excluded_ollama_models", []))
+
     desired_models = await get_default_ollama_models()
+    desired_models = [m for m in desired_models if m not in excluded_models]
     desired_active_model = _pick_active_model(desired_models)
     has_active_provider = any(bool((provider.config or {}).get("active")) for provider in providers)
 
