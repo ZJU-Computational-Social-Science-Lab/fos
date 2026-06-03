@@ -111,7 +111,7 @@ export function ProviderDrawerForm({
                   value={values.api_key}
                   onChange={(event) => setValues((current) => ({ ...current, api_key: event.target.value }))}
                   placeholder={t("settings.providers.providerForm.apiKeyPlaceholder")}
-                  required={mode === "create"}
+                  required={false}
                 />
                 <button
                   type="button"

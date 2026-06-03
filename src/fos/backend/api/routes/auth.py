@@ -22,7 +22,6 @@ from ...schemas.auth import (
 )
 from ...schemas.common import Message
 from ...schemas.user import UserPublic
-from ...services.default_providers import ensure_default_ollama_providers
 from ...services.verification import get_verification_token, issue_verification_token
 
 
@@ -56,9 +55,6 @@ async def register(data: RegisterRequest) -> UserPublic:
         session.add(user)
         await session.commit()
         await session.refresh(user)
-
-        if await ensure_default_ollama_providers(session, user.id):
-            await session.commit()
 
         if settings.require_email_verification:
             token = await issue_verification_token(session, user)
@@ -98,7 +94,6 @@ async def login(data: LoginRequest) -> TokenPair:
             )
         )
         user.last_login_at = datetime.now(timezone.utc)
-        await ensure_default_ollama_providers(session, user.id)
         await session.commit()
 
         return TokenPair(

@@ -187,7 +187,7 @@ export function ProviderManagementPage() {
     onSuccess: async (_data, providerId) => {
       setStatusMessage({
         id: providerId,
-        text: "连接成功",
+        text: t("settings.providers.management.testStatus.success"),
         kind: "success",
       });
       await queryClient.invalidateQueries({ queryKey: ["providers"] });
@@ -195,7 +195,7 @@ export function ProviderManagementPage() {
     onError: async (_error, providerId) => {
       setStatusMessage({
         id: providerId,
-        text: "连接失败",
+        text: t("settings.providers.management.testStatus.failed"),
         kind: "failed",
       });
       await queryClient.invalidateQueries({ queryKey: ["providers"] });
@@ -235,8 +235,8 @@ export function ProviderManagementPage() {
   return (
     <div className="provider-management-page">
       <ProviderPageHeader
-        title="LLM 配置"
-        subtitle="统一管理 OpenAI Compatible 与 Google Gemini 的模型访问配置"
+        title={t("settings.providers.management.pageTitle")}
+        subtitle={t("settings.providers.management.pageSubtitle")}
         onAdd={openCreateDrawer}
       />
 
@@ -262,16 +262,16 @@ export function ProviderManagementPage() {
 
         <section className="provider-cost-note" aria-label={t("settings.providers.costHintAriaLabel")}>
           <div className="provider-cost-note__header">
-            <h2 className="provider-cost-note__title">费用提示</h2>
-            <p className="provider-cost-note__subtitle">以下是常见模型公开定价示例，实际费用以供应商最新账单为准。</p>
+            <h2 className="provider-cost-note__title">{t("settings.providers.management.costNote.title")}</h2>
+            <p className="provider-cost-note__subtitle">{t("settings.providers.management.costNote.subtitle")}</p>
           </div>
           <div className="provider-cost-note__table-wrap">
             <table className="provider-cost-note__table">
               <thead>
                 <tr>
-                  <th>模型</th>
-                  <th>输入价格</th>
-                  <th>输出价格</th>
+                  <th>{t("settings.providers.management.costNote.model")}</th>
+                  <th>{t("settings.providers.management.costNote.inputPrice")}</th>
+                  <th>{t("settings.providers.management.costNote.outputPrice")}</th>
                 </tr>
               </thead>
               <tbody>

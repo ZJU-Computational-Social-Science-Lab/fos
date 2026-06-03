@@ -123,22 +123,11 @@ def generate_archetype_template(
     # Use T() for locale-aware prompts
     prompt = T('prompts.archetype.prompt', locale=language, attrs=attrs_str)
 
-    # Fallback roles and descriptions for timeout/empty response
-    # fallback_roles is stored as a list in locale files
-    fallback_roles_raw = T('prompts.archetype.fallback_roles', locale=language)
-    # Handle both list and string formats
-    if isinstance(fallback_roles_raw, list):
-        fallback_roles = fallback_roles_raw
-    else:
-        fallback_roles = json.loads(fallback_roles_raw) if isinstance(fallback_roles_raw, str) else ["Citizen", "Worker", "Professional", "Student", "Other"]
-    fallback_description = T('prompts.archetype.fallback_description', locale=language, archetype_label=archetype_label)
-
     messages = [
         {"role": "system", "content": "Return only valid JSON."},
         {"role": "user", "content": prompt}
     ]
 
-    # Cross-platform timeout using threading
     import threading
     import queue
 
@@ -152,114 +141,52 @@ def generate_archetype_template(
         except Exception as e:
             exception_queue.put(e)
 
-    # Start LLM call in thread
     llm_thread = threading.Thread(target=llm_call, daemon=True)
     llm_thread.start()
-
-    # Wait for result with timeout
     llm_thread.join(timeout=timeout)
 
     if llm_thread.is_alive():
-        # Thread is still running - timeout occurred
-        import warnings
-        warnings.warn(f"LLM timeout for archetype '{attrs_str}' after {timeout} seconds. Using fallback roles/description.")
+        raise TimeoutError(T('api.errors.llm.timeout', archetype=attrs_str, timeout=timeout))
 
-        return {
-            "description": fallback_description,
-            "roles": fallback_roles
-        }
-
-    # Thread completed - check for result or exception
     if not exception_queue.empty():
         e = exception_queue.get()
-        import warnings
-        warnings.warn(f"LLM error for archetype '{attrs_str}': {e}. Using fallback roles/description.")
-
-        return {
-            "description": fallback_description,
-            "roles": fallback_roles
-        }
+        raise RuntimeError(T('api.errors.llm.call_failed', archetype=attrs_str, error=str(e))) from e
 
     if result_queue.empty():
-        # No result and no exception - unexpected
-        import warnings
-        warnings.warn(f"LLM returned no result for archetype '{attrs_str}'. Using fallback roles/description.")
-
-        return {
-            "description": fallback_description,
-            "roles": fallback_roles
-        }
+        raise RuntimeError(T('api.errors.llm.no_response', archetype=attrs_str))
 
     response = result_queue.get()
 
-    # Debug logging removed — output captured in test_results files
-
-    # Check for empty response - use fallback
     if not response or not response.strip():
-        import warnings
-        warnings.warn(f"LLM returned empty response for archetype '{attrs_str}'. Using fallback.")
+        raise RuntimeError(T('api.errors.llm.empty_response', archetype=attrs_str))
 
-        return {
-            "description": fallback_description,
-            "roles": fallback_roles
-        }
-
-    # Strip markdown code blocks if present
     cleaned = response.strip()
     if cleaned.startswith("```"):
         cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned)
         cleaned = re.sub(r'\s*```$', '', cleaned)
 
-    # Try to parse JSON from response
     json_match = re.search(r'\{[\s\S]*\}', cleaned)
     if not json_match:
-        import warnings
-        warnings.warn(f"No JSON found in LLM response for archetype '{attrs_str}'. Using fallback.")
-
-        return {
-            "description": fallback_description,
-            "roles": fallback_roles
-        }
+        raise RuntimeError(T('api.errors.llm.no_json_in_response', archetype=attrs_str))
 
     try:
         parsed = json.loads(json_match.group())
-    except json.JSONDecodeError:
-        import warnings
-        warnings.warn(f"Invalid JSON in LLM response for archetype '{attrs_str}'. Using fallback.")
+    except json.JSONDecodeError as e:
+        raise RuntimeError(T('api.errors.llm.invalid_json', archetype=attrs_str, error=str(e))) from e
 
-        return {
-            "description": fallback_description,
-            "roles": fallback_roles
-        }
-
-    # Validate required fields
     if "description" not in parsed or not isinstance(parsed["description"], str):
-        import warnings
-        warnings.warn(f"Missing 'description' for archetype '{attrs_str}'. Using fallback.")
-        parsed["description"] = fallback_description
+        raise RuntimeError(T('api.errors.llm.missing_field', archetype=attrs_str, field='description'))
 
     if "roles" not in parsed or not isinstance(parsed["roles"], list) or len(parsed["roles"]) == 0:
-        import warnings
-        warnings.warn(f"Missing or invalid 'roles' for archetype '{attrs_str}'. Using fallback.")
-        parsed["roles"] = fallback_roles
-    else:
-        # Validate roles are strings
-        valid_roles = []
-        for i, r in enumerate(parsed["roles"]):
-            if isinstance(r, str) and r.strip():
-                valid_roles.append(r.strip())
-            else:
-                import warnings
-                warnings.warn(f"Role {i} is not a valid string for archetype '{attrs_str}'. Skipping.")
+        raise RuntimeError(T('api.errors.llm.missing_field', archetype=attrs_str, field='roles'))
 
-        if not valid_roles:
-            parsed["roles"] = fallback_roles
-        else:
-            parsed["roles"] = valid_roles
+    valid_roles = [r.strip() for r in parsed["roles"] if isinstance(r, str) and r.strip()]
+    if not valid_roles:
+        raise RuntimeError(T('api.errors.llm.missing_field', archetype=attrs_str, field='roles'))
 
     return {
         "description": parsed["description"],
-        "roles": parsed["roles"]
+        "roles": valid_roles
     }
 
 

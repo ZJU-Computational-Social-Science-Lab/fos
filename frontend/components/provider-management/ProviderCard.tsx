@@ -1,5 +1,6 @@
 // frontend/components/provider-management/ProviderCard.tsx
 import { Edit3, MoreHorizontal, Play, Trash2, Star } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Provider } from "../../services/providers";
 import { ProviderStatusBadge } from "./ProviderStatusBadge";
 
@@ -36,6 +37,7 @@ export function ProviderCard({
   onSetDefault,
   message,
 }: ProviderCardProps) {
+  const { t } = useTranslation();
   const lastTestedAt = provider.last_tested_at
     ? new Date(provider.last_tested_at).toLocaleString()
     : "";
@@ -51,7 +53,7 @@ export function ProviderCard({
         <div className="provider-card__title-block">
           <div className="provider-card__title-row">
             <h3 className="provider-card__title">{provider.name}</h3>
-            {provider.is_default ? <span className="provider-chip">默认</span> : null}
+            {provider.is_default ? <span className="provider-chip">{t("settings.providers.management.card.default")}</span> : null}
           </div>
           <div className="provider-card__meta-row">
             <span className="provider-card__type">{getProviderLabel(provider.provider)}</span>
@@ -67,11 +69,11 @@ export function ProviderCard({
 
       <div className="provider-card__body">
         <div className="provider-card__row">
-          <span className="provider-card__label">默认模型</span>
+          <span className="provider-card__label">{t("settings.providers.management.card.defaultModel")}</span>
           <strong className="provider-card__value">{provider.model || "—"}</strong>
         </div>
         <div className="provider-card__row">
-          <span className="provider-card__label">最近测试</span>
+          <span className="provider-card__label">{t("settings.providers.management.card.lastTest")}</span>
           <strong className="provider-card__value">{lastTestedAt || "—"}</strong>
         </div>
       </div>
@@ -85,19 +87,19 @@ export function ProviderCard({
       <div className="provider-card__actions">
         <button type="button" className="provider-icon-button" onClick={(event) => { event.stopPropagation(); onTest(provider.id); }} disabled={isTesting}>
           <Play size={14} />
-          <span>测试连接</span>
+          <span>{t("settings.providers.management.card.testConnection")}</span>
         </button>
         <button type="button" className="provider-icon-button" onClick={(event) => { event.stopPropagation(); onEdit(provider.id); }}>
           <Edit3 size={14} />
-          <span>编辑</span>
+          <span>{t("settings.providers.management.card.edit")}</span>
         </button>
         <button type="button" className="provider-icon-button" onClick={(event) => { event.stopPropagation(); onSetDefault(provider.id); }}>
           <Star size={14} />
-          <span>设默认</span>
+          <span>{t("settings.providers.management.card.setDefault")}</span>
         </button>
         <button type="button" className="provider-icon-button provider-icon-button--danger" onClick={(event) => { event.stopPropagation(); onDelete(provider); }}>
           <Trash2 size={14} />
-          <span>删除</span>
+          <span>{t("settings.providers.management.card.delete")}</span>
         </button>
       </div>
       <span className="provider-card__more-indicator" aria-hidden>
