@@ -10,7 +10,6 @@ import {
   ChevronDown,
   Check,
   FileSearch,
-  Link2,
   Quote,
   RotateCcw,
   ScanSearch,
@@ -377,7 +376,7 @@ const emptyResearchDraft = (): PersistedResearchDraft => ({
   reviewRequired: true,
   recommendedParams: {},
   builderMode: 'custom',
-  recognitionMode: 'deterministic',
+  recognitionMode: 'provider',
   selectedProviderId: null,
 });
 
@@ -432,13 +431,13 @@ export function CreateExperimentCustomPage() {
   const [reviewRequired, setReviewRequired] = useState(true);
   const [recommendedParams, setRecommendedParams] = useState<Record<string, unknown>>({});
   const [builderMode, setBuilderMode] = useState<BuilderMode>('custom');
-  const [recognitionMode, setRecognitionMode] = useState<AiScientistRecognitionMode>('deterministic');
+  const [recognitionMode, setRecognitionMode] = useState<AiScientistRecognitionMode>('provider');
   const [selectedProviderId, setSelectedProviderId] = useState<number | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [repairingField, setRepairingField] = useState<AiScientistReextractField | null>(null);
-  const [showAllPresetTemplates, setShowAllPresetTemplates] = useState(false);
+  const [showRecommendedTemplateDetails, setShowRecommendedTemplateDetails] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   const providersQuery = useQuery({
@@ -511,6 +510,7 @@ export function CreateExperimentCustomPage() {
     setBuilderMode(empty.builderMode);
     setRecognitionMode(empty.recognitionMode);
     setSelectedProviderId(empty.selectedProviderId);
+    setShowRecommendedTemplateDetails(false);
     setErrorMessage('');
     window.sessionStorage.removeItem(CUSTOM_BUILDER_DRAFT_STORAGE_KEY);
   };
@@ -551,7 +551,7 @@ export function CreateExperimentCustomPage() {
       setReviewRequired(parsed.reviewRequired ?? true);
       setRecommendedParams(parsed.recommendedParams || {});
       setBuilderMode(parsed.builderMode || 'custom');
-      setRecognitionMode(parsed.recognitionMode || 'deterministic');
+      setRecognitionMode(parsed.recognitionMode || 'provider');
       setSelectedProviderId(parsed.selectedProviderId ?? null);
     } catch {
       window.sessionStorage.removeItem(CUSTOM_BUILDER_DRAFT_STORAGE_KEY);
@@ -682,6 +682,7 @@ export function CreateExperimentCustomPage() {
     setReviewRequired(Boolean(result.review_required));
     setRecommendedParams(result.recommended_params || {});
     setBuilderMode(result.recommended_scenario_id && result.recommended_scenario_id !== 'custom' ? 'recommended' : 'custom');
+    setShowRecommendedTemplateDetails(false);
     if (sourceName) {
       setSourceFileName(sourceName);
     }
@@ -1023,14 +1024,16 @@ export function CreateExperimentCustomPage() {
     });
   }, [allScenarios, t, templateOptions]);
 
-  const featuredPresetOptions = useMemo(() => rankedPresetOptions.slice(0, 3), [rankedPresetOptions]);
-  const hiddenPresetOptions = useMemo(() => rankedPresetOptions.slice(3), [rankedPresetOptions]);
-
   const selectedTemplate = useMemo(() => {
     if (!rankedPresetOptions.length) return null;
     return rankedPresetOptions.find((item) => item.id === selectedTemplateId)
       || suggestedTemplateForScenario(rankedPresetOptions, recommendedScenarioId);
   }, [rankedPresetOptions, recommendedScenarioId, selectedTemplateId]);
+  const primaryPresetOption = useMemo(() => selectedTemplate || rankedPresetOptions[0] || null, [rankedPresetOptions, selectedTemplate]);
+  const alternativePresetOptions = useMemo(
+    () => rankedPresetOptions.filter((item) => item.id !== primaryPresetOption?.id),
+    [primaryPresetOption, rankedPresetOptions],
+  );
 
   const semanticSchemaSections = useMemo(() => {
     if (!semanticSchema) return [];
@@ -1228,38 +1231,6 @@ export function CreateExperimentCustomPage() {
             <Button variant="outline" onClick={clearDraft} disabled={isAnalyzing || isUploading || isApplying}>
               {t('createExperiment.customBuilder.clearDraft', { defaultValue: 'Clear Draft' })}
             </Button>
-            <Button variant="outline" onClick={handleUploadClick} disabled={isAnalyzing || isUploading || isApplying}>
-              <Upload size={16} />
-              {isUploading ? t('common.loading', { defaultValue: 'Loading' }) : t('createExperiment.customBuilder.uploadFile', { defaultValue: 'Upload File' })}
-            </Button>
-            <Button data-testid="research-analyze-button" onClick={() => void runAnalysis(researchText)} disabled={isAnalyzing || isUploading || isApplying}>
-              {isAnalyzing ? t('common.loading', { defaultValue: 'Loading' }) : t('createExperiment.customBuilder.analyze', { defaultValue: 'Analyze' })}
-            </Button>
-            <button
-              type="button"
-              data-testid="research-save-template-toggle"
-              onClick={() => setSaveAsPresetTemplate((current) => !current)}
-              disabled={isAnalyzing || isUploading || isApplying}
-              className="inline-flex items-center gap-3 rounded-2xl border px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-60"
-              style={{
-                borderColor: saveAsPresetTemplate ? 'var(--ss-brand-primary)' : 'var(--ss-border-strong)',
-                background: saveAsPresetTemplate ? 'var(--ss-brand-soft)' : 'var(--ss-page-surface)',
-                color: 'var(--ss-text)',
-              }}
-              aria-pressed={saveAsPresetTemplate}
-            >
-              <span
-                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-                style={{ background: saveAsPresetTemplate ? 'var(--ss-brand-primary)' : 'var(--ss-border-strong)' }}
-              >
-                <span
-                  className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${saveAsPresetTemplate ? 'translate-x-6' : 'translate-x-1'}`}
-                />
-              </span>
-              <span className="text-left">
-                {t('createExperiment.customBuilder.saveTemplateToggle', { defaultValue: '创建后保存到我的预设模板' })}
-              </span>
-            </button>
           </div>
         </div>
 
@@ -1275,28 +1246,6 @@ export function CreateExperimentCustomPage() {
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setRecognitionMode('deterministic')}
-                className="rounded-2xl border p-4 text-left transition"
-                style={{
-                  borderColor: recognitionMode === 'deterministic' ? 'var(--ss-brand-primary)' : 'var(--ss-border-strong)',
-                  background: recognitionMode === 'deterministic' ? 'var(--ss-accent-warm-soft)' : 'var(--ss-page-surface)',
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold" style={{ color: 'var(--ss-heading)' }}>
-                      {t('createExperiment.customBuilder.modeDeterministicTitle', { defaultValue: '硬识别模式' })}
-                    </div>
-                    <p className="mt-2 text-sm leading-6" style={{ color: 'var(--ss-text)' }}>
-                      {t('createExperiment.customBuilder.modeDeterministicBody', { defaultValue: '主要靠后端预处理、规则抽取和模板匹配完成识别，完全不依赖 provider。适合本地小模型能力偏弱、希望不消耗 token 先得到可编辑草案的用户，但复杂论文的识别能力会更有限。' })}
-                    </p>
-                  </div>
-                  {recognitionMode === 'deterministic' ? <Check size={18} style={{ color: 'var(--ss-brand-primary)' }} /> : null}
-                </div>
-              </button>
-
               <button
                 type="button"
                 onClick={() => setRecognitionMode('provider')}
@@ -1316,6 +1265,28 @@ export function CreateExperimentCustomPage() {
                     </p>
                   </div>
                   {recognitionMode === 'provider' ? <Sparkles size={18} style={{ color: 'var(--ss-brand-primary)' }} /> : null}
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRecognitionMode('deterministic')}
+                className="rounded-2xl border p-4 text-left transition"
+                style={{
+                  borderColor: recognitionMode === 'deterministic' ? 'var(--ss-brand-primary)' : 'var(--ss-border-strong)',
+                  background: recognitionMode === 'deterministic' ? 'var(--ss-accent-warm-soft)' : 'var(--ss-page-surface)',
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold" style={{ color: 'var(--ss-heading)' }}>
+                      {t('createExperiment.customBuilder.modeDeterministicTitle', { defaultValue: '硬识别模式' })}
+                    </div>
+                    <p className="mt-2 text-sm leading-6" style={{ color: 'var(--ss-text)' }}>
+                      {t('createExperiment.customBuilder.modeDeterministicBody', { defaultValue: '主要靠后端预处理、规则抽取和模板匹配完成识别，完全不依赖 provider。适合本地小模型能力偏弱、希望不消耗 token 先得到可编辑草案的用户，但复杂论文的识别能力会更有限。' })}
+                    </p>
+                  </div>
+                  {recognitionMode === 'deterministic' ? <Check size={18} style={{ color: 'var(--ss-brand-primary)' }} /> : null}
                 </div>
               </button>
             </div>
@@ -1381,8 +1352,8 @@ export function CreateExperimentCustomPage() {
         <div className="space-y-6">
           <Card className="p-5">
             <div className="space-y-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+                <div className="min-w-0">
                   <h2 className="text-lg font-semibold" style={{ color: 'var(--ss-heading)' }}>
                     {t('createExperiment.customBuilder.inputLabel', { defaultValue: 'Research Source' })}
                   </h2>
@@ -1390,9 +1361,56 @@ export function CreateExperimentCustomPage() {
                     {t('createExperiment.customBuilder.inputHint', { defaultValue: 'Paste an abstract, methods section, or upload a PDF/Word file. Image-based PDFs will be OCR’d automatically.' })}
                   </p>
                 </div>
-                <div data-testid="research-extraction-summary" className="rounded-xl border px-3 py-2 text-xs" style={{ borderColor: 'var(--ss-border-strong)', color: 'var(--ss-text-muted)' }}>
-                  <div>{localizedExtractionMethod(sourceAsset?.extraction_method || 'manual-text', t)}</div>
-                  {sourceAsset?.page_count ? <div>{t('createExperiment.customBuilder.pageCount', { defaultValue: '{{count}} pages', count: sourceAsset.page_count })}</div> : null}
+                <div className="flex flex-col gap-3 xl:items-end xl:justify-self-end">
+                  <div className="flex flex-wrap justify-start gap-3 xl:justify-end">
+                    <Button variant="outline" onClick={handleUploadClick} disabled={isAnalyzing || isUploading || isApplying}>
+                      <Upload size={16} />
+                      {isUploading ? t('common.loading', { defaultValue: 'Loading' }) : t('createExperiment.customBuilder.uploadFile', { defaultValue: 'Upload File' })}
+                    </Button>
+                    <Button data-testid="research-analyze-button" onClick={() => void runAnalysis(researchText)} disabled={isAnalyzing || isUploading || isApplying}>
+                      {isAnalyzing ? t('common.loading', { defaultValue: 'Loading' }) : t('createExperiment.customBuilder.analyze', { defaultValue: 'Analyze' })}
+                    </Button>
+                    <button
+                      type="button"
+                      data-testid="research-save-template-toggle"
+                      onClick={() => setSaveAsPresetTemplate((current) => !current)}
+                      disabled={isAnalyzing || isUploading || isApplying}
+                      className="inline-flex items-center gap-3 rounded-2xl border px-3 py-2 text-sm transition disabled:cursor-not-allowed disabled:opacity-60"
+                      style={{
+                        borderColor: saveAsPresetTemplate ? 'var(--ss-brand-primary)' : 'var(--ss-border-strong)',
+                        background: saveAsPresetTemplate ? 'var(--ss-brand-soft)' : 'var(--ss-page-surface)',
+                        color: 'var(--ss-text)',
+                      }}
+                      aria-pressed={saveAsPresetTemplate}
+                    >
+                      <span
+                        className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                        style={{ background: saveAsPresetTemplate ? 'var(--ss-brand-primary)' : 'var(--ss-border-strong)' }}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${saveAsPresetTemplate ? 'translate-x-6' : 'translate-x-1'}`}
+                        />
+                      </span>
+                      <span className="text-left">
+                        {t('createExperiment.customBuilder.saveTemplateToggle', { defaultValue: '创建后保存到我的预设模板' })}
+                      </span>
+                    </button>
+                  </div>
+                  {sourceAsset ? (
+                    <div className="flex flex-wrap justify-start gap-2 xl:justify-end">
+                      <div
+                        data-testid="research-extraction-summary"
+                        className="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs"
+                        style={{ borderColor: 'var(--ss-border-strong)', color: 'var(--ss-text-muted)' }}
+                      >
+                        <FileSearch size={14} />
+                        <span>{localizedExtractionMethod(sourceAsset.extraction_method || 'uploaded', t)}</span>
+                        {sourceAsset.page_count ? (
+                          <span>{t('createExperiment.customBuilder.pageCount', { defaultValue: '{{count}} pages', count: sourceAsset.page_count })}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -1435,16 +1453,203 @@ export function CreateExperimentCustomPage() {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-semibold" style={{ color: 'var(--ss-heading)' }}>
-                    {t('createExperiment.customBuilder.reviewTitle', { defaultValue: 'Review before continuing' })}
+                    {t('createExperiment.customBuilder.builderPathMergedTitle', { defaultValue: 'Choose how to continue building this experiment' })}
                   </h2>
                   <p className="mt-1 text-sm" style={{ color: 'var(--ss-text)' }}>
-                    {t('createExperiment.customBuilder.reviewSubtitle', { defaultValue: 'Confirm the experiment name, scenario draft, and the path back into the standard builder.' })}
+                    {t('createExperiment.customBuilder.reviewSubtitle', { defaultValue: 'These are extracted draft results. Please manually review, edit, and choose how you want to continue before they are written into the standard builder.' })}
                   </p>
                 </div>
                 <div className="rounded-xl border px-3 py-2 text-xs" style={{ borderColor: 'var(--ss-border-strong)', color: 'var(--ss-text-muted)' }}>
-                  {builderMode === 'recommended'
-                    ? t('createExperiment.customBuilder.modeRecommended', { defaultValue: 'Preset-assisted path' })
-                    : t('createExperiment.customBuilder.modeCustom', { defaultValue: 'Custom path' })}
+                  {t('createExperiment.customBuilder.confidenceLabel', {
+                    defaultValue: 'Confidence: {{score}}%',
+                    score: Math.round((recommendationConfidence || 0) * 100),
+                  })}
+                </div>
+              </div>
+
+              <div className="grid gap-3 xl:grid-cols-2">
+                <button
+                  data-testid="builder-mode-custom"
+                  type="button"
+                  onClick={() => setBuilderMode('custom')}
+                  aria-pressed={builderMode === 'custom'}
+                  className="rounded-2xl border p-4 text-left transition"
+                  style={{
+                    borderColor: builderMode === 'custom' ? 'var(--ss-brand-primary)' : 'var(--ss-border-strong)',
+                    background: builderMode === 'custom' ? 'var(--ss-brand-soft)' : 'var(--ss-page-surface)',
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-base font-semibold" style={{ color: 'var(--ss-heading)' }}>
+                        {t('createExperiment.customBuilder.useCustomTitle', { defaultValue: 'Stay in custom scenario mode' })}
+                      </div>
+                      <p className="mt-2 text-sm leading-6" style={{ color: 'var(--ss-text)' }}>
+                        {t('createExperiment.customBuilder.useCustomDescription', { defaultValue: 'Use the reconstructed scene and custom action set directly, then continue through the standard builder from Step 2.' })}
+                      </p>
+                    </div>
+                    {builderMode === 'custom' ? <Check size={18} style={{ color: 'var(--ss-brand-primary)' }} /> : null}
+                  </div>
+                </button>
+
+                <div
+                  data-testid="builder-mode-recommended"
+                  className="rounded-2xl border p-4"
+                  style={{
+                    borderColor: builderMode === 'recommended' ? 'var(--ss-brand-primary)' : 'var(--ss-border-strong)',
+                    background: builderMode === 'recommended' ? 'var(--ss-brand-soft)' : 'var(--ss-page-surface)',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setBuilderMode('recommended')}
+                    aria-pressed={builderMode === 'recommended'}
+                    className="w-full text-left"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-base font-semibold" style={{ color: 'var(--ss-heading)' }}>
+                          {t('createExperiment.customBuilder.useRecommendedTitle', { defaultValue: 'Map into a preset scenario' })}
+                        </div>
+                        <p className="mt-2 text-sm leading-6" style={{ color: 'var(--ss-text)' }}>
+                          {primaryPresetOption
+                            ? t('createExperiment.customBuilder.reviewRecommended', {
+                              defaultValue: 'The system found a plausible mapping, but you should review the candidate templates before continuing.',
+                            })
+                            : t('createExperiment.customBuilder.useRecommendedDisabled', { defaultValue: 'No strong preset match was found for this source.' })}
+                        </p>
+                      </div>
+                      {builderMode === 'recommended' ? <Check size={18} style={{ color: 'var(--ss-brand-primary)' }} /> : null}
+                    </div>
+                  </button>
+
+                  {primaryPresetOption ? (
+                    <div className="mt-4 rounded-2xl border p-4" style={{ borderColor: 'var(--ss-border)', background: 'var(--ss-surface)' }}>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="text-xs uppercase tracking-wide" style={{ color: 'var(--ss-text-muted)' }}>
+                            {t('createExperiment.customBuilder.modeRecommended', { defaultValue: 'Preset-assisted path' })}
+                          </div>
+                          <div className="mt-1 text-sm font-semibold" style={{ color: 'var(--ss-heading)' }}>
+                            {primaryPresetOption.name}
+                          </div>
+                          <div className="mt-1 text-xs" style={{ color: 'var(--ss-text-muted)' }}>
+                            {primaryPresetOption.category}
+                          </div>
+                        </div>
+                        <div className="rounded-full border px-3 py-1 text-xs font-medium" style={{ borderColor: 'var(--ss-border-strong)', color: 'var(--ss-text)' }}>
+                          {Math.round(primaryPresetOption.score * 100)}%
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    {reviewRequired && primaryPresetOption ? (
+                      <div className="rounded-full border px-3 py-1 text-xs" style={{ borderColor: 'var(--ss-warning)', color: 'var(--ss-text)' }}>
+                        {t('createExperiment.customBuilder.reviewRecommended', {
+                          defaultValue: 'The system found a plausible mapping, but you should review the candidate templates before continuing.',
+                        })}
+                      </div>
+                    ) : null}
+                    {(primaryPresetOption || alternativePresetOptions.length > 0 || Object.keys(recommendedParams).length > 0) ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowRecommendedTemplateDetails((current) => !current)}
+                        className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm transition"
+                        style={{ borderColor: 'var(--ss-border)', background: 'var(--ss-surface)', color: 'var(--ss-text)' }}
+                      >
+                        <span>
+                          {showRecommendedTemplateDetails
+                            ? t('createExperiment.customBuilder.hideAllTemplates', { defaultValue: 'Hide remaining built-in presets' })
+                            : t('createExperiment.customBuilder.showAllTemplates', { defaultValue: 'Show all built-in preset templates' })}
+                        </span>
+                        <ChevronDown
+                          size={16}
+                          className={`transition-transform ${showRecommendedTemplateDetails ? 'rotate-180' : ''}`}
+                        />
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {showRecommendedTemplateDetails ? (
+                    <div className="mt-4 space-y-4 rounded-2xl border p-4" style={{ borderColor: 'var(--ss-border)', background: 'var(--ss-surface)' }}>
+                      {recommendedScenarioReason ? (
+                        <div className="text-sm leading-6" style={{ color: 'var(--ss-text)' }}>
+                          {recommendedScenarioReason}
+                        </div>
+                      ) : null}
+
+                      {alternativePresetOptions.length > 0 ? (
+                        <div className="grid gap-3 md:grid-cols-2">
+                          {alternativePresetOptions.map((option) => {
+                            const isSelected = selectedTemplate?.id === option.id;
+                            return (
+                              <button
+                                key={option.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTemplateId(option.id);
+                                  setBuilderMode('recommended');
+                                }}
+                                className="w-full rounded-2xl border p-4 text-left transition"
+                                style={{
+                                  borderColor: isSelected ? 'var(--ss-brand-primary)' : 'var(--ss-border-strong)',
+                                  background: isSelected ? 'var(--ss-brand-soft)' : 'var(--ss-page-surface)',
+                                }}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <div className="font-semibold" style={{ color: 'var(--ss-heading)' }}>
+                                      {option.name}
+                                    </div>
+                                    <div className="mt-1 text-xs uppercase tracking-wide" style={{ color: 'var(--ss-text-muted)' }}>
+                                      {option.category} · {Math.round(option.score * 100)}%
+                                    </div>
+                                  </div>
+                                  {isSelected ? <Check size={16} /> : null}
+                                </div>
+                                <div className="mt-2 text-sm leading-6" style={{ color: 'var(--ss-text)' }}>
+                                  {option.reason}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+
+                      {Object.keys(recommendedParams).length > 0 ? (
+                        <div className="rounded-2xl border p-4" style={{ borderColor: 'var(--ss-border-strong)', background: 'var(--ss-page-surface)' }}>
+                          <div className="text-sm font-semibold" style={{ color: 'var(--ss-heading)' }}>
+                            {t('createExperiment.customBuilder.prefillParamsTitle', { defaultValue: 'Detected parameter hints' })}
+                          </div>
+                          <div className="mt-3 space-y-2">
+                            {Object.entries(recommendedParams).map(([key, value]) => (
+                              <div key={key} className="flex items-start justify-between gap-3 text-sm">
+                                <div style={{ color: 'var(--ss-text-muted)' }}>{key}</div>
+                                <div className="text-right" style={{ color: 'var(--ss-text)' }}>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold" style={{ color: 'var(--ss-heading)' }}>
+                    {t('createExperiment.customBuilder.reviewTitle', { defaultValue: 'Review before continuing' })}
+                  </h2>
+                  <p className="mt-1 text-sm" style={{ color: 'var(--ss-text)' }}>
+                    {t('createExperiment.customBuilder.reviewSubtitle', { defaultValue: 'These are extracted draft results. Please manually review, edit, and choose how you want to continue before they are written into the standard builder.' })}
+                  </p>
                 </div>
               </div>
 
@@ -1515,183 +1720,6 @@ export function CreateExperimentCustomPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border p-4" style={{ borderColor: 'var(--ss-border-strong)', background: 'var(--ss-page-surface)' }}>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--ss-heading)' }}>
-                    <Link2 size={16} />
-                    {t('createExperiment.customBuilder.builderPathMergedTitle', { defaultValue: 'Choose how to enter the standard Builder' })}
-                  </div>
-                  <div className="text-xs" style={{ color: reviewRequired ? 'var(--ss-warning)' : 'var(--ss-text-muted)' }}>
-                    {t('createExperiment.customBuilder.confidenceLabel', {
-                      defaultValue: 'Confidence: {{score}}%',
-                      score: Math.round((recommendationConfidence || 0) * 100),
-                    })}
-                  </div>
-                </div>
-
-                <div className="mt-3 grid gap-3">
-                  <button
-                    data-testid="builder-mode-custom"
-                    type="button"
-                    onClick={() => setBuilderMode('custom')}
-                    aria-pressed={builderMode === 'custom'}
-                    className="rounded-2xl border p-4 text-left transition"
-                    style={{
-                      borderColor: builderMode === 'custom' ? 'var(--ss-brand-primary)' : 'var(--ss-border-strong)',
-                      background: builderMode === 'custom' ? 'var(--ss-brand-soft)' : 'var(--ss-page-surface)',
-                    }}
-                  >
-                    <div className="text-sm font-semibold" style={{ color: 'var(--ss-heading)' }}>
-                      {t('createExperiment.customBuilder.useCustomTitle', { defaultValue: 'Stay in custom scenario mode' })}
-                    </div>
-                    <p className="mt-1 text-sm" style={{ color: 'var(--ss-text)' }}>
-                      {t('createExperiment.customBuilder.useCustomDescription', { defaultValue: 'Use the reconstructed scene and custom action set directly, then continue through the standard builder from Step 2.' })}
-                    </p>
-                  </button>
-
-                  <div
-                    data-testid="builder-mode-recommended"
-                    role="button"
-                    tabIndex={0}
-                    aria-pressed={builderMode === 'recommended'}
-                    onClick={() => setBuilderMode('recommended')}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        setBuilderMode('recommended');
-                      }
-                    }}
-                    className="rounded-2xl border p-4"
-                    style={{
-                      borderColor: builderMode === 'recommended' ? 'var(--ss-brand-primary)' : 'var(--ss-border-strong)',
-                      background: builderMode === 'recommended' ? 'var(--ss-brand-soft)' : 'var(--ss-page-surface)',
-                    }}
-                  >
-                    <div className="text-sm font-semibold" style={{ color: 'var(--ss-heading)' }}>
-                      {t('createExperiment.customBuilder.useRecommendedTitle', { defaultValue: 'Map into a preset scenario' })}
-                    </div>
-                    <p className="mt-1 text-sm" style={{ color: 'var(--ss-text)' }}>
-                      {selectedTemplate
-                        ? `${selectedTemplate.name}. ${recommendedScenarioReason || selectedTemplate.reason}`
-                        : t('createExperiment.customBuilder.useRecommendedDisabled', { defaultValue: 'No strong preset match was found for this source.' })}
-                    </p>
-
-                    {reviewRequired ? (
-                      <div className="mt-3 rounded-xl border px-3 py-2 text-sm" style={{ borderColor: 'var(--ss-warning)', background: 'var(--ss-brand-soft)', color: 'var(--ss-text)' }}>
-                        {t('createExperiment.customBuilder.reviewRecommended', {
-                          defaultValue: 'The system found a plausible mapping, but you should review the candidate templates before continuing.',
-                        })}
-                      </div>
-                    ) : null}
-
-                    {recommendedScenarioReason ? (
-                      <div className="mt-3 text-sm" style={{ color: 'var(--ss-text)' }}>
-                        {recommendedScenarioReason}
-                      </div>
-                    ) : null}
-
-                    {featuredPresetOptions.length > 0 ? (
-                      <div className="mt-4 space-y-3">
-                        {featuredPresetOptions.map((option) => {
-                          const isSelected = selectedTemplate?.id === option.id;
-                          return (
-                            <button
-                              key={option.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedTemplateId(option.id);
-                                setBuilderMode('recommended');
-                              }}
-                              className="w-full rounded-2xl border p-4 text-left transition"
-                              style={{
-                                borderColor: isSelected ? 'var(--ss-brand-primary)' : 'var(--ss-border-strong)',
-                                background: isSelected ? 'var(--ss-brand-soft)' : 'var(--ss-page-surface)',
-                              }}
-                            >
-                              <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div>
-                                  <div className="font-semibold" style={{ color: 'var(--ss-heading)' }}>
-                                    {option.name}
-                                  </div>
-                                  <div className="mt-1 text-xs uppercase tracking-wide" style={{ color: 'var(--ss-text-muted)' }}>
-                                    {option.category} · {Math.round(option.score * 100)}%
-                                  </div>
-                                </div>
-                                {isSelected ? <Check size={16} /> : null}
-                              </div>
-                              <div className="mt-2 text-sm" style={{ color: 'var(--ss-text)' }}>
-                                {option.reason}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-
-                    {hiddenPresetOptions.length > 0 ? (
-                      <div className="mt-4">
-                        <button
-                          type="button"
-                          onClick={() => setShowAllPresetTemplates((current) => !current)}
-                          className="rounded-xl border px-3 py-2 text-sm transition"
-                          style={{ borderColor: 'var(--ss-border)', background: 'var(--ss-surface)', color: 'var(--ss-text)' }}
-                        >
-                          {showAllPresetTemplates
-                            ? t('createExperiment.customBuilder.hideAllTemplates', { defaultValue: 'Hide remaining built-in presets' })
-                            : t('createExperiment.customBuilder.showAllTemplates', { defaultValue: 'Show all built-in preset templates' })}
-                        </button>
-
-                        {showAllPresetTemplates ? (
-                          <div className="mt-3 grid gap-3 md:grid-cols-2">
-                            {hiddenPresetOptions.map((option) => {
-                              const isSelected = selectedTemplate?.id === option.id;
-                              return (
-                                <button
-                                  key={option.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedTemplateId(option.id);
-                                    setBuilderMode('recommended');
-                                  }}
-                                  className="w-full rounded-2xl border p-4 text-left transition"
-                                  style={{
-                                    borderColor: isSelected ? 'var(--ss-brand-primary)' : 'var(--ss-border-strong)',
-                                    background: isSelected ? 'var(--ss-brand-soft)' : 'var(--ss-page-surface)',
-                                  }}
-                                >
-                                  <div className="font-semibold" style={{ color: 'var(--ss-heading)' }}>{option.name}</div>
-                                  <div className="mt-1 text-xs uppercase tracking-wide" style={{ color: 'var(--ss-text-muted)' }}>
-                                    {option.category}
-                                  </div>
-                                  <div className="mt-2 text-sm" style={{ color: 'var(--ss-text)' }}>
-                                    {option.reason}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    {Object.keys(recommendedParams).length > 0 ? (
-                      <div className="mt-4 rounded-2xl border p-4" style={{ borderColor: 'var(--ss-border)', background: 'var(--ss-surface)' }}>
-                        <div className="text-sm font-semibold" style={{ color: 'var(--ss-heading)' }}>
-                          {t('createExperiment.customBuilder.prefillParamsTitle', { defaultValue: 'Detected parameter hints' })}
-                        </div>
-                        <div className="mt-3 space-y-2">
-                          {Object.entries(recommendedParams).map(([key, value]) => (
-                            <div key={key} className="flex items-start justify-between gap-3 text-sm">
-                              <div style={{ color: 'var(--ss-text-muted)' }}>{key}</div>
-                              <div className="text-right" style={{ color: 'var(--ss-text)' }}>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
             </div>
           </Card>
 
@@ -1732,44 +1760,52 @@ export function CreateExperimentCustomPage() {
           />
 
           <CollapsibleCardSection
-            title={t('createExperiment.customBuilder.settingsTitle', { defaultValue: 'Draft scenario settings' })}
-            hint={t('createExperiment.customBuilder.settingsCollapsedHint', {
-              defaultValue: 'These extracted settings are optional to review here. Open this section when you want to refine additional builder parameters.',
+            title={t('createExperiment.customBuilder.advancedReviewTitle', { defaultValue: 'Advanced edits and review' })}
+            hint={t('createExperiment.customBuilder.advancedReviewHint', {
+              defaultValue: 'Open this area when you want to adjust extracted settings, repair individual fields, or inspect the underlying semantic structure and evidence.',
             })}
             defaultOpen={false}
           >
-            <SettingsDraftPanel
-              t={t}
-              textColor="var(--ss-heading)"
-              helperText={t('createExperiment.customBuilder.settingsHelperText', {
-                defaultValue: 'These rows are editable builder parameters. Restore the extracted set if a manual edit wiped out too much.',
-              })}
-              headerAction={(
-                <Button variant="outline" size="sm" onClick={restoreSettingsDrafts} disabled={extractedSettingsDrafts.length === 0}>
-                  <RotateCcw size={14} />
-                  {t('createExperiment.customBuilder.restoreField', { defaultValue: 'Restore extracted' })}
-                </Button>
-              )}
-              settingsDrafts={settingsDrafts}
-              onAddSetting={addSetting}
-              onUpdateSetting={updateSetting}
-              onRemoveSetting={removeSetting}
-            />
-          </CollapsibleCardSection>
+            <div className="space-y-4">
+              <CollapsibleCardSection
+                title={t('createExperiment.customBuilder.settingsTitle', { defaultValue: 'Draft scenario settings' })}
+                hint={t('createExperiment.customBuilder.settingsCollapsedHint', {
+                  defaultValue: 'These extracted settings are optional to review here. Open this section when you want to refine additional builder parameters.',
+                })}
+                defaultOpen={false}
+              >
+                <SettingsDraftPanel
+                  t={t}
+                  textColor="var(--ss-heading)"
+                  helperText={t('createExperiment.customBuilder.settingsHelperText', {
+                    defaultValue: 'These rows are editable builder parameters. Restore the extracted set if a manual edit wiped out too much.',
+                  })}
+                  headerAction={(
+                    <Button variant="outline" size="sm" onClick={restoreSettingsDrafts} disabled={extractedSettingsDrafts.length === 0}>
+                      <RotateCcw size={14} />
+                      {t('createExperiment.customBuilder.restoreField', { defaultValue: 'Restore extracted' })}
+                    </Button>
+                  )}
+                  settingsDrafts={settingsDrafts}
+                  onAddSetting={addSetting}
+                  onUpdateSetting={updateSetting}
+                  onRemoveSetting={removeSetting}
+                />
+              </CollapsibleCardSection>
 
-          <CollapsibleCardSection
-            title={t('createExperiment.customBuilder.fieldRepairTitle', { defaultValue: 'Field-by-field repair' })}
-            hint={t('createExperiment.customBuilder.fieldRepairHint', {
-              defaultValue: 'Review one field at a time. Restore the analyzed draft for a single field or pull back specific evidence-backed suggestions without resetting the whole page.',
-            })}
-            badge={(
-              <span className="rounded-xl border px-3 py-1.5 text-xs" style={{ borderColor: 'var(--ss-border-strong)', color: 'var(--ss-text-muted)' }}>
-                {t('createExperiment.customBuilder.fieldRepairBadge', { defaultValue: 'Evidence-backed edits' })}
-              </span>
-            )}
-            defaultOpen={false}
-          >
-            <div className="space-y-3">
+              <CollapsibleCardSection
+                title={t('createExperiment.customBuilder.fieldRepairTitle', { defaultValue: 'Field-by-field repair' })}
+                hint={t('createExperiment.customBuilder.fieldRepairHint', {
+                  defaultValue: 'Review one field at a time. Restore the analyzed draft for a single field or pull back specific evidence-backed suggestions without resetting the whole page.',
+                })}
+                badge={(
+                  <span className="rounded-xl border px-3 py-1.5 text-xs" style={{ borderColor: 'var(--ss-border-strong)', color: 'var(--ss-text-muted)' }}>
+                    {t('createExperiment.customBuilder.fieldRepairBadge', { defaultValue: 'Evidence-backed edits' })}
+                  </span>
+                )}
+                defaultOpen={false}
+              >
+                <div className="space-y-3">
                   <div className="rounded-2xl border p-4" style={{ borderColor: 'var(--ss-border-strong)', background: 'var(--ss-page-surface)' }}>
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
@@ -1993,49 +2029,49 @@ export function CreateExperimentCustomPage() {
                     ) : null}
                   </div>
                 </div>
-          </CollapsibleCardSection>
+              </CollapsibleCardSection>
 
-          <CollapsibleCardSection
-            title={t('createExperiment.customBuilder.semanticSchemaTitle', { defaultValue: 'Semantic Schema' })}
-            hint={t('createExperiment.customBuilder.semanticSchemaHint', { defaultValue: 'This is the structured experiment skeleton the system inferred before generating the editable draft.' })}
-            defaultOpen={hasSemanticSchemaContent(semanticSchema)}
-            testId="research-semantic-schema-section"
-          >
-            {hasSemanticSchemaContent(semanticSchema) ? (
-              <div data-testid="research-semantic-schema" className="grid gap-3 lg:grid-cols-2">
-                {semanticSchemaSections.map((section) => (
-                  <div
-                    key={section.key}
-                    data-testid={`research-schema-${section.key}`}
-                    className="rounded-2xl border p-4"
-                    style={{ borderColor: 'var(--ss-border-strong)', background: 'var(--ss-page-surface)' }}
-                  >
-                    <div className="text-sm font-semibold" style={{ color: 'var(--ss-heading)' }}>
-                      {section.title}
-                    </div>
-                    <div className="mt-2 space-y-2">
-                      {section.content.map((item, index) => (
-                        <p key={`${section.key}-${index}`} className="text-sm leading-6" style={{ color: 'var(--ss-text)' }}>
-                          {item}
-                        </p>
-                      ))}
-                    </div>
+              <CollapsibleCardSection
+                title={t('createExperiment.customBuilder.semanticSchemaTitle', { defaultValue: 'Semantic Schema' })}
+                hint={t('createExperiment.customBuilder.semanticSchemaHint', { defaultValue: 'This is the structured experiment skeleton the system inferred before generating the editable draft.' })}
+                defaultOpen={false}
+                testId="research-semantic-schema-section"
+              >
+                {hasSemanticSchemaContent(semanticSchema) ? (
+                  <div data-testid="research-semantic-schema" className="grid gap-3 lg:grid-cols-2">
+                    {semanticSchemaSections.map((section) => (
+                      <div
+                        key={section.key}
+                        data-testid={`research-schema-${section.key}`}
+                        className="rounded-2xl border p-4"
+                        style={{ borderColor: 'var(--ss-border-strong)', background: 'var(--ss-page-surface)' }}
+                      >
+                        <div className="text-sm font-semibold" style={{ color: 'var(--ss-heading)' }}>
+                          {section.title}
+                        </div>
+                        <div className="mt-2 space-y-2">
+                          {section.content.map((item, index) => (
+                            <p key={`${section.key}-${index}`} className="text-sm leading-6" style={{ color: 'var(--ss-text)' }}>
+                              {item}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed p-4 text-sm" style={{ borderColor: 'var(--ss-border-strong)', color: 'var(--ss-text-muted)' }}>
-                {t('createExperiment.customBuilder.noSemanticSchema', { defaultValue: 'Run analysis to see the extracted experiment schema here.' })}
-              </div>
-            )}
-          </CollapsibleCardSection>
+                ) : (
+                  <div className="rounded-2xl border border-dashed p-4 text-sm" style={{ borderColor: 'var(--ss-border-strong)', color: 'var(--ss-text-muted)' }}>
+                    {t('createExperiment.customBuilder.noSemanticSchema', { defaultValue: 'Run analysis to see the extracted experiment schema here.' })}
+                  </div>
+                )}
+              </CollapsibleCardSection>
 
-          <CollapsibleCardSection
-            title={t('createExperiment.customBuilder.validationNotesTitle', { defaultValue: 'Validation Notes' })}
-            hint={t('createExperiment.customBuilder.validationNotesHint', { defaultValue: 'Open this section when you need to inspect why the current draft looks the way it does.' })}
-            defaultOpen={sourceSections.length > 0 || evidence.length > 0 || sourcePages.length > 0}
-          >
-            <div className="space-y-5">
+              <CollapsibleCardSection
+                title={t('createExperiment.customBuilder.validationNotesTitle', { defaultValue: 'Validation Notes' })}
+                hint={t('createExperiment.customBuilder.validationNotesHint', { defaultValue: 'Open this section when you need to inspect why the current draft looks the way it does.' })}
+                defaultOpen={false}
+              >
+                <div className="space-y-5">
               <div className="rounded-2xl border p-4" style={{ borderColor: 'var(--ss-border-strong)', background: 'var(--ss-page-surface)' }}>
                 <div className="mb-2 flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--ss-heading)' }}>
                   <AlertTriangle size={14} />
@@ -2197,12 +2233,14 @@ export function CreateExperimentCustomPage() {
                 </div>
               ) : null}
             </div>
+              </CollapsibleCardSection>
+            </div>
           </CollapsibleCardSection>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border px-5 py-4" style={{ borderColor: 'var(--ss-border-strong)', background: 'var(--ss-surface)' }}>
           <div className="text-sm" style={{ color: 'var(--ss-text)' }}>
-            {t('createExperiment.customBuilder.continueHint', { defaultValue: 'Apply the reviewed draft and continue through the standard experiment builder from Step 2.' })}
+            {t('createExperiment.customBuilder.continueHint', { defaultValue: 'The extracted draft will be written into the standard builder next. Before continuing, please manually check and adjust the scenario, settings, actions, roles, and chosen path as needed.' })}
           </div>
           <div className="flex items-center gap-3">
             <Button variant="outline" onClick={() => navigate('/simulations/create')}>
