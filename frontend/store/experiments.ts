@@ -11,6 +11,8 @@ import type { ExperimentVariant, SimulationReport, SocialNetwork, SimNode } from
 import * as experimentsApi from '../services/experiments';
 import type { EnvironmentSuggestion } from '../services/environmentSuggestions';
 import { addTime } from './helpers';
+import { listMetrics, computeMetricTrajectories } from '../utils/resultsComputations';
+import { buildSummaryPrompt } from '../utils/summaryPrompt';
 import i18n from '../i18n';
 
 export interface ExperimentsSlice {
@@ -68,6 +70,10 @@ export interface ExperimentsSlice {
   runExperiment: (baseNodeId: string, name: string, variants: ExperimentVariant[]) => void;
 
   // Report generation
+  resultsSummary: string | null;
+  isGeneratingResultsSummary: boolean;
+  resultsSummaryError: string | null;
+  generateResultsSummary: (title: string, language: 'en' | 'zh') => Promise<void>;
   generateReport: () => Promise<void>;
   exportReport: (format: 'json' | 'md') => void;
   updateAnalysisConfig: (patch: Partial<ExperimentsSlice['analysisConfig']>) => void;
@@ -112,6 +118,9 @@ export const createExperimentsSlice: StateCreator<
   autoAdvanceTotal: 0,
   autoAdvanceCurrent: 0,
   highlightedNodeId: null,
+  resultsSummary: null,
+  isGeneratingResultsSummary: false,
+  resultsSummaryError: null,
 
   // Actions
   updateAnalysisConfig: (patch) => {
@@ -924,6 +933,36 @@ export const createExperimentsSlice: StateCreator<
       console.error('generateReport failed', e);
       set({ isGeneratingReport: false } as any);
       state.addNotification?.('error', i18n.t('store.reportGenerationFailed') || 'Report generation failed, please try again later');
+    }
+  },
+
+  generateResultsSummary: async (title, language) => {
+    set({ isGeneratingResultsSummary: true, resultsSummaryError: null, resultsSummary: null });
+    try {
+      const state = get();
+      const providerId = state.currentProviderId;
+      if (providerId === null || providerId === undefined) {
+        throw new Error('generateResultsSummary: no LLM provider selected');
+      }
+      const metrics = listMetrics(state.agents).map((name) => ({
+        name,
+        series: computeMetricTrajectories(state.agents, name),
+      }));
+      const prompt = buildSummaryPrompt({ title, language, metrics });
+      const { apiClient } = await import('@/services/client');
+      const res = await apiClient.post<{ text: string }>('llm/refine_report', {
+        prompt,
+        provider_id: providerId,
+      });
+      const text = res.data.text;
+      if (typeof text !== 'string' || text.length === 0) {
+        throw new Error('generateResultsSummary: LLM returned no text');
+      }
+      set({ resultsSummary: text, isGeneratingResultsSummary: false });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      set({ isGeneratingResultsSummary: false, resultsSummaryError: message });
+      throw e;
     }
   },
 
