@@ -10,20 +10,17 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { I18nextProvider } from 'react-i18next';
 import ParameterField, { ScenarioParam } from '../ParameterField';
 import { vi } from 'vitest';
 
-// Mock i18next
-const i18n = {
-  language: 'en',
-  changeLanguage: vi.fn(),
-  t: (key: string) => key,
-} as any;
-
-const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
-);
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
+  Trans: ({ children }: { children: React.ReactNode }) => children,
+  initReactI18next: { type: '3rdParty', init: vi.fn() },
+}));
 
 describe('ParameterField', () => {
   const onChange = vi.fn();
@@ -48,8 +45,7 @@ describe('ParameterField', () => {
       };
 
       const { container } = render(
-        <ParameterField param={param} value={50} onChange={onChange} />,
-        { wrapper }
+        <ParameterField param={param} value={50} onChange={onChange} />
       );
 
       const slider = container.querySelector('input[type="range"]');
@@ -66,8 +62,7 @@ describe('ParameterField', () => {
       };
 
       const { container } = render(
-        <ParameterField param={param} value={0.5} onChange={onChange} />,
-        { wrapper }
+        <ParameterField param={param} value={0.5} onChange={onChange} />
       );
 
       const slider = container.querySelector('input[type="range"]');
@@ -84,8 +79,7 @@ describe('ParameterField', () => {
       };
 
       const { container } = render(
-        <ParameterField param={param} value="" onChange={onChange} />,
-        { wrapper }
+        <ParameterField param={param} value="" onChange={onChange} />
       );
 
       const textarea = container.querySelector('textarea');
@@ -101,8 +95,7 @@ describe('ParameterField', () => {
       };
 
       const { container } = render(
-        <ParameterField param={param} value={false} onChange={onChange} />,
-        { wrapper }
+        <ParameterField param={param} value={false} onChange={onChange} />
       );
 
       const checkbox = container.querySelector('input[type="checkbox"]');
@@ -127,8 +120,7 @@ describe('ParameterField', () => {
       };
 
       const { container } = render(
-        <ParameterField param={param} value={50} onChange={onChange} />,
-        { wrapper }
+        <ParameterField param={param} value={50} onChange={onChange} />
       );
 
       const numberInput = container.querySelector('input[type="number"]') as HTMLInputElement;
@@ -147,8 +139,7 @@ describe('ParameterField', () => {
       };
 
       const { container } = render(
-        <ParameterField param={param} value={false} onChange={onChange} />,
-        { wrapper }
+        <ParameterField param={param} value={false} onChange={onChange} />
       );
 
       const label = container.querySelector('label') as HTMLLabelElement;
