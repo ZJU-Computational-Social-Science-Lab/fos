@@ -1,20 +1,22 @@
 // frontend/components/provider-management/ProviderEmptyState.tsx
 import { Server } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 type ProviderEmptyStateProps = {
   onAddProvider: () => void;
 };
 
 export function ProviderEmptyState({ onAddProvider }: ProviderEmptyStateProps) {
+  const { t } = useTranslation();
   return (
     <section className="provider-empty-state">
       <div className="provider-empty-state__icon">
         <Server size={28} />
       </div>
-      <h2>还没有 LLM 配置，先新增一个开始使用</h2>
-      <p>支持 OpenAI Compatible 与 Google Gemini 两类模型接入。</p>
+      <h2>{t("settings.providers.management.noLlmYet")}</h2>
+      <p>{t("settings.providers.management.supportsOpenaiAndGemini")}</p>
       <button type="button" className="provider-button provider-button--primary" onClick={onAddProvider}>
-        新增 LLM
+        {t("settings.providers.management.addLlm")}
       </button>
     </section>
   );

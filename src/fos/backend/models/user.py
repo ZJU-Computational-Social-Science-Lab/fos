@@ -27,6 +27,7 @@ class User(TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    config: Mapped[dict | None] = mapped_column(JsonType, default=dict, nullable=True)
 
     providers: Mapped[list["ProviderConfig"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     search_providers: Mapped[list["SearchProviderConfig"]] = relationship(back_populates="user", cascade="all, delete-orphan")

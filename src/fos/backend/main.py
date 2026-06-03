@@ -35,9 +35,12 @@ async def _start_polling_service() -> None:
 
 async def _prepare_database() -> None:
     import fos.backend.models  # noqa: F401
+    from .migrations.add_user_config_column import migrate as _migrate_user_config
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    await _migrate_user_config()
 
 
 async def _initialize_vector_store() -> None:

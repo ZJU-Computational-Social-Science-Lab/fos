@@ -259,7 +259,8 @@
       "cta": "View Live Engine",
       "overlayLabel": "Node Activity",
       "overlayBranch": "Branch A-12",
-      "overlayBody": "System logical stability at 89.4% after intervention 4."
+      "overlayBody": "System logical stability at 89.4% after intervention 4.",
+      "comingSoon": "Coming soon"
     },
     "capabilities": {
       "title": "Core Capabilities",
@@ -583,7 +584,50 @@
         "timeoutMs": "Timeout (ms)",
         "topP": "Top P"
       },
-      "searchAlignmentHint": "Configure search alignment providers."
+      "searchAlignmentHint": "Configure search alignment providers.",
+      "management": {
+        "pageTitle": "LLM Configuration",
+        "pageSubtitle": "Manage OpenAI Compatible and Google Gemini model access configurations",
+        "addLlm": "Add LLM",
+        "searchPlaceholder": "Search LLM name / type / URL",
+        "llmCount": "{{count}} LLM(s)",
+        "noMatchingLlm": "No matching LLM configuration",
+        "noLlmYet": "No LLM configuration yet. Add one to get started.",
+        "supportsOpenaiAndGemini": "Supports OpenAI Compatible and Google Gemini model access.",
+        "costNote": {
+          "title": "Cost Information",
+          "subtitle": "Common model public pricing examples. Actual costs are based on the provider's latest billing.",
+          "model": "Model",
+          "inputPrice": "Input Price",
+          "outputPrice": "Output Price"
+        },
+        "status": {
+          "connected": "Connected",
+          "failed": "Failed",
+          "testing": "Testing",
+          "untested": "Not tested"
+        },
+        "card": {
+          "default": "Default",
+          "defaultModel": "Default Model",
+          "lastTest": "Last Test",
+          "testConnection": "Test",
+          "edit": "Edit",
+          "setDefault": "Default",
+          "delete": "Delete"
+        },
+        "deleteDialog": {
+          "title": "Delete LLM Configuration",
+          "confirmMessage": "Are you sure you want to delete the LLM configuration for <strong>{{name}}</strong>? This action cannot be undone.",
+          "cancel": "Cancel",
+          "deleting": "Deleting…",
+          "delete": "Delete"
+        },
+        "testStatus": {
+          "success": "Connection successful",
+          "failed": "Connection failed"
+        }
+      }
     },
     "files": {
       "title": "File Management",

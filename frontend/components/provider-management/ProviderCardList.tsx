@@ -1,5 +1,6 @@
 // frontend/components/provider-management/ProviderCardList.tsx
 import { Search, Server } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Provider } from "../../services/providers";
 import { ProviderCard } from "./ProviderCard";
 
@@ -32,6 +33,7 @@ export function ProviderCardList({
   testingProviderId,
   statusMessage,
 }: ProviderCardListProps) {
+  const { t } = useTranslation();
   return (
     <section className="provider-card-list-shell">
       <div className="provider-card-list-toolbar">
@@ -40,11 +42,11 @@ export function ProviderCardList({
           <input
             value={search}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="搜索 LLM 名称 / 类型 / URL"
+            placeholder={t("settings.providers.management.searchPlaceholder")}
             className="provider-search-input"
           />
         </div>
-        <div className="provider-card-list-count">{providers.length} 个 LLM</div>
+        <div className="provider-card-list-count">{t("settings.providers.management.llmCount", { count: providers.length })}</div>
       </div>
 
       <div className="provider-card-grid">
@@ -67,7 +69,7 @@ export function ProviderCardList({
       {providers.length === 0 && hasProviders ? (
         <div className="provider-card-list-empty">
           <Server size={28} />
-          <p>{search ? "没有匹配的 LLM 配置" : "还没有 LLM 配置，先新增一个开始使用"}</p>
+          <p>{search ? t("settings.providers.management.noMatchingLlm") : t("settings.providers.management.noLlmYet")}</p>
         </div>
       ) : null}
     </section>
