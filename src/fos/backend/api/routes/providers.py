@@ -65,7 +65,7 @@ def _normalize_dialect(raw: str, base_url: str | None) -> tuple[str, str | None]
             base_url = base_url.replace("/v1", "").rstrip("/")
         return "ollama", base_url
     # Heuristic: openai + localhost base_url ⇒ treat as ollama-compatible API
-    if val == "openai" and base_url and "localhost" in base_url:
+    if val == "openai" and base_url and ("localhost" in base_url or ":11434" in base_url):
         # Convert to Ollama dialect and strip /v1 suffix
         if "/v1" in base_url:
             base_url = base_url.replace("/v1", "").rstrip("/")
