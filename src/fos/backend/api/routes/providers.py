@@ -187,13 +187,17 @@ async def delete_provider(request: Request, provider_id: int) -> None:
         await session.commit()
 
         if is_ollama and model_name:
-            user_config = dict(current_user.config or {})
-            excluded = list(user_config.get("excluded_ollama_models", []))
-            if model_name not in excluded:
-                excluded.append(model_name)
-                user_config["excluded_ollama_models"] = excluded
-                current_user.config = user_config
-                await session.commit()
+            try:
+                user_config = dict(current_user.config or {})
+                excluded = list(user_config.get("excluded_ollama_models", []))
+                if model_name not in excluded:
+                    excluded.append(model_name)
+                    user_config["excluded_ollama_models"] = excluded
+                    current_user.config = user_config
+                    await session.commit()
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to update excluded_ollama_models: {e}")
 
 
 @post("/{provider_id:int}/test")
