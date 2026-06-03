@@ -7,7 +7,7 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.user import ProviderConfig
+from ..models.user import ProviderConfig, User
 
 
 DEFAULT_OLLAMA_MODELS = [
@@ -102,8 +102,10 @@ async def ensure_default_ollama_providers(session: AsyncSession, user_id: int, u
     }
 
     excluded_models: set[str] = set()
-    if user and hasattr(user, "config") and user.config:
-        excluded_models = set(user.config.get("excluded_ollama_models", []))
+    if user_id:
+        user_row = await session.get(User, user_id)
+        if user_row and user_row.config:
+            excluded_models = set(user_row.config.get("excluded_ollama_models", []))
 
     desired_models = await get_default_ollama_models()
     desired_models = [m for m in desired_models if m not in excluded_models]

@@ -31,7 +31,6 @@ from ...dependencies import extract_bearer_token, resolve_current_user
 from ...models.user import ProviderConfig, User
 from ...schemas.common import Message
 from ...schemas.provider import ProviderBase, ProviderCreate, ProviderUpdate
-from ...services.default_providers import ensure_default_ollama_providers
 from ...services.provider_dialect import normalize_provider_dialect
 
 
@@ -100,8 +99,6 @@ async def list_providers(request: Request) -> list[ProviderBase]:
     token = extract_bearer_token(request)
     async with get_session() as session:
         current_user = await resolve_current_user(session, token)
-        if await ensure_default_ollama_providers(session, current_user.id, current_user):
-            await session.commit()
         result = await session.execute(
             select(ProviderConfig).where(ProviderConfig.user_id == current_user.id)
         )

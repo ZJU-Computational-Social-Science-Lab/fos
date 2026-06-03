@@ -229,7 +229,14 @@
         "agent_generation_validation_failed": "智能体生成验证失败：{error}",
         "llm_agent_generation_failed": "LLM智能体生成失败：{error}",
         "unexpected_agent_generation_error": "智能体生成过程中出现意外错误：{error}",
-        "failed_to_generate_agents": "生成智能体失败：{error}"
+        "failed_to_generate_agents": "生成智能体失败：{error}",
+        "timeout": "LLM在原型'{archetype}'上超时（{timeout}秒）",
+        "call_failed": "LLM调用原型'{archetype}'失败：{error}",
+        "no_response": "LLM未返回原型'{archetype}'的响应",
+        "empty_response": "LLM返回了原型'{archetype}'的空响应",
+        "no_json_in_response": "LLM响应中未包含原型'{archetype}'的有效JSON",
+        "invalid_json": "LLM返回了原型'{archetype}'的无效JSON：{error}",
+        "missing_field": "LLM响应缺少原型'{archetype}'的必填字段'{field}'"
       },
       "simtree": {
         "unsupported_scene_type": "不支持的场景类型：{scene_type}",
