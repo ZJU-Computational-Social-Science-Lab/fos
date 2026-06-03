@@ -58,14 +58,25 @@ export function computeEventCountByAgent(logs: LogEntry[]): AgentCount[] {
 
   for (const log of logs) {
     if (typeof log.agentId === 'string' && log.agentId.length > 0) {
-      const currentCount = counts.has(log.agentId) ? counts.get(log.agentId) as number : 0;
+      const currentCount = counts.get(log.agentId);
+      if (currentCount === undefined) {
+        counts.set(log.agentId, 1);
+        continue;
+      }
+
       counts.set(log.agentId, currentCount + 1);
     }
   }
 
   return Array.from(counts.entries())
     .map(([agentId, count]) => ({ agentId, count }))
-    .sort((left, right) => right.count - left.count || left.agentId.localeCompare(right.agentId));
+    .sort((left, right) => {
+      if (left.count !== right.count) {
+        return right.count - left.count;
+      }
+
+      return left.agentId.localeCompare(right.agentId);
+    });
 }
 
 export function computeEventCountByRound(logs: LogEntry[]): RoundCount[] {
@@ -76,7 +87,12 @@ export function computeEventCountByRound(logs: LogEntry[]): RoundCount[] {
   const counts = new Map<number, number>();
 
   for (const log of logs) {
-    const currentCount = counts.has(log.round) ? counts.get(log.round) as number : 0;
+    const currentCount = counts.get(log.round);
+    if (currentCount === undefined) {
+      counts.set(log.round, 1);
+      continue;
+    }
+
     counts.set(log.round, currentCount + 1);
   }
 
