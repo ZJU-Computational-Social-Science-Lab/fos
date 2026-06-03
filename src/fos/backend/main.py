@@ -86,6 +86,8 @@ def internal_error_handler(request: Request, exc: Exception) -> Response:
             media_type=MediaType.JSON,
             status_code=404,
         )
+    import logging
+    logging.getLogger(__name__).error(f"Unhandled exception: {exc}", exc_info=True)
     return Response(content={"error": str(exc)}, media_type=MediaType.JSON, status_code=500)
 
 
