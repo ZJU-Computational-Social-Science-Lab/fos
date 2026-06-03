@@ -229,7 +229,14 @@
         "agent_generation_validation_failed": "Agent generation validation failed: {error}",
         "llm_agent_generation_failed": "LLM agent generation failed: {error}",
         "unexpected_agent_generation_error": "Unexpected error during agent generation: {error}",
-        "failed_to_generate_agents": "Failed to generate agents: {error}"
+        "failed_to_generate_agents": "Failed to generate agents: {error}",
+        "timeout": "LLM timed out for archetype '{archetype}' after {timeout} seconds",
+        "call_failed": "LLM call failed for archetype '{archetype}': {error}",
+        "no_response": "LLM returned no response for archetype '{archetype}'",
+        "empty_response": "LLM returned an empty response for archetype '{archetype}'",
+        "no_json_in_response": "LLM response did not contain valid JSON for archetype '{archetype}'",
+        "invalid_json": "LLM returned invalid JSON for archetype '{archetype}': {error}",
+        "missing_field": "LLM response is missing required field '{field}' for archetype '{archetype}'"
       },
       "simtree": {
         "unsupported_scene_type": "Unsupported scene type: {scene_type}",
