@@ -72,6 +72,7 @@ services:
       HF_HOME: /tmp/huggingface
       TORCH_HOME: /tmp/torch
       TRANSFORMERS_CACHE: /tmp/huggingface/transformers
+      GAWORLD_PATH: /opt/gaworld
     depends_on:
       db:
         condition: service_healthy
@@ -101,6 +102,7 @@ services:
       - ./uploads:/app/uploads
       - ./templates:/app/templates
       - ./chroma_db:/app/chroma_db
+      - ../GAWorld:/opt/gaworld
     networks:
       - default
       - backend
