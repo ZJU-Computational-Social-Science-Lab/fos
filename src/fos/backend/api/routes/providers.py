@@ -28,7 +28,7 @@ from fos.i18n import T
 
 from ...core.database import get_session
 from ...dependencies import extract_bearer_token, resolve_current_user
-from ...models.user import ProviderConfig
+from ...models.user import ProviderConfig, User
 from ...schemas.common import Message
 from ...schemas.provider import ProviderBase, ProviderCreate, ProviderUpdate
 from ...services.default_providers import ensure_default_ollama_providers
@@ -188,13 +188,15 @@ async def delete_provider(request: Request, provider_id: int) -> None:
 
         if is_ollama and model_name:
             try:
-                user_config = dict(current_user.config or {})
+                user_row = await session.get(User, current_user.id)
+                user_config = dict(user_row.config or {}) if user_row else {}
                 excluded = list(user_config.get("excluded_ollama_models", []))
                 if model_name not in excluded:
                     excluded.append(model_name)
                     user_config["excluded_ollama_models"] = excluded
-                    current_user.config = user_config
-                    await session.commit()
+                    if user_row:
+                        user_row.config = user_config
+                        await session.commit()
             except Exception as e:
                 import logging
                 logging.getLogger(__name__).warning(f"Failed to update excluded_ollama_models: {e}")
