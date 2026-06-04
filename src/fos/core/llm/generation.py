@@ -96,7 +96,7 @@ def generate_archetype_template(
     archetype: Dict[str, Any],
     llm_client,
     language: str = "en",
-    timeout: int = 30
+    timeout: int = 120
 ) -> Dict[str, Any]:
     """
     Make ONE LLM call to get description and roles for an archetype.
@@ -136,7 +136,7 @@ def generate_archetype_template(
 
     def llm_call():
         try:
-            result = llm_client.chat(messages)
+            result = llm_client.chat(messages, json_mode=True)
             result_queue.put(result)
         except Exception as e:
             exception_queue.put(e)
@@ -161,6 +161,7 @@ def generate_archetype_template(
         raise RuntimeError(T('api.errors.llm.empty_response', archetype=attrs_str))
 
     cleaned = response.strip()
+    cleaned = re.sub(r'<think[\s\S]*?</think\s*>', '', cleaned)
     if cleaned.startswith("```"):
         cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned)
         cleaned = re.sub(r'\s*```$', '', cleaned)
@@ -275,7 +276,7 @@ def generate_agents_with_archetypes(
     traits: List[Dict[str, Any]],
     llm_client,
     language: str = "en",
-    timeout: int = 30,
+    timeout: int = 120,
 ) -> List[Dict[str, Any]]:
     """
     Generate agents based on demographics and archetype probabilities.
