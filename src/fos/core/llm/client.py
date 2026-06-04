@@ -105,9 +105,14 @@ class LLMClient:
         self._sem = BoundedSemaphore(max_concurrent)
 
         # Initialize provider-specific client
+        base_url = provider.base_url
+        if provider.dialect == "openai" and base_url and "/v1" not in base_url and ("localhost" in base_url or ":11434" in base_url):
+            base_url = base_url.rstrip("/") + "/v1"
+            provider.base_url = base_url
+
         if provider.dialect == "openai":
             openai = _get_openai()
-            self.client = openai["create_openai_client"](provider.api_key, provider.base_url)
+            self.client = openai["create_openai_client"](provider.api_key, base_url)
         elif provider.dialect == "gemini":
             gemini = _get_gemini()
             self.client = gemini["create_gemini_client"](provider.model, provider.api_key)
