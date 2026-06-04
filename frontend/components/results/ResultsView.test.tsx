@@ -52,4 +52,18 @@ describe('ResultsView', () => {
     render(<ResultsView labels={labels} language="en" />);
     expect(screen.getByText('No data')).toBeTruthy();
   });
+
+  it('does not render the generate button in the activity fallback (no scored metrics)', () => {
+    useSimulationStore.setState({
+      currentSimulation: sim('Discussion'),
+      agents: [agent('a', 'Alice', {})],
+      logs: [
+        { id: 'l1', nodeId: 'n1', round: 1, type: 'AGENT_SAY', agentId: 'a', content: 'x', timestamp: '2026-05-21T10:00:00.000Z' },
+        { id: 'l2', nodeId: 'n1', round: 2, type: 'AGENT_SAY', agentId: 'a', content: 'y', timestamp: '2026-05-21T10:00:01.000Z' },
+      ],
+      resultsSummary: null, isGeneratingResultsSummary: false, resultsSummaryError: null,
+    } as any);
+    render(<ResultsView labels={labels} language="en" />);
+    expect(screen.queryByRole('button', { name: 'Generate' })).toBeNull();
+  });
 });

@@ -67,31 +67,63 @@ export function ResultsView({ labels, language }: Props) {
   }));
 
   return (
-    <div>
-      <AiSummarySection
-        summary={resultsSummary}
-        isGenerating={isGeneratingResultsSummary}
-        error={resultsSummaryError}
-        onGenerate={onGenerate}
-        labels={{ generate: labels.generate, generating: labels.generating }}
-      />
-      {metrics.length > 0 ? (
-        <div>
-          <select value={activeMetric} aria-label={labels.metric} onChange={(e) => setSelectedMetric(e.target.value)}>
-            {metrics.map((m) => <option key={m} value={m}>{m}</option>)}
-          </select>
-          <MetricTrajectoryChart series={computeMetricTrajectories(agents, activeMetric)} metric={activeMetric} />
+    <div className="h-full overflow-auto">
+      <div className="p-6" style={{ maxWidth: '800px', margin: '0 auto' }}>
+
+        {metrics.length > 0 && (
+          <div className="rounded-lg border p-4 mb-4"
+            style={{ background: 'var(--ss-workspace-surface)', borderColor: 'var(--ss-workspace-border)' }}>
+            <div className="text-xs font-semibold uppercase mb-3"
+              style={{ color: 'var(--ss-workspace-muted)', letterSpacing: '0.05em' }}>
+              AI Analysis
+            </div>
+            <AiSummarySection
+              summary={resultsSummary}
+              isGenerating={isGeneratingResultsSummary}
+              error={resultsSummaryError}
+              onGenerate={onGenerate}
+              labels={{ generate: labels.generate, generating: labels.generating }}
+            />
+          </div>
+        )}
+
+        <div className="rounded-lg border p-4 mb-4"
+          style={{ background: 'var(--ss-workspace-surface)', borderColor: 'var(--ss-workspace-border)' }}>
+          <div className="text-xs font-semibold uppercase mb-3"
+            style={{ color: 'var(--ss-workspace-muted)', letterSpacing: '0.05em' }}>
+            {metrics.length > 0 ? labels.metric : 'Activity'}
+          </div>
+          {metrics.length > 0 ? (
+            <div>
+              <select value={activeMetric} aria-label={labels.metric}
+                onChange={(e) => setSelectedMetric(e.target.value)}
+                className="mb-3 text-sm rounded border px-2 py-1"
+                style={{ background: 'var(--ss-workspace-surface)', color: 'var(--ss-workspace-text)', borderColor: 'var(--ss-workspace-border)' }}>
+                {metrics.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <MetricTrajectoryChart series={computeMetricTrajectories(agents, activeMetric)} metric={activeMetric} />
+            </div>
+          ) : activityBars.length > 0 ? (
+            <CountBarChart bars={activityBars} />
+          ) : (
+            <div className="text-sm" style={{ color: 'var(--ss-workspace-muted)' }}>{labels.noActivity}</div>
+          )}
         </div>
-      ) : activityBars.length > 0 ? (
-        <CountBarChart bars={activityBars} />
-      ) : (
-        <div>{labels.noActivity}</div>
-      )}
-      <ExportSection
-        onExportCsv={onExportCsv}
-        onExportMarkdown={onExportMarkdown}
-        labels={{ csv: labels.exportCsv, markdown: labels.exportReport }}
-      />
+
+        <div className="rounded-lg border p-4"
+          style={{ background: 'var(--ss-workspace-surface)', borderColor: 'var(--ss-workspace-border)' }}>
+          <div className="text-xs font-semibold uppercase mb-3"
+            style={{ color: 'var(--ss-workspace-muted)', letterSpacing: '0.05em' }}>
+            Export
+          </div>
+          <ExportSection
+            onExportCsv={onExportCsv}
+            onExportMarkdown={onExportMarkdown}
+            labels={{ csv: labels.exportCsv, markdown: labels.exportReport }}
+          />
+        </div>
+
+      </div>
     </div>
   );
 }
