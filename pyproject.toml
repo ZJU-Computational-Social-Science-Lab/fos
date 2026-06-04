@@ -23,6 +23,9 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+fos = ["locales/*.json", "core/experiment/scenes/gaworld/profiles/*.json"]
+
 [tool.coverage.run]
 source = ["fos"]
 omit = [
