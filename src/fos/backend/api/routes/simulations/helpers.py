@@ -114,8 +114,8 @@ async def get_tree_record(
     dialect = normalize_provider_dialect(provider.provider)
     base_url = provider.base_url or (get_default_ollama_base_url() if dialect == "ollama" else None)
 
-    # Heuristic: openai + localhost base_url without /v1 => append /v1 for OpenAI-compatible servers like Ollama
-    if dialect == "openai" and base_url and "localhost" in base_url and "/v1" not in base_url:
+    # Heuristic: openai + local base_url without /v1 => append /v1 for OpenAI-compatible servers like Ollama
+    if dialect == "openai" and base_url and "/v1" not in base_url and ("localhost" in base_url or ":11434" in base_url):
         base_url = base_url.rstrip("/") + "/v1"
 
     if dialect not in {"openai", "gemini", "mock", "ollama"}:
@@ -172,7 +172,7 @@ async def get_tree_record(
             continue
         try:
             p_base_url = p.base_url or (get_default_ollama_base_url() if p_dialect == "ollama" else None)
-            if p_dialect == "openai" and p_base_url and "localhost" in p_base_url and "/v1" not in p_base_url:
+            if p_dialect == "openai" and p_base_url and "/v1" not in p_base_url and ("localhost" in p_base_url or ":11434" in p_base_url):
                 p_base_url = p_base_url.rstrip("/") + "/v1"
             p_cfg = LLMConfig(
                 dialect=p_dialect,
