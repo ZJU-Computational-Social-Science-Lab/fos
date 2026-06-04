@@ -6,6 +6,7 @@ The first test checks council chamber uses the council scene and keeps working.
 The second test checks open discussion still uses the normal experiment scene.
 """
 
+import asyncio
 from types import SimpleNamespace
 
 from fos.backend.services import simtree_runtime
@@ -78,6 +79,7 @@ def test_council_chamber_runtime_builds_the_council_scene() -> None:
     scene = tree.nodes[tree.root]["sim"].scene
 
     assert isinstance(scene, CouncilExperimentScene)
+    assert scene.config.scenario_id == "council_chamber"
     assert scene.get_scene_actions("Alice") == ["speak", "skip"]
     assert "Current Phase" in scene.get_agent_status_prompt("Alice")
 
@@ -92,6 +94,39 @@ def test_council_scene_switches_actions_when_voting_starts() -> None:
 
     assert scene.get_scene_actions("Alice") == ["vote_yes", "vote_no", "abstain"]
     assert "Current Phase: voting" in scene.get_agent_status_prompt("Alice")
+
+
+def test_council_chamber_runtime_prompts_all_five_agents() -> None:
+    """Council chamber should not drop the fifth agent as an odd player out."""
+    record = _make_sim_record("council_chamber")
+    record.agent_config["agents"] = [
+        {"name": "Agent1", "role_prompt": "You are Agent1."},
+        {"name": "Agent2", "role_prompt": "You are Agent2."},
+        {"name": "Agent3", "role_prompt": "You are Agent3."},
+        {"name": "Agent4", "role_prompt": "You are Agent4."},
+        {"name": "Agent5", "role_prompt": "You are Agent5."},
+    ]
+    tree = simtree_runtime._build_tree_for_sim(record, clients={})
+    scene = tree.nodes[tree.root]["sim"].scene
+
+    class StubLlm:
+        """Small LLM stub that always skips cleanly."""
+
+        def chat(self, messages, json_mode=False):
+            _ = messages, json_mode
+            return '{"action": "skip"}'
+
+    scene.initialize(StubLlm())
+    result = asyncio.run(scene.run_round(lambda event_type, data: None))
+
+    assert len(result.actions) == 5
+    assert [action.agent_name for action in result.actions] == [
+        "Agent1",
+        "Agent2",
+        "Agent3",
+        "Agent4",
+        "Agent5",
+    ]
 
 
 def test_open_discussion_runtime_builds_the_normal_scene() -> None:

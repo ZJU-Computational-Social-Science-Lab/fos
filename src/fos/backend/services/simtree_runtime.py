@@ -518,7 +518,7 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
                     "proposal_text": council_game_config.proposal_text,
                 },
                 description=council_game_config.description,
-                scenario_id="council",
+                scenario_id="council_chamber",
                 round_visibility="sequential",
                 social_network=inner_cfg.get("social_network") or {},
                 locale=inner_cfg.get("locale") or get_request_locale(),
@@ -578,7 +578,7 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
                 "proposal_text": council_game_config.proposal_text,
             },
             description=council_game_config.description,
-            scenario_id="council",
+            scenario_id="council_chamber",
             round_visibility="sequential",  # Council uses sequential rounds
             social_network=cfg.get("social_network") or {},
             locale=cfg.get("locale") or get_request_locale(),
