@@ -17,6 +17,7 @@ vi.mock("react-i18next", () => ({
       (
         {
           "simPage.advance": "Advance node",
+          "simPage.advanceControls": "Advance Controls",
           "simPage.branch": "Create branch",
           "simPage.autoAdvance": "Auto advance",
           "simPage.enterSteps": "Enter steps",
@@ -79,7 +80,7 @@ describe("ContextToolbar", () => {
   it("keeps advance and steps in one control group with a single advance button", () => {
     render(<ContextToolbar />);
 
-    const group = screen.getByLabelText("Advance controls");
+    const group = screen.getByLabelText("Advance Controls");
 
     const advanceButton = within(group).getByRole("button", { name: "Advance node" });
     const stepsInput = within(group).getByRole("spinbutton", { name: "Enter steps" });
