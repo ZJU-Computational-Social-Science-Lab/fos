@@ -949,7 +949,7 @@ export const createExperimentsSlice: StateCreator<
         series: computeMetricTrajectories(state.agents, name),
       }));
       const prompt = buildSummaryPrompt({ title, language, metrics });
-      const { apiClient } = await import('@/services/client');
+      const { apiClient } = await import('../services/client');
       const res = await apiClient.post<{ text: string }>('llm/refine_report', {
         prompt,
         provider_id: providerId,
