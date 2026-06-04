@@ -327,6 +327,13 @@ class ExperimentRunner:
             active_agents.add(agent2_name)
         return active_agents
 
+    def _should_prompt_only_paired_agents(self) -> bool:
+        """Return True only for real pairwise payoff rounds."""
+        return (
+            self.game_config.grouping_mode == "pairwise"
+            and self.game_config.payoff_type not in ("none",)
+        )
+
     def _calculate_scores(self, round_actions: List[ActionResult], pairs: List[tuple] = None) -> Dict[str, int | float]:
         """Calculate and update scores based on game outcomes using PayoffEngine.
 
@@ -452,12 +459,13 @@ class ExperimentRunner:
         """
         actions = []
         pairs = self._get_pairs_for_round(round_num)
-        active_agent_names = self._get_active_agent_names_for_pairs(pairs)
         agents_to_prompt = self.agents
-        if active_agent_names is not None:
-            agents_to_prompt = [
-                agent for agent in self.agents if agent.name in active_agent_names
-            ]
+        if self._should_prompt_only_paired_agents():
+            active_agent_names = self._get_active_agent_names_for_pairs(pairs)
+            if active_agent_names is not None:
+                agents_to_prompt = [
+                    agent for agent in self.agents if agent.name in active_agent_names
+                ]
 
         # Cap concurrent LLM calls so the model server is not overwhelmed.
         # Tune via FOS_LLM_CONCURRENCY env var (default 10).
@@ -566,12 +574,13 @@ class ExperimentRunner:
         """
         actions = []
         pairs = self._get_pairs_for_round(round_num)
-        active_agent_names = self._get_active_agent_names_for_pairs(pairs)
         agents_to_prompt = self.agents
-        if active_agent_names is not None:
-            agents_to_prompt = [
-                agent for agent in self.agents if agent.name in active_agent_names
-            ]
+        if self._should_prompt_only_paired_agents():
+            active_agent_names = self._get_active_agent_names_for_pairs(pairs)
+            if active_agent_names is not None:
+                agents_to_prompt = [
+                    agent for agent in self.agents if agent.name in active_agent_names
+                ]
 
         for agent in agents_to_prompt:
             result = await self._prompt_agent(agent, round_num)
@@ -626,7 +635,9 @@ class ExperimentRunner:
         # Create a mapping from name to agent
         agent_map = {agent.name: agent for agent in self.agents}
         pairs = self._get_pairs_for_round(round_num)
-        active_agent_names = self._get_active_agent_names_for_pairs(pairs)
+        active_agent_names = None
+        if self._should_prompt_only_paired_agents():
+            active_agent_names = self._get_active_agent_names_for_pairs(pairs)
 
         actions = []
         for agent_name in self.turn_order:

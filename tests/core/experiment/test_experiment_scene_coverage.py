@@ -230,7 +230,7 @@ class TestMultiAgentRound:
 
     @pytest.mark.asyncio
     async def test_three_agent_round(self):
-        """Three agents all produce actions."""
+        """A pair game with three agents should skip the unpaired player."""
         agents = [
             {"name": "A", "role_prompt": "Agent A"},
             {"name": "B", "role_prompt": "Agent B"},
@@ -241,8 +241,28 @@ class TestMultiAgentRound:
 
         events = []
         result = await scene.run_round(lambda t, d: events.append((t, d)))
-        assert len(result.actions) == 3
-        assert {a.agent_name for a in result.actions} == {"A", "B", "C"}
+        assert len(result.actions) == 2
+        assert {a.agent_name for a in result.actions}.issubset({"A", "B", "C"})
+
+    @pytest.mark.asyncio
+    async def test_three_agent_discussion_round_prompts_everyone(self):
+        """A non-pair discussion round should still prompt every agent."""
+        agents = [
+            {"name": "A", "role_prompt": "Agent A"},
+            {"name": "B", "role_prompt": "Agent B"},
+            {"name": "C", "role_prompt": "Agent C"},
+        ]
+        scene = _make_scene(
+            scenario_id="open_discussion",
+            agents=agents,
+            actions=[{"name": "speak", "description": "Say something"}],
+            parameters={"payoff_type": "none", "grouping_mode": "individual", "topic": "Lunch"},
+        )
+        _init_scene(scene)
+
+        result = await scene.run_round(lambda t, d: None)
+
+        assert [action.agent_name for action in result.actions] == ["A", "B", "C"]
 
 
 # --- Config Edge Cases ---

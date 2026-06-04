@@ -21,7 +21,7 @@ from fos.core.experiment.scene import ExperimentScene
 from fos.core.experiment.config import ExperimentConfig
 from fos.core.experiment.round_context import RoundContextManager
 from fos.core.experiment.information_model import InformationModel
-from fos.core.experiment.facilitator import SystemFacilitator
+from fos.core.experiment.facilitator import CouncilPhase, SystemFacilitator
 
 logger = logging.getLogger(__name__)
 
@@ -213,7 +213,6 @@ class CouncilExperimentScene(ExperimentScene):
             return ["vote_yes", "vote_no", "abstain"]
 
         # Fall back to LEGACY facilitator system for backwards compatibility
-        from fos.core.phase_controller import CouncilPhase
         if self.facilitator.phase == CouncilPhase.VOTING:
             return ["vote_yes", "vote_no", "abstain"]
 
