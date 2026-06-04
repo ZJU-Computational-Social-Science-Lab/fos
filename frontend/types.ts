@@ -103,6 +103,7 @@ export interface LogEntry {
   agentId?: string;
   content: string;
   actionLabel?: string;
+  outcome?: Record<string, number>; // numeric results from this event (e.g. payoff, amount)
   structuredData?: {
     kind: 'policy_diff';
     title: string;
