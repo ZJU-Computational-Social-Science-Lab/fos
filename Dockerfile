@@ -20,9 +20,12 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY requirements.txt ./
 
+COPY requirements-gaworld.txt ./
+
 # Only install packages not already present in the base image
 RUN pip install --no-cache-dir --default-timeout=1000 -r requirements.txt || true \
-    && pip install --no-cache-dir lxml-html-clean || true
+    && pip install --no-cache-dir lxml-html-clean || true \
+    && pip install --no-cache-dir --default-timeout=1000 -r requirements-gaworld.txt || true
 
 COPY src ./src
 COPY scripts ./scripts
