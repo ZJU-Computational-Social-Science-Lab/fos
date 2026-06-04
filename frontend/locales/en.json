@@ -2423,7 +2423,8 @@
     },
     "analyseTab": {
       "compareDiff": "Compare diff",
-      "overview": "Overview"
+      "overview": "Overview",
+      "results": "Results"
     },
     "event": {
       "addFailed": "Failed to add event",
@@ -3738,6 +3739,20 @@
     "template": "Template",
     "time": "Time",
     "titleFallback": "Simulation"
+  },
+  "results": {
+    "noData": "No results yet",
+    "generate": "Generate analysis",
+    "generating": "Generating…",
+    "metric": "Metric",
+    "exportCsv": "Export CSV",
+    "exportReport": "Export report",
+    "noActivity": "No agent activity recorded",
+    "reportSummary": "Summary",
+    "reportNoSummary": "Not generated yet.",
+    "reportFinalValues": "Final values",
+    "reportAgent": "Agent",
+    "reportFinalValue": "Final value"
   },
   "topologyExplorer": {
     "activeBranch": "Active Branch",
