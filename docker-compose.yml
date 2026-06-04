@@ -126,14 +126,6 @@ services:
       - default
     restart: unless-stopped
     runtime: nvidia
-    gpus: all
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
     dns:
       - 8.8.8.8
       - 8.8.4.4
