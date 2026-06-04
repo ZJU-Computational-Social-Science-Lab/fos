@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSimulationStore } from '@/store';
-import { listMetrics, computeMetricTrajectories, computeEventCountByAgent } from '@/utils/resultsComputations';
+import { listMetrics, computeMetricTrajectories, computeEventCountByAgent, hydrateAgentHistoryFromLogs } from '@/utils/resultsComputations';
 import { generateMarkdownReport } from '@/utils/markdownReport';
 import { logsToCsv } from '@/utils/logsToCsv';
 import { MetricTrajectoryChart } from './MetricTrajectoryChart';
@@ -44,8 +44,9 @@ export function ResultsView({ labels, language }: Props) {
     return <div>{labels.noData}</div>;
   }
 
+  const hydratedAgents = hydrateAgentHistoryFromLogs(logs, agents);
   const title: string = currentSimulation.name;
-  const metrics = listMetrics(agents);
+  const metrics = listMetrics(hydratedAgents);
   const activeMetric = metrics.includes(selectedMetric)
     ? selectedMetric
     : (metrics.length > 0 ? metrics[0] : '');
@@ -54,13 +55,13 @@ export function ResultsView({ labels, language }: Props) {
   const onExportCsv = () => { downloadFile(title + '_results.csv', logsToCsv(logs), 'text/csv'); };
   const onExportMarkdown = () => {
     const md = generateMarkdownReport(
-      { title, metrics: metrics.map((m) => ({ name: m, series: computeMetricTrajectories(agents, m) })), summary: resultsSummary },
+      { title, metrics: metrics.map((m) => ({ name: m, series: computeMetricTrajectories(hydratedAgents, m) })), summary: resultsSummary },
       { summary: labels.reportSummary, noSummary: labels.reportNoSummary, finalValues: labels.reportFinalValues, agent: labels.reportAgent, finalValue: labels.reportFinalValue },
     );
     downloadFile(title + '_report.md', md, 'text/markdown');
   };
 
-  const nameById = new Map((agents as any[]).map((a) => [a.id, a.name]));
+  const nameById = new Map((hydratedAgents as any[]).map((a) => [a.id, a.name]));
   const activityBars = computeEventCountByAgent(logs).map((c) => ({
     label: nameById.has(c.agentId) ? (nameById.get(c.agentId) as string) : c.agentId,
     value: c.count,
@@ -101,7 +102,7 @@ export function ResultsView({ labels, language }: Props) {
                 style={{ background: 'var(--ss-workspace-surface)', color: 'var(--ss-workspace-text)', borderColor: 'var(--ss-workspace-border)' }}>
                 {metrics.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
-              <MetricTrajectoryChart series={computeMetricTrajectories(agents, activeMetric)} metric={activeMetric} />
+              <MetricTrajectoryChart series={computeMetricTrajectories(hydratedAgents, activeMetric)} metric={activeMetric} />
             </div>
           ) : activityBars.length > 0 ? (
             <CountBarChart bars={activityBars} />
