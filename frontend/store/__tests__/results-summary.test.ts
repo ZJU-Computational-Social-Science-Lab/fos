@@ -4,7 +4,7 @@ vi.mock('@/services/client', () => ({ apiClient: { post: vi.fn() } }));
 
 import { apiClient } from '@/services/client';
 import { useSimulationStore } from '@/store';
-import type { Agent } from '@/types';
+import type { Agent, LogEntry } from '@/types';
 
 const post = vi.mocked(apiClient.post);
 
@@ -12,6 +12,17 @@ const agent = (id: string, name: string, history: Record<string, number[]>): Age
   id, name, role: '', avatarUrl: '', profile: '',
   llmConfig: { provider: 'mock', model: 'default' },
   properties: {}, history, memory: [], knowledgeBase: [],
+});
+
+const logWithOutcome = (agentId: string, round: number, outcome: Record<string, number>): LogEntry => ({
+  id: `lo-${round}-${agentId}`,
+  nodeId: 'n1',
+  round,
+  type: 'AGENT_ACTION',
+  agentId,
+  content: 'x',
+  timestamp: '2026-05-21T10:00:00.000Z',
+  outcome,
 });
 
 beforeEach(() => {
@@ -71,5 +82,28 @@ describe('generateResultsSummary', () => {
       (useSimulationStore.getState() as any).generateResultsSummary('X', 'en'),
     ).rejects.toThrow();
     expect(post).not.toHaveBeenCalled();
+  });
+
+  it('generates a summary by hydrating history from log outcomes when agent.history is empty', async () => {
+    post.mockResolvedValue({ data: { text: 'The agents cooperated.' } } as any);
+    useSimulationStore.setState({
+      agents: [
+        agent('a', 'Alice', {}),
+        agent('b', 'Bob', {}),
+      ],
+      logs: [
+        logWithOutcome('a', 1, { payoff: 10 }),
+        logWithOutcome('b', 1, { payoff: 8 }),
+        logWithOutcome('a', 2, { payoff: 12 }),
+        logWithOutcome('b', 2, { payoff: 9 }),
+      ],
+      currentProviderId: 7,
+    } as any);
+
+    await (useSimulationStore.getState() as any).generateResultsSummary('Test', 'en');
+
+    const s = useSimulationStore.getState() as any;
+    expect(s.resultsSummary).toBe('The agents cooperated.');
+    expect(s.resultsSummaryError).toBeNull();
   });
 });

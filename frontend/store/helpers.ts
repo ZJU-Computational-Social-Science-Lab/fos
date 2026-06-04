@@ -526,6 +526,17 @@ export const mapBackendEventsToLogs = (
 
       // Build readable label
       const readableAction = translateActionName(actionName);
+      const o: Record<string, number> = {};
+      if (typeof payoff === 'number') {
+        o.payoff = payoff;
+      }
+      Object.entries(parameters).forEach(([k, v]) => {
+        if (typeof v === 'number') {
+          o[k] = v;
+        }
+      });
+      const outcomeData: Record<string, number> | undefined =
+        Object.keys(o).length > 0 ? o : undefined;
 
       // Use summary if available (it contains action result info)
       if (summary) {
@@ -536,7 +547,7 @@ export const mapBackendEventsToLogs = (
         const content = payoff !== null && payoff !== undefined
           ? `${contentBase}${pickText(` -> payoff=${payoff}`, ` -> 收益=${payoff}`)}`
           : contentBase;
-        return { ...base, type: 'AGENT_ACTION', agentId, content, actionLabel: readableAction };
+        return { ...base, type: 'AGENT_ACTION', agentId, content, actionLabel: readableAction, outcome: outcomeData };
       }
 
       // Otherwise build our own label
@@ -565,7 +576,7 @@ export const mapBackendEventsToLogs = (
         label += pickText(` -> payoff=${payoff}`, ` -> 收益=${payoff}`);
       }
 
-      return { ...base, type: 'AGENT_ACTION', agentId, content: label, actionLabel: readableAction };
+      return { ...base, type: 'AGENT_ACTION', agentId, content: label, actionLabel: readableAction, outcome: outcomeData };
     }
 
     // Reduction action — PGG deduction events emitted by the reduce handler
