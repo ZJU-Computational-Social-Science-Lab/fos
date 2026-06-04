@@ -2423,7 +2423,8 @@
     },
     "analyseTab": {
       "compareDiff": "对比差异",
-      "overview": "概览"
+      "overview": "概览",
+      "results": "结果"
     },
     "event": {
       "addFailed": "添加事件失败",
@@ -3772,5 +3773,19 @@
     "template": "模板",
     "time": "时间",
     "titleFallback": "模拟"
+  },
+  "results": {
+    "noData": "暂无结果",
+    "generate": "生成分析",
+    "generating": "生成中…",
+    "metric": "指标",
+    "exportCsv": "导出 CSV",
+    "exportReport": "导出报告",
+    "noActivity": "未记录智能体活动",
+    "reportSummary": "摘要",
+    "reportNoSummary": "尚未生成",
+    "reportFinalValues": "最终数值",
+    "reportAgent": "智能体",
+    "reportFinalValue": "最终值"
   }
 }
