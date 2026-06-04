@@ -5,6 +5,7 @@ import {
   computeMetricTrajectories,
   computeEventCountByAgent,
   computeEventCountByRound,
+  hydrateAgentHistoryFromLogs,
 } from './resultsComputations';
 
 const agent = (id: string, name: string, history: Record<string, number[]>): Agent => ({
@@ -16,6 +17,11 @@ const agent = (id: string, name: string, history: Record<string, number[]>): Age
 const log = (id: string, round: number, type: LogEntry['type'], agentId?: string): LogEntry => ({
   id, nodeId: 'n1', round, type, content: 'x', timestamp: '2026-05-21T10:00:00.000Z',
   ...(agentId !== undefined ? { agentId } : {}),
+});
+
+const logWithOutcome = (agentId: string, round: number, outcome: Record<string, number>): LogEntry => ({
+  id: `lo-${round}-${agentId}`, nodeId: 'n1', round, type: 'AGENT_ACTION',
+  agentId, content: 'x', timestamp: '2026-05-21T10:00:00.000Z', outcome,
 });
 
 const alice = agent('a', 'Alice', { score: [10, 12, 15], cooperation: [1, 1, 0] });
@@ -111,5 +117,72 @@ describe('computeEventCountByRound', () => {
   it('throws when logs is not an array', () => {
     // @ts-expect-error testing runtime guard
     expect(() => computeEventCountByRound('nope')).toThrow();
+  });
+});
+
+describe('hydrateAgentHistoryFromLogs', () => {
+  it('builds history arrays from log outcome data, grouped by agent and round', () => {
+    const logs = [
+      logWithOutcome('a', 1, { payoff: 10, amount: 5 }),
+      logWithOutcome('b', 1, { payoff: 8, amount: 10 }),
+      logWithOutcome('a', 2, { payoff: 12, amount: 7 }),
+      logWithOutcome('b', 2, { payoff: 9, amount: 8 }),
+    ];
+    const result = hydrateAgentHistoryFromLogs(logs, [alice, bob]);
+    const a = result.find((r) => r.id === 'a');
+    const b = result.find((r) => r.id === 'b');
+    expect(a?.history['payoff']).toEqual([10, 12]);
+    expect(a?.history['amount']).toEqual([5, 7]);
+    expect(b?.history['payoff']).toEqual([8, 9]);
+    expect(b?.history['amount']).toEqual([10, 8]);
+  });
+
+  it('fills missing rounds with 0 to keep arrays dense', () => {
+    const logs = [
+      logWithOutcome('a', 1, { payoff: 10 }),
+      logWithOutcome('a', 3, { payoff: 15 }),
+    ];
+    const result = hydrateAgentHistoryFromLogs(logs, [alice]);
+    expect(result[0].history['payoff']).toEqual([10, 0, 15]);
+  });
+
+  it('does not overwrite an agent history key that already has values', () => {
+    const existing = agent('a', 'Alice', { payoff: [99, 98] });
+    const logs = [
+      logWithOutcome('a', 1, { payoff: 10 }),
+      logWithOutcome('a', 2, { payoff: 12 }),
+    ];
+    const result = hydrateAgentHistoryFromLogs(logs, [existing]);
+    expect(result[0].history['payoff']).toEqual([99, 98]);
+  });
+
+  it('adds new metrics from logs even when other history keys already exist', () => {
+    const existing = agent('a', 'Alice', { payoff: [99, 98] });
+    const logs = [
+      logWithOutcome('a', 1, { payoff: 10, amount: 5 }),
+      logWithOutcome('a', 2, { payoff: 12, amount: 7 }),
+    ];
+    const result = hydrateAgentHistoryFromLogs(logs, [existing]);
+    expect(result[0].history['payoff']).toEqual([99, 98]);
+    expect(result[0].history['amount']).toEqual([5, 7]);
+  });
+
+  it('returns agents unchanged when no logs have outcome data', () => {
+    const logs = [log('s', 1, 'SYSTEM')];
+    const emptyAlice = agent('a', 'Alice', {});
+    const emptyBob = agent('b', 'Bob', {});
+    const result = hydrateAgentHistoryFromLogs(logs, [emptyAlice, emptyBob]);
+    expect(result[0].history).toEqual({});
+    expect(result[1].history).toEqual({});
+  });
+
+  it('throws when logs is not an array', () => {
+    // @ts-expect-error testing runtime guard
+    expect(() => hydrateAgentHistoryFromLogs('nope', [alice])).toThrow();
+  });
+
+  it('throws when agents is not an array', () => {
+    // @ts-expect-error testing runtime guard
+    expect(() => hydrateAgentHistoryFromLogs([], 'nope')).toThrow();
   });
 });

@@ -100,3 +100,71 @@ export function computeEventCountByRound(logs: LogEntry[]): RoundCount[] {
     .map(([round, count]) => ({ round, count }))
     .sort((left, right) => left.round - right.round);
 }
+
+export function hydrateAgentHistoryFromLogs(logs: LogEntry[], agents: Agent[]): Agent[] {
+  if (!Array.isArray(logs)) {
+    throw new Error('hydrateAgentHistoryFromLogs: logs must be an array');
+  }
+
+  if (!Array.isArray(agents)) {
+    throw new Error('hydrateAgentHistoryFromLogs: agents must be an array');
+  }
+
+  const actionLogs = logs.filter(
+    (log) =>
+      log.type === 'AGENT_ACTION'
+      && typeof log.agentId === 'string'
+      && log.agentId.length > 0
+      && log.outcome !== undefined
+      && Object.keys(log.outcome).length > 0,
+  );
+
+  if (actionLogs.length === 0) {
+    return agents;
+  }
+
+  const maxRound = Math.max(...actionLogs.map((log) => log.round));
+  const store = new Map<string, Map<string, Map<number, number>>>();
+
+  for (const log of actionLogs) {
+    const agentId = log.agentId as string;
+
+    if (!store.has(agentId)) {
+      store.set(agentId, new Map());
+    }
+
+    const agentMetrics = store.get(agentId) as Map<string, Map<number, number>>;
+
+    for (const [metric, value] of Object.entries(log.outcome as Record<string, number>)) {
+      if (!agentMetrics.has(metric)) {
+        agentMetrics.set(metric, new Map());
+      }
+
+      const roundsByMetric = agentMetrics.get(metric) as Map<number, number>;
+      roundsByMetric.set(log.round, value);
+    }
+  }
+
+  return agents.map((agent) => {
+    const agentMetrics = store.get(agent.id);
+
+    if (agentMetrics === undefined) {
+      return agent;
+    }
+
+    const newHistory = { ...agent.history };
+
+    agentMetrics.forEach((roundsByMetric, metric) => {
+      if (newHistory[metric] !== undefined && newHistory[metric].length > 0) {
+        return;
+      }
+
+      newHistory[metric] = Array.from({ length: maxRound }, (_, index) => {
+        const value = roundsByMetric.get(index + 1);
+        return typeof value === 'number' ? value : 0;
+      });
+    });
+
+    return { ...agent, history: newHistory };
+  });
+}
