@@ -24,7 +24,7 @@ describe('MetricTrajectoryChart', () => {
     const polylines = container.querySelectorAll('polyline');
     expect(polylines).toHaveLength(2);
 
-    const expected = metricChartGeometry(series, 100, 100);
+    const expected = metricChartGeometry(series, 40, 60);
     expect(container.querySelector('polyline[data-agent="a"]')?.getAttribute('points'))
       .toBe(expected[0].points);
     expect(container.querySelector('polyline[data-agent="b"]')?.getAttribute('points'))

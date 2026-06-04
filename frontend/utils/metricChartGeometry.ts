@@ -69,6 +69,13 @@ function buildPoints(
     .join(' ');
 }
 
+export function metricChartBounds(
+  series: Series[],
+): { yMin: number; yMax: number; maxLen: number } {
+  validateSeries(series);
+  return getValueBounds(series);
+}
+
 export function metricChartGeometry(
   series: Series[],
   width: number,

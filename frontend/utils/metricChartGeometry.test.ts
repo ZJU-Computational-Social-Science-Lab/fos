@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { metricChartGeometry } from './metricChartGeometry';
+import { metricChartGeometry, metricChartBounds } from './metricChartGeometry';
 import type { Series } from './resultsComputations';
 
 describe('metricChartGeometry', () => {
@@ -48,5 +48,19 @@ describe('metricChartGeometry', () => {
     const series: Series[] = [{ agentId: 'a', agentName: 'Alice', values: [1, 2] }];
     expect(() => metricChartGeometry(series, 0, 100)).toThrow();
     expect(() => metricChartGeometry(series, 100, -1)).toThrow();
+  });
+});
+
+describe('metricChartBounds', () => {
+  it('returns yMin, yMax, and maxLen across all series', () => {
+    const series: Series[] = [
+      { agentId: 'a', agentName: 'Alice', values: [5, 10, 8] },
+      { agentId: 'b', agentName: 'Bob', values: [3, 12] },
+    ];
+    expect(metricChartBounds(series)).toEqual({ yMin: 3, yMax: 12, maxLen: 3 });
+  });
+
+  it('throws on an empty series array', () => {
+    expect(() => metricChartBounds([])).toThrow();
   });
 });
