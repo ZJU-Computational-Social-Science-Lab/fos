@@ -20,13 +20,13 @@ export function ExportSection({
   labels,
 }: ExportSectionProps): React.JSX.Element {
   return (
-    <>
+    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
       <button type="button" onClick={onExportCsv}>
         {labels.csv}
       </button>
       <button type="button" onClick={onExportMarkdown}>
         {labels.markdown}
       </button>
-    </>
+    </div>
   );
 }

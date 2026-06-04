@@ -23,11 +23,17 @@ export function AiSummarySection({
 }: AiSummarySectionProps): React.JSX.Element {
   return (
     <section>
-      <button type="button" onClick={onGenerate} disabled={isGenerating}>
+      <button
+        type="button"
+        onClick={onGenerate}
+        disabled={isGenerating}
+        className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors hover:opacity-80 disabled:opacity-50"
+        style={{ background: 'var(--ss-brand-soft)', color: 'var(--ss-brand-primary)', borderColor: 'var(--ss-brand-primary)' }}
+      >
         {isGenerating ? labels.generating : labels.generate}
       </button>
-      {error !== null ? <div role="alert">{error}</div> : null}
-      {summary !== null && isGenerating === false ? <div>{summary}</div> : null}
+      {error !== null ? <p role="alert" className="mt-2 text-sm" style={{ color: 'var(--color-text-error, #ef4444)' }}>{error}</p> : null}
+      {summary !== null && !isGenerating ? <div className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--ss-workspace-text)' }}>{summary}</div> : null}
     </section>
   );
 }
