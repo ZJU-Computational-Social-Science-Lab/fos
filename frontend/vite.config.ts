@@ -2,6 +2,7 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import type { Plugin } from "vite";
+import path from "path";
 
 // 非常简化版：提供一个虚拟模块 "virtual:docs"
 // 以后你想接入真正的 md/mdx 文档，我们只需要改这里
@@ -54,6 +55,11 @@ export default defineConfig(({ mode }) => {
       react(),
       virtualDocsPlugin(),
     ],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./"),
+      },
+    },
     // Add support for importing .md files as raw strings with ?raw suffix
     assetsInclude: ["**/*.md"],
     server: {

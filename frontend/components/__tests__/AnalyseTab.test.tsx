@@ -14,15 +14,13 @@ import { useSimulationStore } from "../../store";
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) =>
-      (
-        {
-          "components.analyseTab.overview": "Overview",
-          "components.analyseTab.compareDiff": "Compare diff",
-          "simPage.tabs.analyse": "Analyse",
-          "simPage.analytics": "Analytics",
-          "simPage.report": "Report",
-        } as Record<string, string>
-      )[key] ?? key,
+      ({
+        "components.analyseTab.results": "Results",
+        "components.analyseTab.compareDiff": "Compare diff",
+        "simPage.analytics": "Analytics",
+        "simPage.report": "Report",
+      } as Record<string, string>)[key] ?? key,
+    i18n: { language: "en", changeLanguage: vi.fn() },
   }),
 }));
 
@@ -35,17 +33,19 @@ describe("AnalyseTab", () => {
     useSimulationStore.setState({
       agents: [],
       logs: [],
+      resultsSummary: null,
+      isGeneratingResultsSummary: false,
+      resultsSummaryError: null,
       toggleAnalytics: vi.fn(),
       toggleReportModal: vi.fn(),
     } as never);
   });
 
-  it("shows the overview first", () => {
+  it("shows the results tab first", () => {
     render(<AnalyseTab />);
 
-    expect(screen.getByText("Overview")).toBeInTheDocument();
+    expect(screen.getByText("Results")).toBeInTheDocument();
     expect(screen.getByText("Compare diff")).toBeInTheDocument();
-    expect(screen.getByText("Analyse")).toBeInTheDocument();
   });
 
   it("switches to compare diff", () => {
