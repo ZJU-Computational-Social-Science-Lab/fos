@@ -328,12 +328,14 @@ export const createExperimentsSlice: StateCreator<
           console.log('[advanceSimulation] Recovered from 504 — found and awaited child node', found);
         }
 
+        const newSelectedId = String(res.child);
+        set({ selectedNodeId: newSelectedId } as any);
+
         // Refresh tree graph
         const graph = await getTreeGraph(base, simId, token);
-        const newSelectedId = String(res.child);
         if (graph) {
           const nodesMapped = mapGraphToNodes(graph);
-          set({ nodes: nodesMapped, selectedNodeId: newSelectedId } as any);
+          set({ nodes: nodesMapped } as any);
         }
 
         let events: any[] = [];
@@ -345,7 +347,7 @@ export const createExperimentsSlice: StateCreator<
           ]);
         } catch (error) {
           console.error('[advanceSimulation] Advance succeeded but failed to hydrate child node:', error);
-          set({ isGenerating: false, selectedNodeId: newSelectedId } as any);
+          set({ isGenerating: false } as any);
           const detail = getBackendErrorDetail(error);
           const base = i18n.t('store.advanceHydrationFailed') || 'Simulation advanced, but loading the new node details failed';
           state.addNotification?.('warning', detail !== null ? `${base}: ${detail}` : base);
