@@ -26,3 +26,11 @@ class PolicyCascadeScene(
     """Strict top→mid→low cascade, single action per tier, downstream-only delivery."""
 
     TYPE = "policy_cascade_scene"
+
+    @classmethod
+    def deserialize(cls, data: dict) -> "PolicyCascadeScene":
+        scene = Scene.deserialize(data)
+        scene.tier_order = list(scene.state.get("tier_order", []))
+        scene._tier_map = {}
+        scene._agents_by_tier = {t: [] for t in scene.tier_order}
+        return scene

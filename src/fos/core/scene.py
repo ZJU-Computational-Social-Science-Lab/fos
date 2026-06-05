@@ -50,6 +50,22 @@ class Scene:
     def deserialize_config(cls, data) -> dict:
         return {}
 
+    def serialize(self) -> dict:
+        return {
+            "type": getattr(self, "TYPE", ""),
+            "name": self.name,
+            "initial_event": self.initial_event,
+            "state": dict(self.state),
+        }
+
+    @classmethod
+    def deserialize(cls, data: dict) -> "Scene":
+        obj = cls.__new__(cls)
+        obj.name = data.get("name", "")
+        obj.initial_event = data.get("initial_event", "")
+        obj.state = dict(data.get("state", {}))
+        return obj
+
     def on_event(self, sim, event_type, data) -> None:
         pass
 
