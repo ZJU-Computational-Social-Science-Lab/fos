@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useSimulationStore } from '@/store';
+import { useAuthStore } from '@/store/auth';
 import { listMetrics, computeMetricTrajectories, computeEventCountByAgent, hydrateAgentHistoryFromLogs } from '@/utils/resultsComputations';
 import { generateMarkdownReport } from '@/utils/markdownReport';
-import { logsToCsv } from '@/utils/logsToCsv';
 import { MetricTrajectoryChart } from './MetricTrajectoryChart';
 import { CountBarChart } from './CountBarChart';
 import { AiSummarySection } from './AiSummarySection';
@@ -33,6 +33,7 @@ export function ResultsView({ labels, language }: Props) {
   const agents = useSimulationStore((s: any) => s.agents);
   const logs = useSimulationStore((s: any) => s.logs);
   const currentSimulation = useSimulationStore((s: any) => s.currentSimulation);
+  const engineConfig = useSimulationStore((s: any) => s.engineConfig);
   const resultsSummary = useSimulationStore((s: any) => s.resultsSummary);
   const isGeneratingResultsSummary = useSimulationStore((s: any) => s.isGeneratingResultsSummary);
   const resultsSummaryError = useSimulationStore((s: any) => s.resultsSummaryError);
@@ -52,7 +53,37 @@ export function ResultsView({ labels, language }: Props) {
     : (metrics.length > 0 ? metrics[0] : '');
 
   const onGenerate = () => { generateResultsSummary(title, language); };
-  const onExportCsv = () => { downloadFile(title + '_results.csv', logsToCsv(logs), 'text/csv'); };
+  const onExportCsv = async () => {
+    const token = (engineConfig as any).token ?? useAuthStore.getState().accessToken ?? undefined;
+    const baseUrl = engineConfig.endpoint;
+
+    const response = await fetch(
+      `${baseUrl}/simulations/${currentSimulation.id}/export?format=csv`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.status}`);
+    }
+
+    const contentDisp = response.headers.get('Content-Disposition');
+    const filenameMatch = contentDisp?.match(/filename="(.+)"/);
+    const filename = filenameMatch ? filenameMatch[1] : `${title}_export.csv`;
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
   const onExportMarkdown = () => {
     const md = generateMarkdownReport(
       { title, metrics: metrics.map((m) => ({ name: m, series: computeMetricTrajectories(hydratedAgents, m) })), summary: resultsSummary },
