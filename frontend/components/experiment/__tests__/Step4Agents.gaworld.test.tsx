@@ -6,11 +6,13 @@
  */
 
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import * as matchers from '@testing-library/jest-dom/matchers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Step4Agents } from '../Step4Agents';
 import { useExperimentBuilder } from '../../../store/experiment-builder';
+
+expect.extend(matchers);
 
 vi.mock('../../../store/experiment-builder', () => ({
   useExperimentBuilder: vi.fn(),
@@ -45,6 +47,7 @@ describe('Step4Agents GAWorld defaults', () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.restoreAllMocks();
   });
 

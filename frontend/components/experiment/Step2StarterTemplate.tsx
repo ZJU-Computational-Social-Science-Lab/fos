@@ -13,6 +13,7 @@ import { useExperimentBuilder } from '../../store/experiment-builder';
 import ParameterField from './ParameterField';
 import { ActionEditor } from './ActionEditor';
 import GAWorldScenarioPanel from './GAWorldScenarioPanel';
+import { buildGAWorldInitialParams } from './gaworldPresetModes';
 import { ResourceConfig } from './ResourceConfig';
 
 const DISTORTION_ONLY_PARAM_KEYS = new Set([
@@ -187,10 +188,12 @@ export const Step2StarterTemplate: React.FC = () => {
   // Initialize scenario params from defaults
   useEffect(() => {
     if (selectedScenarioData && selectedScenarioData.parameters && Object.keys(scenarioParams).length === 0) {
-      const defaults: Record<string, unknown> = {};
-      selectedScenarioData.parameters.forEach((param) => {
-        defaults[param.key] = param.default;
-      });
+      const defaults = selectedScenarioData.id === 'gaworld'
+        ? buildGAWorldInitialParams(selectedScenarioData.parameters)
+        : selectedScenarioData.parameters.reduce<Record<string, unknown>>((accumulator, param) => {
+          accumulator[param.key] = param.default;
+          return accumulator;
+        }, {});
       setScenarioParams(defaults);
     }
   }, [selectedScenarioData, scenarioParams, setScenarioParams]);

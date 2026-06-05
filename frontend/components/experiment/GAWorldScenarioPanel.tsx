@@ -9,6 +9,7 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { GAWORLD_PRESET_KEYS, getGAWorldPresetModes, type GAWorldPresetKey } from './gaworldPresetModes';
 
 interface GAWorldScenarioPanelProps {
   scenarioParams: Record<string, unknown>;
@@ -16,7 +17,7 @@ interface GAWorldScenarioPanelProps {
 }
 
 interface PresetOption {
-  key: 'fast' | 'balanced' | 'full_fidelity';
+  key: GAWorldPresetKey;
   modes: Record<string, string>;
 }
 
@@ -37,35 +38,10 @@ interface SystemGroup {
   options: ModeOption[];
 }
 
-const PRESETS: PresetOption[] = [
-  {
-    key: 'fast',
-    modes: {
-      information_mode: 'off',
-      daily_life_mode: 'stable_routines',
-      people_mode: 'simple_behavior',
-      memory_mode: 'in_the_moment',
-    },
-  },
-  {
-    key: 'balanced',
-    modes: {
-      information_mode: 'city_news',
-      daily_life_mode: 'some_variation',
-      people_mode: 'adaptive_behavior',
-      memory_mode: 'some_continuity',
-    },
-  },
-  {
-    key: 'full_fidelity',
-    modes: {
-      information_mode: 'active_flow',
-      daily_life_mode: 'flexible_daily_life',
-      people_mode: 'rich_human_behavior',
-      memory_mode: 'rich_memory',
-    },
-  },
-];
+const PRESETS: PresetOption[] = GAWORLD_PRESET_KEYS.map((key) => ({
+  key,
+  modes: getGAWorldPresetModes(key),
+}));
 
 const SYSTEM_GROUPS: SystemGroup[] = [
   {
