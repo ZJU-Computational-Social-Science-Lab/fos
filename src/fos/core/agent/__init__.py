@@ -42,6 +42,20 @@ class Agent:
         self.is_offline = False
         self.short_memory = Agent._ShortMemory()
 
+    def serialize(self) -> dict:
+        return {
+            "name": self.name,
+            "properties": dict(self.properties),
+            "role_prompt": self.role_prompt,
+            "user_profile": self.user_profile,
+            "language": self.language,
+            "action_space": list(self.action_space),
+            "knowledge_base": list(self.knowledge_base),
+            "documents": dict(self.documents),
+            "score": self.score,
+            "short_memory": self.short_memory.get_all(),
+        }
+
     def add_env_feedback(self, msg: str) -> None:
         self.short_memory.append("system", msg)
 
@@ -51,7 +65,7 @@ class Agent:
     @classmethod
     def deserialize(cls, data: dict) -> "Agent":
         props = data.get("properties", {})
-        return cls(
+        agent = cls(
             name=data["name"],
             properties=props,
             role_prompt=data.get("role_prompt") or data.get("rolePrompt", ""),
@@ -62,3 +76,6 @@ class Agent:
             documents=data.get("documents", {}),
             score=data.get("score", 0),
         )
+        for entry in data.get("short_memory", []):
+            agent.short_memory.append(entry.get("role", ""), entry.get("content", ""))
+        return agent
