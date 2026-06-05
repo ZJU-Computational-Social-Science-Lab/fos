@@ -444,12 +444,15 @@ class GAWorldSubprocessManager:
             env["PYTHONPATH"],
         )
 
+        work_dir = self.output_dir / "workdir"
+        work_dir.mkdir(parents=True, exist_ok=True)
+
         if os.name == "nt":
             with open(log_file, "w", encoding="utf-8") as file_obj:
                 self.process = subprocess.Popen(
                     command,
                     env=env,
-                    cwd=str(self.gaworld_path),
+                    cwd=str(work_dir),
                     stdout=file_obj,
                     stderr=subprocess.STDOUT,
                 )
@@ -459,7 +462,7 @@ class GAWorldSubprocessManager:
             self.process = subprocess.Popen(
                 command,
                 env=env,
-                cwd=str(self.gaworld_path),
+                cwd=str(work_dir),
                 stdout=file_obj,
                 stderr=subprocess.STDOUT,
                 preexec_fn=os.setsid,
