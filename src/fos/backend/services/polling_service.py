@@ -85,8 +85,8 @@ class PollingService:
             self._scheduler.remove_job(source_id)
             logger.info(f"Job removed: {source_id}")
         except Exception as e:
-            import apscheduler
-            if isinstance(e, apscheduler.exceptions.JobNotFoundError):
+            from apscheduler.jobstores.base import JobLookupError
+            if isinstance(e, JobLookupError):
                 logger.debug(f"Job not found (already removed): {source_id}")
             else:
                 logger.warning(f"Failed to remove job {source_id}: {e}")

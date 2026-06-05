@@ -218,7 +218,7 @@ async def test_provider(request: Request, provider_id: int) -> Message:
             top_p=1.0,
             frequency_penalty=0.0,
             presence_penalty=0.0,
-            max_tokens=64,
+            max_tokens=4096,
             supports_vision=guess_supports_vision(provider.model),
         )
 
