@@ -61,6 +61,7 @@ export async function getTreeGraph(base: string, id: string, token?: string): Pr
   try {
     return await httpGet<Graph>(base, `/simulations/${id}/tree/graph`, token);
   } catch (e) {
+    console.error('[getTreeGraph] Failed to fetch tree graph:', e);
     return null;
   }
 }
