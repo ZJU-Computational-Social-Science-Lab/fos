@@ -2,7 +2,6 @@
 Tests for ExperimentKernel and built-in action types.
 """
 
-import pytest
 from fos.core.experiment.kernel import (
     ExperimentKernel,
     ChoiceAction,
@@ -67,7 +66,7 @@ def test_all_sociology_actions_registered():
     """All sociology actions should be registered in the kernel."""
     from fos.core.scenarios.actions import CATEGORY_ACTION_LIBRARIES
 
-    kernel = ExperimentKernel()
+    ExperimentKernel()
     sociology_actions = CATEGORY_ACTION_LIBRARIES.get("sociology", [])
 
     # Check that sociology category exists and has actions

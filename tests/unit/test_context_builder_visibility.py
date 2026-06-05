@@ -6,7 +6,6 @@ Verifies that agents only see events they can observe based on observed_by field
 Contains: test_visibility_filtering
 """
 
-import pytest
 from fos.core.context_builder import build_structured_context
 from fos.core.experiment.information_model import InformationModel
 from fos.core.experiment.round_context import RoundEvent

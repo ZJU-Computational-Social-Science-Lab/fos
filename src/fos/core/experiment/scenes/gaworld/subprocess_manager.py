@@ -456,26 +456,16 @@ class GAWorldSubprocessManager:
             elif child.is_file() and child.name != "generative_city_sim.py":
                 link_target.symlink_to(child)
 
-        if os.name == "nt":
-            with open(log_file, "w", encoding="utf-8") as file_obj:
-                self.process = subprocess.Popen(
-                    command,
-                    env=env,
-                    cwd=str(work_dir),
-                    stdout=file_obj,
-                    stderr=subprocess.STDOUT,
-                )
-            return
-
         with open(log_file, "w", encoding="utf-8") as file_obj:
-            self.process = subprocess.Popen(
-                command,
-                env=env,
-                cwd=str(work_dir),
-                stdout=file_obj,
-                stderr=subprocess.STDOUT,
-                preexec_fn=os.setsid,
-            )
+            popen_kwargs: dict[str, Any] = {
+                "env": env,
+                "cwd": str(self.gaworld_path),
+                "stdout": file_obj,
+                "stderr": subprocess.STDOUT,
+            }
+            if os.name != "nt":
+                popen_kwargs["preexec_fn"] = os.setsid
+            self.process = subprocess.Popen(command, **popen_kwargs)
 
     def wait_for_day(
         self,

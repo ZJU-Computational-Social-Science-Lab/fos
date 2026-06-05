@@ -7,7 +7,7 @@ via WebSocket for real-time visualization.
 
 Contains: ContagionStatistics, TransitionEvent
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 

@@ -1,6 +1,5 @@
 """Test context formatting with show_average_contribution."""
 
-import pytest
 from fos.core.context_builder import build_structured_context
 from fos.core.experiment.information_model import InformationModel
 from fos.core.experiment.state import ExperimentState, AgentState

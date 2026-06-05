@@ -8,18 +8,16 @@ all scenarios, models, agents, and iterations.
 import logging
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Dict, List, Optional
 
-from .agents import AgentProfile, ALL_AGENTS, get_archetypal_agents, get_domain_specific_agents
+from .agents import AgentProfile, ALL_AGENTS, get_archetypal_agents
 from .config import (
     AVAILABLE_MODELS,
     ModelConfig,
-    SCENARIOS_BY_PATTERN,
     test_config,
 )
 from .csv_reporter import CSVReporter, TestResult
-from .cross_llm_analyzer import apply_cross_llm_status, CrossLLMAnalysis
+from .cross_llm_analyzer import apply_cross_llm_status
 from .evaluators import EvaluationResult, evaluate_output
 from .ollama_client import ChatMessage, LLMResponse, OllamaClient
 from .prompt_builder import build_prompt  # New simplified prompt builder
@@ -500,9 +498,8 @@ def build_system_prompt_override(
     This function shadows the original build_system_prompt to use
     the simplified prompt builder for small 3B-4B models.
     """
-    from .prompt_builder import build_prompt
     return build_prompt(scenario, agent, use_simple=use_simple)
 
 
 # Monkey-patch the original function
-build_system_prompt = build_system_prompt_override
+build_system_prompt = build_system_prompt_override  # noqa: F811

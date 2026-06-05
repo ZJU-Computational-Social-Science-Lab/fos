@@ -15,7 +15,6 @@ from pathlib import Path
 
 from litestar import Router, get, post
 from litestar.exceptions import HTTPException
-from litestar.response import Response
 from pydantic import ValidationError
 
 from fos.core.agent import Agent
@@ -172,10 +171,12 @@ def scene_config_template(scene_key: str, scene_cls) -> dict:
     name = scene_cls.__name__
     if scene_key == "emotional_conflict_scene":
         name = "EmotionalConflictScene"
+    get_description = getattr(scene, "get_scenario_description", None)
+    scene_description = get_description() if callable(get_description) else ""
     return {
         "type": scene_key,
         "name": name,
-        "description": SCENE_DESCRIPTIONS.get(scene_key) or scene.get_scenario_description() or "",
+        "description": SCENE_DESCRIPTIONS.get(scene_key) or scene_description or "",
         "config_schema": config_schema,
         "allowed_actions": allowed_list,
         "basic_actions": basic_list,

@@ -9,7 +9,7 @@ Contains: GenericTemplate, export_json_schema
 from __future__ import annotations
 
 from typing import Any, Literal
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 from re import match
 
 from fos.i18n import T

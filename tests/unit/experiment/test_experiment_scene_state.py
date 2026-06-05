@@ -1,6 +1,5 @@
 """Tests for ExperimentScene state integration."""
 import asyncio
-import pytest
 from fos.core.experiment.scene import ExperimentScene
 from fos.core.experiment.config import ExperimentConfig
 from fos.core.experiment.controller import ActionResult

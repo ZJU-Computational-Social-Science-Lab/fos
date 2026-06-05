@@ -586,7 +586,7 @@ export const LogViewer: React.FC = () => {
     return (sceneConfig.parameters as Record<string, unknown>) || sceneConfig || {};
   }, [currentSimulation]);
 
-  const viewMode = ViewMode.CARD;
+  const viewMode = ViewMode.CARD as ViewMode;
   const [searchQuery, setSearchQuery] = useState('');
   const [openRounds, setOpenRounds] = useState<Set<number>>(new Set());
   const hasInitializedOpenRoundsRef = useRef(false);

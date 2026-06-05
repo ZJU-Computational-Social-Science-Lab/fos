@@ -4,7 +4,6 @@ from litestar.exceptions import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .core.config import get_settings
-from .core.database import get_session
 from fos.i18n import T
 from .models.user import User
 from .schemas.user import UserPublic

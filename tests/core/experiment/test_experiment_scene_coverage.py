@@ -71,7 +71,9 @@ class TestPayoffCalculations:
         _init_scene(scene)
 
         events = []
-        emitter = lambda t, d: events.append((t, d))
+        def emitter(t, d):
+            events.append((t, d))
+
         result = await scene.run_round(emitter)
 
         # Both cooperated → both should get cooperate_reward
@@ -192,7 +194,7 @@ class TestFeedbackInjection:
                 client.chat = MagicMock(return_value='{"action": "cooperate"}')
 
             events = []
-            result = await scene.run_round(lambda t, d: events.append((t, d)))
+            await scene.run_round(lambda t, d: events.append((t, d)))
 
             # build_prompt should have been called — check the context arg
             # includes the feedback text
@@ -323,7 +325,7 @@ class TestEventEmission:
         _init_scene(scene)
 
         events = []
-        result = await scene.run_round(lambda t, d: events.append((t, d)))
+        await scene.run_round(lambda t, d: events.append((t, d)))
 
         action_events = [e for e in events if e[0] == "experiment_action"]
         assert len(action_events) == 2

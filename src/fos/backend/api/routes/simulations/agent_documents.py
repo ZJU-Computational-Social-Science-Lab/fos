@@ -31,7 +31,6 @@ from litestar.datastructures import UploadFile
 from litestar.enums import RequestEncodingType
 from litestar.params import Body
 from litestar.exceptions import HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from fos.backend.core.database import get_session
@@ -40,7 +39,6 @@ from fos.backend.services.documents import process_document
 from fos.i18n import T
 from fos.backend.services.simtree_runtime import SIM_TREE_REGISTRY
 from fos.backend.services.simtree_runtime import get_runtime_agent_count, get_runtime_agent_map
-from fos.i18n import T
 
 from .helpers import get_simulation_for_owner
 
@@ -386,7 +384,7 @@ async def get_agent_memory(
 
     async with get_session() as session:
         current_user = await resolve_current_user(session, token)
-        sim = await get_simulation_for_owner(session, current_user.id, simulation_id)
+        await get_simulation_for_owner(session, current_user.id, simulation_id)
 
         agent_data = None
 

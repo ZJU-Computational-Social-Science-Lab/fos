@@ -7,7 +7,6 @@ Tests the context manager's ability to:
 - Handle multiple rounds correctly
 """
 
-import pytest
 
 from fos.core.experiment.round_context import (
     RoundContextManager,

@@ -27,7 +27,7 @@ _mod = types.ModuleType("fos.core.llm.providers.validation")
 _mod.validate_media_url = lambda url: "valid"
 sys.modules.setdefault("fos.core.llm.providers.validation", _mod)
 
-from fos.core.llm.providers.ollama import encode_images
+from fos.core.llm.providers.ollama import encode_images  # noqa: E402
 
 
 def _safe_valid(url):

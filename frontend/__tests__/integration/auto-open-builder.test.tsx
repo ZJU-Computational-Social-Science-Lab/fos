@@ -15,14 +15,17 @@ import SimulationPage from '../../pages/SimulationPage';
 import { useSimulationStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
 
-vi.mock('../../components/ExperimentBuilderModal', () => ({
-  ExperimentBuilderModal: ({ isOpen, presentation }: { isOpen?: boolean; presentation?: string }) => (
-    isOpen ? <div data-testid="experiment-builder">{presentation || 'modal'}</div> : null
-  ),
-  default: ({ isOpen, presentation }: { isOpen?: boolean; presentation?: string }) => (
-    isOpen ? <div data-testid="experiment-builder">{presentation || 'modal'}</div> : null
-  ),
-}));
+vi.mock('../../components/ExperimentBuilderModal', async () => {
+  const { useSimulationStore } = await import('../../store');
+  const MockExperimentBuilderModal = () => {
+    const isOpen = useSimulationStore((state) => state.isWizardOpen);
+    return isOpen ? <div data-testid="experiment-builder">modal</div> : null;
+  };
+  return {
+    ExperimentBuilderModal: MockExperimentBuilderModal,
+    default: MockExperimentBuilderModal,
+  };
+});
 
 // Minimal i18n mock
 vi.mock('react-i18next', () => ({
@@ -39,17 +42,26 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: vi.fn() },
 }));
 
+vi.mock('../../services/client', () => ({
+  apiClient: {
+    get: vi.fn().mockResolvedValue({ data: { available: false, turn: null, enabled: false } }),
+    post: vi.fn().mockResolvedValue({ data: {} }),
+    put: vi.fn().mockResolvedValue({ data: {} }),
+    delete: vi.fn().mockResolvedValue({ data: {} }),
+  },
+}));
+
 // Mock all API service calls
 vi.mock('../../services/simulations', () => ({
-  getSimulation: vi.fn(),
+  getSimulation: vi.fn().mockResolvedValue({ id: 'sim-123', name: 'Existing Simulation' }),
   listSimulations: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../../services/simulationTree', () => ({
-  getTreeGraph: vi.fn(),
-  getSimEvents: vi.fn(),
-  getSimState: vi.fn(),
-  getRehydrate: vi.fn(),
+  getTreeGraph: vi.fn().mockResolvedValue(null),
+  getSimEvents: vi.fn().mockResolvedValue([]),
+  getSimState: vi.fn().mockResolvedValue(null),
+  getRehydrate: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('../../services/scenes', () => ({
@@ -58,6 +70,10 @@ vi.mock('../../services/scenes', () => ({
 
 vi.mock('../../services/providers', () => ({
   listProviders: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('../../services/environmentSuggestions', () => ({
+  getSuggestionStatus: vi.fn().mockResolvedValue({ available: false, turn: null, enabled: false }),
 }));
 
 function LocationProbe() {

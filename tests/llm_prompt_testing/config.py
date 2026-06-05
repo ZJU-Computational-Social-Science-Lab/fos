@@ -4,10 +4,9 @@ Configuration management for LLM prompt testing framework.
 Handles Ollama API connection settings, model configurations, and test parameters.
 """
 
-import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 
 @dataclass

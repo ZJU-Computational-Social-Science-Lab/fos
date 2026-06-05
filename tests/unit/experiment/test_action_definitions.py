@@ -1,5 +1,4 @@
 """Tests for action definitions."""
-import pytest
 from fos.core.experiment.actions.definitions import (
     ActionDefinition,
     ParameterSpec,

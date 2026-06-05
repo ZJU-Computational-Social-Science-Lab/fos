@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import Integer, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db.base import Base
 from ..db.mixins import TimestampMixin

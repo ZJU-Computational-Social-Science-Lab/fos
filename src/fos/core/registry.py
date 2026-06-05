@@ -1,3 +1,7 @@
+import random as _random
+from typing import List, Tuple
+
+from fos.core.experiment.information_model import InformationModel
 from fos.core.experiment.scenes.council_experiment import CouncilExperimentScene
 from fos.core.experiment.scenes.gaworld.scene import GAWorldScene
 from fos.core.experiment.scene import ExperimentScene
@@ -57,15 +61,6 @@ SCENE_ACTIONS: dict[str, dict[str, list[str]]] = {
         "allowed": [],
     },
 }
-
-# ---------------------------------------------------------------------------
-# Information Model Registry (mirrors SCENE_MAP pattern for the info layer)
-# ---------------------------------------------------------------------------
-
-import random as _random
-from typing import List, Tuple
-from fos.core.experiment.information_model import InformationModel
-
 
 def pair_agents_randomly(agents: List[str], round_num: int) -> List[Tuple[str, str]]:
     """Deterministically pair agents by round_num seed (no global state side-effects)."""

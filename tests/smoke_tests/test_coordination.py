@@ -4,13 +4,9 @@ Smoke tests for coordination scenarios with real Ollama LLM.
 Tests Coordination Game scenario with neighbor-based visibility and feedback payoffs.
 """
 
-import asyncio
 import pytest
-from pathlib import Path
-from typing import Dict, Any, List
 
 from fos.core.llm_config import LLMConfig
-from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.game_configs import GameConfig
 from fos.core.experiment.runner import ExperimentRunner
 from fos.core.experiment.information_model import InformationModel
@@ -68,7 +64,7 @@ async def test_coordination_game_basic(default_llm_client, output_dir):
         context_budget_chars=0,
     )
 
-    filename = f"coordination_game_phi4-mini_basic.txt"
+    filename = "coordination_game_phi4-mini_basic.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "coordination_game", "phi4-mini", "basic") as out:
@@ -130,7 +126,7 @@ async def test_coordination_game_no_scores(default_llm_client, output_dir):
         context_budget_chars=0,
     )
 
-    filename = f"coordination_game_phi4-mini_no_scores.txt"
+    filename = "coordination_game_phi4-mini_no_scores.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "coordination_game", "phi4-mini", "no_scores") as out:
@@ -288,7 +284,7 @@ async def test_coordination_game_simultaneous_mode(default_llm_client, output_di
         context_budget_chars=0,
     )
 
-    filename = f"coordination_game_phi4-mini_simultaneous.txt"
+    filename = "coordination_game_phi4-mini_simultaneous.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "coordination_game", "phi4-mini", "simultaneous") as out:

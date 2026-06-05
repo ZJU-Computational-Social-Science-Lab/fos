@@ -1,5 +1,4 @@
 """Tests for ExperimentState classes."""
-import pytest
 from fos.core.experiment.state import ExperimentState, AgentState
 
 

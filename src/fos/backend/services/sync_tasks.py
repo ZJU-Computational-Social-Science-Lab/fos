@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
 from typing import Optional
+
 from ..celery_app import celery_app
 from ..core.database import get_session
 from ..models.simulation import Simulation, SimulationSyncLog
-from ..models.user import User
+
+logger = logging.getLogger(__name__)
+
 
 @celery_app.task(bind=True)
 def run_sync_task(self, simulation_id: Optional[str], user_id: Optional[int], payload: dict, sync_log_id: Optional[int] = None) -> dict:
@@ -44,7 +48,7 @@ def run_sync_task(self, simulation_id: Optional[str], user_id: Optional[int], pa
 
                 # Merge social_network into scene_config
                 if social_network:
-                    scene_config = {**scene_config, social_network: social_network}
+                    scene_config = {**scene_config, "social_network": social_network}
                     logger.debug(f"[sync_tasks] Merging social_network into scene_config: {social_network}")
 
                 # determine create vs update

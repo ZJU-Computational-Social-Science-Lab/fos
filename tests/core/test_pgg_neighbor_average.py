@@ -132,7 +132,6 @@ class TestPGGNeighborAverageChain:
 
     def test_no_agent_sees_global_average(self, chain_state, chain_graph, info_model):
         """No agent's average includes all agents."""
-        events = _make_events_for_round(1, {"A": 2, "B": 5, "C": 8})
         # Global average would be (2+5+8)/3 = 5.0, but that's coincidental
         # with neighbor averages. Use a non-symmetric case to be sure.
         asymmetric_state = ExperimentState(

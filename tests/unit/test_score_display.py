@@ -3,8 +3,7 @@ Tests for score display visibility based on InformationModel.include_scores.
 
 Verifies that scores are hidden when include_scores=False in coordination games.
 """
-import pytest
-from fos.core.experiment.round_context import RoundContextManager, RoundEvent
+from fos.core.experiment.round_context import RoundContextManager
 from fos.core.experiment.information_model import InformationModel
 
 

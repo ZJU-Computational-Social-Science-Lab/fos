@@ -9,7 +9,7 @@ Contains: LocaleMiddleware
 """
 
 from litestar.middleware.base import AbstractMiddleware
-from litestar.types import ASGIApp, Receive, Scope, Send
+from litestar.types import Receive, Scope, Send
 
 from fos.i18n import set_request_locale
 

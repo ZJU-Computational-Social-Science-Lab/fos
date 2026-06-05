@@ -170,8 +170,6 @@ def parse_xml_action(output: str, valid_actions: List[str]) -> ParseResult:
             error_message="Empty output",
         )
 
-    output_lower = output.lower()
-
     # Try <Action name="..." /> format
     action_match = re.search(r'<(?:Action|action)\s+name\s*=\s*"([^"]+)"', output)
     if action_match:

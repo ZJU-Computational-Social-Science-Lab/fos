@@ -21,7 +21,6 @@ from typing import List
 sys.path.insert(0, "tests/llm_prompt_testing")
 
 from tests.llm_prompt_testing.action_parser import parse_action
-from tests.llm_prompt_testing.agents import ARCHETYPAL_AGENTS
 from tests.llm_prompt_testing.config import AVAILABLE_MODELS
 from tests.llm_prompt_testing.ollama_client import OllamaClient, ChatMessage
 
@@ -158,7 +157,7 @@ async def test_minimal_prompt(
             prompt_sent=full_prompt,
         )
 
-    except Exception as e:
+    except Exception:
         return MinimalTestResult(
             model_name=model_config.name,
             action_name=action,
@@ -216,7 +215,7 @@ async def run_minimal_tests(
     )
 
     print(f"\n{'='*70}")
-    print(f"Minimal Format Testing")
+    print("Minimal Format Testing")
     print(f"Models: {len(models)} | Formats: {len(formats)} | Variants: {len(variants)}")
     print(f"Total tests: {total_tests}\n")
 
@@ -395,7 +394,7 @@ def main():
     print("=" * 70)
     print("Minimal Format Testing for 3-4B Models")
     print("=" * 70)
-    print(f"\nConfiguration:")
+    print("\nConfiguration:")
     print(f"  Models: {', '.join(models)}")
     print(f"  Formats: {', '.join(formats)}")
     print(f"  Variants: {', '.join(variants)}")

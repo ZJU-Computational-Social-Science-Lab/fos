@@ -1,6 +1,5 @@
 """Test that scene passes show_average_contribution to InformationModel."""
 
-import pytest
 from fos.core.experiment.scene import ExperimentScene
 from fos.core.experiment.config import ExperimentConfig
 from unittest.mock import MagicMock

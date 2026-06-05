@@ -9,11 +9,12 @@ import React from 'react';
 export interface CardProps {
   children: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }
 
-export const Card: React.FC<CardProps> = ({ children, className = '' }) => {
+export const Card: React.FC<CardProps> = ({ children, className = '', style }) => {
   return (
-    <div className={`lab-surface overflow-hidden ${className}`.trim()}>
+    <div className={`lab-surface overflow-hidden ${className}`.trim()} style={style}>
       {children}
     </div>
   );

@@ -5,7 +5,6 @@ Verifies the SEIR state values and string serialization behavior.
 
 Contains: TestContagionState
 """
-import pytest
 from fos.core.contagion.states import ContagionState
 
 

@@ -13,13 +13,10 @@ Contains: TestTierProgression, TestDistortionDetection,
           TestThreadManagementViaAdapter, TestResetAgentsForNewPolicy
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-import pytest
 
-from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.config import ExperimentConfig
-from fos.core.experiment.scene import ExperimentScene
 from fos.core.llm.client import LLMClient
 from fos.core.llm_config import LLMConfig
 from fos.core.scenes.policy_cascade_experiment import (

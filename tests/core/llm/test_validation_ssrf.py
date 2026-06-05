@@ -10,7 +10,6 @@ Contains: test_valid_public_urls, test_invalid_schemes,
           test_data_uri_allowed, test_cloud_metadata_blocked,
           test_non_string_input
 """
-import pytest
 
 from fos.core.llm.validation import (
     _is_private_network_url,

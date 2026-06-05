@@ -175,7 +175,7 @@ class GameMap:
         """Return locations within Manhattan distance radius, sorted by distance."""
         nearby = [
             loc for loc in sorted(
-                self.locations.values(), key=lambda l: (l.y, l.x, l.name)
+                self.locations.values(), key=lambda location: (location.y, location.x, location.name)
             )
             if abs(loc.x - x) + abs(loc.y - y) <= radius
         ]

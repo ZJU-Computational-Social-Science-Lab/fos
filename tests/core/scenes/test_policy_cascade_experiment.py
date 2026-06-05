@@ -8,7 +8,6 @@ Contains: test fixtures and 9 test functions.
 """
 from unittest.mock import MagicMock
 
-import pytest
 
 from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.config import ExperimentConfig

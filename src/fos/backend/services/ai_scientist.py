@@ -177,219 +177,219 @@ SCENARIO_KEYWORDS: dict[str, list[str]] = {
 
 DEFAULT_SCENARIO_ACTIONS: dict[str, list[dict[str, str]]] = {
     "public_goods": [
-        {"name": "contribute", "description": T("prompts.actions.ai_scientist.contribute")},
-        {"name": "keep", "description": T("prompts.actions.ai_scientist.keep")},
+        {"name": "contribute", "description": T("prompts.actions.ai_scientist.contribute", locale="en")},
+        {"name": "keep", "description": T("prompts.actions.ai_scientist.keep", locale="en")},
     ],
     "prisoners_dilemma": [
-        {"name": "cooperate", "description": T("prompts.actions.ai_scientist.cooperate")},
-        {"name": "defect", "description": T("prompts.actions.ai_scientist.defect")},
+        {"name": "cooperate", "description": T("prompts.actions.ai_scientist.cooperate", locale="en")},
+        {"name": "defect", "description": T("prompts.actions.ai_scientist.defect", locale="en")},
     ],
     "battle_of_the_sexes": [
-        {"name": "option_a", "description": T("prompts.actions.ai_scientist.option_a")},
-        {"name": "option_b", "description": T("prompts.actions.ai_scientist.option_b")},
+        {"name": "option_a", "description": T("prompts.actions.ai_scientist.option_a", locale="en")},
+        {"name": "option_b", "description": T("prompts.actions.ai_scientist.option_b", locale="en")},
     ],
     "stag_hunt": [
-        {"name": "stag", "description": T("prompts.actions.ai_scientist.stag")},
-        {"name": "hare", "description": T("prompts.actions.ai_scientist.hare")},
+        {"name": "stag", "description": T("prompts.actions.ai_scientist.stag", locale="en")},
+        {"name": "hare", "description": T("prompts.actions.ai_scientist.hare", locale="en")},
     ],
     "coordination_game": [
-        {"name": "option_a", "description": T("prompts.actions.ai_scientist.option_a")},
-        {"name": "option_b", "description": T("prompts.actions.ai_scientist.option_b")},
+        {"name": "option_a", "description": T("prompts.actions.ai_scientist.option_a", locale="en")},
+        {"name": "option_b", "description": T("prompts.actions.ai_scientist.option_b", locale="en")},
     ],
     "policy_erosion": [
-        {"name": "transmit_faithfully", "description": T("prompts.actions.ai_scientist.transmit_faithfully")},
-        {"name": "reinterpret_downward", "description": T("prompts.actions.ai_scientist.reinterpret_downward")},
-        {"name": "comply_directive", "description": T("prompts.actions.ai_scientist.comply_directive")},
-        {"name": "resist_quietly", "description": T("prompts.actions.ai_scientist.resist_quietly")},
+        {"name": "transmit_faithfully", "description": T("prompts.actions.ai_scientist.transmit_faithfully", locale="en")},
+        {"name": "reinterpret_downward", "description": T("prompts.actions.ai_scientist.reinterpret_downward", locale="en")},
+        {"name": "comply_directive", "description": T("prompts.actions.ai_scientist.comply_directive", locale="en")},
+        {"name": "resist_quietly", "description": T("prompts.actions.ai_scientist.resist_quietly", locale="en")},
     ],
     "social_norm_disruption": [
-        {"name": "comply_publicly", "description": T("prompts.actions.ai_scientist.comply_publicly")},
-        {"name": "comply_covertly_resist", "description": T("prompts.actions.ai_scientist.comply_covertly_resist")},
-        {"name": "resist_openly", "description": T("prompts.actions.ai_scientist.resist_openly")},
-        {"name": "persuade_others", "description": T("prompts.actions.ai_scientist.persuade_others")},
+        {"name": "comply_publicly", "description": T("prompts.actions.ai_scientist.comply_publicly", locale="en")},
+        {"name": "comply_covertly_resist", "description": T("prompts.actions.ai_scientist.comply_covertly_resist", locale="en")},
+        {"name": "resist_openly", "description": T("prompts.actions.ai_scientist.resist_openly", locale="en")},
+        {"name": "persuade_others", "description": T("prompts.actions.ai_scientist.persuade_others", locale="en")},
     ],
     "echo_chamber": [
-        {"name": "express_opinion", "description": T("prompts.actions.ai_scientist.express_opinion")},
-        {"name": "reinforce_ingroup", "description": T("prompts.actions.ai_scientist.reinforce_ingroup")},
-        {"name": "challenge_outgroup", "description": T("prompts.actions.ai_scientist.challenge_outgroup")},
-        {"name": "disengage", "description": T("prompts.actions.ai_scientist.disengage")},
+        {"name": "express_opinion", "description": T("prompts.actions.ai_scientist.express_opinion", locale="en")},
+        {"name": "reinforce_ingroup", "description": T("prompts.actions.ai_scientist.reinforce_ingroup", locale="en")},
+        {"name": "challenge_outgroup", "description": T("prompts.actions.ai_scientist.challenge_outgroup", locale="en")},
+        {"name": "disengage", "description": T("prompts.actions.ai_scientist.disengage", locale="en")},
     ],
     "resource_scarcity": [
-        {"name": "share_resources", "description": T("prompts.actions.ai_scientist.share_resources")},
-        {"name": "hoard", "description": T("prompts.actions.ai_scientist.hoard")},
-        {"name": "propose_trade", "description": T("prompts.actions.ai_scientist.propose_trade")},
-        {"name": "form_contract", "description": T("prompts.actions.ai_scientist.form_contract")},
+        {"name": "share_resources", "description": T("prompts.actions.ai_scientist.share_resources", locale="en")},
+        {"name": "hoard", "description": T("prompts.actions.ai_scientist.hoard", locale="en")},
+        {"name": "propose_trade", "description": T("prompts.actions.ai_scientist.propose_trade", locale="en")},
+        {"name": "form_contract", "description": T("prompts.actions.ai_scientist.form_contract", locale="en")},
     ],
     "open_discussion": [
-        {"name": "speak", "description": T("prompts.actions.ai_scientist.speak")},
+        {"name": "speak", "description": T("prompts.actions.ai_scientist.speak", locale="en")},
     ],
     "council_chamber": [
-        {"name": "speak", "description": T("prompts.actions.ai_scientist.speak")},
-        {"name": "vote_yes", "description": T("prompts.actions.ai_scientist.vote_yes")},
-        {"name": "vote_no", "description": T("prompts.actions.ai_scientist.vote_no")},
-        {"name": "abstain", "description": T("prompts.actions.ai_scientist.abstain")},
+        {"name": "speak", "description": T("prompts.actions.ai_scientist.speak", locale="en")},
+        {"name": "vote_yes", "description": T("prompts.actions.ai_scientist.vote_yes", locale="en")},
+        {"name": "vote_no", "description": T("prompts.actions.ai_scientist.vote_no", locale="en")},
+        {"name": "abstain", "description": T("prompts.actions.ai_scientist.abstain", locale="en")},
     ],
     "contagion": [
-        {"name": "move", "description": T("prompts.actions.ai_scientist.move")},
-        {"name": "speak", "description": T("prompts.actions.ai_scientist.speak")},
+        {"name": "move", "description": T("prompts.actions.ai_scientist.move", locale="en")},
+        {"name": "speak", "description": T("prompts.actions.ai_scientist.speak", locale="en")},
     ],
 }
 
 CUSTOM_STRUCTURE_ACTIONS: dict[str, list[dict[str, str]]] = {
     "proposal_response_exchange": [
-        {"name": "propose_split", "description": T("prompts.actions.ai_scientist.propose_split")},
-        {"name": "approve_split", "description": T("prompts.actions.ai_scientist.approve_split")},
-        {"name": "reject_split", "description": T("prompts.actions.ai_scientist.reject_split")},
+        {"name": "propose_split", "description": T("prompts.actions.ai_scientist.propose_split", locale="en")},
+        {"name": "approve_split", "description": T("prompts.actions.ai_scientist.approve_split", locale="en")},
+        {"name": "reject_split", "description": T("prompts.actions.ai_scientist.reject_split", locale="en")},
     ],
     "competitive_pressure_choice": [
-        {"name": "choose_compete", "description": T("prompts.actions.ai_scientist.choose_compete")},
-        {"name": "choose_yield", "description": T("prompts.actions.ai_scientist.choose_yield")},
+        {"name": "choose_compete", "description": T("prompts.actions.ai_scientist.choose_compete", locale="en")},
+        {"name": "choose_yield", "description": T("prompts.actions.ai_scientist.choose_yield", locale="en")},
     ],
     "shared_target_threshold": [
-        {"name": "contribute_to_target", "description": T("prompts.actions.ai_scientist.contribute_to_target")},
-        {"name": "keep_private_reserves", "description": T("prompts.actions.ai_scientist.keep_private_reserves")},
-        {"name": "delegate_choice", "description": T("prompts.actions.ai_scientist.delegate_choice")},
+        {"name": "contribute_to_target", "description": T("prompts.actions.ai_scientist.contribute_to_target", locale="en")},
+        {"name": "keep_private_reserves", "description": T("prompts.actions.ai_scientist.keep_private_reserves", locale="en")},
+        {"name": "delegate_choice", "description": T("prompts.actions.ai_scientist.delegate_choice", locale="en")},
     ],
     "majority_visibility_pressure": [
-        {"name": "align_with_visible_majority", "description": T("prompts.actions.ai_scientist.align_with_visible_majority")},
-        {"name": "state_independent_answer", "description": T("prompts.actions.ai_scientist.state_independent_answer")},
+        {"name": "align_with_visible_majority", "description": T("prompts.actions.ai_scientist.align_with_visible_majority", locale="en")},
+        {"name": "state_independent_answer", "description": T("prompts.actions.ai_scientist.state_independent_answer", locale="en")},
     ],
     "threshold_adoption_process": [
-        {"name": "adopt_behavior", "description": T("prompts.actions.ai_scientist.adopt_behavior")},
-        {"name": "wait_for_more_adoption", "description": T("prompts.actions.ai_scientist.wait_for_more_adoption")},
+        {"name": "adopt_behavior", "description": T("prompts.actions.ai_scientist.adopt_behavior", locale="en")},
+        {"name": "wait_for_more_adoption", "description": T("prompts.actions.ai_scientist.wait_for_more_adoption", locale="en")},
     ],
     "escalating_bidding": [
-        {"name": "increase_bid", "description": T("prompts.actions.ai_scientist.increase_bid")},
-        {"name": "exit_bidding", "description": T("prompts.actions.ai_scientist.exit_bidding")},
+        {"name": "increase_bid", "description": T("prompts.actions.ai_scientist.increase_bid", locale="en")},
+        {"name": "exit_bidding", "description": T("prompts.actions.ai_scientist.exit_bidding", locale="en")},
     ],
     "attendance_capacity_avoidance": [
-        {"name": "attend", "description": T("prompts.actions.ai_scientist.attend")},
-        {"name": "stay_away", "description": T("prompts.actions.ai_scientist.stay_away")},
+        {"name": "attend", "description": T("prompts.actions.ai_scientist.attend", locale="en")},
+        {"name": "stay_away", "description": T("prompts.actions.ai_scientist.stay_away", locale="en")},
     ],
     "minority_side_choice": [
-        {"name": "choose_side_a", "description": T("prompts.actions.ai_scientist.choose_side_a")},
-        {"name": "choose_side_b", "description": T("prompts.actions.ai_scientist.choose_side_b")},
+        {"name": "choose_side_a", "description": T("prompts.actions.ai_scientist.choose_side_a", locale="en")},
+        {"name": "choose_side_b", "description": T("prompts.actions.ai_scientist.choose_side_b", locale="en")},
     ],
     "common_pool_extraction": [
-        {"name": "extract_resource", "description": T("prompts.actions.ai_scientist.extract_resource")},
-        {"name": "restrain_extraction", "description": T("prompts.actions.ai_scientist.restrain_extraction")},
-        {"name": "monitor_or_sanction", "description": T("prompts.actions.ai_scientist.monitor_or_sanction")},
+        {"name": "extract_resource", "description": T("prompts.actions.ai_scientist.extract_resource", locale="en")},
+        {"name": "restrain_extraction", "description": T("prompts.actions.ai_scientist.restrain_extraction", locale="en")},
+        {"name": "monitor_or_sanction", "description": T("prompts.actions.ai_scientist.monitor_or_sanction", locale="en")},
     ],
     "sanctioning_public_goods": [
-        {"name": "contribute_to_public_pool", "description": T("prompts.actions.ai_scientist.contribute_to_public_pool")},
-        {"name": "withhold_contribution", "description": T("prompts.actions.ai_scientist.withhold_contribution")},
-        {"name": "punish_free_rider", "description": T("prompts.actions.ai_scientist.punish_free_rider")},
+        {"name": "contribute_to_public_pool", "description": T("prompts.actions.ai_scientist.contribute_to_public_pool", locale="en")},
+        {"name": "withhold_contribution", "description": T("prompts.actions.ai_scientist.withhold_contribution", locale="en")},
+        {"name": "punish_free_rider", "description": T("prompts.actions.ai_scientist.punish_free_rider", locale="en")},
     ],
     "spatial_relocation_preference": [
-        {"name": "stay_put", "description": T("prompts.actions.ai_scientist.stay_put")},
-        {"name": "relocate", "description": T("prompts.actions.ai_scientist.relocate")},
+        {"name": "stay_put", "description": T("prompts.actions.ai_scientist.stay_put", locale="en")},
+        {"name": "relocate", "description": T("prompts.actions.ai_scientist.relocate", locale="en")},
     ],
     "sequential_information_cascade": [
-        {"name": "follow_private_signal", "description": T("prompts.actions.ai_scientist.follow_private_signal")},
-        {"name": "follow_observed_majority", "description": T("prompts.actions.ai_scientist.follow_observed_majority")},
+        {"name": "follow_private_signal", "description": T("prompts.actions.ai_scientist.follow_private_signal", locale="en")},
+        {"name": "follow_observed_majority", "description": T("prompts.actions.ai_scientist.follow_observed_majority", locale="en")},
     ],
     "organizational_garbage_can": [
-        {"name": "attach_problem", "description": T("prompts.actions.ai_scientist.attach_problem")},
-        {"name": "attach_solution", "description": T("prompts.actions.ai_scientist.attach_solution")},
-        {"name": "defer_or_drift", "description": T("prompts.actions.ai_scientist.defer_or_drift")},
+        {"name": "attach_problem", "description": T("prompts.actions.ai_scientist.attach_problem", locale="en")},
+        {"name": "attach_solution", "description": T("prompts.actions.ai_scientist.attach_solution", locale="en")},
+        {"name": "defer_or_drift", "description": T("prompts.actions.ai_scientist.defer_or_drift", locale="en")},
     ],
     "weighted_opinion_averaging": [
-        {"name": "update_belief", "description": T("prompts.actions.ai_scientist.update_belief")},
-        {"name": "hold_current_belief", "description": T("prompts.actions.ai_scientist.hold_current_belief")},
+        {"name": "update_belief", "description": T("prompts.actions.ai_scientist.update_belief", locale="en")},
+        {"name": "hold_current_belief", "description": T("prompts.actions.ai_scientist.hold_current_belief", locale="en")},
     ],
     "collective_motion_alignment": [
-        {"name": "align_heading", "description": T("prompts.actions.ai_scientist.align_heading")},
-        {"name": "separate_to_avoid_collision", "description": T("prompts.actions.ai_scientist.separate_to_avoid_collision")},
-        {"name": "cohere_with_group", "description": T("prompts.actions.ai_scientist.cohere_with_group")},
+        {"name": "align_heading", "description": T("prompts.actions.ai_scientist.align_heading", locale="en")},
+        {"name": "separate_to_avoid_collision", "description": T("prompts.actions.ai_scientist.separate_to_avoid_collision", locale="en")},
+        {"name": "cohere_with_group", "description": T("prompts.actions.ai_scientist.cohere_with_group", locale="en")},
     ],
     "resource_search_trade_ecology": [
-        {"name": "move_and_harvest", "description": T("prompts.actions.ai_scientist.move_and_harvest")},
-        {"name": "trade_resources", "description": T("prompts.actions.ai_scientist.trade_resources")},
-        {"name": "save_or_consume", "description": T("prompts.actions.ai_scientist.save_or_consume")},
+        {"name": "move_and_harvest", "description": T("prompts.actions.ai_scientist.move_and_harvest", locale="en")},
+        {"name": "trade_resources", "description": T("prompts.actions.ai_scientist.trade_resources", locale="en")},
+        {"name": "save_or_consume", "description": T("prompts.actions.ai_scientist.save_or_consume", locale="en")},
     ],
     "recruitment_switching": [
-        {"name": "stay_with_current_option", "description": T("prompts.actions.ai_scientist.stay_with_current_option")},
-        {"name": "switch_due_to_recruitment", "description": T("prompts.actions.ai_scientist.switch_due_to_recruitment")},
+        {"name": "stay_with_current_option", "description": T("prompts.actions.ai_scientist.stay_with_current_option", locale="en")},
+        {"name": "switch_due_to_recruitment", "description": T("prompts.actions.ai_scientist.switch_due_to_recruitment", locale="en")},
     ],
     "bystander_help_diffusion": [
-        {"name": "provide_help", "description": T("prompts.actions.ai_scientist.provide_help")},
-        {"name": "wait_for_others", "description": T("prompts.actions.ai_scientist.wait_for_others")},
+        {"name": "provide_help", "description": T("prompts.actions.ai_scientist.provide_help", locale="en")},
+        {"name": "wait_for_others", "description": T("prompts.actions.ai_scientist.wait_for_others", locale="en")},
     ],
     "authority_obedience_conflict": [
-        {"name": "comply_with_order", "description": T("prompts.actions.ai_scientist.comply_with_order")},
-        {"name": "refuse_order", "description": T("prompts.actions.ai_scientist.refuse_order")},
-        {"name": "withdraw_from_task", "description": T("prompts.actions.ai_scientist.withdraw_from_task")},
+        {"name": "comply_with_order", "description": T("prompts.actions.ai_scientist.comply_with_order", locale="en")},
+        {"name": "refuse_order", "description": T("prompts.actions.ai_scientist.refuse_order", locale="en")},
+        {"name": "withdraw_from_task", "description": T("prompts.actions.ai_scientist.withdraw_from_task", locale="en")},
     ],
     "intergroup_competition_superordinate_goal": [
-        {"name": "cooperate_with_ingroup", "description": T("prompts.actions.ai_scientist.cooperate_with_ingroup")},
-        {"name": "compete_with_outgroup", "description": T("prompts.actions.ai_scientist.compete_with_outgroup")},
-        {"name": "cooperate_across_groups", "description": T("prompts.actions.ai_scientist.cooperate_across_groups")},
+        {"name": "cooperate_with_ingroup", "description": T("prompts.actions.ai_scientist.cooperate_with_ingroup", locale="en")},
+        {"name": "compete_with_outgroup", "description": T("prompts.actions.ai_scientist.compete_with_outgroup", locale="en")},
+        {"name": "cooperate_across_groups", "description": T("prompts.actions.ai_scientist.cooperate_across_groups", locale="en")},
     ],
     "social_comparison_adjustment": [
-        {"name": "compare_with_peers", "description": T("prompts.actions.ai_scientist.compare_with_peers")},
-        {"name": "adjust_self_evaluation", "description": T("prompts.actions.ai_scientist.adjust_self_evaluation")},
-        {"name": "hold_current_self_view", "description": T("prompts.actions.ai_scientist.hold_current_self_view")},
+        {"name": "compare_with_peers", "description": T("prompts.actions.ai_scientist.compare_with_peers", locale="en")},
+        {"name": "adjust_self_evaluation", "description": T("prompts.actions.ai_scientist.adjust_self_evaluation", locale="en")},
+        {"name": "hold_current_self_view", "description": T("prompts.actions.ai_scientist.hold_current_self_view", locale="en")},
     ],
     "liquidity_run_coordination": [
-        {"name": "withdraw_early", "description": T("prompts.actions.ai_scientist.withdraw_early")},
-        {"name": "keep_deposit", "description": T("prompts.actions.ai_scientist.keep_deposit")},
+        {"name": "withdraw_early", "description": T("prompts.actions.ai_scientist.withdraw_early", locale="en")},
+        {"name": "keep_deposit", "description": T("prompts.actions.ai_scientist.keep_deposit", locale="en")},
     ],
     "asymmetric_quality_market": [
-        {"name": "quote_trade_price", "description": T("prompts.actions.ai_scientist.quote_trade_price")},
-        {"name": "certify_or_signal_quality", "description": T("prompts.actions.ai_scientist.certify_or_signal_quality")},
-        {"name": "refuse_trade", "description": T("prompts.actions.ai_scientist.refuse_trade")},
+        {"name": "quote_trade_price", "description": T("prompts.actions.ai_scientist.quote_trade_price", locale="en")},
+        {"name": "certify_or_signal_quality", "description": T("prompts.actions.ai_scientist.certify_or_signal_quality", locale="en")},
+        {"name": "refuse_trade", "description": T("prompts.actions.ai_scientist.refuse_trade", locale="en")},
     ],
     "adaptive_asset_market": [
-        {"name": "forecast_and_trade", "description": T("prompts.actions.ai_scientist.forecast_and_trade")},
-        {"name": "switch_trading_rule", "description": T("prompts.actions.ai_scientist.switch_trading_rule")},
-        {"name": "hold_position", "description": T("prompts.actions.ai_scientist.hold_position")},
+        {"name": "forecast_and_trade", "description": T("prompts.actions.ai_scientist.forecast_and_trade", locale="en")},
+        {"name": "switch_trading_rule", "description": T("prompts.actions.ai_scientist.switch_trading_rule", locale="en")},
+        {"name": "hold_position", "description": T("prompts.actions.ai_scientist.hold_position", locale="en")},
     ],
     "noise_arbitrage_market": [
-        {"name": "trade_on_noise_signal", "description": T("prompts.actions.ai_scientist.trade_on_noise_signal")},
-        {"name": "arbitrage_against_mispricing", "description": T("prompts.actions.ai_scientist.arbitrage_against_mispricing")},
-        {"name": "reduce_exposure", "description": T("prompts.actions.ai_scientist.reduce_exposure")},
+        {"name": "trade_on_noise_signal", "description": T("prompts.actions.ai_scientist.trade_on_noise_signal", locale="en")},
+        {"name": "arbitrage_against_mispricing", "description": T("prompts.actions.ai_scientist.arbitrage_against_mispricing", locale="en")},
+        {"name": "reduce_exposure", "description": T("prompts.actions.ai_scientist.reduce_exposure", locale="en")},
     ],
     "insider_market_making": [
-        {"name": "submit_informed_order", "description": T("prompts.actions.ai_scientist.submit_informed_order")},
-        {"name": "submit_noise_order", "description": T("prompts.actions.ai_scientist.submit_noise_order")},
-        {"name": "update_market_quote", "description": T("prompts.actions.ai_scientist.update_market_quote")},
+        {"name": "submit_informed_order", "description": T("prompts.actions.ai_scientist.submit_informed_order", locale="en")},
+        {"name": "submit_noise_order", "description": T("prompts.actions.ai_scientist.submit_noise_order", locale="en")},
+        {"name": "update_market_quote", "description": T("prompts.actions.ai_scientist.update_market_quote", locale="en")},
     ],
     "exploration_exploitation_learning": [
-        {"name": "explore_new_option", "description": T("prompts.actions.ai_scientist.explore_new_option")},
-        {"name": "exploit_known_option", "description": T("prompts.actions.ai_scientist.exploit_known_option")},
+        {"name": "explore_new_option", "description": T("prompts.actions.ai_scientist.explore_new_option", locale="en")},
+        {"name": "exploit_known_option", "description": T("prompts.actions.ai_scientist.exploit_known_option", locale="en")},
     ],
     "supply_chain_bullwhip": [
-        {"name": "place_replenishment_order", "description": T("prompts.actions.ai_scientist.place_replenishment_order")},
-        {"name": "ship_available_inventory", "description": T("prompts.actions.ai_scientist.ship_available_inventory")},
-        {"name": "hold_buffer_stock", "description": T("prompts.actions.ai_scientist.hold_buffer_stock")},
+        {"name": "place_replenishment_order", "description": T("prompts.actions.ai_scientist.place_replenishment_order", locale="en")},
+        {"name": "ship_available_inventory", "description": T("prompts.actions.ai_scientist.ship_available_inventory", locale="en")},
+        {"name": "hold_buffer_stock", "description": T("prompts.actions.ai_scientist.hold_buffer_stock", locale="en")},
     ],
     "innovation_diffusion_marketing": [
-        {"name": "adopt_product", "description": T("prompts.actions.ai_scientist.adopt_product")},
-        {"name": "delay_adoption", "description": T("prompts.actions.ai_scientist.delay_adoption")},
-        {"name": "promote_to_peers", "description": T("prompts.actions.ai_scientist.promote_to_peers")},
+        {"name": "adopt_product", "description": T("prompts.actions.ai_scientist.adopt_product", locale="en")},
+        {"name": "delay_adoption", "description": T("prompts.actions.ai_scientist.delay_adoption", locale="en")},
+        {"name": "promote_to_peers", "description": T("prompts.actions.ai_scientist.promote_to_peers", locale="en")},
     ],
     "common_pool_governance": [
-        {"name": "harvest_resource", "description": T("prompts.actions.ai_scientist.harvest_resource")},
-        {"name": "monitor_compliance", "description": T("prompts.actions.ai_scientist.monitor_compliance")},
-        {"name": "sanction_rule_breaker", "description": T("prompts.actions.ai_scientist.sanction_rule_breaker")},
+        {"name": "harvest_resource", "description": T("prompts.actions.ai_scientist.harvest_resource", locale="en")},
+        {"name": "monitor_compliance", "description": T("prompts.actions.ai_scientist.monitor_compliance", locale="en")},
+        {"name": "sanction_rule_breaker", "description": T("prompts.actions.ai_scientist.sanction_rule_breaker", locale="en")},
     ],
     "collective_action_free_rider": [
-        {"name": "contribute_to_collective_action", "description": T("prompts.actions.ai_scientist.contribute_to_collective_action")},
-        {"name": "free_ride_on_others", "description": T("prompts.actions.ai_scientist.free_ride_on_others")},
-        {"name": "offer_selective_incentive", "description": T("prompts.actions.ai_scientist.offer_selective_incentive")},
+        {"name": "contribute_to_collective_action", "description": T("prompts.actions.ai_scientist.contribute_to_collective_action", locale="en")},
+        {"name": "free_ride_on_others", "description": T("prompts.actions.ai_scientist.free_ride_on_others", locale="en")},
+        {"name": "offer_selective_incentive", "description": T("prompts.actions.ai_scientist.offer_selective_incentive", locale="en")},
     ],
     "spatial_price_competition": [
-        {"name": "choose_market_position", "description": T("prompts.actions.ai_scientist.choose_market_position")},
-        {"name": "set_price", "description": T("prompts.actions.ai_scientist.set_price")},
-        {"name": "buy_nearest_offer", "description": T("prompts.actions.ai_scientist.buy_nearest_offer")},
+        {"name": "choose_market_position", "description": T("prompts.actions.ai_scientist.choose_market_position", locale="en")},
+        {"name": "set_price", "description": T("prompts.actions.ai_scientist.set_price", locale="en")},
+        {"name": "buy_nearest_offer", "description": T("prompts.actions.ai_scientist.buy_nearest_offer", locale="en")},
     ],
     "reference_dependent_risk_choice": [
-        {"name": "choose_safe_option", "description": T("prompts.actions.ai_scientist.choose_safe_option")},
-        {"name": "choose_risky_option", "description": T("prompts.actions.ai_scientist.choose_risky_option")},
+        {"name": "choose_safe_option", "description": T("prompts.actions.ai_scientist.choose_safe_option", locale="en")},
+        {"name": "choose_risky_option", "description": T("prompts.actions.ai_scientist.choose_risky_option", locale="en")},
     ],
     "endowment_statusquo_exchange": [
-        {"name": "keep_endowed_item", "description": T("prompts.actions.ai_scientist.keep_endowed_item")},
-        {"name": "offer_exchange", "description": T("prompts.actions.ai_scientist.offer_exchange")},
+        {"name": "keep_endowed_item", "description": T("prompts.actions.ai_scientist.keep_endowed_item", locale="en")},
+        {"name": "offer_exchange", "description": T("prompts.actions.ai_scientist.offer_exchange", locale="en")},
     ],
 }
 
@@ -572,47 +572,47 @@ STRUCTURE_DISPLAY_TEXTS: dict[str, dict[str, str]] = {
 CUSTOM_ACTION_LIBRARY: list[dict[str, Any]] = [
     {
         "name": "share_status_update",
-        "description": T("prompts.actions.ai_scientist_custom.share_status_update"),
+        "description": T("prompts.actions.ai_scientist_custom.share_status_update", locale="en"),
         "patterns": [r"状态同步", r"广播", r"共享内存", r"共享", r"告知", r"回复", r"同步更新", r"notify", r"share", r"broadcast", r"update"],
     },
     {
         "name": "reroute_traffic",
-        "description": T("prompts.actions.ai_scientist_custom.reroute_traffic"),
+        "description": T("prompts.actions.ai_scientist_custom.reroute_traffic", locale="en"),
         "patterns": [r"重定向", r"绕行", r"引导", r"疏导", r"开放应急车道", r"route", r"reroute", r"redirect", r"traffic"],
     },
     {
         "name": "request_signal_priority",
-        "description": T("prompts.actions.ai_scientist_custom.request_signal_priority"),
+        "description": T("prompts.actions.ai_scientist_custom.request_signal_priority", locale="en"),
         "patterns": [r"信号灯", r"信号优先", r"绿灯", r"配时", r"绿色通道", r"priority", r"signal", r"green corridor"],
     },
     {
         "name": "dispatch_response_resources",
-        "description": T("prompts.actions.ai_scientist_custom.dispatch_response_resources"),
+        "description": T("prompts.actions.ai_scientist_custom.dispatch_response_resources", locale="en"),
         "patterns": [r"救护车", r"消防车", r"警车", r"调度", r"出发", r"dispatch", r"resource", r"rescue"],
     },
     {
         "name": "inspect_hazard_zone",
-        "description": T("prompts.actions.ai_scientist_custom.inspect_hazard_zone"),
+        "description": T("prompts.actions.ai_scientist_custom.inspect_hazard_zone", locale="en"),
         "patterns": [r"侦察", r"热成像", r"气体传感器", r"确认", r"扫描", r"三维环境模型", r"inspect", r"scan", r"sensor"],
     },
     {
         "name": "establish_safety_perimeter",
-        "description": T("prompts.actions.ai_scientist_custom.establish_safety_perimeter"),
+        "description": T("prompts.actions.ai_scientist_custom.establish_safety_perimeter", locale="en"),
         "patterns": [r"路障", r"隔离区", r"封锁", r"扩大隔离区", r"isolation", r"barrier", r"perimeter", r"blockade"],
     },
     {
         "name": "mitigate_hazard",
-        "description": T("prompts.actions.ai_scientist_custom.mitigate_hazard"),
+        "description": T("prompts.actions.ai_scientist_custom.mitigate_hazard", locale="en"),
         "patterns": [r"吸附", r"处置", r"泄漏", r"危险源", r"mitigate", r"contain", r"leak"],
     },
     {
         "name": "broadcast_public_guidance",
-        "description": T("prompts.actions.ai_scientist_custom.broadcast_public_guidance"),
+        "description": T("prompts.actions.ai_scientist_custom.broadcast_public_guidance", locale="en"),
         "patterns": [r"导航", r"电子屏", r"社交媒体", r"推送", r"个性化绕行", r"关闭门窗", r"public", r"guidance", r"alert"],
     },
     {
         "name": "replan_strategy",
-        "description": T("prompts.actions.ai_scientist_custom.replan_strategy"),
+        "description": T("prompts.actions.ai_scientist_custom.replan_strategy", locale="en"),
         "patterns": [r"调整", r"修正", r"升级", r"反馈循环", r"监测用户是否采纳", r"adaptive", r"replan", r"adjust"],
     },
 ]
@@ -2835,19 +2835,19 @@ def _extract_agents(text: str, preferred_scenario_id: str | None) -> list[dict[s
     if preferred_scenario_id == "policy_erosion":
         per_tier = count or 5
         return [
-            {"label": "top tier officials", "description": T("prompts.roles.top_tier_officials"), "count": per_tier},
-            {"label": "middle managers", "description": T("prompts.roles.middle_managers"), "count": per_tier},
-            {"label": "frontline staff", "description": T("prompts.roles.frontline_staff"), "count": per_tier},
+            {"label": "top tier officials", "description": T("prompts.roles.top_tier_officials", locale="en"), "count": per_tier},
+            {"label": "middle managers", "description": T("prompts.roles.middle_managers", locale="en"), "count": per_tier},
+            {"label": "frontline staff", "description": T("prompts.roles.frontline_staff", locale="en"), "count": per_tier},
         ]
 
     if preferred_scenario_id == "council_chamber":
         return [
-            {"label": "council members", "description": T("prompts.roles.council_members"), "count": count or 5},
+            {"label": "council members", "description": T("prompts.roles.council_members", locale="en"), "count": count or 5},
         ]
 
     if preferred_scenario_id == "prisoners_dilemma" or "prisoner" in lowered:
         return [
-            {"label": "players", "description": T("prompts.roles.prisoners_dilemma_players"), "count": 2},
+            {"label": "players", "description": T("prompts.roles.prisoners_dilemma_players", locale="en"), "count": 2},
         ]
 
     if any(term in lowered for term in ("manager", "official", "employee", "worker", "resident", "citizen", "household")):
@@ -2868,7 +2868,7 @@ def _extract_agents(text: str, preferred_scenario_id: str | None) -> list[dict[s
             return roles[:4]
 
     return [
-        {"label": "participants", "description": T("prompts.roles.default_participants"), "count": count or 4},
+        {"label": "participants", "description": T("prompts.roles.default_participants", locale="en"), "count": count or 4},
     ]
 
 

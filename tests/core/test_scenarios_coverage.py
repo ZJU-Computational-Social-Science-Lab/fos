@@ -8,7 +8,6 @@ Contains: TestTranslateScenario, TestSupportedFilter, TestCategoryActions,
           TestMutationSafety, TestRegistryCompleteness
 """
 
-import pytest
 from fos.core.scenarios.registry import (
     ALL_SCENARIOS,
     _translate_scenario,

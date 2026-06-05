@@ -30,6 +30,38 @@ from fos.core.llm.client import LLMClient
 logger = logging.getLogger(__name__)
 
 
+def _repair_single_choose_action(
+    result: dict[str, Any],
+    game_config: GameConfig,
+) -> dict[str, Any]:
+    """Move a mistaken choice value into the parameter for a single choose action."""
+    if game_config.action_type != "discrete":
+        return result
+    if len(game_config.actions) != 1:
+        return result
+
+    action_name = game_config.actions[0]
+    if not action_name.startswith("choose_"):
+        return result
+
+    field = game_config.output_field
+    raw_value = result.get(field)
+    if not isinstance(raw_value, str) or raw_value.strip() == "":
+        return result
+
+    if raw_value.strip().lower() == action_name.lower():
+        return result
+
+    parameter_name = action_name.removeprefix("choose_")
+    if parameter_name in result:
+        return result
+
+    repaired = dict(result)
+    repaired[field] = action_name
+    repaired[parameter_name] = raw_value.strip()
+    return repaired
+
+
 @dataclass
 class ActionResult:
     """Result of processing an LLM action response.
@@ -102,7 +134,7 @@ class ExperimentController:
         """
         debug_log = []
 
-        debug_log.append(f"\n--- CONTROLLER: Processing Response ---\n")
+        debug_log.append("\n--- CONTROLLER: Processing Response ---\n")
         debug_log.append(f"  agent: {agent.name}\n")
         debug_log.append(f"  output_field: {game_config.output_field}\n")
         debug_log.append(f"  allowed actions: {game_config.actions}\n")
@@ -163,15 +195,21 @@ class ExperimentController:
                     debug_log=debug_log
                 )
 
+        repaired = _repair_single_choose_action(parsed, game_config)
+        if repaired != parsed:
+            debug_log.append(f"  repaired single choose action: {repaired}\n")
+            parsed = repaired
+
         # Step 2: Validate against game config
         validated = validate_and_clamp(parsed, game_config)
         if validated is None:
-            debug_log.append(f"  ERROR: Validation failed - action not in allowed set\n")
-            debug_log.append(f"  parsed action field: {parsed.get(game_config.output_field, '')}\n")
+            invalid_action = parsed.get(game_config.output_field, "")
+            debug_log.append("  ERROR: Validation failed - action not in allowed set\n")
+            debug_log.append(f"  parsed action field: {invalid_action}\n")
             logger.error(f"Validation failed for {agent.name}: {parsed}")
             return ActionResult(
                 success=False,
-                action_name=parsed.get(game_config.output_field, ""),
+                action_name=invalid_action,
                 parameters={},
                 summary="",
                 agent_name=agent.name,
@@ -281,7 +319,7 @@ class ExperimentController:
                     break
         should_follow_up = bool(action_schemas and canonical_action_name in action_schemas)
 
-        debug_log.append(f"\n--- FOLLOW-UP GATING ---\n")
+        debug_log.append("\n--- FOLLOW-UP GATING ---\n")
         debug_log.append(f"  action_name: {action_name}\n")
         debug_log.append(f"  canonical_action_name: {canonical_action_name}\n")
         debug_log.append(f"  schema_keys: {schema_keys}\n")
@@ -300,7 +338,7 @@ class ExperimentController:
                 followup_mode = "json"
 
             debug_log.append(f"\n{'='*80}\n")
-            debug_log.append(f"FOLLOW-UP PROMPT REQUIRED\n")
+            debug_log.append("FOLLOW-UP PROMPT REQUIRED\n")
             debug_log.append(f"{'='*80}\n")
             debug_log.append(f"  action: {action_name}\n")
             debug_log.append(f"  mode: {followup_mode}\n")
@@ -330,9 +368,9 @@ class ExperimentController:
             )
 
             # Log the follow-up prompt
-            debug_log.append(f"\n--- FOLLOW-UP PROMPT ---\n")
+            debug_log.append("\n--- FOLLOW-UP PROMPT ---\n")
             debug_log.append(followup_prompt)
-            debug_log.append(f"\n--- END FOLLOW-UP PROMPT ---\n\n")
+            debug_log.append("\n--- END FOLLOW-UP PROMPT ---\n\n")
 
 
             try:
@@ -343,9 +381,9 @@ class ExperimentController:
                 )
 
                 # Log the follow-up response IMMEDIATELY after the prompt
-                debug_log.append(f"\n--- FOLLOW-UP RESPONSE ---\n")
+                debug_log.append("\n--- FOLLOW-UP RESPONSE ---\n")
                 debug_log.append(followup_response)
-                debug_log.append(f"\n--- END FOLLOW-UP RESPONSE ---\n\n")
+                debug_log.append("\n--- END FOLLOW-UP RESPONSE ---\n\n")
 
 
                 # Parse the follow-up response based on mode
@@ -368,10 +406,10 @@ class ExperimentController:
                 summary = f"{agent.name} chose {action_name} ({param_str})"
 
                 # Add final result to debug log
-                debug_log.append(f"\n--- PROCESSED RESULT ---\n")
+                debug_log.append("\n--- PROCESSED RESULT ---\n")
                 debug_log.append(f"  action: {action_name}\n")
-                debug_log.append(f"  success: True\n")
-                debug_log.append(f"  skipped: False\n")
+                debug_log.append("  success: True\n")
+                debug_log.append("  skipped: False\n")
                 debug_log.append(f"  summary: {summary}\n")
                 debug_log.append("\n" + "-"*80 + "\n\n")
 
@@ -394,10 +432,10 @@ class ExperimentController:
                 return initial_result
 
         # No follow-up needed - add final result to debug log
-        debug_log.append(f"\n--- PROCESSED RESULT ---\n")
+        debug_log.append("\n--- PROCESSED RESULT ---\n")
         debug_log.append(f"  action: {action_name}\n")
-        debug_log.append(f"  success: True\n")
-        debug_log.append(f"  skipped: False\n")
+        debug_log.append("  success: True\n")
+        debug_log.append("  skipped: False\n")
         debug_log.append(f"  summary: {initial_result.summary}\n")
         debug_log.append("\n" + "-"*80 + "\n\n")
 

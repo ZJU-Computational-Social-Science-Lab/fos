@@ -1,9 +1,11 @@
 # src/fos/backend/api/routes/llm.py
 from __future__ import annotations
 
-from typing import Any, List, Optional, Dict
+import json
 import logging
-logger = logging.getLogger(__name__)
+import re
+from typing import Any, Dict, List, Optional
+
 from litestar import Router, post
 from litestar.connection import Request
 from pydantic import BaseModel, Field
@@ -23,6 +25,9 @@ from ....core.llm_config import LLMConfig, guess_supports_vision
 
 # Import stratified distribution for balanced provider assignment across demographics
 from ...services.stratified_distribution import stratified_provider_assignment
+
+logger = logging.getLogger(__name__)
+
 
 class GenerateAgentsRequest(BaseModel):
     count: int = Field(5, ge=1, le=50)
@@ -161,9 +166,6 @@ async def generate_agents(
         raw_text = llm.chat(messages)
    # 打印原始输出用于调试
         logger.debug(f"LLM raw output (first 500 chars): {raw_text[:500]}")
-        
-        import json
-        import re
         
         # 清理 LLM 输出：去除 markdown 代码块标记
         cleaned_text = raw_text.strip()

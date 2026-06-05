@@ -2,7 +2,6 @@
 Tests for validation module.
 """
 
-import pytest
 from tests.llm_prompt_testing.prompt_v2.game_configs import GameConfig, PRISONERS_DILEMMA, PUBLIC_GOODS
 from tests.llm_prompt_testing.prompt_v2.validation import (
     strip_markdown_fences,

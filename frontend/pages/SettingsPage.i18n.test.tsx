@@ -22,7 +22,7 @@ vi.mock("../components/provider-management/ProviderManagementPage", () => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => {
-      const language = (globalThis as { i18n: { language: "en" | "zh" } }).i18n.language;
+      const language = (globalThis as unknown as { i18n: { language: "en" | "zh" } }).i18n.language;
       const translations: Record<"en" | "zh", Record<string, string>> = {
         en: {
           "settings.title": "Settings",
@@ -61,7 +61,7 @@ vi.mock("react-i18next", () => ({
       };
       return translations[language][key] ?? key;
     },
-    i18n: (globalThis as { i18n: { language: "en" | "zh" } }).i18n,
+    i18n: (globalThis as unknown as { i18n: { language: "en" | "zh" } }).i18n,
   }),
 }));
 

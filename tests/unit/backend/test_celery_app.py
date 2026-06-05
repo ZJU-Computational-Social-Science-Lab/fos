@@ -9,7 +9,6 @@ import builtins
 import importlib.util
 import sys
 from pathlib import Path
-from types import ModuleType
 
 
 def test_celery_app_falls_back_when_celery_is_not_installed(monkeypatch) -> None:

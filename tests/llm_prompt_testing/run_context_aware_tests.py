@@ -26,7 +26,7 @@ from typing import List, Optional
 
 sys.path.insert(0, "tests/llm_prompt_testing")
 
-from tests.llm_prompt_testing.action_parser import parse_action, ParseResult
+from tests.llm_prompt_testing.action_parser import parse_action
 from tests.llm_prompt_testing.agents import ARCHETYPAL_AGENTS
 from tests.llm_prompt_testing.config import AVAILABLE_MODELS
 from tests.llm_prompt_testing.ollama_client import OllamaClient, ChatMessage
@@ -397,7 +397,7 @@ async def run_context_tests(
     total_tests = len(models) * len(formats) * total_scenarios
 
     print(f"\n{'='*70}")
-    print(f"Context-Aware Action Testing")
+    print("Context-Aware Action Testing")
     print(f"Models: {len(models)} | Formats: {len(formats)} | Actions: {len(actions_to_test)}")
     print(f"Total scenarios: {total_scenarios} | Total tests: {total_tests}\n")
 
@@ -507,7 +507,7 @@ def print_context_summary(summary: dict, models: List[str], formats: List[str]) 
 
     print(f"\n{'='*70}")
     print(f"OVERALL: {pass_rate:.0f}% of actions work")
-    print(f"TARGET: 85%")
+    print("TARGET: 85%")
 
     if pass_rate >= 85:
         print("[SUCCESS] Target met!")
@@ -586,7 +586,7 @@ def main():
     print("=" * 70)
     print("Social-Sim Context-Aware Action Testing")
     print("=" * 70)
-    print(f"\nConfiguration:")
+    print("\nConfiguration:")
     print(f"  Models: {', '.join(models)}")
     print(f"  Formats: {', '.join(formats)}")
     print(f"  Actions: {len(actions_to_test)}")

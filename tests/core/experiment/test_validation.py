@@ -2,7 +2,6 @@
 Tests for validation layer (Layer 3 of Three-Layer Architecture).
 """
 
-import pytest
 
 from fos.core.experiment.game_configs import PRISONERS_DILEMMA, MINIMUM_EFFORT
 from fos.core.experiment.validation import (

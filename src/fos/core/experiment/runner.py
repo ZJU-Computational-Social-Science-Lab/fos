@@ -24,12 +24,12 @@ from fos.core.experiment.game_configs import GameConfig
 from fos.core.experiment.kernel import ExperimentKernel
 from fos.core.experiment.controller import ExperimentController, ActionResult
 from fos.core.experiment.round_context import RoundContextManager
-from fos.core.experiment.prompt_builder import build_prompt, build_reprompt
+from fos.core.experiment.prompt_builder import build_prompt
 from fos.core.experiment.action_handler import ActionHandler
 from fos.i18n import T
 from fos.core.experiment.payoff.engine import PayoffEngine
 from fos.core.experiment.feedback.builder import CoordinationFeedbackBuilder
-from fos.core.experiment.debug_log import get_debug_file, write_debug, reset_debug_file
+from fos.core.experiment.debug_log import write_debug
 from fos.core.llm.client import LLMClient
 
 logger = logging.getLogger(__name__)
@@ -922,6 +922,8 @@ class ExperimentRunner:
         # Build neighbor context from social graph
         neighbor_context = ""
         graph = self.scene_state.get("graph", {})
+        if not graph and self.scene is not None:
+            graph = getattr(getattr(self.scene, "config", None), "social_network", {}) or {}
         edges = graph.get("edges", [])
         if edges:
             neighbors = [b for a, b in edges if a == agent.name] + [a for a, b in edges if b == agent.name]
@@ -965,7 +967,7 @@ class ExperimentRunner:
         debug_buffer.append(f"## VISIBILITY MODE: {self.round_visibility}\n")
 
         # ACTION FILTERING DEBUG - show what actions were filtered
-        debug_buffer.append(f"\n--- ACTION FILTERING ---\n")
+        debug_buffer.append("\n--- ACTION FILTERING ---\n")
         debug_buffer.append(f"  self.scene type: {type(self.scene).__name__ if self.scene else 'None'}\n")
         debug_buffer.append(f"  has get_scene_actions: {hasattr(self.scene, 'get_scene_actions') if self.scene else 'N/A'}\n")
         # PGG Phase debug
@@ -974,11 +976,11 @@ class ExperimentRunner:
         if allowed_actions:
             debug_buffer.append(f"  filtered actions for {agent.name}: {allowed_actions}\n")
         else:
-            debug_buffer.append(f"  filtered actions: None (no filtering available)\n")
+            debug_buffer.append("  filtered actions: None (no filtering available)\n")
 
         # --- NETWORK VISIBILITY DEBUG ---
         if self.information_model and self.information_model.scope_type in ("neighborhood", "neighbor"):
-            debug_buffer.append(f"\n--- NETWORK VISIBILITY ---\n")
+            debug_buffer.append("\n--- NETWORK VISIBILITY ---\n")
             graph = self.scene_state.get("graph", {})
             edges = graph.get("edges", [])
             if edges:
@@ -996,7 +998,7 @@ class ExperimentRunner:
                     neighbor_names = sorted(neighbor_map.get(agent_obj.name, []))
                     debug_buffer.append(f"  {agent_obj.name}: connected to {neighbor_names}\n")
             else:
-                debug_buffer.append(f"  (No network edges configured)\n")
+                debug_buffer.append("  (No network edges configured)\n")
 
         # --- PAIRINGS (for paired games) ---
         if self.information_model and self.information_model.scope_type == "pair" and self.information_model.pairing_fn:
@@ -1005,7 +1007,7 @@ class ExperimentRunner:
             for a, b in pairs:
                 debug_buffer.append(f"  {a} paired with {b}\n")
 
-        debug_buffer.append(f"--- AGENT PROPERTIES ---\n")
+        debug_buffer.append("--- AGENT PROPERTIES ---\n")
         for k, v in agent.get_properties_dict().items():
             debug_buffer.append(f"  {k}: {v}\n")
 
@@ -1016,18 +1018,18 @@ class ExperimentRunner:
             _resolved_client = self.llm_client
         _p = _resolved_client.provider if hasattr(_resolved_client, "provider") else None
         if _p:
-            debug_buffer.append(f"\n--- LLM CLIENT (actual) ---\n")
+            debug_buffer.append("\n--- LLM CLIENT (actual) ---\n")
             debug_buffer.append(f"  source: {'per-agent distribution' if agent.name in (self.agent_llm_clients or {}) else 'default/fallback'}\n")
             debug_buffer.append(f"  provider_id: {agent.properties.get('provider_id', 'N/A')}\n")
             debug_buffer.append(f"  dialect: {_p.dialect}\n")
             debug_buffer.append(f"  model: {_p.model}\n")
             debug_buffer.append(f"  base_url: {_p.base_url}\n")
         else:
-            debug_buffer.append(f"\n--- LLM CLIENT (actual) ---\n")
+            debug_buffer.append("\n--- LLM CLIENT (actual) ---\n")
             debug_buffer.append(f"  source: {'per-agent distribution' if agent.name in (self.agent_llm_clients or {}) else 'default/fallback'}\n")
             debug_buffer.append(f"  provider_id: {agent.properties.get('provider_id', 'N/A')}\n")
             debug_buffer.append(f"  client type: {type(_resolved_client).__name__}\n")
-        debug_buffer.append(f"\n--- GAME CONFIG ---\n")
+        debug_buffer.append("\n--- GAME CONFIG ---\n")
         debug_buffer.append(f"  scenario: {self.game_config.description[:100]}...\n")
         # GAP-CLOSURE-01: Show filtered actions in debug output
         if allowed_actions:
@@ -1038,14 +1040,14 @@ class ExperimentRunner:
         debug_buffer.append(f"  output_field: {self.game_config.output_field}\n")
         if self.game_config.action_descriptions:
             debug_buffer.append(f"  action_descriptions: {self.game_config.action_descriptions}\n")
-        debug_buffer.append(f"\n--- CONTEXT (filtered for this agent) ---\n")
+        debug_buffer.append("\n--- CONTEXT (filtered for this agent) ---\n")
         debug_buffer.append(f"{context[:500]}...\n" if len(context) > 500 else f"{context}\n")
         debug_buffer.append(f"\n{'='*80}\n")
-        debug_buffer.append(f"FULL PROMPT SENT TO LLM\n")
+        debug_buffer.append("FULL PROMPT SENT TO LLM\n")
         debug_buffer.append(f"{'='*80}\n\n")
         debug_buffer.append(prompt)
         debug_buffer.append(f"\n\n{'='*80}\n")
-        debug_buffer.append(f"END OF PROMPT\n")
+        debug_buffer.append("END OF PROMPT\n")
         debug_buffer.append(f"{'='*80}\n\n")
 
         logger.debug(f"Prompting agent {agent.name} for round {round_num}")
@@ -1068,7 +1070,7 @@ class ExperimentRunner:
             if not raw_response or not raw_response.strip():
                 logger.error(f"Empty response from LLM for {agent.name}")
                 debug_buffer.append(f"\n{'!'*80}\n")
-                debug_buffer.append(f"EMPTY RESPONSE\n")
+                debug_buffer.append("EMPTY RESPONSE\n")
                 debug_buffer.append(f"{'!'*80}\n")
                 debug_buffer.append(f"Agent {agent.name} received empty response from LLM\n\n")
                 # Write debug output atomically
@@ -1087,11 +1089,11 @@ class ExperimentRunner:
 
             # Add response to debug buffer
             debug_buffer.append(f"\n{'='*80}\n")
-            debug_buffer.append(f"LLM RAW RESPONSE\n")
+            debug_buffer.append("LLM RAW RESPONSE\n")
             debug_buffer.append(f"{'='*80}\n\n")
             debug_buffer.append(raw_response)
             debug_buffer.append(f"\n\n{'='*80}\n")
-            debug_buffer.append(f"END OF RESPONSE\n")
+            debug_buffer.append("END OF RESPONSE\n")
             debug_buffer.append(f"{'='*80}\n\n")
 
             logger.debug(f"LLM response for {agent.name}: {len(raw_response)} chars")
@@ -1126,8 +1128,11 @@ class ExperimentRunner:
             if self.scene and getattr(getattr(self.scene, "config", None), "scenario_id", None) == "custom":
                 custom_actions = allowed_actions or self.game_config.actions
                 for action_name in custom_actions:
-                    action_schemas[str(action_name)] = self._build_custom_action_followup_schema(
-                        str(action_name),
+                    custom_action_name = str(action_name)
+                    if custom_action_name in action_schemas:
+                        continue
+                    action_schemas[custom_action_name] = self._build_custom_action_followup_schema(
+                        custom_action_name,
                         _locale,
                     )
                     logger.debug(
@@ -1152,6 +1157,11 @@ class ExperimentRunner:
             if result.debug_log:
                 debug_buffer.extend(result.debug_log)
 
+            if result.skipped and result.error == "Action not in allowed set":
+                result.parameters = {"invalid_action": result.action_name}
+                result.action_name = "skip"
+                result.summary = f"{agent.name} skipped"
+
             # Write all debug output atomically (prompt + response + controller + followup)
             await self._write_debug_atomically(debug_buffer)
 
@@ -1164,7 +1174,7 @@ class ExperimentRunner:
 
         except Exception as e:
             debug_buffer.append(f"\n{'!'*80}\n")
-            debug_buffer.append(f"ERROR\n")
+            debug_buffer.append("ERROR\n")
             debug_buffer.append(f"{'!'*80}\n")
             debug_buffer.append(f"Agent {agent.name} failed: {e}\n\n")
             # Write debug output atomically

@@ -8,21 +8,16 @@ Tests the following scenarios:
 - Public Goods (group, pool)
 """
 
-import asyncio
 import pytest
-from pathlib import Path
 from typing import Dict, Any, List
 
 from fos.core.llm_config import LLMConfig
-from fos.core.llm import create_llm_client
 from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.game_configs import GameConfig
 from fos.core.experiment.runner import ExperimentRunner
-from fos.core.experiment.round_context import RoundContextManager
 
 from tests.smoke_tests.utils import (
     SmokeTestOutput,
-    build_game_config,
     build_experiment_agent,
 )
 
@@ -206,7 +201,7 @@ async def test_pd_two_agents(default_llm_client, output_dir):
     ]
 
     # Create output file
-    filename = f"prisoners_dilemma_phi4-mini_two_agents.txt"
+    filename = "prisoners_dilemma_phi4-mini_two_agents.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "prisoners_dilemma", "phi4-mini", "two_agents") as out:
@@ -251,7 +246,7 @@ async def test_pd_four_agents_paired(default_llm_client, output_dir):
         build_experiment_agent("Dave", llm_config, role_prompt="You are Dave."),
     ]
 
-    filename = f"prisoners_dilemma_phi4-mini_four_agents.txt"
+    filename = "prisoners_dilemma_phi4-mini_four_agents.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "prisoners_dilemma", "phi4-mini", "four_agents") as out:
@@ -294,7 +289,7 @@ async def test_bos_coordination(default_llm_client, output_dir):
         build_experiment_agent("Partner2", llm_config, role_prompt="You prefer football."),
     ]
 
-    filename = f"battle_of_sexes_phi4-mini_coordination.txt"
+    filename = "battle_of_sexes_phi4-mini_coordination.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "battle_of_sexes", "phi4-mini", "coordination") as out:
@@ -340,7 +335,7 @@ async def test_stag_hunt_group(default_llm_client, output_dir):
         build_experiment_agent("Hunter3", llm_config, role_prompt="You are Hunter3."),
     ]
 
-    filename = f"stag_hunt_phi4-mini_group.txt"
+    filename = "stag_hunt_phi4-mini_group.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "stag_hunt", "phi4-mini", "group") as out:
@@ -386,7 +381,7 @@ async def test_public_goods_pool(default_llm_client, output_dir):
         build_experiment_agent("Player3", llm_config, role_prompt="You are Player3 with 20 tokens."),
     ]
 
-    filename = f"public_goods_phi4-mini_pool.txt"
+    filename = "public_goods_phi4-mini_pool.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "public_goods", "phi4-mini", "pool") as out:
@@ -431,7 +426,7 @@ async def test_pd_two_rounds(default_llm_client, output_dir):
         build_experiment_agent("Bob", llm_config, role_prompt="You are Bob."),
     ]
 
-    filename = f"prisoners_dilemma_phi4-mini_two_rounds.txt"
+    filename = "prisoners_dilemma_phi4-mini_two_rounds.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "prisoners_dilemma", "phi4-mini", "two_rounds") as out:

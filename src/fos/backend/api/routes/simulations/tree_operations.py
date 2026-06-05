@@ -22,14 +22,12 @@ Contains:
 
 import asyncio
 import logging
-from typing import Any
 
 from litestar import get, post, delete
 from litestar.connection import Request
 from litestar.exceptions import HTTPException
 
 from fos.backend.core.timing import log_time
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from fos.backend.core.config import get_settings
 from fos.backend.core.database import get_session
@@ -47,7 +45,6 @@ from .helpers import (
     broadcast_tree_event,
 )
 from fos.backend.services.simtree_runtime import (
-    SIM_TREE_REGISTRY,
     get_runtime_agent_count,
     get_runtime_agent_map,
     get_runtime_agent_profile,

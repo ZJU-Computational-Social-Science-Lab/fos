@@ -99,7 +99,7 @@ class TestTokenReset:
                         print(f"  {agent_name}: {tokens} tokens")
 
                 # Run the round (async)
-                result = await scene.run_round(
+                await scene.run_round(
                     event_emitter=lambda *args, **kwargs: None,  # Mock event emitter
                 )
 
@@ -133,7 +133,6 @@ class TestTokenReset:
         """
         from fos.core.experiment.payoff.engine import PayoffEngine
         from fos.core.experiment.controller import ActionResult
-        from fos.core.experiment.state import ExperimentState, AgentState
 
         print("\n" + "="*60)
         print("PAYOFF CALCULATION TEST")

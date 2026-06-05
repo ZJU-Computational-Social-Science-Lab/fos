@@ -20,6 +20,7 @@ import json
 import math
 import random
 import re
+import warnings
 from typing import List, Dict, Any, Optional
 
 from fos.i18n import T
@@ -112,13 +113,14 @@ def generate_archetype_template(
 
     Returns:
         Dict with "description" (str) and "roles" (List[str])
-
-    Raises:
-        RuntimeError: If LLM response is invalid or cannot be parsed
-        TimeoutError: If LLM call times out
     """
     attrs_str = ", ".join(f"{k}: {v}" for k, v in archetype["attributes"].items())
     archetype_label = archetype.get("label", attrs_str)
+
+    def fallback_template(description: str | None = None, roles: list[str] | None = None) -> Dict[str, Any]:
+        safe_description = description or f"A person matching this profile: {archetype_label}."
+        safe_roles = roles or ["Citizen", "Worker", "Student", "Professional", "Other"]
+        return {"description": safe_description, "roles": safe_roles}
 
     # Use T() for locale-aware prompts
     prompt = T('prompts.archetype.prompt', locale=language, attrs=attrs_str)
@@ -128,15 +130,24 @@ def generate_archetype_template(
         {"role": "user", "content": prompt}
     ]
 
-    import threading
+    if timeout <= 0:
+        warnings.warn(f"LLM timeout for archetype '{attrs_str}'", UserWarning)
+        return fallback_template()
+
     import queue
+    import threading
 
     result_queue = queue.Queue()
     exception_queue = queue.Queue()
 
     def llm_call():
         try:
-            result = llm_client.chat(messages, json_mode=True)
+            try:
+                result = llm_client.chat(messages, json_mode=True)
+            except TypeError as error:
+                if "json_mode" not in str(error):
+                    raise
+                result = llm_client.chat(messages)
             result_queue.put(result)
         except Exception as e:
             exception_queue.put(e)
@@ -146,19 +157,23 @@ def generate_archetype_template(
     llm_thread.join(timeout=timeout)
 
     if llm_thread.is_alive():
-        raise TimeoutError(T('api.errors.llm.timeout', archetype=attrs_str, timeout=timeout))
+        warnings.warn(f"LLM timeout for archetype '{attrs_str}'", UserWarning)
+        return fallback_template()
 
     if not exception_queue.empty():
         e = exception_queue.get()
-        raise RuntimeError(T('api.errors.llm.call_failed', archetype=attrs_str, error=str(e))) from e
+        warnings.warn(f"LLM error for archetype '{attrs_str}': {e}", UserWarning)
+        return fallback_template()
 
     if result_queue.empty():
-        raise RuntimeError(T('api.errors.llm.no_response', archetype=attrs_str))
+        warnings.warn(f"LLM error for archetype '{attrs_str}': no response", UserWarning)
+        return fallback_template()
 
     response = result_queue.get()
 
     if not response or not response.strip():
-        raise RuntimeError(T('api.errors.llm.empty_response', archetype=attrs_str))
+        warnings.warn(f"LLM returned an empty response for archetype '{attrs_str}'", UserWarning)
+        return fallback_template()
 
     cleaned = response.strip()
     cleaned = re.sub(r'<think[\s\S]*?</think\s*>', '', cleaned)
@@ -168,25 +183,38 @@ def generate_archetype_template(
 
     json_match = re.search(r'\{[\s\S]*\}', cleaned)
     if not json_match:
-        raise RuntimeError(T('api.errors.llm.no_json_in_response', archetype=attrs_str))
+        warnings.warn(f"No JSON found in LLM response for archetype '{attrs_str}'", UserWarning)
+        return fallback_template()
 
     try:
         parsed = json.loads(json_match.group())
     except json.JSONDecodeError as e:
-        raise RuntimeError(T('api.errors.llm.invalid_json', archetype=attrs_str, error=str(e))) from e
+        warnings.warn(f"Invalid JSON for archetype '{attrs_str}': {e}", UserWarning)
+        return fallback_template()
 
     if "description" not in parsed or not isinstance(parsed["description"], str):
-        raise RuntimeError(T('api.errors.llm.missing_field', archetype=attrs_str, field='description'))
+        warnings.warn(f"Missing .description for archetype '{attrs_str}'", UserWarning)
+        description = None
+    else:
+        description = parsed["description"]
 
     if "roles" not in parsed or not isinstance(parsed["roles"], list) or len(parsed["roles"]) == 0:
-        raise RuntimeError(T('api.errors.llm.missing_field', archetype=attrs_str, field='roles'))
+        warnings.warn(f"Missing or invalid .roles for archetype '{attrs_str}'", UserWarning)
+        return fallback_template(description=description)
 
-    valid_roles = [r.strip() for r in parsed["roles"] if isinstance(r, str) and r.strip()]
+    valid_roles = []
+    for role in parsed["roles"]:
+        if isinstance(role, str) and role.strip():
+            valid_roles.append(role.strip())
+        else:
+            warnings.warn(f"Role {role!r} is not a valid string and was skipped", UserWarning)
+
     if not valid_roles:
-        raise RuntimeError(T('api.errors.llm.missing_field', archetype=attrs_str, field='roles'))
+        warnings.warn(f"Missing or invalid .roles for archetype '{attrs_str}'", UserWarning)
+        return fallback_template(description=description)
 
     return {
-        "description": parsed["description"],
+        "description": description or fallback_template()["description"],
         "roles": valid_roles
     }
 

@@ -8,7 +8,6 @@ handle_conclude — the non-PGG handlers from handlers.py.
 Contains: TestHandleMove, TestHandleTalk, TestHandleCouncilSpeak,
           TestHandleStartVoting, TestHandleVote, TestHandleConclude
 """
-import pytest
 
 from fos.core.experiment.actions.handlers import (
     handle_abstain,
@@ -224,13 +223,13 @@ class TestHandleVote:
     def test_vote_no_handler(self):
         state = _make_state(["Alice"])
         state.extensions["voting_started"] = True
-        result = handle_vote_no({}, "Alice", state, _make_scene())
+        handle_vote_no({}, "Alice", state, _make_scene())
         assert state.extensions["votes"]["Alice"] == "no"
 
     def test_abstain_handler(self):
         state = _make_state(["Alice"])
         state.extensions["voting_started"] = True
-        result = handle_abstain({}, "Alice", state, _make_scene())
+        handle_abstain({}, "Alice", state, _make_scene())
         assert state.extensions["votes"]["Alice"] == "abstain"
 
 

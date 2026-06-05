@@ -10,10 +10,8 @@ softening, rewriting, priority/filtering, and the main distort function.
 Contains: Groups A–H (29 tests)
 """
 
-import hashlib
 from unittest.mock import MagicMock
 
-import pytest
 
 from fos.core.scenes.policy_cascade.distortion import PolicyCascadeDistortionMixin
 from fos.core.scenes.policy_cascade.base import PolicyCascadeBaseMixin

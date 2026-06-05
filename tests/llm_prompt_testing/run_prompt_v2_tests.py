@@ -27,11 +27,8 @@ from tests.llm_prompt_testing.prompt_v2 import (
 )
 from tests.llm_prompt_testing.prompt_v2.game_configs import (
     PRISONERS_DILEMMA,
-    STAG_HUNT,
     PUBLIC_GOODS,
-    ULTIMATUM_PROPOSER,
 )
-from tests.llm_prompt_testing.ollama_client import OllamaClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

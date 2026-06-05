@@ -5,4 +5,3 @@ Import from there directly.
 """
 
 from fos.core.llm_config import *  # noqa: F401, F403
-from fos.core.llm_config import LLMConfig  # explicit for type checkers

@@ -3,7 +3,7 @@ Tests for ExperimentController (Layer 3 validation and execution).
 """
 
 import pytest
-from fos.core.experiment.controller import ExperimentController, ActionResult
+from fos.core.experiment.controller import ExperimentController
 from fos.core.experiment.game_configs import GameConfig, PRISONERS_DILEMMA
 from fos.core.experiment.kernel import ExperimentKernel
 from fos.core.experiment.round_context import RoundContextManager
@@ -56,6 +56,65 @@ async def test_process_invalid_action():
     assert result.success is False
     assert result.skipped is True
     assert "not in allowed set" in result.error
+
+
+@pytest.mark.asyncio
+async def test_invalid_action_preserves_original_controller_diagnostic():
+    """Invalid model action names should stay visible at the controller boundary."""
+    kernel = ExperimentKernel()
+    context_manager = RoundContextManager()
+    controller = ExperimentController(kernel, context_manager)
+
+    agent = ExperimentAgent(
+        name="Bob",
+        properties={},
+        llm_config=LLMConfig(dialect="mock")
+    )
+
+    result = await controller.process_response(
+        '{"reasoning": "...", "action": "teleport_away"}',
+        agent,
+        PRISONERS_DILEMMA,
+        None,
+        round_num=1,
+    )
+
+    assert result.success is False
+    assert result.action_name == "teleport_away"
+    assert result.skipped is True
+
+
+@pytest.mark.asyncio
+async def test_color_choice_in_action_field_is_repaired():
+    """A color placed in the action field should become a choose_color parameter."""
+    kernel = ExperimentKernel()
+    context_manager = RoundContextManager()
+    controller = ExperimentController(kernel, context_manager)
+
+    agent = ExperimentAgent(
+        name="NodeC",
+        properties={},
+        llm_config=LLMConfig(dialect="mock")
+    )
+    color_config = GameConfig(
+        name="coordination_game",
+        description="Choose a color different from your neighbors.",
+        action_type="discrete",
+        actions=["choose_color"],
+        action_descriptions={"choose_color": "Select a color for your node"},
+    )
+
+    result = await controller.process_response(
+        '{"action": "green"}',
+        agent,
+        color_config,
+        None,
+        round_num=2,
+    )
+
+    assert result.success is True
+    assert result.action_name == "choose_color"
+    assert result.parameters == {"color": "green"}
 
 
 @pytest.mark.asyncio

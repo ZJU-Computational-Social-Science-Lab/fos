@@ -1,8 +1,8 @@
-# ExternalEventRecord model for storing events from external data sources
+# This file stores event records that come from external data sources.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import String, Text, DateTime, JSON, ForeignKey
@@ -32,6 +32,8 @@ class ExternalEventRecord(Base):
     severity: Mapped[str] = mapped_column(String(20), default="medium")
     url: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     raw_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    event_timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    event_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
     status: Mapped[str] = mapped_column(String(20), default="pending")

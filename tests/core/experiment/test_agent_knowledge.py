@@ -8,7 +8,6 @@ Contains: TestKnowledgeContextNoQuery, TestKnowledgeContextWithQuery,
           TestKnowledgeContextEdgeCases
 """
 
-import pytest
 
 from fos.core.experiment.agent import ExperimentAgent
 from fos.core.llm_config import LLMConfig
@@ -117,8 +116,8 @@ class TestKnowledgeContextWithQuery:
         ctx = a.get_knowledge_context(query="AI ethics artificial")
         lines = ctx.split("\n")
         # AI Ethics should appear before AI Safety
-        ethics_idx = next(i for i, l in enumerate(lines) if "AI Ethics" in l)
-        safety_idx = next((i for i, l in enumerate(lines) if "AI Safety" in l), -1)
+        ethics_idx = next(i for i, line in enumerate(lines) if "AI Ethics" in line)
+        safety_idx = next((i for i, line in enumerate(lines) if "AI Safety" in line), -1)
         assert ethics_idx < safety_idx
 
 

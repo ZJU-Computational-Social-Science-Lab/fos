@@ -1,7 +1,6 @@
 """
 Unit tests for RoundEvent observed_by/payoff and RoundContextManager observer methods.
 """
-import pytest
 from fos.core.experiment.round_context import RoundContextManager, RoundEvent
 from fos.core.experiment.information_model import InformationModel
 

@@ -20,11 +20,10 @@ from typing import List, Optional
 # Setup path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from tests.llm_prompt_testing.action_parser import parse_action, ParseResult
+from tests.llm_prompt_testing.action_parser import parse_action
 from tests.llm_prompt_testing.agents import ARCHETYPAL_AGENTS
 from tests.llm_prompt_testing.config import AVAILABLE_MODELS
 from tests.llm_prompt_testing.ollama_client import OllamaClient, ChatMessage
-from tests.llm_prompt_testing.prompt_builder import build_json_prompt, PROMPT_BUILDERS
 
 
 def get_test_agent():
@@ -110,8 +109,6 @@ class ActionTestResult:
 
 def build_test_prompt(action_name: str, action_data: dict, format_type: str, agent) -> str:
     """Build a test prompt for a specific action."""
-    builder = PROMPT_BUILDERS.get(format_type, build_json_prompt)
-
     desc = action_data.get("description", action_name)
     params_desc = ""
     if action_data.get("valid_params"):
@@ -223,7 +220,6 @@ async def run_action_tests(
         return [], {}
 
     # Filter available models
-    available_api_names = [m.api_name for m in AVAILABLE_MODELS if m.name in models]
     missing_models = []
 
     for model_config in AVAILABLE_MODELS:
@@ -344,19 +340,19 @@ def print_final_summary(summary: dict, models: List[str], formats: List[str], ac
     print(f"Actions Failing (0%): {len(by_action) - len(passing_actions)}")
 
     if passing_actions:
-        print(f"\nPassing Actions:")
+        print("\nPassing Actions:")
         for action in sorted(passing_actions):
             print(f"  [OK] {action}")
 
     failing_actions = set(by_action.keys()) - set(passing_actions)
     if failing_actions:
-        print(f"\nFailing Actions:")
+        print("\nFailing Actions:")
         for action in sorted(failing_actions):
             print(f"  [--] {action}")
 
     print(f"\n{'='*70}")
     print(f"OVERALL: {pass_rate:.0f}% of actions work")
-    print(f"TARGET: 85%")
+    print("TARGET: 85%")
 
     if pass_rate >= 85:
         print("[SUCCESS] Target met!")
@@ -501,14 +497,13 @@ def main():
     print("=" * 70)
     print("Social-Sim Platform Action Testing")
     print("=" * 70)
-    print(f"\nConfiguration:")
+    print("\nConfiguration:")
     print(f"  Models: {', '.join(models)}")
     print(f"  Formats: {', '.join(formats)}")
     print(f"  Actions: {len(actions_to_test)}")
     print(f"  Runs per combo: {args.runs}")
 
     # Import asyncio
-    import asyncio
 
     # Run tests
     results, summary = asyncio.run(run_action_tests(

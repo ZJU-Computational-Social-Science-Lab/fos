@@ -145,7 +145,6 @@ class ActionHandler:
         if target.startswith("agent."):
             # Agent-scoped target
             parts = target.split(".")
-            field_name = parts[1]
             sub_field = parts[2] if len(parts) > 2 else None
 
             agent = state.agents.get(agent_name)

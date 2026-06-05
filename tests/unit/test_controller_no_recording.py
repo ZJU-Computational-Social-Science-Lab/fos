@@ -3,7 +3,6 @@ Unit tests to verify controller does NOT record to context manager.
 Runner is now the single recording source.
 """
 import asyncio
-import pytest
 from unittest.mock import Mock
 
 from fos.core.experiment.controller import ExperimentController

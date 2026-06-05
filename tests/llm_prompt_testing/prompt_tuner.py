@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from .agents import AgentProfile
-from .evaluators import EvaluationResult, EvaluationResult
+from .evaluators import EvaluationResult
 from .scenarios import ScenarioConfig
 
 logger = logging.getLogger(__name__)

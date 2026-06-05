@@ -397,6 +397,6 @@ class CouncilExperimentScene(ExperimentScene):
             logger.info(f"[DESERIALIZE] Loaded cycle_phase={scene.cycle_phase.value}, "
                        f"rounds_in_cycle_phase={scene.rounds_in_cycle_phase}, round_num={scene.round_num}")
         else:
-            logger.warning(f"[DESERIALIZE] No cycle_phase data found in extensions, using defaults")
+            logger.warning("[DESERIALIZE] No cycle_phase data found in extensions, using defaults")
 
         return scene

@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store/auth';
 
 const translations: Record<string, string> = {
   'simPage.enterSteps': 'Enter number of steps (1–100)',
+  'simPage.advanceControls': 'Advance controls',
   'simPage.autoAdvance': 'Auto advance',
   'simPage.stop': 'Stop',
   'simPage.advance': 'Advance node',

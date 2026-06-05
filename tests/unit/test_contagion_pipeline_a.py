@@ -14,7 +14,6 @@ Contains: test_instantiation, test_initialize_assigns_map_xy,
           test_get_moore_neighbors_edge, test_get_moore_neighbors_excludes_self
 """
 import asyncio
-import pytest
 
 from fos.core.contagion.scene import ContagionScene
 from fos.core.contagion.states import ContagionState

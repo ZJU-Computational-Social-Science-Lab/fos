@@ -7,7 +7,11 @@ with support for visibility filtering and structured output.
 Contains: build_context_summary, build_structured_context
 """
 
-from typing import Dict, Any, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List
+
+if TYPE_CHECKING:
+    from fos.core.experiment.information_model import InformationModel
+    from fos.core.experiment.state import ExperimentState
 
 
 def _format_action_with_parameters(agent_label: str, action_name: str, parameters: Dict[str, Any]) -> str:

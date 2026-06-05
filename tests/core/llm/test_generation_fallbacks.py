@@ -9,9 +9,7 @@ Contains: TestGenerationTimeout, TestGenerationErrorFallbacks,
           TestProbabilityValidation, TestTraitValidation
 """
 
-import json
 import pytest
-import threading
 import time
 from unittest.mock import MagicMock
 

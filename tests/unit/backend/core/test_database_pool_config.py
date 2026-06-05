@@ -11,9 +11,7 @@ Each test verifies one thing:
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
 
-import pytest
 
 
 def _build_engine_kwargs(database_url: str, settings_overrides: dict | None = None) -> dict:

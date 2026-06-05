@@ -5,7 +5,7 @@ Uses JSON format for actions instead of XML to work around model limitations.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict
+from typing import Dict
 
 
 @dataclass
@@ -74,8 +74,8 @@ strategic_scenarios = {
 }
 
 
-def get_scenario(scenario_id: str):
-    """Get a scenario configuration by ID."""
+def get_strategic_scenario(scenario_id: str):
+    """Get a strategic scenario configuration by ID."""
     return strategic_scenarios.get(scenario_id)
 
 

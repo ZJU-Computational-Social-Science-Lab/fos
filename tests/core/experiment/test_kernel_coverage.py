@@ -9,8 +9,6 @@ Contains: tests for ExperimentKernel, schema_builder.build_schema
 
 from fos.core.experiment.kernel import (
     ExperimentKernel,
-    ChoiceAction,
-    SpeakAction,
     VoteAction,
     NumericalAction,
 )

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import concurrent.futures
-import json
 from typing import List
 
 from fos.backend.celery_app import celery_app
 from fos.core.database import get_session
-from fos.backend.models.experiment import Experiment, ExperimentVariant, ExperimentRun
+from fos.backend.models.experiment import Experiment, ExperimentRun
 from fos.backend.models.simulation import Simulation
 from fos.i18n import T
 from sqlalchemy import select

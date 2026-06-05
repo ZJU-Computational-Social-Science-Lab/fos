@@ -15,7 +15,6 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import List
 
 sys.path.insert(0, "tests/llm_prompt_testing")
 
@@ -23,7 +22,6 @@ from tests.llm_prompt_testing.action_parser import parse_action
 from tests.llm_prompt_testing.agents import ARCHETYPAL_AGENTS
 from tests.llm_prompt_testing.config import AVAILABLE_MODELS
 from tests.llm_prompt_testing.ollama_client import OllamaClient, ChatMessage
-from tests.llm_prompt_testing.prompt_builder import build_json_prompt
 
 # Platform actions to test
 PLATFORM_ACTIONS = {
@@ -180,7 +178,6 @@ async def run_action_tests(actions_to_test, models, formats, runs_per_action, ve
         print(f"[ERROR] Could not connect to Ollama: {e}")
         return [], {}
 
-    available_api_names = [m.api_name for m in AVAILABLE_MODELS if m.name in models]
     missing = []
     for m in AVAILABLE_MODELS:
         if m.name in models and m.api_name not in available_models:
@@ -277,7 +274,7 @@ def print_final_summary(summary, models, formats, actions_to_test):
 
     print(f"\n{'='*70}")
     print(f"OVERALL: {pass_rate:.0f}% of actions work")
-    print(f"TARGET: 85%")
+    print("TARGET: 85%")
 
     if pass_rate >= 85:
         print("[SUCCESS] Target met!")
@@ -351,13 +348,12 @@ def main():
     print("=" * 70)
     print("Social-Sim Platform Action Testing")
     print("=" * 70)
-    print(f"\nConfiguration:")
+    print("\nConfiguration:")
     print(f"  Models: {', '.join(models)}")
     print(f"  Formats: {', '.join(formats)}")
     print(f"  Actions: {len(actions_to_test)}")
     print(f"  Runs per combo: {args.runs}")
 
-    import asyncio
     results, summary = asyncio.run(run_action_tests(
         actions_to_test=actions_to_test,
         models=models,

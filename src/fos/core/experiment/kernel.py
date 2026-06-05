@@ -7,7 +7,6 @@ Researchers select action types in the GUI, and the kernel instantiates them.
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Literal, Optional
-from dataclasses import dataclass
 
 from fos.core.experiment.actions.registry import ACTION_REGISTRY
 from fos.i18n import T

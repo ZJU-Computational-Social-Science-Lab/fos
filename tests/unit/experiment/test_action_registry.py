@@ -1,11 +1,10 @@
 """Tests for action registry."""
-import pytest
 from fos.core.experiment.actions.registry import (
     ACTION_REGISTRY,
     get_action,
     register_action,
 )
-from fos.core.experiment.actions.definitions import ActionDefinition, ParameterSpec
+from fos.core.experiment.actions.definitions import ActionDefinition
 
 
 class TestActionRegistry:

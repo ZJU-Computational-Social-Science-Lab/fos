@@ -1,7 +1,6 @@
 """
 Unit tests for truncate_context_to_budget() and information_model param in build_prompt.
 """
-import pytest
 from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.game_configs import PRISONERS_DILEMMA
 from fos.core.experiment.prompt_builder import build_prompt, truncate_context_to_budget

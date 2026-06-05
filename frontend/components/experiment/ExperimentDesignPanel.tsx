@@ -23,9 +23,10 @@ import { useSimulationStore } from "../../store";
 import {
   ExperimentVariant,
   Intervention,
+  NetworkParams,
   NetworkResult,
-  ScenarioData,
 } from "../../types";
+import type { ScenarioData } from "../../services/scenarios";
 import { connectNodeEvents } from "../../services/simulationTree";
 import { getScenario } from "../../services/scenarios";
 import { generateNetwork } from "../../utils/networkTopologies";
@@ -34,12 +35,28 @@ import {
   parseScenarioParams,
 } from "../../utils/parseScenarioParams";
 import { MultimodalInput } from "../MultimodalInput";
-import { ResourceConfig } from "./ResourceConfig";
 import ParameterField from "./ParameterField";
 
 interface ExperimentDesignPanelProps {
   mode?: "modal" | "embedded";
   onClose?: () => void;
+}
+
+interface ScenarioParameterDefinition {
+  type?: string;
+  description?: string;
+  default?: unknown;
+  ui_hint?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  options?: string[];
+}
+
+interface ScenarioDataWithSchema extends ScenarioData {
+  parameter_schema?: {
+    properties?: Record<string, ScenarioParameterDefinition>;
+  };
 }
 
 const extractMarkdownImages = (text: string): string[] => {
@@ -170,6 +187,16 @@ const toParameterFieldType = (
   return "string";
 };
 
+const toParameterUiHint = (definition: ScenarioParameterDefinition): string => {
+  if (definition.ui_hint) return definition.ui_hint;
+  if (definition.type === "boolean") return "toggle";
+  if (definition.type === "number" || definition.type === "integer" || definition.type === "float") {
+    return "number";
+  }
+  if (definition.type === "array") return "list";
+  return "text";
+};
+
 const hasMeaningfulInterventionText = (text: string): boolean =>
   String(text || "").trim().length > 0;
 
@@ -232,7 +259,7 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
     {}
   );
   const [scenarioDataCache, setScenarioDataCache] = useState<
-    Record<string, ScenarioData>
+    Record<string, ScenarioDataWithSchema>
   >({});
 
   const closePanel = (): void => {
@@ -1328,43 +1355,55 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
                                 return (
                                   <div className="space-y-3">
                                     {Object.entries(parameterDefinitions).map(
-                                      ([key, definition]) => (
-                                        <ParameterField
-                                          key={key}
-                                          parameterName={key}
-                                          fieldType={toParameterFieldType(
-                                            definition.type
-                                          )}
-                                          value={
-                                            intervention.parsedParams?.[key] ??
-                                            baseParams[key]
-                                          }
-                                          defaultValue={baseParams[key]}
-                                          description={definition.description}
-                                          onChange={(nextValue) =>
-                                            updateIntervention(
-                                              variant.id,
-                                              intervention.id,
-                                              "parsedParams",
-                                              {
-                                                ...intervention.parsedParams,
-                                                [key]: nextValue,
+                                      ([key, definition]) => {
+                                        const fieldLabel = humanizeBackendLabel(key);
+                                        return (
+                                          <div key={key} className="space-y-1">
+                                            <label
+                                              className="text-[11px] font-semibold"
+                                              style={{ color: "var(--ss-heading)" }}
+                                            >
+                                              {fieldLabel}
+                                            </label>
+                                            <ParameterField
+                                              param={{
+                                                type: toParameterFieldType(definition.type),
+                                                default: definition.default ?? baseParams[key] ?? "",
+                                                ui_hint: toParameterUiHint(definition),
+                                                min: definition.min,
+                                                max: definition.max,
+                                                step: definition.step,
+                                                options: definition.options,
+                                              }}
+                                              value={
+                                                intervention.parsedParams?.[key] ??
+                                                baseParams[key] ??
+                                                definition.default ??
+                                                ""
                                               }
-                                            )
-                                          }
-                                          onRemove={() =>
-                                            updateIntervention(
-                                              variant.id,
-                                              intervention.id,
-                                              "parsedParams",
-                                              {
-                                                ...intervention.parsedParams,
-                                                [key]: "__DELETE__",
+                                              onChange={(nextValue) =>
+                                                updateIntervention(
+                                                  variant.id,
+                                                  intervention.id,
+                                                  "parsedParams",
+                                                  {
+                                                    ...intervention.parsedParams,
+                                                    [key]: nextValue,
+                                                  }
+                                                )
                                               }
-                                            )
-                                          }
-                                        />
-                                      )
+                                            />
+                                            {definition.description ? (
+                                              <p
+                                                className="text-[11px]"
+                                                style={{ color: "var(--ss-text-muted)" }}
+                                              >
+                                                {definition.description}
+                                              </p>
+                                            ) : null}
+                                          </div>
+                                        );
+                                      }
                                     )}
                                   </div>
                                 );
@@ -1594,17 +1633,33 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
                             ) : null}
 
                             {intervention.networkPreset !== "custom" ? (
-                              <ResourceConfig
-                                preset={intervention.networkPreset || "full"}
-                                params={intervention.networkParams}
-                                onChange={(nextParams) =>
-                                  updateIntervention(
-                                    variant.id,
-                                    intervention.id,
-                                    "networkParams",
-                                    nextParams
-                                  )
-                                }
+                              <textarea
+                                value={JSON.stringify(intervention.networkParams || {}, null, 2)}
+                                onChange={(event) => {
+                                  try {
+                                    const nextParams = JSON.parse(event.target.value) as Partial<NetworkParams>;
+                                    updateIntervention(
+                                      variant.id,
+                                      intervention.id,
+                                      "networkParams",
+                                      nextParams
+                                    );
+                                  } catch {
+                                    updateIntervention(
+                                      variant.id,
+                                      intervention.id,
+                                      "networkParams",
+                                      intervention.networkParams || {}
+                                    );
+                                  }
+                                }}
+                                placeholder='{"random": {"connectionChance": 0.3}}'
+                                className="w-full text-xs border rounded p-2 font-mono h-24"
+                                style={{
+                                  background: "var(--ss-input-bg)",
+                                  borderColor: "var(--ss-border)",
+                                  color: "var(--ss-text)",
+                                }}
                               />
                             ) : null}
                           </div>

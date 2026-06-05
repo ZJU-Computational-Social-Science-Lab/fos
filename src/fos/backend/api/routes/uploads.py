@@ -10,7 +10,6 @@ from typing import Annotated
 from uuid import uuid4
 
 from litestar import Router, post, get, delete
-from litestar.response import Response
 from litestar.status_codes import HTTP_200_OK
 from litestar.connection import Request
 from litestar.datastructures import UploadFile
@@ -412,7 +411,6 @@ async def find_orphaned_uploads(request: Request) -> dict:
     async with get_session() as session:
         await resolve_current_user(session, token)
 
-    from ...core.simulator import Simulator  # Import here to avoid circular dependency
 
     upload_root = _get_upload_root()
 

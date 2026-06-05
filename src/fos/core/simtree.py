@@ -17,7 +17,7 @@ except ImportError:
     LLMClientPool = None  # type: ignore[assignment,misc]
 
 if TYPE_CHECKING:
-    from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
+    pass
 
 logger = logging.getLogger(__name__)
 

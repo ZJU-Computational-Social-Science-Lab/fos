@@ -1,13 +1,11 @@
+# This file describes the simulation data shapes that API routes send and receive.
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class SimulationBase(BaseModel):
-    model_config = ConfigDict(
-        from_attributes=True,
-        json_encoders={datetime: lambda v: v.isoformat() if v else None},
-    )
+    model_config = ConfigDict(from_attributes=True)
 
     id: str
     name: str
@@ -39,16 +37,15 @@ class SimulationUpdate(BaseModel):
     agent_config: dict | None = None
     scene_config: dict | None = None
 
+
 class SnapshotBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     label: str
     turns: int
     state: dict
     created_at: datetime
-
-    class Config:
-        from_attributes = True
-        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
 
 
 class SnapshotCreate(BaseModel):
@@ -56,11 +53,9 @@ class SnapshotCreate(BaseModel):
 
 
 class SimulationLogEntry(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     event_type: str
     payload: dict
     created_at: datetime
-
-    class Config:
-        from_attributes = True
-        json_encoders = {datetime: lambda v: v.isoformat() if v else None}

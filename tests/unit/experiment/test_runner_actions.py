@@ -1,11 +1,9 @@
 """Tests for ActionHandler integration in ExperimentRunner."""
-import pytest
 from unittest.mock import MagicMock
 from fos.core.experiment.runner import ExperimentRunner
 from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.game_configs import GameConfig
 from fos.core.experiment.state import ExperimentState, AgentState
-from fos.core.experiment.action_handler import ActionHandler
 
 
 class TestRunnerActionIntegration:

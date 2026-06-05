@@ -6,7 +6,7 @@ what effects they have, and what scenario features they require.
 
 Contains: ActionDefinition, ParameterSpec, EffectSpec
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
 

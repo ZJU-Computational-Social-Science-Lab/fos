@@ -11,7 +11,7 @@ Tests the runner's ability to:
 
 import asyncio
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, patch
 
 from fos.core.experiment.runner import ExperimentRunner, RoundResult
 from fos.core.experiment.agent import ExperimentAgent

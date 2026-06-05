@@ -4,7 +4,6 @@ Tests for schema builder module.
 Tests the JSON schema generation for constrained decoding.
 """
 
-import pytest
 
 from fos.core.experiment.game_configs import PRISONERS_DILEMMA, MINIMUM_EFFORT
 from fos.core.experiment.schema_builder import build_schema

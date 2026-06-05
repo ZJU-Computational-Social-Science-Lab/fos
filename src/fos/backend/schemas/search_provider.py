@@ -1,15 +1,15 @@
-from pydantic import BaseModel
+# This file describes search provider settings that API routes send and receive.
+from pydantic import BaseModel, ConfigDict
 
 
 class SearchProviderBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     provider: str
     base_url: str | None = None
     has_api_key: bool = False
     config: dict | None = None
-
-    class Config:
-        from_attributes = True
 
 
 class SearchProviderCreate(BaseModel):

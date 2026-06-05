@@ -1,8 +1,12 @@
+# This file describes the public user data shapes that API routes send and receive.
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
+
 
 class UserBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     email: EmailStr
     username: str
@@ -14,10 +18,6 @@ class UserBase(BaseModel):
     role: str
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
-        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
 
 
 class UserPublic(UserBase):

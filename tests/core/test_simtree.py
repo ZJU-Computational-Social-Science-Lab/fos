@@ -6,7 +6,6 @@ by injecting minimal fake node data, avoiding the need for a live Simulator.
 
 Contains: TestSimTreeStructure
 """
-import pytest
 from fos.core.simtree import SimTree
 
 

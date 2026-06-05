@@ -1,9 +1,9 @@
-"""ExternalEventService — polls data sources, evaluates events, writes to DB."""
+# This file polls data sources, turns their data into events, and saves those events.
 
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -14,6 +14,11 @@ from fos.backend.models.external_event_record import ExternalEventRecord
 from fos.core.external_event import ExternalEventType, Severity
 
 logger = logging.getLogger(__name__)
+
+
+def _utc_now() -> datetime:
+    """Return the current time in UTC."""
+    return datetime.now(UTC)
 
 
 # Keyword-based rule engine for ExternalEventService
@@ -80,7 +85,7 @@ class ExternalEventService:
                 await session.commit()
 
                 # Update last_poll_at
-                source.last_poll_at = datetime.utcnow()
+                source.last_poll_at = _utc_now()
                 source.last_error = None
                 await session.commit()
 
@@ -144,9 +149,9 @@ class ExternalEventService:
                 continue
 
             try:
-                ts = parse_dt(timestamp_str) if timestamp_str else datetime.utcnow()
+                ts = parse_dt(timestamp_str) if timestamp_str else _utc_now()
             except Exception:
-                ts = datetime.utcnow()
+                ts = _utc_now()
 
             results.append({
                 "event_type": _evaluate_event_type(str(title), str(content)),
@@ -170,9 +175,9 @@ class ExternalEventService:
                     if title:
                         ts_str = item.get("timestamp") or item.get("published_at")
                         try:
-                            ts = parse_dt(ts_str) if ts_str else datetime.utcnow()
+                            ts = parse_dt(ts_str) if ts_str else _utc_now()
                         except Exception:
-                            ts = datetime.utcnow()
+                            ts = _utc_now()
                         results.append({
                             "event_type": _evaluate_event_type(str(title), str(content)),
                             "severity": _evaluate_severity(str(title), str(content)),
