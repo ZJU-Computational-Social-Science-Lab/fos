@@ -451,7 +451,7 @@ async def analyze_research_text(request: Request, data: AnalyzeRequest) -> Analy
                     top_p=1.0,
                     frequency_penalty=0.0,
                     presence_penalty=0.0,
-                    max_tokens=2048,
+                    max_tokens=16384,
                     supports_vision=guess_supports_vision(provider.model),
                 )
                 llm = create_llm_client(cfg)

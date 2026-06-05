@@ -31,16 +31,19 @@ settings = get_settings()
 # explicitly provided to avoid passing unsupported args for some dialects.
 engine_kwargs: dict = {"echo": settings.debug}
 
-# SQLite-specific tuning for concurrent access.
 if settings.database_url.startswith("sqlite"):
     engine_kwargs["connect_args"] = {"timeout": 60}
-    # Sensible defaults for SQLite under concurrent load (overridable via settings).
     if settings.db_pool_size is None:
         engine_kwargs["pool_size"] = 20
     if settings.db_max_overflow is None:
         engine_kwargs["max_overflow"] = 10
     if settings.db_pool_timeout is None:
         engine_kwargs["pool_timeout"] = 60
+else:
+    if settings.db_pool_pre_ping is None:
+        engine_kwargs["pool_pre_ping"] = True
+    if settings.db_pool_recycle is None:
+        engine_kwargs["pool_recycle"] = 3600
 
 if settings.db_pool_size is not None:
     engine_kwargs["pool_size"] = settings.db_pool_size
