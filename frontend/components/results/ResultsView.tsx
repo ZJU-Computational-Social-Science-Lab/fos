@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useSimulationStore } from '@/store';
 import { useAuthStore } from '@/store/auth';
-import { listMetrics, computeMetricTrajectories, computeEventCountByAgent, hydrateAgentHistoryFromLogs } from '@/utils/resultsComputations';
+import { listMetrics, computeMetricTrajectories, computeMetricAggregate, computeEventCountByAgent, hydrateAgentHistoryFromLogs } from '@/utils/resultsComputations';
 import { generateMarkdownReport } from '@/utils/markdownReport';
+import { AggregateTrajectoryChart } from './AggregateTrajectoryChart';
 import { MetricTrajectoryChart } from './MetricTrajectoryChart';
 import { CountBarChart } from './CountBarChart';
 import { AiSummarySection } from './AiSummarySection';
@@ -13,6 +14,7 @@ export type ResultsLabels = {
   exportCsv: string; exportReport: string; noActivity: string;
   reportSummary: string; reportNoSummary: string; reportFinalValues: string;
   reportAgent: string; reportFinalValue: string;
+  perAgent: string; aggregate: string; mean: string; range: string;
 };
 
 type Props = { labels: ResultsLabels; language: 'en' | 'zh' };
@@ -41,9 +43,14 @@ export function ResultsView({ labels, language }: Props) {
 
   const [selectedMetric, setSelectedMetric] = useState<string>('');
 
-  if (!currentSimulation || !Array.isArray(logs) || logs.length === 0) {
+  if (!currentSimulation || !Array.isArray(logs)) {
     return <div>{labels.noData}</div>;
   }
+
+  const AGGREGATE_THRESHOLD = 12;
+  const [viewMode, setViewMode] = useState<'per-agent' | 'aggregate'>(() =>
+    agents.length > AGGREGATE_THRESHOLD ? 'aggregate' : 'per-agent'
+  );
 
   const hydratedAgents = hydrateAgentHistoryFromLogs(logs, agents);
   const title: string = currentSimulation.name;
@@ -51,6 +58,9 @@ export function ResultsView({ labels, language }: Props) {
   const activeMetric = metrics.includes(selectedMetric)
     ? selectedMetric
     : (metrics.length > 0 ? metrics[0] : '');
+  const series = metrics.length > 0
+    ? computeMetricTrajectories(hydratedAgents, activeMetric)
+    : [];
 
   const onGenerate = () => { generateResultsSummary(title, language); };
   const onExportCsv = async () => {
@@ -133,7 +143,43 @@ export function ResultsView({ labels, language }: Props) {
                 style={{ background: 'var(--ss-workspace-surface)', color: 'var(--ss-workspace-text)', borderColor: 'var(--ss-workspace-border)' }}>
                 {metrics.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
-              <MetricTrajectoryChart series={computeMetricTrajectories(hydratedAgents, activeMetric)} metric={activeMetric} />
+
+              {metrics.length > 0 && (
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+                  {(['per-agent', 'aggregate'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setViewMode(mode)}
+                      style={{
+                        padding: '2px 8px', fontSize: '11px', borderRadius: '4px', cursor: 'pointer',
+                        border: '1px solid var(--ss-workspace-border)',
+                        background: viewMode === mode ? 'var(--ss-brand-soft)' : 'transparent',
+                        color: viewMode === mode ? 'var(--ss-brand-primary)' : 'var(--ss-workspace-muted)',
+                      }}
+                    >
+                      {mode === 'per-agent' ? labels.perAgent : labels.aggregate}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {metrics.length > 0 ? (
+                viewMode === 'aggregate' && series.length > 0 ? (
+                  <AggregateTrajectoryChart
+                    points={computeMetricAggregate(series)}
+                    metric={activeMetric}
+                    meanLabel={labels.mean}
+                    rangeLabel={labels.range}
+                  />
+                ) : (
+                  <MetricTrajectoryChart series={series} metric={activeMetric} />
+                )
+              ) : activityBars.length > 0 ? (
+                <CountBarChart bars={activityBars} />
+              ) : (
+                <div className="text-sm" style={{ color: 'var(--ss-workspace-muted)' }}>{labels.noActivity}</div>
+              )}
             </div>
           ) : activityBars.length > 0 ? (
             <CountBarChart bars={activityBars} />

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildSummaryPrompt } from './summaryPrompt';
 import type { SummaryPromptInput } from './summaryPrompt';
+import type { MetricAggregatePoint, Series } from './resultsComputations';
 
 const base: SummaryPromptInput = {
   title: 'Public goods game',
@@ -42,5 +43,36 @@ describe('buildSummaryPrompt', () => {
 
   it('throws when title is empty', () => {
     expect(() => buildSummaryPrompt({ ...base, title: '' })).toThrow();
+  });
+
+  it('uses aggregate statistics format when series count exceeds 12', () => {
+    const many: Series[] = Array.from({ length: 13 }, (_, i) => ({
+      agentId: `a${i}`,
+      agentName: `Agent${i + 1}`,
+      values: [10 + i, 12 + i, 14 + i],
+    }));
+    const prompt = buildSummaryPrompt({
+      title: 'Test',
+      language: 'en',
+      metrics: [{ name: 'payoff', series: many }],
+    });
+    expect(prompt.toLowerCase()).toContain('mean');
+    expect(prompt.toLowerCase()).toContain('min');
+    expect(prompt.toLowerCase()).toContain('max');
+    expect(prompt).not.toContain('Agent1');
+  });
+
+  it('stays in per-agent format when series count is at or below 12', () => {
+    const few: Series[] = Array.from({ length: 12 }, (_, i) => ({
+      agentId: `a${i}`,
+      agentName: `Agent${i + 1}`,
+      values: [10, 12],
+    }));
+    const prompt = buildSummaryPrompt({
+      title: 'Test',
+      language: 'en',
+      metrics: [{ name: 'payoff', series: few }],
+    });
+    expect(prompt).toContain('Agent1');
   });
 });
