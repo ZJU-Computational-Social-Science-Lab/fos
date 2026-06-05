@@ -7,10 +7,8 @@ that don't understand the game.
 """
 
 import json
-from typing import Optional
 from ..ollama_client import OllamaClient, ChatMessage
 from .game_configs import GameConfig
-from .schema_builder import build_schema
 
 
 def verify_comprehension(

@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import logging
 
-from typing import Any, List
+from typing import List
 from pydantic import BaseModel
 from litestar import post, get, Router
 from litestar.exceptions import HTTPException
 from litestar.connection import Request
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from fos.i18n import T
 from fos.backend.core.database import get_session
@@ -19,7 +18,6 @@ from fos.backend.models.simulation import Simulation
 from fos.backend.models.user import ProviderConfig
 from fos.backend.models.llm_usage import LLMUsage
 from fos.backend.services.experiment_runner import (
-    EXPERIMENT_REGISTRY,
     create_experiment_db,
     start_experiment_run_background,
 )

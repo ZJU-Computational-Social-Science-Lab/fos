@@ -18,16 +18,14 @@ from datetime import datetime, timezone
 from litestar import get, post
 from litestar.connection import Request
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from fos.backend.core.database import get_session
 from fos.backend.dependencies import extract_bearer_token, resolve_current_user
-from fos.backend.models.simulation import Simulation, SimulationSnapshot, SimulationLog
+from fos.backend.models.simulation import SimulationSnapshot, SimulationLog
 from fos.backend.schemas.simulation import SnapshotBase, SnapshotCreate, SimulationLogEntry
 
 from .helpers import (
     get_simulation_for_owner,
-    get_tree_record,
 )
 from fos.backend.services.simtree_runtime import SIM_TREE_REGISTRY
 

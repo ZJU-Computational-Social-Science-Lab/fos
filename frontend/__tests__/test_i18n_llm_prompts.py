@@ -43,8 +43,10 @@ def load_flat(path: Path) -> dict[str, str]:
         out = {}
         for k, v in d.items():
             key = f"{prefix}.{k}" if prefix else k
-            if isinstance(v, dict): out.update(_flatten(v, key))
-            else: out[key] = str(v)
+            if isinstance(v, dict):
+                out.update(_flatten(v, key))
+            else:
+                out[key] = str(v)
         return out
     with open(path, encoding="utf-8") as f:
         return _flatten(json.load(f))
@@ -54,8 +56,10 @@ def iter_py_files() -> Generator[Path, None, None]:
     skip = {"__pycache__", ".git", "tests", "migrations"}
     skip_names = {"i18n.py", "conftest.py"}
     for f in SRC.rglob("*.py"):
-        if any(p in skip for p in f.parts): continue
-        if f.name in skip_names: continue
+        if any(p in skip for p in f.parts):
+            continue
+        if f.name in skip_names:
+            continue
         yield f
 
 
@@ -293,7 +297,6 @@ def test_llm_client_pool_role_prompts_use_t():
     for i, line in enumerate(lines, start=1):
         m = hardcoded_re.search(line)
         if m:
-            key_name = m.group(1)
             value = m.group(2)
             # Skip empty strings and strings that are clearly just placeholders
             if value.strip() and not value.startswith("{"):

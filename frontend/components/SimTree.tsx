@@ -1,4 +1,4 @@
-
+// This file draws the simulation tree, lets people pick nodes, and provides zoom controls for exploring the tree.
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { SimNode } from '../types';
@@ -50,6 +50,8 @@ export const SimTree: React.FC<SimTreeProps> = ({
 
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
+    const safeWidth = width || 1;
+    const safeHeight = height || 1;
     
     // Clear previous
     d3.select(containerRef.current).selectAll('*').remove();
@@ -57,6 +59,7 @@ export const SimTree: React.FC<SimTreeProps> = ({
     // Setup Zoom
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 4])
+      .extent([[0, 0], [safeWidth, safeHeight]])
       .on('zoom', (event) => {
         g.attr('transform', event.transform);
       });
@@ -65,8 +68,8 @@ export const SimTree: React.FC<SimTreeProps> = ({
 
     const svg = d3.select(containerRef.current)
       .append('svg')
-      .attr('width', width)
-      .attr('height', height)
+      .attr('width', safeWidth)
+      .attr('height', safeHeight)
       .attr('class', 'cursor-grab active:cursor-grabbing')
       .call(zoom)
       .on("dblclick.zoom", null);
@@ -186,8 +189,8 @@ const root = d3.stratify<SimNode>()
 
     // Initial positioning
     const initialTransform = isVertical
-      ? d3.zoomIdentity.translate(width / 2, 80).scale(1)
-      : d3.zoomIdentity.translate(80, height / 2).scale(1);
+      ? d3.zoomIdentity.translate(safeWidth / 2, 80).scale(1)
+      : d3.zoomIdentity.translate(80, safeHeight / 2).scale(1);
     svg.call(zoom.transform, initialTransform);
 
   }, [resolvedNodes, selectNode, setCompareTarget, alwaysSelectOnClick, layoutDirection]);

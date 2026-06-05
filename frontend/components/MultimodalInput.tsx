@@ -7,7 +7,8 @@ import { useImageCrop, calculateCropOverlay, calculateCropPreviewStyle } from '.
 interface Props {
   label?: string;
   helperText?: string;
-  onInsert: (url: string, altText?: string) => void;
+  onInsert?: (url: string, altText?: string) => void;
+  onUploadComplete?: (url: string) => void;
   presetUrl?: string | null;
   enableCrop?: boolean;
   enableAltText?: boolean; // Enable alt text input for accessibility
@@ -22,6 +23,7 @@ export const MultimodalInput: React.FC<Props> = ({
   label,
   helperText,
   onInsert,
+  onUploadComplete,
   presetUrl = null,
   enableCrop = true,
   enableAltText = true
@@ -47,7 +49,7 @@ export const MultimodalInput: React.FC<Props> = ({
   } = useImageCrop({
     onCropped: (url) => {
       setPreviewUrl(url);
-      onInsert(url, altText || undefined);
+      onInsert?.(url, altText || undefined);
       setStatus({ kind: 'success', message: t('components.multimodalInput.cropAndUploadSuccess') });
     },
     onError: (message) => {
@@ -80,7 +82,8 @@ export const MultimodalInput: React.FC<Props> = ({
       console.log('Uploaded asset:', asset); // Debug
       setPreviewUrl(isImage ? asset.url : null);
       setLastUploadedName(file.name);
-      onInsert(asset.url, altText || undefined);
+      onInsert?.(asset.url, altText || undefined);
+      onUploadComplete?.(asset.url);
       setSuccess(t('components.multimodalInput.uploadSuccess'));
     } catch (err) {
       console.error(err);

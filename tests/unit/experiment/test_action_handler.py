@@ -7,7 +7,6 @@ PGG record-only action registration.
 
 Contains: TestActionHandler, TestPGGActionRegistry
 """
-import pytest
 from fos.core.experiment.action_handler import ActionHandler
 from fos.core.experiment.actions.registry import ACTION_REGISTRY, get_action
 from fos.core.experiment.state import ExperimentState, AgentState

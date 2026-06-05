@@ -4,16 +4,11 @@ Smoke tests for Grid World scenario with real Ollama LLM.
 Tests movement, gathering, and rest actions in a grid environment.
 """
 
-import asyncio
 import pytest
-from pathlib import Path
-from typing import Dict, Any, List
 
 from fos.core.llm_config import LLMConfig
-from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.game_configs import GameConfig
 from fos.core.experiment.runner import ExperimentRunner
-from fos.core.experiment.information_model import InformationModel
 
 from tests.smoke_tests.utils import (
     SmokeTestOutput,
@@ -64,7 +59,7 @@ async def test_grid_world_movement(default_llm_client, output_dir):
         build_experiment_agent("Explorer2", llm_config, role_prompt="You are a gatherer who focuses on collecting resources."),
     ]
 
-    filename = f"grid_world_phi4-mini_movement.txt"
+    filename = "grid_world_phi4-mini_movement.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "grid_world", "phi4-mini", "movement") as out:
@@ -118,7 +113,7 @@ async def test_grid_world_no_scores(default_llm_client, output_dir):
         build_experiment_agent("Agent2", llm_config, role_prompt="You are Agent 2."),
     ]
 
-    filename = f"grid_world_phi4-mini_no_scores.txt"
+    filename = "grid_world_phi4-mini_no_scores.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "grid_world", "phi4-mini", "no_scores") as out:

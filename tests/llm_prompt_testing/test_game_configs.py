@@ -2,7 +2,6 @@
 Tests for game_configs module.
 """
 
-import pytest
 from tests.llm_prompt_testing.prompt_v2.game_configs import (
     GameConfig,
     PRISONERS_DILEMMA,

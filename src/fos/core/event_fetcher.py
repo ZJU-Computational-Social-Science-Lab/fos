@@ -2,109 +2,6 @@
 
 Provides a base class and implementations for polling various external
 data sources (policy, market, news, custom APIs).
-"""
-
-import asyncio
-import logging
-from abc import ABC, abstractmethod
-from datetime import datetime
-from typing import Optional
-
-from fos.core.external_event import (
-    ExternalEvent,
-    ExternalEventType,
-    EventSource,
-    Severity,
-)
-
-logger = logging.getLogger(__name__)
-
-
-class BaseEventFetcher(ABC):
-    """Abstract base class for event fetchers."""
-
-    def __init__(
-        self,
-        poll_interval_minutes: int = 10,
-        enabled: bool = True,
-    ) -> None:
-        """Initialize the fetcher.
-
-        Args:
-            poll_interval_minutes: How often to poll (minutes).
-            enabled: Whether fetching is enabled.
-        """
-        self.poll_interval = poll_interval_minutes * 60
-        self.enabled = enabled
-        self._last_poll: Optional[datetime] = None
-        self._running = False
-
-    @property
-    @abstractmethod
-    def source(self) -> EventSource:
-        """Return the event source identifier."""
-        pass
-
-    @property
-    @abstractmethod
-    def event_type(self) -> ExternalEventType:
-        """Return the event type for this source."""
-        pass
-
-    @abstractmethod
-    async def fetch(self) -> list[ExternalEvent]:
-        """Fetch events from the data source.
-
-        Returns:
-            List of ExternalEvents fetched from the source.
-        """
-        pass
-
-    async def poll(self) -> list[ExternalEvent]:
-        """Poll the data source and return new events.
-
-        Returns:
-            List of new ExternalEvents since last poll.
-        """
-        if not self.enabled:
-            return []
-
-        try:
-            events = await self.fetch()
-            self._last_poll = datetime.now()
-            logger.info(
-                f"Polled {self.source.value}: {len(events)} events"
-            )
-            return events
-        except Exception as e:
-            logger.error(f"Error polling {self.source.value}: {e}")
-            return []
-
-    async def run(self, queue, interval_seconds: Optional[int] = None):
-        """Run continuous polling.
-
-        Args:
-            queue: EventQueue to add events to.
-            interval_seconds: Override default poll interval.
-        """
-        self._running = True
-        interval = interval_seconds or self.poll_interval
-
-        while self._running:
-            events = await self.poll()
-            for event in events:
-                queue.enqueue(event)
-            await asyncio.sleep(interval)
-
-    def stop(self):
-        """Stop the polling loop."""
-        self._running = False
-
-
-"""Event fetcher for polling external APIs.
-
-Provides a base class and implementations for polling various external
-data sources (policy, market, news, custom APIs).
 
 Supports:
 - Policy data from government open data platforms
@@ -118,7 +15,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 import urllib.request
 
 from fos.core.external_event import (

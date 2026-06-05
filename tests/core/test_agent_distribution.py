@@ -12,7 +12,6 @@ Run with:
     pytest tests/core/test_agent_distribution.py -v
 """
 
-import pytest
 from unittest.mock import MagicMock
 
 from fos.core.llm_config import LLMConfig

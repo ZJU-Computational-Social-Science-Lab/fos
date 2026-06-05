@@ -32,16 +32,16 @@ async def list_data_sources(
     """List all data sources, optionally filtered by simulation_id."""
     token = extract_bearer_token(request)
     async with get_session() as session:
-        current_user = await resolve_current_user(session, token)
+        await resolve_current_user(session, token)
 
     async with get_session() as session:
         query = select(DataSource)
         if simulation_id:
             query = query.where(
-                (DataSource.is_global == True) | (DataSource.simulation_id == simulation_id)
+                DataSource.is_global.is_(True) | (DataSource.simulation_id == simulation_id)
             )
         else:
-            query = query.where(DataSource.is_global == True)
+            query = query.where(DataSource.is_global.is_(True))
 
         result = await session.execute(query)
         sources = result.scalars().all()
@@ -60,7 +60,7 @@ async def create_data_source(
     """Create a new data source."""
     token = extract_bearer_token(request)
     async with get_session() as session:
-        current_user = await resolve_current_user(session, token)
+        await resolve_current_user(session, token)
 
     async with get_session() as session:
         source = DataSource(
@@ -90,7 +90,7 @@ async def get_data_source(
     """Get a single data source by ID."""
     token = extract_bearer_token(request)
     async with get_session() as session:
-        current_user = await resolve_current_user(session, token)
+        await resolve_current_user(session, token)
 
     async with get_session() as session:
         result = await session.execute(select(DataSource).where(DataSource.id == source_id))
@@ -111,7 +111,7 @@ async def update_data_source(
     """Update a data source."""
     token = extract_bearer_token(request)
     async with get_session() as session:
-        current_user = await resolve_current_user(session, token)
+        await resolve_current_user(session, token)
 
     async with get_session() as session:
         result = await session.execute(select(DataSource).where(DataSource.id == source_id))
@@ -149,7 +149,7 @@ async def delete_data_source(
     """Delete a data source."""
     token = extract_bearer_token(request)
     async with get_session() as session:
-        current_user = await resolve_current_user(session, token)
+        await resolve_current_user(session, token)
 
     async with get_session() as session:
         result = await session.execute(select(DataSource).where(DataSource.id == source_id))
@@ -172,7 +172,7 @@ async def test_data_source(
     """Test connection to a data source API."""
     token = extract_bearer_token(request)
     async with get_session() as session:
-        current_user = await resolve_current_user(session, token)
+        await resolve_current_user(session, token)
 
     async with get_session() as session:
         result = await session.execute(select(DataSource).where(DataSource.id == source_id))
@@ -211,7 +211,7 @@ async def poll_data_source(
 
     token = extract_bearer_token(request)
     async with get_session() as session:
-        current_user = await resolve_current_user(session, token)
+        await resolve_current_user(session, token)
 
     async with get_session() as session:
         stmt = select(DataSource).where(DataSource.id == source_id)

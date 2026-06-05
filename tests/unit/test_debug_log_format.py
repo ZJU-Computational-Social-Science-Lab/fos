@@ -9,7 +9,6 @@ import tempfile
 import re
 from pathlib import Path
 from unittest.mock import Mock, patch
-import pytest
 
 from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.game_configs import PRISONERS_DILEMMA

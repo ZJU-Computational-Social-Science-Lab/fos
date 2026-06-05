@@ -5,7 +5,7 @@ Ensures providers are distributed evenly across demographic groups
 to avoid confounding variables in experiments.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 import random
 from collections import defaultdict
 
@@ -125,7 +125,6 @@ def validate_distribution(
 # Example usage for your case:
 if __name__ == "__main__":
     # Simulated example based on your 99-agent run
-    from fos.core.llm.generation import generate_agents_with_archetypes
 
     # After generating agents, use stratified assignment:
     # agents = generate_agents_with_archetypes(...)

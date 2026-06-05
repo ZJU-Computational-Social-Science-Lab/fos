@@ -5,7 +5,6 @@ Provides simplified prompts for small 3B-4B models that struggle
 with long, complex prompts. Includes minimal JSON, XML, and text variants.
 """
 
-from typing import List
 
 from .agents import AgentProfile
 from .scenarios import ScenarioConfig
@@ -37,7 +36,6 @@ def build_json_prompt(
     """
     # Build action list string
     action_list = ", ".join(f'"{a.name}"' for a in scenario.actions)
-    first_action = scenario.actions[0].name if scenario.actions else "action_name"
 
     # Minimal JSON prompt (under 40 words)
     prompt = f"""You are {agent.name}. {agent.role_prompt}
@@ -105,7 +103,6 @@ def build_text_prompt(
     """
     # Build action list string
     action_list = ", ".join(f'"{a.name}"' for a in scenario.actions)
-    first_action = scenario.actions[0].name if scenario.actions else "action_name"
 
     # Minimal text prompt
     prompt = f"""You are {agent.name}. {agent.role_prompt}

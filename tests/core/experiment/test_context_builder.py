@@ -7,7 +7,6 @@ each round. Wrong context = agents making decisions based on bad data.
 Contains: tests for build_structured_context with InformationModel
 """
 
-import pytest
 
 from fos.core.context_builder import build_structured_context
 from fos.core.experiment.round_context import RoundEvent

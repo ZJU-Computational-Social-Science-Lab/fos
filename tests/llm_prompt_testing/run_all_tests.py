@@ -9,7 +9,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -17,7 +17,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from tests.llm_prompt_testing.config import (
     AVAILABLE_MODELS,
     INTERACTION_PATTERNS,
-    SCENARIOS_BY_PATTERN,
     test_config,
 )
 from tests.llm_prompt_testing.csv_reporter import CSVReporter
@@ -255,7 +254,7 @@ def main():
         return 1
 
     # Run tests
-    start_msg = f"Starting LLM Prompt Testing"
+    start_msg = "Starting LLM Prompt Testing"
     if args.pattern:
         start_msg += f" for pattern: {args.pattern}"
     else:

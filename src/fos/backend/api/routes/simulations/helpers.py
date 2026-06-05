@@ -16,7 +16,6 @@ Contains:
 """
 
 import logging
-from typing import Any
 
 from jose import JWTError, jwt
 from litestar.exceptions import HTTPException
@@ -27,7 +26,6 @@ from fos.core.llm_config import LLMConfig, guess_supports_vision
 from fos.core.search_config import SearchConfig
 from fos.core.llm import create_llm_client
 from fos.core.tools.web.search import create_search_client
-from fos.backend.core.database import get_session
 from fos.backend.core.timing import log_event
 from fos.backend.dependencies import settings
 

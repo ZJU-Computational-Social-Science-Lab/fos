@@ -286,7 +286,7 @@ class EnvironmentAgent:
             suggestions.append(
                 {
                     "event_type": "notification",
-                    "description": T("prompts.env_agent.resource_pressure"),
+                    "description": T("prompts.env_agent.resource_pressure", locale="en"),
                     "severity": "moderate",
                     "grounding": f"Resource pressure is {analysis['resource_pressure']:.2f}.",
                 }
@@ -296,7 +296,7 @@ class EnvironmentAgent:
             suggestions.append(
                 {
                     "event_type": "notification",
-                    "description": T("prompts.env_agent.stable_probing"),
+                    "description": T("prompts.env_agent.stable_probing", locale="en"),
                     "severity": "mild",
                     "grounding": "No strong instability signal was found in the latest finished rounds.",
                 }

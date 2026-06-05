@@ -7,7 +7,7 @@ and generates events when conditions are met.
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 import uuid
 
 from fos.core.external_event import ExternalEvent, ExternalEventType, EventSource, Severity

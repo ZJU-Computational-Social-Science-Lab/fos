@@ -7,9 +7,8 @@ and identify model-specific capabilities and limitations.
 
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 
-from .config import AVAILABLE_MODELS
 from .csv_reporter import TestResult
 
 logger = logging.getLogger(__name__)

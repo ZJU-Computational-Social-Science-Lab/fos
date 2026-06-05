@@ -1,6 +1,5 @@
 """Tests for core.context_builder module."""
 
-import pytest
 from fos.core.context_builder import build_context_summary
 
 

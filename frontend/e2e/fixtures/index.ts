@@ -20,7 +20,7 @@ type E2EFixtures = {
 };
 
 export const test = base.extend<E2EFixtures>({
-  locale: ['en', { option: true }],
+  locale: 'en',
   authedPage: async ({ page, locale, request }, use) => {
     const email = process.env.E2E_EMAIL || 'test@test.com.cn';
     const password = process.env.E2E_PASSWORD || 'test';

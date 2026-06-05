@@ -266,7 +266,7 @@ class ExperimentScene:
             logger.warning("No social network configured for this experiment")
         self.runner.set_scene_state(scene_state_dict)
 
-        logger.debug(f"ExperimentRunner initialized:")
+        logger.debug("ExperimentRunner initialized:")
         logger.debug(f"  scenario_id={self.config.scenario_id}")
         logger.debug(f"  scope_type={information_model.scope_type}")
         logger.debug(f"  include_scores={information_model.include_scores}")
@@ -612,7 +612,6 @@ class ExperimentScene:
 
         # Build payoff_config from scenario registry metadata
         payoff_config = {}
-        scenario_id = self.config.scenario_id
         try:
             _scenario_for_payoff = scenario
             if _scenario_for_payoff and "matrix_meta" in _scenario_for_payoff:
@@ -735,8 +734,10 @@ class ExperimentScene:
                     followup_modes[action_name] = "plain_text"
                     logger.debug(f"[FOLLOWUP] Added followup mode for '{action_name}': plain_text")
 
-        # Fallback: Auto-detect speak-like actions for any scenario
-        # This handles "custom" scenarios that have speak actions
+        if self.config.scenario_id == "custom":
+            return followup_modes
+
+        # Fallback: Auto-detect speak-like actions for non-custom scenarios
         for action_name in action_names:
             if action_name.lower() in ("speak", "say", "talk") and action_name not in followup_modes:
                 followup_modes[action_name] = "plain_text"

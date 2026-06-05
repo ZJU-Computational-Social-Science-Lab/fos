@@ -26,8 +26,6 @@ from tests.llm_prompt_testing.ollama_client import (
 )
 from tests.llm_prompt_testing.prompt_builder import (
     build_json_prompt,
-    build_xml_prompt,
-    build_text_prompt,
     PROMPT_BUILDERS,
 )
 from tests.llm_prompt_testing.scenarios import Action, ScenarioConfig
@@ -160,7 +158,6 @@ def run_all_tests(
         return [], {}
 
     # Check which test models are available
-    available_api_names = [m.api_name for m in AVAILABLE_MODELS if m.name in models]
     missing_models = []
 
     for model_config in AVAILABLE_MODELS:
@@ -388,7 +385,7 @@ def main():
     print("="*65)
     print("Small Model Action Testing Framework")
     print("="*65)
-    print(f"\nConfiguration:")
+    print("\nConfiguration:")
     print(f"  Models: {', '.join(models)}")
     print(f"  Formats: {', '.join(formats)}")
     print(f"  Runs per format: {args.runs}")

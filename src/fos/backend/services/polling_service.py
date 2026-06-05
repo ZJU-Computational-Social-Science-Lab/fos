@@ -46,7 +46,7 @@ class PollingService:
         from fos.backend.models.data_source import DataSource
 
         async with get_session() as session:
-            stmt = select(DataSource).where(DataSource.is_enabled == True)
+            stmt = select(DataSource).where(DataSource.is_enabled.is_(True))
             result = await session.execute(stmt)
             sources = result.scalars().all()
 
@@ -96,16 +96,16 @@ class PollingService:
         try:
             self._scheduler.pause_job(source_id)
             logger.info(f"Job paused: {source_id}")
-        except Exception:
-            pass
+        except Exception as error:
+            logger.warning(f"Failed to pause job {source_id}: {error}")
 
     def resume_job(self, source_id: str) -> None:
         """Resume a paused job."""
         try:
             self._scheduler.resume_job(source_id)
             logger.info(f"Job resumed: {source_id}")
-        except Exception:
-            pass
+        except Exception as error:
+            logger.warning(f"Failed to resume job {source_id}: {error}")
 
     def shutdown(self) -> None:
         """Stop the scheduler gracefully."""

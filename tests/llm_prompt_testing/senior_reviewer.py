@@ -8,9 +8,9 @@ identifies issues, and generates actionable recommendations.
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
-from .config import INTERACTION_PATTERNS, AVAILABLE_MODELS
+from .config import INTERACTION_PATTERNS
 from .csv_reporter import CSVReporter, TestResult
 from .cross_llm_analyzer import (
     build_model_capability_profiles,

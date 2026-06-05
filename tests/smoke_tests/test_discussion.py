@@ -4,13 +4,9 @@ Smoke tests for discussion scenarios with real Ollama LLM.
 Tests Open Discussion scenario with free-form conversation.
 """
 
-import asyncio
 import pytest
-from pathlib import Path
-from typing import Dict, Any, List
 
 from fos.core.llm_config import LLMConfig
-from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.game_configs import GameConfig
 from fos.core.experiment.runner import ExperimentRunner
 from fos.core.experiment.kernel import ExperimentKernel, SpeakAction
@@ -63,7 +59,7 @@ async def test_open_discussion_basic(default_llm_client, output_dir):
     ExperimentKernel.register("speak", SpeakAction)
     kernel = ExperimentKernel()
 
-    filename = f"open_discussion_phi4-mini_basic.txt"
+    filename = "open_discussion_phi4-mini_basic.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "open_discussion", "phi4-mini", "basic") as out:
@@ -118,7 +114,7 @@ async def test_open_discussion_no_scores(default_llm_client, output_dir):
     ExperimentKernel.register("speak", SpeakAction)
     kernel = ExperimentKernel()
 
-    filename = f"open_discussion_phi4-mini_no_scores.txt"
+    filename = "open_discussion_phi4-mini_no_scores.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "open_discussion", "phi4-mini", "no_scores") as out:

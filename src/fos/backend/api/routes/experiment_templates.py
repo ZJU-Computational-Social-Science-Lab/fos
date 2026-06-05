@@ -386,7 +386,7 @@ async def run_experiment(
             record = await get_tree_record(simulation, session, current_user.id)
             # Mark the root node as running
             record.running.add(0)
-        except Exception as e:
+        except Exception:
             # If tree loading fails, still return the simulation
             # The frontend can retry by starting the simulation
             pass

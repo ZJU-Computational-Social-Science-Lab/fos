@@ -4,7 +4,6 @@ Unit tests for scenario registry.
 Tests scenario metadata and parameter definitions.
 """
 
-import pytest
 from fos.core.scenarios.registry import BATTLE_OF_THE_SEXES, STAG_HUNT, PUBLIC_GOODS, CUSTOM
 
 

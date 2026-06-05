@@ -2,7 +2,6 @@
 Tests for json_mode parameter in LLMClient.
 """
 
-import pytest
 from fos.core.llm.client import LLMClient
 from fos.core.llm.llm_config import LLMConfig
 

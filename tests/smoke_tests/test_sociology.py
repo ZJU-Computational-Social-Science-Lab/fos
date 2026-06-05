@@ -8,13 +8,9 @@ Tests the following sociology scenarios:
 - Resource Scarcity (group, none)
 """
 
-import asyncio
 import pytest
-from pathlib import Path
-from typing import Dict, Any, List
 
 from fos.core.llm_config import LLMConfig
-from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.game_configs import GameConfig
 from fos.core.experiment.runner import ExperimentRunner
 from fos.core.experiment.information_model import InformationModel
@@ -148,7 +144,7 @@ async def test_social_norm_disruption(default_llm_client, output_dir):
         build_experiment_agent("LowStatus2", llm_config, role_prompt="You are a low-status individual who resents the new rule."),
     ]
 
-    filename = f"social_norm_disruption_phi4-mini_basic.txt"
+    filename = "social_norm_disruption_phi4-mini_basic.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "social_norm_disruption", "phi4-mini", "basic") as out:
@@ -200,7 +196,7 @@ async def test_policy_erosion_sequential(default_llm_client, output_dir):
         build_experiment_agent("Worker", llm_config, role_prompt="You are a frontline worker who must implement policies."),
     ]
 
-    filename = f"policy_erosion_phi4-mini_sequential.txt"
+    filename = "policy_erosion_phi4-mini_sequential.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "policy_erosion", "phi4-mini", "sequential") as out:
@@ -266,7 +262,7 @@ async def test_echo_chamber_neighbor_visibility(default_llm_client, output_dir):
         context_budget_chars=0,
     )
 
-    filename = f"echo_chamber_phi4-mini_neighbor.txt"
+    filename = "echo_chamber_phi4-mini_neighbor.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "echo_chamber", "phi4-mini", "neighbor") as out:
@@ -318,7 +314,7 @@ async def test_resource_scarcity_sharing(default_llm_client, output_dir):
         build_experiment_agent("Individualist", llm_config, role_prompt="You prioritize your own needs over the group."),
     ]
 
-    filename = f"resource_scarcity_phi4-mini_sharing.txt"
+    filename = "resource_scarcity_phi4-mini_sharing.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "resource_scarcity", "phi4-mini", "sharing") as out:

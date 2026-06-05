@@ -22,7 +22,6 @@ from litestar import get, post, patch, delete
 from litestar.connection import Request
 from litestar.exceptions import HTTPException
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from fos.backend.core.database import get_session
@@ -42,7 +41,6 @@ from fos.i18n import T
 
 from .helpers import (
     get_simulation_for_owner,
-    get_tree_record,
 )
 
 

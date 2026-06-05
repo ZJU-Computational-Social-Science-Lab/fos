@@ -7,8 +7,6 @@ action mappings, resource names, and edge cases.
 Contains: TestFormatRoundResults, TestFormatPublicGoodsResults
 """
 
-import pytest
-from unittest.mock import patch
 
 from fos.core.simulation.results import (
     format_round_results,

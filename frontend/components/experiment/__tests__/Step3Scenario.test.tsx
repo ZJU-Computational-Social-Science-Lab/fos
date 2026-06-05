@@ -10,38 +10,21 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { I18nextProvider } from 'react-i18next';
 import { Step3Scenario } from '../Step3Scenario';
 import { useExperimentBuilder } from '@/store/experiment-builder';
 import { vi } from 'vitest';
 
-// Mock i18next with more complete mock
-const i18n = {
-  language: 'en',
-  changeLanguage: vi.fn(),
-  getFixedT: vi.fn(() => vi.fn((key: string, params?: any) => {
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, params?: Record<string, unknown>) => {
     const translations: Record<string, string> = {
       'experimentBuilder.actions.chooseAction': `Choose ${params?.action || ''}`,
       'experimentBuilder.dynamicActionsInfo.title': 'Dynamic Actions:',
       'experimentBuilder.dynamicActionsInfo.message':
         'These actions are generated from the parameter. Edit it in Step 2 to change the available choices.',
+      'experimentBuilder.step3.noActions': 'No actions available. Please select a scenario first',
     };
-    let result = translations[key] || key;
-    if (params) {
-      Object.keys(params).forEach((param) => {
-        result = result.replace(`{${param}}`, String(params[param]));
-      });
-    }
-    return result;
-  })),
-  t: (key: string, params?: any) => {
-    const translations: Record<string, string> = {
-      'experimentBuilder.actions.chooseAction': `Choose ${params?.action || ''}`,
-      'experimentBuilder.dynamicActionsInfo.title': 'Dynamic Actions:',
-      'experimentBuilder.dynamicActionsInfo.message':
-        'These actions are generated from the parameter. Edit it in Step 2 to change the available choices.',
-    };
-    let result = translations[key] || key;
+    let result = translations[key] || String(params?.defaultValue ?? key);
     if (params) {
       Object.keys(params).forEach((param) => {
         result = result.replace(`{${param}}`, String(params[param]));
@@ -49,11 +32,10 @@ const i18n = {
     }
     return result;
   },
-} as any;
+  }),
+}));
 
-const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
-);
+const wrapper = ({ children }: { children: React.ReactNode }) => <>{children}</>;
 
 // Mock the store
 vi.mock('@/store/experiment-builder', () => ({

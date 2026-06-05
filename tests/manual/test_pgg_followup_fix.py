@@ -15,8 +15,8 @@ from unittest.mock import Mock
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root / "src"))
 
-from fos.core.experiment.game_configs import GameConfig
-from fos.core.experiment.prompt_builder import build_prompt, build_reprompt
+from fos.core.experiment.game_configs import GameConfig  # noqa: E402
+from fos.core.experiment.prompt_builder import build_prompt, build_reprompt  # noqa: E402
 
 
 def test_followup_prompt_without_action_list():
@@ -100,9 +100,6 @@ def test_followup_prompt_without_action_list():
     print("=" * 80)
     print(followup_prompt)
     print()
-
-    # Verify follow-up prompt structure
-    lines = followup_prompt.split("\n")
 
     # Check that follow-up has the instruction
     assert "You chose to allocate" in followup_prompt, "Missing follow-up instruction"

@@ -10,9 +10,8 @@ TestGeminiChat, TestGeminiCompletion, TestGeminiEmbedding
 """
 
 import sys
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
-import pytest
 
 # Ensure google.genai is importable (mock it if not installed)
 if "google.genai" not in sys.modules:
@@ -37,7 +36,7 @@ class TestCreateClient:
 
     @patch("fos.core.llm.providers.gemini.genai")
     def test_configures_api_key(self, mock_genai):
-        model = create_gemini_client("gemini-pro", "my-key")
+        create_gemini_client("gemini-pro", "my-key")
         mock_genai.configure.assert_called_once_with(api_key="my-key")
         mock_genai.GenerativeModel.assert_called_once_with(model_name="gemini-pro")
 

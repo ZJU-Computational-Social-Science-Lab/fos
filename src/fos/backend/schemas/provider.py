@@ -1,9 +1,12 @@
+# This file describes provider settings that API routes send and receive.
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ProviderBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     name: str
     provider: str
@@ -16,10 +19,6 @@ class ProviderBase(BaseModel):
     last_test_status: str | None = None
     last_error: str | None = None
     config: dict | None = None
-
-    class Config:
-        from_attributes = True
-        json_encoders = {datetime: lambda v: v.isoformat() if v else None}
 
 
 class ProviderCreate(BaseModel):

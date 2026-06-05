@@ -1,105 +1,85 @@
-"""
-Manual verification script for coordination game fixes.
-Tests all three fixes without requiring pytest.
-"""
+# This file manually checks coordination fixes and lets pytest report them clearly.
+# build_context_manager creates a small memory of agent actions for the checks.
+# test_fix_1_visibility_filtering checks that agents only see neighbor actions.
+# test_fix_2_no_score_display checks that hidden scores stay hidden.
+# check_debug_log_format checks that debug logs use the expected readable layout.
+# run_check runs one check and turns its result into a simple pass or fail value.
+# main runs these checks from the command line and reports a simple summary.
+from __future__ import annotations
+
 import sys
-sys.path.insert(0, 'src')
+from collections.abc import Callable
+from pathlib import Path
 
-from fos.core.experiment.round_context import RoundContextManager
+sys.path.insert(0, "src")
+
 from fos.core.experiment.information_model import InformationModel
+from fos.core.experiment.round_context import RoundContextManager
 
 
-def test_fix_1_visibility_filtering():
-    """Fix 1: Context shows only neighbors (not all agents)."""
-    print("\n=== Fix 1: Visibility Filtering ===")
-
-    # Create information model with neighbor scope
+def build_context_manager(agent_names: list[str]) -> RoundContextManager:
+    """Create a context manager that hides scores and only shows nearby actions."""
     info_model = InformationModel(
         scope_type="neighborhood",
         include_scores=False,
         recent_window=5,
     )
 
-    # Create context manager
-    context_manager = RoundContextManager(
+    return RoundContextManager(
         information_model=info_model,
-        all_agent_names=["NodeA", "NodeB", "NodeC"],
+        all_agent_names=agent_names,
     )
 
-    # Set up a graph: A-B, B-C (no edge A-C)
-    graph = {"edges": [("NodeA", "NodeB"), ("NodeB", "NodeC")]}
 
-    # Record actions for round 1
+def test_fix_1_visibility_filtering() -> None:
+    """Fix 1: Context shows only neighbors, not every agent."""
+    print("\n=== Fix 1: Visibility Filtering ===")
+
+    context_manager = build_context_manager(["NodeA", "NodeB", "NodeC"])
+
     context_manager.record_action(
         agent_name="NodeA",
         action_name="choose_color",
         parameters={"color": "red"},
         round_num=1,
         summary="NodeA chose red",
-        observed_by=["NodeA", "NodeB"],  # Only B can see A
+        observed_by=["NodeA", "NodeB"],
         payoff=0,
     )
-
     context_manager.record_action(
         agent_name="NodeB",
         action_name="choose_color",
         parameters={"color": "blue"},
         round_num=1,
         summary="NodeB chose blue",
-        observed_by=["NodeA", "NodeB", "NodeC"],  # A and C can see B
+        observed_by=["NodeA", "NodeB", "NodeC"],
         payoff=0,
     )
-
     context_manager.record_action(
         agent_name="NodeC",
         action_name="choose_color",
         parameters={"color": "green"},
         round_num=1,
         summary="NodeC chose green",
-        observed_by=["NodeB", "NodeC"],  # Only B can see C
+        observed_by=["NodeB", "NodeC"],
         payoff=0,
     )
 
-    # Get context for NodeA - should see only NodeB's action (neighbor), not NodeC
-    context_a = context_manager.get_context_for_agent(
-        "NodeA",
-        agent_score=None,
-    )
+    context_a = context_manager.get_context_for_agent("NodeA", agent_score=None)
 
     print(f"Context for NodeA:\n{context_a}\n")
 
-    # NodeA should see NodeB's action (neighbor)
-    has_nodeb = "NodeB" in context_a
-    # NodeA should NOT see NodeC's action (not a neighbor)
-    has_nodec = "NodeC" in context_a
-
-    if has_nodeb and not has_nodec:
-        print("✅ PASS: NodeA sees only neighbor NodeB, not NodeC")
-        return True
-    else:
-        print(f"❌ FAIL: NodeA should see NodeB but not NodeC")
-        print(f"   Has NodeB: {has_nodeb}, Has NodeC: {has_nodec}")
-        return False
+    assert "NodeB" in context_a, "NodeA should see neighbor NodeB"
+    assert "NodeC" not in context_a, "NodeA should not see non-neighbor NodeC"
+    print("PASS: NodeA sees only neighbor NodeB, not NodeC")
 
 
-def test_fix_2_no_score_display():
-    """Fix 2: No 'My score' line appears when include_scores=False."""
+def test_fix_2_no_score_display() -> None:
+    """Fix 2: No 'My score' line appears when scores are hidden."""
     print("\n=== Fix 2: No Score Display ===")
 
-    # Create information model WITHOUT scores
-    info_model = InformationModel(
-        scope_type="neighborhood",
-        include_scores=False,  # This is the key setting
-        recent_window=3,
-    )
+    context_manager = build_context_manager(["Node1", "Node2"])
 
-    # Create context manager
-    context_manager = RoundContextManager(
-        information_model=info_model,
-        all_agent_names=["Node1", "Node2"],
-    )
-
-    # Record some actions
     context_manager.record_action(
         agent_name="Node1",
         action_name="coordinate",
@@ -109,7 +89,6 @@ def test_fix_2_no_score_display():
         observed_by=["Node1", "Node2"],
         payoff=0,
     )
-
     context_manager.record_action(
         agent_name="Node2",
         action_name="coordinate",
@@ -120,99 +99,63 @@ def test_fix_2_no_score_display():
         payoff=0,
     )
 
-    # Get context for Node1 with agent_score=0
-    context = context_manager.get_context_for_agent(
-        "Node1",
-        agent_score=0,
-    )
+    context = context_manager.get_context_for_agent("Node1", agent_score=0)
 
     print(f"Context for Node1:\n{context}\n")
 
-    # Verify "My score" does NOT appear
-    if "My score" in context:
-        print("❌ FAIL: Score appears when include_scores=False")
-        print(f"   Found 'My score' in context")
-        return False
-    else:
-        print("✅ PASS: No score displayed when include_scores=False")
-        return True
+    assert "My score" not in context, "Score appears when include_scores=False"
+    print("PASS: No score displayed when include_scores=False")
 
 
-def test_fix_3_debug_log_format():
-    """Fix 3: Debug log has sequential format (not nested)."""
+def check_debug_log_format() -> bool | None:
+    """Fix 3: Debug log has a sequential format instead of a nested one."""
     print("\n=== Fix 3: Debug Log Format ===")
 
-    # Read the latest debug log
-    import glob
-    from pathlib import Path
-
-    log_dir = Path("test_results")
-    log_files = sorted(log_dir.glob("experiment_debug_*.txt"))
+    log_files = sorted(Path("test_results").glob("experiment_debug_*.txt"))
 
     if not log_files:
-        print("⚠️  SKIP: No debug log files found")
+        print("SKIP: No debug log files found")
         return None
 
     latest_log = log_files[-1]
     print(f"Checking latest log: {latest_log}")
 
-    with open(latest_log, 'r', encoding='utf-8') as f:
-        content = f.read()
+    content = latest_log.read_text(encoding="utf-8")
+    agent_count = sum(1 for line in content.splitlines() if line.startswith("## AGENT:"))
 
-    # Check for sequential format markers
-    has_agent_header = "## AGENT:" in content
-    has_round_header = "## ROUND:" in content
-    has_sections = "---" in content and "===" in content
-
-    # Check for sequential agent entries (not nested)
-    lines = content.split('\n')
-    agent_count = sum(1 for line in lines if line.startswith("## AGENT:"))
-
-    print(f"  Has agent headers: {has_agent_header}")
-    print(f"  Has round headers: {has_round_header}")
-    print(f"  Has section markers: {has_sections}")
-    print(f"  Agent entries found: {agent_count}")
-
-    if has_agent_header and has_round_header and has_sections and agent_count > 0:
-        print("✅ PASS: Debug log has sequential format")
-        return True
-    else:
-        print("❌ FAIL: Debug log format is incorrect")
-        return False
+    assert "## AGENT:" in content, "Debug log should include agent headers"
+    assert "## ROUND:" in content, "Debug log should include round headers"
+    assert "---" in content and "===" in content, "Debug log should include section markers"
+    assert agent_count > 0, "Debug log should include at least one agent entry"
+    print("PASS: Debug log has sequential format")
+    return True
 
 
-def main():
-    """Run all verification tests."""
+def run_check(name: str, check: Callable[[], object]) -> tuple[str, bool]:
+    """Run one manual check and record whether it passed."""
+    try:
+        check()
+    except AssertionError as error:
+        print(f"FAIL in {name}: {error}")
+        return name, False
+    return name, True
+
+
+def main() -> int:
+    """Run all manual verification checks."""
     print("=" * 60)
     print("MANUAL VERIFICATION OF COORDINATION GAME FIXES")
     print("=" * 60)
 
-    results = []
+    results = [
+        run_check("Fix 1: Visibility Filtering", test_fix_1_visibility_filtering),
+        run_check("Fix 2: No Score Display", test_fix_2_no_score_display),
+    ]
 
-    # Test Fix 1: Visibility Filtering
-    try:
-        results.append(("Fix 1: Visibility Filtering", test_fix_1_visibility_filtering()))
-    except Exception as e:
-        print(f"❌ ERROR in Fix 1: {e}")
-        results.append(("Fix 1: Visibility Filtering", False))
+    debug_result = check_debug_log_format()
+    if debug_result is not None:
+        results.append(("Fix 3: Debug Log Format", debug_result))
 
-    # Test Fix 2: No Score Display
-    try:
-        results.append(("Fix 2: No Score Display", test_fix_2_no_score_display()))
-    except Exception as e:
-        print(f"❌ ERROR in Fix 2: {e}")
-        results.append(("Fix 2: No Score Display", False))
-
-    # Test Fix 3: Debug Log Format
-    try:
-        result = test_fix_3_debug_log_format()
-        if result is not None:
-            results.append(("Fix 3: Debug Log Format", result))
-    except Exception as e:
-        print(f"❌ ERROR in Fix 3: {e}")
-        results.append(("Fix 3: Debug Log Format", False))
-
-    # Summary
     print("\n" + "=" * 60)
     print("SUMMARY")
     print("=" * 60)
@@ -221,17 +164,17 @@ def main():
     total = len(results)
 
     for name, result in results:
-        status = "✅ PASS" if result else "❌ FAIL"
+        status = "PASS" if result else "FAIL"
         print(f"{status}: {name}")
 
     print(f"\nTotal: {passed}/{total} tests passed")
 
     if passed == total:
-        print("\n✅ ALL FIXES VERIFIED!")
+        print("\nALL FIXES VERIFIED!")
         return 0
-    else:
-        print("\n❌ SOME FIXES FAILED!")
-        return 1
+
+    print("\nSOME FIXES FAILED!")
+    return 1
 
 
 if __name__ == "__main__":

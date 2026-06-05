@@ -2,7 +2,6 @@
 Tests for comprehension module.
 """
 
-import pytest
 from unittest.mock import Mock, patch
 from tests.llm_prompt_testing.prompt_v2.game_configs import PRISONERS_DILEMMA, PUBLIC_GOODS
 from tests.llm_prompt_testing.prompt_v2.comprehension import verify_comprehension

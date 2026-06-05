@@ -16,18 +16,14 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from tests.llm_prompt_testing.run_pattern_test import (
+from tests.llm_prompt_testing.run_pattern_test import (  # noqa: E402
     PatternTestRunner,
-    build_system_prompt,
-    build_user_message,
 )
-from tests.llm_prompt_testing.agents import get_archetypal_agents
-from tests.llm_prompt_testing.config import AVAILABLE_MODELS, test_config
-from tests.llm_prompt_testing.csv_reporter import CSVReporter
-from tests.llm_prompt_testing.cross_llm_analyzer import apply_cross_llm_status
-from tests.llm_prompt_testing.scenarios import (
+from tests.llm_prompt_testing.agents import get_archetypal_agents  # noqa: E402
+from tests.llm_prompt_testing.config import AVAILABLE_MODELS, test_config  # noqa: E402
+from tests.llm_prompt_testing.cross_llm_analyzer import apply_cross_llm_status  # noqa: E402
+from tests.llm_prompt_testing.scenarios import (  # noqa: E402
     get_scenarios_for_pattern,
-    ALL_SCENARIOS,
 )
 
 # Configure logging
@@ -152,7 +148,7 @@ def run_strategic_decisions_tests():
             f"{cross_llm_pass}/{total} cross-LLM PASS"
         )
 
-    logger.info(f"\nResults saved to: test_results/strategic_decisions/")
+    logger.info("\nResults saved to: test_results/strategic_decisions/")
     return all_results_by_scenario
 
 

@@ -1,6 +1,5 @@
 """Test get_neighbor_average calculation."""
 
-import pytest
 from fos.core.experiment.information_model import InformationModel
 from fos.core.experiment.state import ExperimentState, AgentState
 

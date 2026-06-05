@@ -10,9 +10,8 @@ Provides flexible evaluation with multi-format support:
 """
 
 import logging
-import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .action_parser import parse_action, ParseResult
 from .agents import AgentProfile

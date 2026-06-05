@@ -2,7 +2,6 @@
 Tests for ExperimentAgent class.
 """
 
-import pytest
 
 from fos.core.experiment.agent import ExperimentAgent
 from fos.core.llm_config import LLMConfig

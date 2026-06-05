@@ -4,7 +4,6 @@ Tests for scenario helper functions.
 Tests name resolution and fallback logic for custom action/resource names.
 """
 
-import pytest
 from fos.core.scenarios.helpers import get_action_config, get_resource_name
 
 

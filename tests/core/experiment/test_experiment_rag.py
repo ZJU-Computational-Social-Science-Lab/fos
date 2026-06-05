@@ -7,9 +7,8 @@ semantic search delegation, keyword fallback, and no-call guarantees.
 Contains: test_experiment_rag_* (8 tests)
 """
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-import pytest
 
 from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.config import ExperimentConfig

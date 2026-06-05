@@ -1,8 +1,15 @@
+// This file checks that creating connected experiments sends the right scene and agent details to the backend.
+import { waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const simulationServiceMocks = vi.hoisted(() => ({
+  createSimulation: vi.fn(),
+  startSimulation: vi.fn(),
+}));
+
 vi.mock('../services/simulations', () => ({
-  createSimulation: vi.fn().mockResolvedValue({ id: 'sim-connected', name: 'Connected Simulation' }),
-  startSimulation: vi.fn().mockResolvedValue({}),
+  createSimulation: simulationServiceMocks.createSimulation,
+  startSimulation: simulationServiceMocks.startSimulation,
 }));
 
 vi.mock('../services/simulationTree', () => ({
@@ -20,6 +27,11 @@ import type { SimulationTemplate } from '../types';
 describe('Simulation Slice - Connected Experiment Payload', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    simulationServiceMocks.createSimulation.mockResolvedValue({
+      id: 'sim-connected',
+      name: 'Connected Simulation',
+    });
+    simulationServiceMocks.startSimulation.mockResolvedValue({});
     useSimulationStore.setState({
       simulations: [],
       currentSimulation: null,
@@ -95,10 +107,9 @@ describe('Simulation Slice - Connected Experiment Payload', () => {
       undefined,
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(createSimulation).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(createSimulation).toHaveBeenCalledTimes(1);
+    });
     const payload = vi.mocked(createSimulation).mock.calls[0][1];
     expect(payload.scene_type).toBe('experiment_template');
     expect(payload.scene_config.scenario_id).toBe('public_goods');
@@ -187,10 +198,9 @@ describe('Simulation Slice - Connected Experiment Payload', () => {
       undefined,
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(createSimulation).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(createSimulation).toHaveBeenCalledTimes(1);
+    });
     const payload = vi.mocked(createSimulation).mock.calls[0][1];
     expect(payload.scene_type).toBe('gaworld_scene');
     expect(payload.scene_config.parameters).toEqual({
@@ -307,10 +317,9 @@ describe('Simulation Slice - Connected Experiment Payload', () => {
       undefined,
     );
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(createSimulation).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(createSimulation).toHaveBeenCalledTimes(1);
+    });
     const payload = vi.mocked(createSimulation).mock.calls[0][1];
     expect(payload.scene_type).toBe('gaworld_scene');
     expect(payload.scene_config.parameters.agent_ids).toBe('1,2,3,4');

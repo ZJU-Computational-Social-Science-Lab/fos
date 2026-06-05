@@ -7,7 +7,6 @@ run_round execution, and registry presence.
 Contains: test_scene_creation, test_initialize, test_run_round, test_registry
 """
 import asyncio
-import pytest
 from fos.core.experiment.config import ExperimentConfig
 from fos.core.scenes.policy_cascade_experiment import PolicyCascadeExperimentScene
 from fos.core.llm.client import LLMClient, LLMConfig

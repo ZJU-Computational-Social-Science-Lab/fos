@@ -3,7 +3,7 @@ Test to verify that experiment_tasks.py correctly builds provider_clients.
 
 This simulates what experiment_tasks.py does when creating clients.
 """
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 from fos.core.llm_config import LLMConfig
 from fos.core.llm import create_llm_client
 

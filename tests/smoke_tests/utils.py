@@ -5,9 +5,14 @@ Provides the SmokeTestOutput class for writing formatted test results
 to files for human and LLM review.
 """
 
-from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from fos.core.experiment.agent import ExperimentAgent
+    from fos.core.experiment.game_configs import GameConfig
+    from fos.core.llm_config import LLMConfig
 
 
 class SmokeTestOutput:

@@ -2,7 +2,6 @@
 Integration test: InformationModel correctly scopes knowledge across a full run.
 """
 import asyncio
-import pytest
 from unittest.mock import Mock
 
 from fos.core.experiment.agent import ExperimentAgent

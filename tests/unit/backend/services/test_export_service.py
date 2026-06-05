@@ -1,5 +1,4 @@
 """Tests for export service."""
-import pytest
 from datetime import datetime
 from fos.backend.services.export_service import generate_export_filename
 

@@ -12,6 +12,7 @@ Contains:
 """
 
 import asyncio
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
@@ -19,15 +20,13 @@ from litestar import post, get
 from litestar.exceptions import HTTPException
 from litestar.connection import Request
 from sqlalchemy import delete as sa_delete
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from fos.i18n import T
 from fos.backend.core.database import get_session
 from fos.backend.dependencies import extract_bearer_token, resolve_current_user
-from fos.backend.models.simulation import Simulation, SimulationLog, SimulationSnapshot
+from fos.backend.models.simulation import Simulation, SimulationLog
 from fos.backend.schemas.common import Message
 from fos.backend.schemas.simulation import SimulationBase
-from litestar import get
 
 from .helpers import (
     get_simulation_for_owner,
@@ -36,6 +35,8 @@ from .helpers import (
 from fos.backend.services.simulations import generate_simulation_id, generate_simulation_name
 from fos.core.simtree import SimTree
 from fos.backend.services.simtree_runtime import SIM_TREE_REGISTRY
+
+logger = logging.getLogger(__name__)
 
 
 @post("/{simulation_id:str}/start")

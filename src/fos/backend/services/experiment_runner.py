@@ -206,7 +206,6 @@ async def run_variants_parallel(simulation_id: str, node_ids: List[int], turns: 
     if rec is None:
         raise RuntimeError(T("api.errors.simulation_tree_not_loaded"))
     tree = rec.tree
-    loop = asyncio.get_running_loop()
 
     # mark running
     for nid in node_ids:

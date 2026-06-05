@@ -28,13 +28,14 @@ import { GuideAssistant } from "../components/GuideAssistant";
 import { InterventionTab } from "../components/InterventionTab";
 import { ToastContainer } from "../components/Toast";
 import { useSimulationStore } from "../store";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { getSimulation as apiGetSimulation } from "../services/simulations";
 import { getTreeGraph, getSimEvents, getSimState, getRehydrate } from "../services/simulationTree";
 import { useAuthStore } from "../store/auth";
 import { useTranslation } from "react-i18next";
 import { TabRail } from "../components/TabRail";
 import { PeekOverlay } from "../components/PeekOverlay";
+import ContextToolbar from "../components/ContextToolbar";
 
 // ---------------- SimulationPage ----------------
 
@@ -44,8 +45,10 @@ const SimulationPage: React.FC = () => {
   const [railWidth, setRailWidth] = React.useState(96);
   const isResizingRailRef = React.useRef(false);
   const params = useParams();
+  const navigate = useNavigate();
   const simIdParam = params['id'] || params['simulationId'] || null;
   const engineConfig = useSimulationStore((state) => state.engineConfig);
+  const currentSimulation = useSimulationStore((state) => state.currentSimulation);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasRestored = useAuthStore((s) => s.hasRestored);
 
@@ -465,15 +468,21 @@ const SimulationPage: React.FC = () => {
     }
   }, [hasRestored, isAuthenticated]);
 
+  React.useEffect(() => {
+    if (simIdParam || !hasRestored || !isAuthenticated || !currentSimulation?.id) return;
+
+    navigate(`/simulations/${currentSimulation.id}`, { replace: true });
+  }, [simIdParam, hasRestored, isAuthenticated, currentSimulation?.id, navigate]);
+
   // Auto-open experiment builder when creating a new simulation
   React.useEffect(() => {
-    if (!simIdParam && hasRestored && isAuthenticated) {
+    if (!simIdParam && hasRestored && isAuthenticated && !currentSimulation?.id) {
       const { isWizardOpen, toggleWizard } = useSimulationStore.getState();
       if (!isWizardOpen) {
         toggleWizard(true);
       }
     }
-  }, [simIdParam, hasRestored, isAuthenticated]);
+  }, [simIdParam, hasRestored, isAuthenticated, currentSimulation?.id]);
 
   const activeTab = useSimulationStore((s) => s.activeTab);
 
@@ -524,6 +533,15 @@ const SimulationPage: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {activeTab === 'workspace' && (
           <>
+            <div
+              className="flex flex-wrap items-center justify-between gap-3 border-b px-3 py-2"
+              style={{
+                background: "var(--ss-workspace-surface)",
+                borderColor: "var(--ss-workspace-border)",
+              }}
+            >
+              <ContextToolbar />
+            </div>
             <div className="flex-1 overflow-hidden relative px-3 pb-3 pt-2">
               <div className="flex gap-3 h-full">
                 <div className="w-[40%] flex flex-col">

@@ -113,14 +113,11 @@ def test_all_default_action_ids_exist_in_category_library():
 
 def test_payoff_matrix_scenarios_have_valid_matrix_meta():
     """Payoff matrix scenarios should have valid matrix metadata."""
-    scenarios = get_all_scenarios()
     payoff_scenarios = ["prisoners_dilemma", "battle_of_the_sexes", "stag_hunt"]
 
     for scenario_id in payoff_scenarios:
         scenario = get_scenario(scenario_id)
         if scenario:
-            # Should have payoff parameters
-            payoff_params = [p for p in scenario["parameters"] if "payoff" in p["id"].lower()]
             # At minimum should describe the payoff structure
             assert scenario["description"] is not None
             assert len(scenario["description"]) > 0

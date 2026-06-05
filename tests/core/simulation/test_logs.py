@@ -5,7 +5,6 @@ Covers format_action_log and format_public_goods_log with all
 formatting branches: matrix game mapping, pass-through, custom names.
 """
 
-import pytest
 from fos.core.simulation.logs import format_action_log, format_public_goods_log
 
 

@@ -24,17 +24,15 @@ from typing import List, Optional
 # Setup path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from tests.llm_prompt_testing.action_parser import parse_action, ParseResult
+from tests.llm_prompt_testing.action_parser import parse_action
 from tests.llm_prompt_testing.agents import ARCHETYPAL_AGENTS
-from tests.llm_prompt_testing.config import AVAILABLE_MODELS, test_config
+from tests.llm_prompt_testing.config import AVAILABLE_MODELS
 from tests.llm_prompt_testing.ollama_client import (
     OllamaClient,
     ChatMessage,
 )
 from tests.llm_prompt_testing.prompt_builder import (
     build_json_prompt,
-    build_xml_prompt,
-    build_text_prompt,
     PROMPT_BUILDERS,
 )
 from tests.llm_prompt_testing.scenarios import Action, ScenarioConfig
@@ -224,7 +222,6 @@ async def run_all_tests(
     print(f"✓ Ollama running. Found {len(available_models)} models.")
 
     # Check which test models are available
-    available_api_names = [m.api_name for m in AVAILABLE_MODELS if m.name in models]
     missing_models = []
 
     for model_config in AVAILABLE_MODELS:
@@ -438,7 +435,7 @@ def save_results(results: List[TestRun], summary: dict, output_dir: Path):
     # Save text report
     report_path = output_dir / f"report_{timestamp}.txt"
     with open(report_path, "w") as f:
-        f.write(f"Small Model Action Testing Report\n")
+        f.write("Small Model Action Testing Report\n")
         f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
         f.write(f"Target Success Rate: {TARGET_SUCCESS_RATE}%\n\n")
 
@@ -494,7 +491,7 @@ async def main():
     print("="*65)
     print("Small Model Action Testing Framework")
     print("="*65)
-    print(f"\nConfiguration:")
+    print("\nConfiguration:")
     print(f"  Models: {', '.join(models)}")
     print(f"  Formats: {', '.join(formats)}")
     print(f"  Runs per format: {args.runs}")

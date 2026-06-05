@@ -160,7 +160,7 @@ class TestUIReliabilitySmoke:
             f"Expected 3 unique events, got {len(filtered_events)}"
         )
 
-        print(f"Smoketest passed: Mixed event types deduplicated correctly")
+        print("Smoketest passed: Mixed event types deduplicated correctly")
 
     def test_simtree_docker_rendering(self):
         """

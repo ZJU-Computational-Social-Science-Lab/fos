@@ -5,7 +5,7 @@ Flexible configuration that works with any social science scenario.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List
 
 
 @dataclass

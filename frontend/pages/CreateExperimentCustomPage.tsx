@@ -1060,7 +1060,7 @@ export function CreateExperimentCustomPage() {
           parameters: [],
           actions: customRuntimeActions,
           category_actions: customRuntimeActions,
-          default_action_ids: customRuntimeActions.map((item) => item.id || item.name),
+          default_action_ids: customRuntimeActions.map((item) => item.name),
         });
         setScenarioDescription(scenarioDescription);
         setScenarioParams({

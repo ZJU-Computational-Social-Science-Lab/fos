@@ -5,7 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base
 from ..db.mixins import TimestampMixin
-from .simulation import JsonType, Simulation
+from .simulation import JsonType
 
 
 class Experiment(TimestampMixin, Base):

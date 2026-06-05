@@ -14,7 +14,6 @@ import pytest
 
 from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.game_configs import GameConfig
-from fos.core.experiment.kernel import ExperimentKernel
 from fos.core.experiment.runner import ExperimentRunner
 from fos.core.llm.client import LLMClient
 from fos.core.llm_config import LLMConfig

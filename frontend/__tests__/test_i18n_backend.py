@@ -19,7 +19,6 @@ Add to CI:
 import ast
 import json
 import re
-import sys
 from pathlib import Path
 from typing import Generator
 
@@ -123,8 +122,10 @@ class HardcodedHTTPDetailVisitor(ast.NodeVisitor):
 
     @staticmethod
     def _func_name(node: ast.AST) -> str:
-        if isinstance(node, ast.Name): return node.id
-        if isinstance(node, ast.Attribute): return node.attr
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            return node.attr
         return ""
 
 
@@ -305,7 +306,6 @@ def test_all_t_keys_exist_in_en_locale(t_key_violations):
 
     FIX: Add the missing key to src/fos/locales/en.json.
     """
-    en_flat = load_json_flat(EN_JSON)
     missing = {
         label: locs for label, locs in t_key_violations.items()
         if "en.json" in label
@@ -314,7 +314,9 @@ def test_all_t_keys_exist_in_en_locale(t_key_violations):
         return
 
     report = "\n".join(
-        f"  {label}\n" + "\n".join(f"    used at {p}:{l}" for p, l in locs)
+        f"  {label}\n" + "\n".join(
+            f"    used at {path}:{line_number}" for path, line_number in locs
+        )
         for label, locs in sorted(missing.items())
     )
     pytest.fail(f"{len(missing)} T() key(s) missing from en.json:\n\n{report}")
@@ -337,7 +339,9 @@ def test_all_t_keys_exist_in_zh_locale(t_key_violations):
         return
 
     report = "\n".join(
-        f"  {label}\n" + "\n".join(f"    used at {p}:{l}" for p, l in locs)
+        f"  {label}\n" + "\n".join(
+            f"    used at {path}:{line_number}" for path, line_number in locs
+        )
         for label, locs in sorted(missing.items())
     )
     pytest.fail(f"{len(missing)} T() key(s) missing from zh.json:\n\n{report}")
@@ -412,8 +416,10 @@ def test_backend_locale_key_parity():
                 keys.add(full_key)
         return keys
 
-    with open(EN_JSON, encoding="utf-8") as f: en = json.load(f)
-    with open(ZH_JSON, encoding="utf-8") as f: zh = json.load(f)
+    with open(EN_JSON, encoding="utf-8") as f:
+        en = json.load(f)
+    with open(ZH_JSON, encoding="utf-8") as f:
+        zh = json.load(f)
 
     en_keys = get_all_keys(en)
     zh_keys = get_all_keys(zh)

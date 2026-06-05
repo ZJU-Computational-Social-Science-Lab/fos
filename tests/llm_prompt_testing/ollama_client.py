@@ -5,11 +5,10 @@ Provides a wrapper around the Ollama API with retry logic, timeout handling,
 and standardized request/response formats.
 """
 
-import json
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import List
 
 import requests
 

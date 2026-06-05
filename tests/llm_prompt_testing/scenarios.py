@@ -5,9 +5,7 @@ Supports both XML and JSON formats based on model capabilities.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional
-
-from .config import SCENARIOS_BY_PATTERN
+from typing import List, Dict, Any
 
 # Use JSON for action output (default can be overridden with --use-json flag)
 USE_JSON_FOR_ACTIONS = True
@@ -61,12 +59,12 @@ class ScenarioConfig:
             parts.append(f"Personality: {self.personality}")
 
         if self.goals:
-            parts.append(f"Goals:")
+            parts.append("Goals:")
             for goal in self.goals:
                 parts.append(f"- {goal}")
 
         if self.config:
-            parts.append(f"Configuration:")
+            parts.append("Configuration:")
             for key, value in self.config.items():
                 parts.append(f"  - {key}: {value}")
 
@@ -373,7 +371,6 @@ def get_scenarios_for_pattern(pattern: str) -> List["ScenarioConfig"]:
     Returns:
         List of ScenarioConfig objects for the pattern
     """
-    scenario_ids = SCENARIOS_BY_PATTERN.get(pattern, [])
     scenarios = []
 
     # Find the scenario dict for this pattern

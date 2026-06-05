@@ -8,7 +8,6 @@ Contains: Simulator
 
 from __future__ import annotations
 
-import traceback
 import logging
 from copy import deepcopy
 from queue import Queue
@@ -218,7 +217,7 @@ class Simulator:
                         if bool(pass_control):
                             yielded = True
                             break
-                except Exception as e:
+                except Exception:
                     logger.exception("Exception during agent turn", extra={"agent": agent.name})
                     continue_turn = False
                     break

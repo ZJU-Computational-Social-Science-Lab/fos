@@ -280,15 +280,19 @@ export function LandingPage() {
                   className="ss-landing__preview-video"
                   src={getBilibiliEmbedUrl()}
                   scrolling="no"
-                  border="none"
                   frameBorder="0"
                   allowFullScreen
                   title={String(t("landing.preview.title"))}
                 />
               ) : (
-                <div className="ss-landing__preview-video ss-landing__preview-placeholder">
-                  <p>{t("landing.preview.comingSoon")}</p>
-                </div>
+                <video
+                  className="ss-landing__preview-video"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  aria-label={String(t("landing.preview.title"))}
+                />
               )}
             </div>
           </div>

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, UniqueConstraint, JSON
 from sqlalchemy.dialects.postgresql import JSONB
@@ -6,6 +7,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base
 from ..db.mixins import TimestampMixin
+
+if TYPE_CHECKING:
+    from fos.backend.models.experiment_template import ExperimentTemplate
+    from fos.backend.models.simulation import Simulation
+    from fos.backend.models.token import VerificationToken
 
 # 在本文件内定义一个通用 JSON 类型：
 # - PostgreSQL 下为 JSONB

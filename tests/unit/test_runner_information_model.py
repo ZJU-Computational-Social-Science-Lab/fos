@@ -2,7 +2,6 @@
 Unit tests for ExperimentRunner with InformationModel integration.
 """
 import asyncio
-import pytest
 from unittest.mock import Mock
 
 from fos.core.experiment.agent import ExperimentAgent

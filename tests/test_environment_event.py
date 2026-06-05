@@ -1,4 +1,3 @@
-import pytest
 from fos.core.event import EnvironmentEvent
 
 

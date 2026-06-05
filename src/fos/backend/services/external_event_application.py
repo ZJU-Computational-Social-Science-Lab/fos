@@ -10,7 +10,7 @@ Each function here does one clear job:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -39,7 +39,11 @@ class ExternalEventCreateInput:
     def from_payload(cls, payload: dict[str, Any]) -> "ExternalEventCreateInput":
         """Build one clean input object from a route payload."""
         raw_timestamp = payload.get("timestamp")
-        timestamp = datetime.fromisoformat(str(raw_timestamp)) if raw_timestamp else datetime.utcnow()
+        timestamp = (
+            datetime.fromisoformat(str(raw_timestamp))
+            if raw_timestamp
+            else datetime.now(UTC)
+        )
         metadata = payload.get("metadata") or {}
         if not isinstance(metadata, dict):
             raise ValueError(T("api.errors.invalid_event_metadata"))

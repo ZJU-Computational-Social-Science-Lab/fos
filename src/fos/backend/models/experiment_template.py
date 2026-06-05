@@ -6,12 +6,17 @@ loaded and run via the GUI.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base
 from ..db.mixins import TimestampMixin
 from .simulation import JsonType
+
+if TYPE_CHECKING:
+    from fos.backend.models.user import User
 
 
 class ExperimentTemplate(TimestampMixin, Base):

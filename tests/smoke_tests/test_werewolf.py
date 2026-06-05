@@ -6,22 +6,18 @@ because the scenario requires a dedicated role/phase runtime.
 Do not remove — they serve as a regression baseline for future re-enablement.
 """
 
-import asyncio
 import pytest
-from pathlib import Path
-from typing import Dict, Any, List
 
 pytestmark = pytest.mark.skip(
     reason="Werewolf is currently unsupported/inactive — requires dedicated role/phase runtime"
 )
 
-from fos.core.llm_config import LLMConfig
-from fos.core.experiment.agent import ExperimentAgent
-from fos.core.experiment.game_configs import GameConfig
-from fos.core.experiment.runner import ExperimentRunner
-from fos.core.experiment.kernel import ExperimentKernel, SpeakAction, VoteAction
+from fos.core.llm_config import LLMConfig  # noqa: E402
+from fos.core.experiment.game_configs import GameConfig  # noqa: E402
+from fos.core.experiment.runner import ExperimentRunner  # noqa: E402
+from fos.core.experiment.kernel import ExperimentKernel, SpeakAction, VoteAction  # noqa: E402
 
-from tests.smoke_tests.utils import (
+from tests.smoke_tests.utils import (  # noqa: E402
     SmokeTestOutput,
     build_experiment_agent,
 )
@@ -75,7 +71,7 @@ async def test_werewolf_voting(default_llm_client, output_dir):
     kernel.register("speak", SpeakAction)
     kernel.register("vote", VoteAction)
 
-    filename = f"werewolf_phi4-mini_voting.txt"
+    filename = "werewolf_phi4-mini_voting.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "werewolf", "phi4-mini", "voting") as out:
@@ -129,7 +125,7 @@ async def test_werewolf_two_rounds(default_llm_client, output_dir):
     kernel.register("speak", SpeakAction)
     kernel.register("vote", VoteAction)
 
-    filename = f"werewolf_phi4-mini_two_rounds.txt"
+    filename = "werewolf_phi4-mini_two_rounds.txt"
     filepath = output_dir / filename
 
     with SmokeTestOutput(filepath, "werewolf", "phi4-mini", "two_rounds") as out:

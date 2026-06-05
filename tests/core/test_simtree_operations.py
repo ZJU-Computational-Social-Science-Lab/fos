@@ -9,7 +9,7 @@ TestBranch, TestCopySimAttach, TestAdvanceOps
 """
 
 import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 from fos.core.simtree import SimTree, SimCloneError
 
@@ -447,9 +447,6 @@ class TestBranch:
 
     def test_branch_with_environment_event_targets_specific_receivers(self):
         tree, _ = _make_tree_via_new(("Alice", "Bob", "Carol"))
-        alice = MagicMock()
-        bob = MagicMock()
-        carol = MagicMock()
         cid = tree.branch(0, [{"op": "environment_event", "text": "Secret message",
                                 "event_type": "whisper", "receivers": ["Alice", "Bob"]}])
         # The clone's agents were freshly created by deserialize, not our mocks.

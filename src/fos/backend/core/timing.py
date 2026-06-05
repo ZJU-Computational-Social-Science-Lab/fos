@@ -44,7 +44,7 @@ def log_time(category: str, **kwargs: Any):
         parts = [f"{k}={v}" for k, v in kwargs.items()]
         parts.append(f"duration_ms={duration_ms}")
         if error:
-            parts.append(f"status=error")
+            parts.append("status=error")
             parts.append(f"error={error[:80]}")
         else:
             parts.append("status=ok")
