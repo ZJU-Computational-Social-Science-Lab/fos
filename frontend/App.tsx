@@ -46,6 +46,9 @@ const CreateExperimentCustomPage = lazy(() =>
 const DocsPage = lazy(() =>
   import("./pages/DocsPage").then((m) => ({ default: m.DocsPage }))
 );
+const ReleaseDemoPage = lazy(() =>
+  import("./pages/ReleaseDemoPage").then((m) => ({ default: m.ReleaseDemoPage }))
+);
 
 // 新前端的仿真主界面（你已经把原来的 App 改名为 SimulationPage.tsx，并 default export）
 const SimulationPage = lazy(() => import("./pages/SimulationPage"));
@@ -106,6 +109,15 @@ const App: React.FC = () => {
           element={
             <Layout navVariant="product">
               <DocsPage />
+            </Layout>
+          }
+        />
+
+        <Route
+          path="/meeting"
+          element={
+            <Layout navVariant="product">
+              <ReleaseDemoPage />
             </Layout>
           }
         />
