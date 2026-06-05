@@ -1009,3 +1009,303 @@
     }
   }
 }
+
+@layer components {
+  .ss-release-page {
+    gap: 1.5rem;
+  }
+
+  .ss-release-page__hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) auto;
+    gap: 1.2rem;
+    align-items: end;
+    padding: clamp(1.35rem, 2.4vw, 1.95rem);
+    border: 1px solid var(--ss-border);
+    border-radius: 1.75rem;
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--ss-brand-soft) 64%, transparent), transparent 46%),
+      color-mix(in srgb, var(--ss-surface) 96%, transparent);
+  }
+
+  .ss-release-page__hero-copy {
+    display: grid;
+    gap: 0.9rem;
+    min-width: 0;
+  }
+
+  .ss-release-page__eyebrow,
+  .ss-release-page__panel-kicker,
+  .ss-release-page__info-label,
+  .ss-release-page__status-title,
+  .ss-release-page__link-label {
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--ss-brand-primary) 74%, var(--ss-text-subtle));
+  }
+
+  .ss-release-page__title {
+    margin: 0;
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.08;
+    color: var(--ss-heading);
+  }
+
+  .ss-release-page__lead,
+  .ss-release-page__note,
+  .ss-release-page__helper-copy,
+  .ss-release-page__status-copy,
+  .ss-release-page__placeholder span {
+    margin: 0;
+    color: var(--ss-text-muted);
+    line-height: 1.72;
+  }
+
+  .ss-release-page__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .ss-release-page__meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 2.6rem;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--ss-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ss-surface) 92%, transparent);
+    color: var(--ss-heading);
+    font-weight: 600;
+  }
+
+  .ss-release-page__meta-pill--soft {
+    background: color-mix(in srgb, var(--ss-brand-soft) 84%, var(--ss-surface));
+    color: var(--ss-brand-hover);
+  }
+
+  .ss-release-page__hero-actions {
+    display: grid;
+    gap: 0.8rem;
+    align-content: end;
+    justify-items: stretch;
+    min-width: min(100%, 17rem);
+  }
+
+  .ss-release-page__button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 3.2rem;
+    padding: 0.85rem 1.1rem;
+    border-radius: 999px;
+    border: 1px solid var(--ss-border);
+    text-decoration: none;
+    font-weight: 700;
+    transition:
+      transform 0.18s ease,
+      border-color 0.18s ease,
+      background 0.18s ease,
+      color 0.18s ease;
+    cursor: pointer;
+  }
+
+  .ss-release-page__button:hover {
+    transform: translateY(-1px);
+  }
+
+  .ss-release-page__button--primary {
+    background: linear-gradient(135deg, var(--ss-brand-primary), var(--ss-brand-hover));
+    border-color: transparent;
+    color: #fffaf2;
+  }
+
+  .ss-release-page__button--secondary {
+    background: color-mix(in srgb, var(--ss-surface) 94%, transparent);
+    color: var(--ss-heading);
+  }
+
+  .ss-release-page__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.2rem;
+    align-items: stretch;
+  }
+
+  .ss-release-page__panel {
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+    height: 100%;
+    padding: clamp(1.2rem, 2.2vw, 1.65rem);
+    border: 1px solid var(--ss-border);
+    border-radius: 1.5rem;
+    background: color-mix(in srgb, var(--ss-surface) 96%, transparent);
+  }
+
+  .ss-release-page__panel-head {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .ss-release-page__panel-title {
+    margin: 0.25rem 0 0;
+    font-size: 1.18rem;
+    line-height: 1.35;
+    color: var(--ss-heading);
+  }
+
+  .ss-release-page__icon-chip {
+    display: inline-flex;
+    width: 2.4rem;
+    height: 2.4rem;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    border-radius: 0.95rem;
+    background: var(--ss-brand-soft);
+    color: var(--ss-brand-primary);
+  }
+
+  .ss-release-page__qr-frame {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    width: min(100%, 18rem);
+    padding: 0.9rem;
+    margin-inline: auto;
+    border: 1px solid var(--ss-border);
+    border-radius: 1.4rem;
+    background: #fff;
+  }
+
+  .ss-release-page__qr-frame--meeting {
+    width: min(100%, 16rem);
+  }
+
+  .ss-release-page__qr-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 0.8rem;
+  }
+
+  .ss-release-page__link-box,
+  .ss-release-page__intro-card,
+  .ss-release-page__info-row,
+  .ss-release-page__status-box {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.95rem 1rem;
+    border: 1px solid var(--ss-border);
+    border-radius: 1.1rem;
+    background: color-mix(in srgb, var(--ss-surface-muted) 88%, transparent);
+  }
+
+  .ss-release-page__link,
+  .ss-release-page__inline-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--ss-brand-primary);
+    text-decoration: none;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .ss-release-page__link span {
+    overflow-wrap: anywhere;
+  }
+
+  .ss-release-page__meeting-layout {
+    display: grid;
+    grid-template-columns: minmax(15rem, 16rem) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .ss-release-page__meeting-info {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .ss-release-page__intro-card {
+    align-content: start;
+    min-height: 8rem;
+  }
+
+  .ss-release-page__info-value,
+  .ss-release-page__placeholder strong {
+    color: var(--ss-heading);
+    font-size: 1rem;
+    overflow-wrap: anywhere;
+  }
+
+  .ss-release-page__placeholder {
+    display: grid;
+    gap: 0.75rem;
+    place-items: center;
+    text-align: center;
+    color: var(--ss-text-muted);
+  }
+
+  .theme-dark .ss-release-page__hero,
+  .theme-dark .ss-release-page__panel,
+  .theme-dark .ss-release-page__link-box,
+  .theme-dark .ss-release-page__info-row,
+  .theme-dark .ss-release-page__status-box {
+    border-color: rgba(130, 175, 160, 0.16);
+    background: rgba(10, 24, 21, 0.8);
+    box-shadow:
+      0 12px 32px rgba(0, 0, 0, 0.24),
+      inset 0 0 0 1px rgba(47, 230, 166, 0.04);
+  }
+
+  .theme-dark .ss-release-page__button--secondary,
+  .theme-dark .ss-release-page__meta-pill,
+  .theme-dark .ss-release-page__qr-frame {
+    border-color: rgba(130, 175, 160, 0.14);
+    background: rgba(9, 20, 18, 0.76);
+  }
+
+  .theme-dark .ss-release-page__meta-pill--soft {
+    background: rgba(47, 230, 166, 0.14);
+    color: var(--ss-heading);
+  }
+
+  @media (max-width: 980px) {
+    .ss-release-page__hero,
+    .ss-release-page__grid,
+    .ss-release-page__meeting-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .ss-release-page__hero-actions,
+    .ss-release-page__qr-frame,
+    .ss-release-page__qr-frame--meeting {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .ss-release-page__hero,
+    .ss-release-page__panel {
+      padding: 1rem;
+      border-radius: 1.25rem;
+    }
+
+    .ss-release-page__title {
+      font-size: 1.85rem;
+    }
+
+    .ss-release-page__button {
+      min-height: 3rem;
+    }
+  }
+}
