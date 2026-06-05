@@ -152,6 +152,14 @@ class ExperimentRunnerAdapter:
         if not self.scene.agents and (self._llm_client is not None or getattr(self.scene, "TYPE", "") == "gaworld_scene"):
             self.scene.initialize(self._llm_client or object(), provider_clients=self._provider_clients)
 
+    def _scene_agent_map(self) -> dict[str, object]:
+        """Return experiment agents by name for adapter-only compatibility paths."""
+        return {
+            getattr(agent, "name", ""): agent
+            for agent in getattr(self.scene, "agents", []) or []
+            if getattr(agent, "name", "")
+        }
+
     def run(self, max_turns: int = 1) -> None:
         """Run experiment rounds (each 'turn' = one round)."""
         if not self.scene.runner:
@@ -246,19 +254,44 @@ class ExperimentRunnerAdapter:
         """No-op for SimTree compatibility (adapter has no event queue)."""
         pass
 
-    def broadcast(self, event) -> None:
+    def broadcast(self, event, receivers=None) -> None:
         """Broadcast a public event to the experiment scene.
 
         Args:
             event: PublicEvent or similar event object with text attribute
         """
-        # For experiment scenes, broadcast emits as a public event
-        if hasattr(event, "text"):
-            self._emit_event("public_broadcast", {"text": event.text})
-        elif hasattr(event, "__dict__"):
-            self._emit_event("public_broadcast", event.__dict__)
-        else:
-            self._emit_event("public_broadcast", {"data": str(event)})
+        targets = list(self._scene_agent_map().values())
+        allowed = {str(name).strip() for name in (receivers or []) if str(name).strip()}
+        if allowed:
+            targets = [agent for agent in targets if getattr(agent, "name", "") in allowed]
+
+        text = ""
+        if hasattr(event, "to_string"):
+            try:
+                text = str(event.to_string()).strip()
+            except Exception:
+                text = ""
+        if not text:
+            text = str(
+                getattr(event, "text", None)
+                or getattr(event, "content", None)
+                or getattr(event, "message", None)
+                or ""
+            ).strip()
+        if not text:
+            text = str(event)
+
+        for agent in targets:
+            if hasattr(agent, "add_env_feedback"):
+                agent.add_env_feedback(text)
+
+        payload = {
+            "text": text,
+            "recipients": [getattr(agent, "name", "") for agent in targets if getattr(agent, "name", "")],
+            "scoped": bool(allowed),
+            "type": type(event).__name__,
+        }
+        self._emit_event("system_broadcast", payload)
 
     def inject_host_message(self, message: str) -> None:
         """Inject a host message into all agents' context for the next round.
@@ -267,6 +300,31 @@ class ExperimentRunnerAdapter:
             message: Host message text to inject
         """
         self.scene.inject_host_message(message)
+
+
+def get_runtime_agent_map(simulator) -> dict[str, object]:
+    """Return a name->agent mapping for either runtime architecture."""
+    if isinstance(simulator, ExperimentRunnerAdapter):
+        return simulator._scene_agent_map()
+    return getattr(simulator, "agents", {}) or {}
+
+
+def get_runtime_agent_count(simulator) -> int:
+    """Return the visible runtime agent count for either simulator style."""
+    return len(get_runtime_agent_map(simulator))
+
+
+def get_runtime_agent_profile(agent: object) -> str:
+    """Return the best available user-facing profile string for an agent."""
+    properties = getattr(agent, "properties", {}) or {}
+    return str(
+        getattr(agent, "user_profile", "")
+        or getattr(agent, "role_prompt", "")
+        or properties.get("profile")
+        or properties.get("description")
+        or properties.get("role")
+        or ""
+    ).strip()
 
 
 def _build_tree_for_scene(scene_type: str, clients: dict | None = None) -> SimTree:
@@ -522,6 +580,7 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
                 round_visibility="sequential",
                 social_network=inner_cfg.get("social_network") or {},
                 locale=inner_cfg.get("locale") or get_request_locale(),
+                global_knowledge=inner_cfg.get("global_knowledge", {}),
             )
             logger.debug(f"[COUNCIL_EXPERIMENT] Creating CouncilExperimentScene with parameters: {config.parameters}")
             scene = CouncilExperimentScene(config)
@@ -535,6 +594,7 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
                 round_visibility=inner_cfg.get("round_visibility", "simultaneous"),
                 social_network=inner_cfg.get("social_network") or {},
                 locale=inner_cfg.get("locale") or get_request_locale(),
+                global_knowledge=inner_cfg.get("global_knowledge", {}),
             )
             logger.debug(f"[EXPERIMENT] Creating ExperimentConfig with parameters: {cfg.get('parameters', {})}")
             scene = ExperimentScene(config)
@@ -582,6 +642,7 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
             round_visibility="sequential",  # Council uses sequential rounds
             social_network=cfg.get("social_network") or {},
             locale=cfg.get("locale") or get_request_locale(),
+            global_knowledge=cfg.get("global_knowledge", {}),
         )
         logger.debug(f"[COUNCIL_EXPERIMENT] Creating CouncilExperimentScene with parameters: {config.parameters}")
         scene = CouncilExperimentScene(config)
@@ -613,6 +674,7 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
             round_visibility="sequential",
             social_network=cfg.get("social_network") or {},
             locale=cfg.get("locale", "en"),
+            global_knowledge=cfg.get("global_knowledge", {}),
         )
         scene = PolicyCascadeExperimentScene(config)
         adapter = ExperimentRunnerAdapter(scene, clients or make_clients_from_env())
@@ -690,6 +752,7 @@ def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
             parameters=gaworld_params,
             scenario_id="gaworld",
             locale=inner_cfg.get("locale", "zh"),
+            global_knowledge=inner_cfg.get("global_knowledge", {}),
         )
         scene = GAWorldScene(config)
         adapter = ExperimentRunnerAdapter(scene, clients or make_clients_from_env())
@@ -992,11 +1055,23 @@ class SimTreeRegistry:
             sim = node_data.get("sim")
             if sim is None:
                 continue
-            for agent_name, agent in sim.agents.items():
+            agent_map = getattr(sim, "agents", {}) or {}
+            if not agent_map and hasattr(sim, "_scene_agent_map"):
+                agent_map = sim._scene_agent_map()
+            for agent_name, agent in agent_map.items():
                 if agent_name in kb_by_name:
                     agent.knowledge_base = list(kb_by_name[agent_name])
                 if agent_name in docs_by_name:
                     agent.documents = dict(docs_by_name[agent_name])
+            scene = getattr(sim, "scene", None)
+            config_agents = getattr(getattr(scene, "config", None), "agents", None)
+            if isinstance(config_agents, list):
+                for agent_cfg in config_agents:
+                    agent_name = str(agent_cfg.get("name", "")).strip()
+                    if agent_name in kb_by_name:
+                        agent_cfg["knowledgeBase"] = list(kb_by_name[agent_name])
+                    if agent_name in docs_by_name:
+                        agent_cfg["documents"] = dict(docs_by_name[agent_name])
             nodes_updated += 1
 
         return True
@@ -1034,8 +1109,14 @@ class SimTreeRegistry:
             sim = node_data.get("sim")
             if sim is None:
                 continue
-            for agent_name, agent in sim.agents.items():
-                agent.set_global_knowledge(global_knowledge)
+            scene = getattr(sim, "scene", None)
+            if scene is not None and hasattr(scene, "global_knowledge"):
+                scene.global_knowledge = dict(global_knowledge)
+                if hasattr(scene, "config"):
+                    scene.config.global_knowledge = dict(global_knowledge)
+            for agent_name, agent in (getattr(sim, "agents", {}) or {}).items():
+                if hasattr(agent, "set_global_knowledge"):
+                    agent.set_global_knowledge(global_knowledge)
 
         return True
 

@@ -573,10 +573,22 @@ class SimTree:
                 ag.plan_state = op["plan_state"]
             elif name == "agent_props_patch":
                 # Apply property updates to the cloned simulator's agent
-                ag = sim.agents[op["name"]]
+                from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
+                if isinstance(sim, ExperimentRunnerAdapter):
+                    ag = sim._scene_agent_map()[op["name"]]
+                else:
+                    ag = sim.agents[op["name"]]
                 updates = op["updates"]
                 for k, v in updates.items():
                     ag.properties[k] = v
+                if isinstance(sim, ExperimentRunnerAdapter):
+                    config_agents = getattr(getattr(sim.scene, "config", None), "agents", None) or []
+                    for agent_cfg in config_agents:
+                        if str(agent_cfg.get("name", "")).strip() == str(op.get("name", "")).strip():
+                            merged_props = dict(agent_cfg.get("properties") or {})
+                            merged_props.update(updates)
+                            agent_cfg["properties"] = merged_props
+                            break
                 try:
                     logger.debug("SimTree.branch applied agent_props_patch", extra={"parent": parent_id, "child": cid, "agent": op.get("name"), "updates": updates})
                 except Exception:
@@ -632,6 +644,35 @@ class SimTree:
                 if is_policy_scene:
                     payload["notice_only"] = notice_only
                 receivers = op.get("receivers")
+                from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
+                is_custom_experiment = (
+                    isinstance(sim, ExperimentRunnerAdapter)
+                    and getattr(getattr(sim.scene, "config", None), "scenario_id", "") == "custom"
+                )
+                if is_custom_experiment:
+                    if event_type == "broadcast":
+                        sim.broadcast(
+                            PublicEvent(description, prefix="SYSTEM BROADCAST"),
+                            receivers=receivers,
+                        )
+                    elif receivers:
+                        agent_map = sim._scene_agent_map()
+                        for receiver_name in receivers:
+                            agent = agent_map.get(receiver_name)
+                            if agent is None:
+                                raise ValueError(T("Unknown environment_event receiver: {receiver_name}", receiver_name=receiver_name))
+                            agent.add_env_feedback(description)
+                        sim._emit_event(
+                            "public_event",
+                            {"message": description, "scoped": True, "recipients": receivers},
+                        )
+                    else:
+                        sim.inject_host_message(description)
+                        sim._emit_event(
+                            "public_event",
+                            {"message": description, "scoped": False, "recipients": []},
+                        )
+                    continue
                 if receivers:
                     for receiver_name in receivers:
                         if receiver_name not in sim.agents:
@@ -661,27 +702,61 @@ class SimTree:
 
         for item in overrides:
             name = item["name"]
-            agent = sim.agents[name]
+            from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
+            is_experiment_adapter = isinstance(sim, ExperimentRunnerAdapter)
+            if is_experiment_adapter:
+                agent = sim._scene_agent_map()[name]
+            else:
+                agent = sim.agents[name]
 
             current = dict(agent_overrides.get(name, {}))
+            config_agent = None
+            if is_experiment_adapter:
+                for candidate in getattr(getattr(sim.scene, "config", None), "agents", None) or []:
+                    if str(candidate.get("name", "")).strip() == str(name).strip():
+                        config_agent = candidate
+                        break
 
             if "language" in item:
-                agent.language = item["language"]
+                if hasattr(agent, "language"):
+                    agent.language = item["language"]
+                if config_agent is not None:
+                    config_agent["language"] = item["language"]
                 current["language"] = item["language"]
 
             if "llm_config" in item:
                 llm_cfg = json.loads(json.dumps(item["llm_config"]))
                 agent.properties["llm_config"] = llm_cfg
+                if hasattr(agent, "llm_config"):
+                    agent.llm_config = llm_cfg
+                if config_agent is not None:
+                    config_agent["llm_config"] = llm_cfg
                 current["llm_config"] = llm_cfg
+
+            if "provider_id" in item:
+                provider_id = item["provider_id"]
+                if hasattr(agent, "provider_id"):
+                    agent.provider_id = provider_id
+                agent.properties["provider_id"] = provider_id
+                if config_agent is not None:
+                    config_agent["provider_id"] = provider_id
+                    config_properties = dict(config_agent.get("properties") or {})
+                    config_properties["provider_id"] = provider_id
+                    config_agent["properties"] = config_properties
+                current["provider_id"] = provider_id
 
             if "knowledge_base" in item:
                 kb = json.loads(json.dumps(item["knowledge_base"]))
                 agent.knowledge_base = kb
+                if config_agent is not None:
+                    config_agent["knowledgeBase"] = kb
                 current["knowledge_base"] = kb
 
             if "documents" in item:
                 docs = json.loads(json.dumps(item["documents"]))
                 agent.documents = docs
+                if config_agent is not None:
+                    config_agent["documents"] = docs
                 current["documents"] = docs
 
             if "properties" in item:
@@ -689,7 +764,16 @@ class SimTree:
                 for k, v in props.items():
                     agent.properties[k] = v
                 merged = dict(agent.properties)
+                if config_agent is not None:
+                    config_agent["properties"] = dict(merged)
                 current["properties"] = merged
+
+            if is_experiment_adapter and hasattr(sim.scene, "_agent_llm_clients"):
+                target_provider_id = item.get("provider_id", getattr(agent, "provider_id", None))
+                if target_provider_id is not None and getattr(sim, "_provider_clients", None):
+                    client = sim._provider_clients.get(target_provider_id)
+                    if client is not None:
+                        sim.scene._agent_llm_clients[name] = client
 
             agent_overrides[name] = current
 

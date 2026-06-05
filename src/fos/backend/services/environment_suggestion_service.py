@@ -20,6 +20,7 @@ from fos.backend.models.external_event_record import ExternalEventRecord
 from fos.backend.models.simulation import Simulation
 from fos.backend.models.user import ProviderConfig
 from fos.backend.services.simtree_runtime import SIM_TREE_REGISTRY
+from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter, get_runtime_agent_map
 from fos.core.environment_analyzer import EnvironmentAnalyzer
 from fos.core.environment_config import EnvironmentConfig
 from fos.core.environment_context_builder import build_environment_context
@@ -339,11 +340,16 @@ def _deliver_notice_only_event(
     receivers: list[str] | None,
 ) -> None:
     """Send a notice-only event through the same path host injections already use."""
+    runtime_agents = get_runtime_agent_map(simulator)
     if receivers is not None:
         for name in receivers:
-            agent = simulator.agents.get(name)
+            agent = runtime_agents.get(name)
             if agent:
                 _add_env_feedback(agent, description)
+        if isinstance(simulator, ExperimentRunnerAdapter):
+            if hasattr(simulator, "_emit_event"):
+                simulator._emit_event("public_event", {"message": description, "scoped": True, "recipients": receivers})
+            return
         if hasattr(simulator.scene, "inject_host_message"):
             scoped_prefix = f"[Private notice to {', '.join(receivers)}]\n" if receivers else ""
             simulator.scene.inject_host_message(f"{scoped_prefix}{description}")
@@ -370,7 +376,7 @@ def _deliver_notice_only_event(
         if hasattr(simulator, "_emit_event"):
             simulator._emit_event("public_event", {"message": description, "scoped": False, "recipients": []})
     else:
-        for agent in simulator.agents.values():
+        for agent in runtime_agents.values():
             _add_env_feedback(agent, description)
 
     if hasattr(simulator.scene, "inject_host_message"):

@@ -14,6 +14,7 @@ from fos.backend.models.user import ProviderConfig
 from fos.backend.core.database import get_session
 from fos.backend.models.experiment import Experiment, ExperimentVariant, ExperimentRun
 from fos.backend.services.simtree_runtime import SIM_TREE_REGISTRY, SimTreeRecord
+from fos.backend.services.simtree_runtime import get_runtime_agent_map
 from fos.backend.celery_app import celery_app
 
 # Import the Celery task here to avoid circular imports at module import time
@@ -106,7 +107,7 @@ async def run_experiment_db(simulation_id: str, exp_id: str, turns: int) -> List
             logs = node.get("logs") or []
             # agents snapshot (shallow props)
             agents = {}
-            for name, ag in (sim.agents.items() if sim else []):
+            for name, ag in (get_runtime_agent_map(sim).items() if sim else []):
                 agents[name] = getattr(ag, "properties", {})
             summaries[int(nid)] = {
                 "node_id": int(nid),
@@ -392,7 +393,7 @@ async def _run_experiment_worker(simulation_id: str, exp_id: str, run_id: int, t
             sim = node.get("sim")
             logs = node.get("logs") or []
             agents = {}
-            for name, ag in (sim.agents.items() if sim else []):
+            for name, ag in (get_runtime_agent_map(sim).items() if sim else []):
                 agents[name] = getattr(ag, "properties", {})
             summaries[int(nid)] = {
                 "node_id": int(nid),

@@ -11,7 +11,7 @@ from fos.backend.models.simulation import Simulation
 from fos.i18n import T
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from fos.backend.services.simtree_runtime import SimTree
+from fos.backend.services.simtree_runtime import SimTree, get_runtime_agent_map
 from fos.core.llm import create_llm_client
 from fos.core.llm_config import LLMConfig, guess_supports_vision
 from fos.backend.models.user import ProviderConfig, SearchProviderConfig
@@ -199,7 +199,7 @@ def run_experiment_task(self, simulation_id: str, exp_id: str, run_id: int, turn
                 sim = node.get("sim")
                 logs = node.get("logs") or []
                 agents = {}
-                for name, ag in (sim.agents.items() if sim else []):
+                for name, ag in (get_runtime_agent_map(sim).items() if sim else []):
                     agents[name] = getattr(ag, "properties", {})
                 summaries[int(nid)] = {
                     "node_id": int(nid),
