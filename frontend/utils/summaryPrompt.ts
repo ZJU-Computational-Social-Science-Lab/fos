@@ -1,9 +1,15 @@
 /*
 This file builds the text prompt that describes simulation results for an AI summary.
-buildSummaryPrompt checks the input and turns each metric and agent value list into plain text.
+buildSummaryPrompt checks the input and turns each metric into plain text.
+buildMetricBlock chooses between agent lines and aggregate lines for one metric.
+buildPerAgentLines writes one line per agent with all values and the final value.
+buildAggregateLines writes one line per round with mean, min, and max values.
+validateSeriesHaveValues makes sure every series has at least one value.
+formatAggregatePoint turns one aggregate round into a plain text line.
 */
 
-import type { Series } from './resultsComputations';
+import { computeMetricAggregate } from './resultsComputations';
+import type { MetricAggregatePoint, Series } from './resultsComputations';
 
 export type SummaryPromptInput = {
   title: string;
@@ -16,6 +22,8 @@ const ENGLISH_INSTRUCTION =
 
 const CHINESE_INSTRUCTION =
   '你是一名研究分析员。请用中文对以下多智能体模拟结果撰写一段简洁、可用于论文发表的分析。指出最显著的行为模式以及任何值得注意或意外的结果。使用适合论文的学术语气。';
+
+const AGGREGATE_THRESHOLD = 12;
 
 export function buildSummaryPrompt(input: SummaryPromptInput): string {
   if (typeof input.title !== 'string' || input.title.length === 0) {
@@ -31,22 +39,47 @@ export function buildSummaryPrompt(input: SummaryPromptInput): string {
   }
 
   const instruction = input.language === 'en' ? ENGLISH_INSTRUCTION : CHINESE_INSTRUCTION;
-  const dataBlock = input.metrics
-    .map((metric) => {
-      const seriesLines = metric.series.map((series) => {
-        if (series.values.length === 0) {
-          throw new Error(
-            `buildSummaryPrompt: series for agent "${series.agentName}" in metric "${metric.name}" has no values`,
-          );
-        }
-
-        const lastValue = series.values[series.values.length - 1];
-        return `- ${series.agentName}: ${series.values.join(', ')} (final: ${lastValue})`;
-      });
-
-      return [`${metric.name}:`, ...seriesLines].join('\n');
-    })
-    .join('\n');
+  const dataBlock = input.metrics.map((metric) => buildMetricBlock(metric.name, metric.series)).join('\n');
 
   return `${instruction}\n\nSimulation: ${input.title}\n\nData:\n${dataBlock}`;
+}
+
+function buildMetricBlock(metricName: string, series: Series[]): string {
+  if (series.length > AGGREGATE_THRESHOLD) {
+    return [`${metricName}:`, ...buildAggregateLines(metricName, series)].join('\n');
+  }
+
+  return [`${metricName}:`, ...buildPerAgentLines(metricName, series)].join('\n');
+}
+
+function buildPerAgentLines(metricName: string, series: Series[]): string[] {
+  validateSeriesHaveValues(metricName, series);
+
+  return series.map((oneSeries) => {
+    const lastValue = oneSeries.values[oneSeries.values.length - 1];
+    return `- ${oneSeries.agentName}: ${oneSeries.values.join(', ')} (final: ${lastValue})`;
+  });
+}
+
+function buildAggregateLines(metricName: string, series: Series[]): string[] {
+  validateSeriesHaveValues(metricName, series);
+
+  const aggregate = computeMetricAggregate(series);
+  const heading = `- Aggregate statistics across ${series.length} agents:`;
+
+  return [heading, ...aggregate.map(formatAggregatePoint)];
+}
+
+function validateSeriesHaveValues(metricName: string, series: Series[]): void {
+  for (const oneSeries of series) {
+    if (oneSeries.values.length === 0) {
+      throw new Error(
+        `buildSummaryPrompt: series for agent "${oneSeries.agentName}" in metric "${metricName}" has no values`,
+      );
+    }
+  }
+}
+
+function formatAggregatePoint(point: MetricAggregatePoint): string {
+  return `- Round ${point.round}: mean ${point.mean}, min ${point.min}, max ${point.max}`;
 }

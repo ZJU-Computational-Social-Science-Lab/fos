@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ResultsView } from './ResultsView';
 import { useSimulationStore } from '@/store';
 import type { LogEntry } from '@/types';
@@ -9,6 +9,7 @@ const labels = {
   exportCsv: 'CSV', exportReport: 'Report', noActivity: 'No activity',
   reportSummary: 'Summary', reportNoSummary: 'None', reportFinalValues: 'Finals',
   reportAgent: 'Agent', reportFinalValue: 'Final',
+  perAgent: 'Per-agent', aggregate: 'Aggregate', mean: 'Mean', range: 'Range',
 };
 const agent = (id: string, name: string, history: Record<string, number[]>) => ({
   id, name, role: '', avatarUrl: '', profile: '', llmConfig: { provider: 'mock', model: 'default' },
@@ -88,5 +89,36 @@ describe('ResultsView', () => {
     expect(container.querySelectorAll('polyline')).toHaveLength(2);
     expect(screen.getByText('Alice')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Generate' })).toBeTruthy();
+  });
+
+  it('auto-selects aggregate mode and renders a band polygon when agents exceed the threshold', () => {
+    const manyAgents = Array.from({ length: 13 }, (_, i) =>
+      agent(`a${i}`, `Agent${i + 1}`, { score: [10 + i, 12 + i] })
+    );
+    useSimulationStore.setState({
+      currentSimulation: sim('PGG'),
+      agents: manyAgents,
+      logs: [],
+      resultsSummary: null, isGeneratingResultsSummary: false, resultsSummaryError: null,
+    } as any);
+    const { container } = render(<ResultsView labels={labels} language="en" />);
+    expect(container.querySelector('polygon')).toBeTruthy();
+  });
+
+  it('toggles from aggregate to per-agent when the per-agent button is clicked', () => {
+    const manyAgents = Array.from({ length: 13 }, (_, i) =>
+      agent(`a${i}`, `Agent${i + 1}`, { score: [10 + i, 12 + i] })
+    );
+    useSimulationStore.setState({
+      currentSimulation: sim('PGG'),
+      agents: manyAgents,
+      logs: [],
+      resultsSummary: null, isGeneratingResultsSummary: false, resultsSummaryError: null,
+    } as any);
+    const { container } = render(<ResultsView labels={labels} language="en" />);
+    expect(container.querySelector('polygon')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Per-agent' }));
+    expect(container.querySelector('polygon')).toBeNull();
+    expect(container.querySelectorAll('polyline').length).toBe(13);
   });
 });
