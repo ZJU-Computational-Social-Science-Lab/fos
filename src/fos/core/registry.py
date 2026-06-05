@@ -3,15 +3,17 @@ from fos.core.experiment.scenes.gaworld.scene import GAWorldScene
 from fos.core.experiment.scene import ExperimentScene
 from fos.core.contagion.scene import ContagionScene
 from fos.core.scenes.policy_cascade_experiment import PolicyCascadeExperimentScene
+from fos.core.scenes.policy_cascade import PolicyCascadeScene
 
 ACTION_SPACE_MAP: dict = {}
 
 
 SCENE_MAP = {
-    "council_experiment": CouncilExperimentScene,  # REFACTOR-COUNCIL-06: New experiment-based council scene
+    "council_experiment": CouncilExperimentScene,
     "experiment_template": ExperimentScene,
     "contagion_scene": ContagionScene,
     "policy_cascade_experiment": PolicyCascadeExperimentScene,
+    "policy_cascade_scene": PolicyCascadeScene,
     "gaworld_scene": GAWorldScene,
 }
 
