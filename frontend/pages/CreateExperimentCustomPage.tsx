@@ -26,7 +26,12 @@ import {
   type SettingDraft,
   SettingsDraftPanel,
 } from '../components/experiment/AiScientistDraftPanels';
-import { getAllScenarios, getScenario } from '../services/scenarios';
+import {
+  getAllScenarios,
+  getScenario,
+  type ActionDef,
+  type ScenarioData,
+} from '../services/scenarios';
 import {
   analyzeAiScientistInput,
   type AiScientistRecognitionMode,
@@ -126,6 +131,96 @@ const cloneDraftItem = (draft: DraftItem, prefix: 'action' | 'agent'): DraftItem
 
 const normalizeKey = (value: string): string =>
   value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+
+const normalizeToken = (value: string): string => value.trim().toLowerCase();
+
+const CUSTOM_RUNTIME_ACTIONS: ActionDef[] = [
+  { id: 'speak', name: 'Speak', description: 'Say something to the group' },
+  { id: 'skip', name: 'Skip', description: 'Pass without speaking this turn' },
+];
+
+const getScenarioRuntimeActions = (scenario: ScenarioData): ActionDef[] => {
+  if (scenario.actions?.length) {
+    return scenario.actions;
+  }
+
+  const categoryActions = scenario.category_actions || [];
+  if (categoryActions.length === 0) {
+    return [];
+  }
+
+  const defaultActionIds = new Set(
+    (scenario.default_action_ids || []).map((value) => normalizeToken(String(value))),
+  );
+  if (defaultActionIds.size === 0) {
+    return categoryActions;
+  }
+
+  const filtered = categoryActions.filter((action) => {
+    const actionId = normalizeToken(String(action.id || ''));
+    const actionName = normalizeToken(String(action.name || ''));
+    return defaultActionIds.has(actionId) || defaultActionIds.has(actionName);
+  });
+
+  return filtered.length > 0 ? filtered : categoryActions;
+};
+
+const resolveRecommendedScenarioActions = (
+  scenario: ScenarioData,
+  approvedActions: Array<{ name: string; description: string }>,
+): { availableActions: ActionDef[]; selectedActionIds: string[] } => {
+  const availableActions = getScenarioRuntimeActions(scenario);
+  if (availableActions.length === 0) {
+    return {
+      availableActions: approvedActions,
+      selectedActionIds: approvedActions.map((item) => item.name),
+    };
+  }
+
+  const actionLookup = new Map<string, ActionDef>();
+  availableActions.forEach((action) => {
+    [action.id, action.name, action.description].forEach((candidate) => {
+      const key = normalizeToken(String(candidate || ''));
+      if (key && !actionLookup.has(key)) {
+        actionLookup.set(key, action);
+      }
+    });
+  });
+
+  const matchedActionNames = approvedActions
+    .flatMap((item) => {
+      const match = [item.name, item.description]
+        .map((candidate) => actionLookup.get(normalizeToken(candidate)))
+        .find(Boolean);
+      return match ? [match.name] : [];
+    });
+
+  const dedupedMatchedActionNames = Array.from(new Set(matchedActionNames));
+  if (dedupedMatchedActionNames.length > 0) {
+    return {
+      availableActions,
+      selectedActionIds: dedupedMatchedActionNames,
+    };
+  }
+
+  const defaultActionIds = new Set(
+    (scenario.default_action_ids || []).map((value) => normalizeToken(String(value))),
+  );
+  const defaultSelectedActionNames = availableActions
+    .filter((action) => {
+      const actionId = normalizeToken(String(action.id || ''));
+      const actionName = normalizeToken(String(action.name || ''));
+      return defaultActionIds.has(actionId) || defaultActionIds.has(actionName);
+    })
+    .map((action) => action.name);
+
+  return {
+    availableActions,
+    selectedActionIds: defaultSelectedActionNames.length > 0
+      ? defaultSelectedActionNames
+      : availableActions.map((action) => action.name),
+  };
+};
 
 const buildScenarioParams = (
   settingsDrafts: SettingDraft[],
@@ -341,8 +436,6 @@ function CollapsibleCardSection({
     </Card>
   );
 }
-
-const normalizeToken = (value: string): string => value.trim().toLowerCase();
 
 const emptyResearchDraft = (): PersistedResearchDraft => ({
   researchText: '',
@@ -930,6 +1023,10 @@ export function CreateExperimentCustomPage() {
         const defaults = Object.fromEntries(
           (recommendedScenario.parameters || []).map((param) => [param.key, param.default]),
         );
+        const {
+          availableActions: recommendedRuntimeActions,
+          selectedActionIds: recommendedSelectedActionIds,
+        } = resolveRecommendedScenarioActions(recommendedScenario, approvedActions);
         const mergedParams = {
           ...defaults,
           ...scenarioParams,
@@ -942,14 +1039,16 @@ export function CreateExperimentCustomPage() {
         });
         setScenarioDescription(scenarioDescription);
         setScenarioParams(mergedParams);
-        setAvailableActions(approvedActions.length > 0 ? approvedActions : (recommendedScenario.actions || []));
-        setSelectedActionIds(approvedActions.map((item) => item.name));
+        setAvailableActions(recommendedRuntimeActions);
+        setSelectedActionIds(recommendedSelectedActionIds);
         setAgentMode('manual');
         approvedAgents.forEach((agent) => addAgentType(agent));
         setSocialNetwork({});
         markStepComplete(1);
         setCurrentStep(2);
       } else {
+        const customRuntimeActions = approvedActions.length > 0 ? approvedActions : CUSTOM_RUNTIME_ACTIONS;
+
         setSelectedScenarioId('custom');
         setSelectedScenarioData({
           id: 'custom',
@@ -959,9 +1058,9 @@ export function CreateExperimentCustomPage() {
           interaction_mode: 'sequential',
           display_type: 'params',
           parameters: [],
-          actions: approvedActions,
-          category_actions: approvedActions,
-          default_action_ids: approvedActions.map((item) => item.name),
+          actions: customRuntimeActions,
+          category_actions: customRuntimeActions,
+          default_action_ids: customRuntimeActions.map((item) => item.id || item.name),
         });
         setScenarioDescription(scenarioDescription);
         setScenarioParams({
@@ -969,8 +1068,8 @@ export function CreateExperimentCustomPage() {
           custom_prompt: scenarioDescription,
           turn_ordering: 'sequential',
         });
-        setAvailableActions(approvedActions);
-        setSelectedActionIds(approvedActions.map((item) => item.name));
+        setAvailableActions(customRuntimeActions);
+        setSelectedActionIds(customRuntimeActions.map((item) => item.name));
         setAgentMode('manual');
         approvedAgents.forEach((agent) => addAgentType(agent));
         setRoundVisibility('sequential');

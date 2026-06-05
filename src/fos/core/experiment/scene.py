@@ -20,6 +20,27 @@ from fos.i18n import T
 logger = logging.getLogger(__name__)
 
 
+def _extract_custom_response_payload(parameters: dict[str, Any]) -> dict[str, str]:
+    """Pull the custom-visible reply fields out of action parameters."""
+    response = str(
+        parameters.get("response")
+        or parameters.get("message")
+        or ""
+    ).strip()
+    reason = str(
+        parameters.get("reason")
+        or parameters.get("reasoning")
+        or parameters.get("rationale")
+        or ""
+    ).strip()
+    message = str(parameters.get("message") or "").strip()
+    return {
+        "response": response,
+        "reason": reason,
+        "message": message,
+    }
+
+
 class ExperimentScene:
     """Standalone experiment orchestrator - no Scene inheritance.
 
@@ -76,6 +97,7 @@ class ExperimentScene:
                 action_history=list(a.get("action_history") or []),
                 score=int(a.get("score", 0) or 0),
                 knowledge_base=list(a.get("knowledgeBase") or a.get("knowledge_base") or []),
+                documents=dict(a.get("documents") or {}),
                 provider_id=a.get("provider_id") or a.get("providerId"),
             )
             for a in self.config.agents
@@ -359,6 +381,18 @@ class ExperimentScene:
             if not action.success and action.error:
                 event_data["error"] = action.error
             event_emitter("experiment_action", event_data)
+            if self.config.scenario_id == "custom" and action.success:
+                reply_payload = _extract_custom_response_payload(action.parameters)
+                if reply_payload["response"] or reply_payload["reason"]:
+                    event_emitter(
+                        "experiment_response",
+                        {
+                            "agent": action.agent_name,
+                            "action": action.action_name,
+                            "round": round_num,
+                            **reply_payload,
+                        },
+                    )
 
         logger.info(f"Round {round_num} complete: {len(result.actions)} actions")
 
@@ -1033,6 +1067,7 @@ class ExperimentScene:
                     "action_history": list(agent.action_history),
                     "score": agent.score,
                     "knowledge_base": list(agent.knowledge_base),
+                    "documents": dict(agent.documents),
                 })
         return {
             "config": {
@@ -1045,6 +1080,7 @@ class ExperimentScene:
                 "round_visibility": self.config.round_visibility,
                 "social_network": self.config.social_network,
                 "locale": self.config.locale,
+                "global_knowledge": self.global_knowledge,
             },
             "current_round": self.current_round,
             "history": self._history,

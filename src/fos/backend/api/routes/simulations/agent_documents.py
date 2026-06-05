@@ -39,6 +39,7 @@ from fos.backend.dependencies import extract_bearer_token, resolve_current_user
 from fos.backend.services.documents import process_document
 from fos.i18n import T
 from fos.backend.services.simtree_runtime import SIM_TREE_REGISTRY
+from fos.backend.services.simtree_runtime import get_runtime_agent_count, get_runtime_agent_map
 from fos.i18n import T
 
 from .helpers import get_simulation_for_owner
@@ -49,6 +50,34 @@ logger = logging.getLogger(__name__)
 # Constants for document upload validation
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 ALLOWED_EXTENSIONS = {".pdf", ".txt", ".docx", ".md"}
+
+
+def _resolve_social_network_connections(simulator, agent_name: str) -> list[str]:
+    """Return neighbor names from either scene.state or scene.config.social_network."""
+    scene = getattr(simulator, "scene", None)
+    state = getattr(scene, "state", None)
+    if isinstance(state, dict):
+        social_network = state.get("social_network", {}) or {}
+        direct = social_network.get(agent_name)
+        if isinstance(direct, list):
+            return [str(name).strip() for name in direct if str(name).strip()]
+
+    config_network = getattr(getattr(scene, "config", None), "social_network", {}) or {}
+    edges = config_network.get("edges") if isinstance(config_network, dict) else None
+    if not isinstance(edges, list):
+        return []
+
+    neighbors: list[str] = []
+    for edge in edges:
+        if not isinstance(edge, (list, tuple)) or len(edge) < 2:
+            continue
+        left = str(edge[0] or "").strip()
+        right = str(edge[1] or "").strip()
+        if left == agent_name and right:
+            neighbors.append(right)
+        elif right == agent_name and left:
+            neighbors.append(left)
+    return neighbors
 
 
 @post("/{simulation_id:str}/agents/{agent_name:str}/documents")
@@ -217,7 +246,7 @@ async def list_agent_documents(
                     node = record.tree.nodes.get(node_id)
                     if node is not None:
                         simulator = node["sim"]
-                        agent = simulator.agents.get(agent_name)
+                        agent = get_runtime_agent_map(simulator).get(agent_name)
                         if agent is not None:
                             documents = getattr(agent, "documents", {})
                             return [
@@ -370,16 +399,15 @@ async def get_agent_memory(
                     node = record.tree.nodes.get(node_id)
                     if node is not None:
                         simulator = node["sim"]
-                        agent = simulator.agents.get(agent_name)
+                        agent = get_runtime_agent_map(simulator).get(agent_name)
                         if agent is not None:
-                            # Extract message sources from env_feedback
-                            env_feedback = getattr(agent, "env_feedback", [])
+                            env_feedback = list(
+                                getattr(agent, "env_feedback", [])
+                                or getattr(agent, "feedback_buffer", [])
+                                or []
+                            )
                             seen_messages_from = _extract_senders_from_feedback(env_feedback)
-
-                            # Get connections from social network
-                            scene = simulator.scene
-                            social_network = scene.state.get("social_network", {})
-                            connections = social_network.get(agent_name, [])
+                            connections = _resolve_social_network_connections(simulator, agent_name)
 
                             agent_data = {
                                 "name": agent_name,
@@ -388,7 +416,7 @@ async def get_agent_memory(
                                 "env_feedback_preview": env_feedback[-10:] if env_feedback else [],
                                 "seen_messages_from": seen_messages_from,
                                 "social_network_connections": connections,
-                                "total_agents": len(simulator.agents),
+                                "total_agents": get_runtime_agent_count(simulator),
                             }
             except (ValueError, KeyError):
                 pass  # Fall through to error response

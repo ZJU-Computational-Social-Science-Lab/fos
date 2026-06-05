@@ -46,7 +46,12 @@ from .helpers import (
     get_simulation_and_tree_for_owner,
     broadcast_tree_event,
 )
-from fos.backend.services.simtree_runtime import SIM_TREE_REGISTRY
+from fos.backend.services.simtree_runtime import (
+    SIM_TREE_REGISTRY,
+    get_runtime_agent_count,
+    get_runtime_agent_map,
+    get_runtime_agent_profile,
+)
 from fos.backend.services.simtree_advance import run_simulator_for_advance
 from fos.backend.services.documents import composite_rag_retrieval, format_rag_context
 from fos.backend.dependencies import extract_bearer_token, resolve_current_user
@@ -221,7 +226,9 @@ async def simulation_tree_advance_frontier(
         async def _run(parent_id: int) -> tuple[int, int, bool]:
             child_id = allocations[parent_id]
             simulator = tree.nodes[child_id]["sim"]
-            total_turns = max(1, turns) * max(1, len(simulator.agents))
+            from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
+            turn_multiplier = 1 if isinstance(simulator, ExperimentRunnerAdapter) else max(1, len(simulator.agents))
+            total_turns = max(1, turns) * turn_multiplier
             with log_time("SIM", sim_id=simulation_id, node=child_id, turns=total_turns, op="advance_frontier"):
                 await asyncio.to_thread(simulator.run, max_turns=total_turns)
             return parent_id, child_id, False
@@ -318,7 +325,9 @@ async def simulation_tree_advance_multi(
 
         async def _run(child_id: int) -> tuple[int, bool]:
             simulator = tree.nodes[child_id]["sim"]
-            total_turns = max(1, turns) * max(1, len(simulator.agents))
+            from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
+            turn_multiplier = 1 if isinstance(simulator, ExperimentRunnerAdapter) else max(1, len(simulator.agents))
+            total_turns = max(1, turns) * turn_multiplier
             with log_time("SIM", sim_id=simulation_id, node=child_id, turns=total_turns, op="advance_multi"):
                 await asyncio.to_thread(simulator.run, max_turns=total_turns)
             return child_id, False
@@ -408,7 +417,9 @@ async def simulation_tree_advance_chain(
                 await asyncio.sleep(0)
 
                 simulator = tree.nodes[cid]["sim"]
-                total_turns = 1 * max(1, len(simulator.agents))
+                from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
+                turn_multiplier = 1 if isinstance(simulator, ExperimentRunnerAdapter) else max(1, len(simulator.agents))
+                total_turns = 1 * turn_multiplier
                 logger.info(f"[ADVANCE_CHAIN] Running simulator for node {cid}, max_turns={total_turns}")
                 try:
                     with log_time("SIM", sim_id=simulation_id, node=cid, turns=total_turns, step=_, op="advance_chain"):
@@ -426,7 +437,6 @@ async def simulation_tree_advance_chain(
                         break
                     logger.info(f"[ADVANCE_CHAIN] Simulator run complete for node {cid}")
 
-                    from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
                     if isinstance(simulator, ExperimentRunnerAdapter):
                         new_events = len(simulator.events)
                         node_logs = len(node.get('logs', []))
@@ -770,7 +780,8 @@ async def test_agent_knowledge(
         simulator = node["sim"]
         results = []
 
-        for name, agent in simulator.agents.items():
+        runtime_agents = get_runtime_agent_map(simulator)
+        for name, agent in runtime_agents.items():
             if agent_name and name != agent_name:
                 continue
 
@@ -789,6 +800,13 @@ async def test_agent_knowledge(
                 query_results = agent.query_knowledge(query, top_k=5)
                 agent_result["query"] = query
                 agent_result["query_results"] = query_results
+            elif query and hasattr(agent, "get_rag_context"):
+                agent_result["query"] = query
+                agent_result["query_context_preview"] = agent.get_rag_context(
+                    query=query,
+                    global_knowledge=getattr(getattr(simulator, "scene", None), "global_knowledge", {}),
+                    top_k=5,
+                )[:500]
 
             # Get knowledge context preview
             if hasattr(agent, "get_knowledge_context"):
@@ -800,7 +818,7 @@ async def test_agent_knowledge(
         return {
             "simulation_id": simulation_id,
             "node_id": node_id,
-            "agent_count": len(simulator.agents),
+            "agent_count": get_runtime_agent_count(simulator),
             "agents": results
         }
 
@@ -853,7 +871,9 @@ async def ask_agents_question(
 
         results = []
 
-        for name, agent in simulator.agents.items():
+        runtime_agents = get_runtime_agent_map(simulator)
+        scene_global_knowledge = getattr(getattr(simulator, "scene", None), "global_knowledge", None)
+        for name, agent in runtime_agents.items():
             if target_agent and name != target_agent:
                 continue
 
@@ -889,8 +909,8 @@ async def ask_agents_question(
             retrieval_result = await asyncio.to_thread(
                 composite_rag_retrieval,
                 question,
-                agent_documents=cfg_documents,
-                global_knowledge=global_knowledge,
+                agent_documents=documents or cfg_documents,
+                global_knowledge=scene_global_knowledge or global_knowledge,
                 top_k=5
             )
 
@@ -907,8 +927,9 @@ async def ask_agents_question(
                             knowledge_sources.append(source)
 
             # Build prompt with knowledge
+            profile = get_runtime_agent_profile(agent)
             if knowledge_context:
-                prompt = f"""You are {name}. {agent.user_profile}
+                prompt = f"""You are {name}. {profile}
 
 {knowledge_context}
 
@@ -917,7 +938,7 @@ Based on your knowledge above, please answer this question concisely:
 
 If you have specific information in your knowledge base about this, use it. If not, say you don't have that information."""
             else:
-                prompt = f"""You are {name}. {agent.user_profile}
+                prompt = f"""You are {name}. {profile}
 
 Based on your knowledge (if any), please answer this question concisely:
 {question}

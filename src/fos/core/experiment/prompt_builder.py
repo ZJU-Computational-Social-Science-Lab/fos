@@ -273,7 +273,12 @@ def build_prompt(
     if game_config.action_type == "discrete":
         # GAP-CLOSURE-01: Use filtered actions in output format
         actions_formatted = ", ".join(f'"{a}"' for a in actions_to_show)
-        if game_config.name == "custom":
+        normalized_actions = {str(a).strip().lower() for a in actions_to_show}
+        custom_speak_skip_only = (
+            game_config.name == "custom"
+            and normalized_actions == {"speak", "skip"}
+        )
+        if custom_speak_skip_only:
             sections.append(
                 'Respond with exactly one JSON object in one of these forms:\n'
                 '{"action": "speak", "message": "..."}\n'

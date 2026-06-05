@@ -129,6 +129,44 @@ class ExperimentRunner:
         logger.debug(f"Using default LLM client for {agent.name}")
         return self.llm_client
 
+    def _build_custom_action_followup_schema(self, action_name: str, locale: str) -> dict[str, dict[str, str] | str]:
+        """Collect a short visible response and rationale for custom experiments.
+
+        Custom experiments do not have scenario-specific runtime events like
+        policy cascade scenes, so we ask each agent to provide a compact
+        response plus a brief reason tied to the chosen action. These fields
+        are later emitted as a separate UI log entry for custom-only flows.
+        """
+        is_zh = str(locale or "").lower().startswith("zh")
+        schema: dict[str, dict[str, str]] = {
+            "response": {
+                "type": "string",
+                "description": (
+                    f"你在本轮收到提示后对外展现出的实际回应，要和动作“{action_name}”一致。"
+                    if is_zh else
+                    f"The visible response you give this round after receiving the prompt. It must align with the action '{action_name}'."
+                ),
+            },
+            "reason": {
+                "type": "string",
+                "description": (
+                    f"你为什么基于当前角色、处境和收到的信息选择“{action_name}”。简短但具体。"
+                    if is_zh else
+                    f"Why you chose '{action_name}' based on your role, situation, and the prompt you received. Keep it brief but specific."
+                ),
+            },
+        }
+        if str(action_name).strip().lower() in {"speak", "say", "talk"}:
+            schema["message"] = {
+                "type": "string",
+                "description": (
+                    "你本轮真正说出口的话。"
+                    if is_zh else
+                    "The exact words you say aloud this round."
+                ),
+            }
+        return {"schema": schema, "mode": "json"}
+
     def set_scene_state(self, state: Dict[str, Any]) -> None:
         """Merge new state into scene_state. context_manager holds the same reference."""
         self.scene_state.update(state)
@@ -1084,6 +1122,17 @@ class ExperimentRunner:
                         "mode": mode,
                     }
                     logger.debug(f"[RUNNER] Added action_schema for '{action_name}': mode={mode}")
+
+            if self.scene and getattr(getattr(self.scene, "config", None), "scenario_id", None) == "custom":
+                custom_actions = allowed_actions or self.game_config.actions
+                for action_name in custom_actions:
+                    action_schemas[str(action_name)] = self._build_custom_action_followup_schema(
+                        str(action_name),
+                        _locale,
+                    )
+                    logger.debug(
+                        f"[RUNNER] Added custom followup schema for '{action_name}' with response/reason logging"
+                    )
 
             logger.debug(f"[RUNNER] Final action_schemas keys: {list(action_schemas.keys())}")
             result = await self.controller.process_response_with_followup(

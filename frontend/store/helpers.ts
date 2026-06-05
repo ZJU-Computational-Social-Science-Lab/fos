@@ -579,6 +579,35 @@ export const mapBackendEventsToLogs = (
       return { ...base, type: 'AGENT_ACTION', agentId, content: label, actionLabel: readableAction, outcome: outcomeData };
     }
 
+    if (evType === 'experiment_response') {
+      const agentName: string = data.agent || '';
+      const actionName: string = data.action || '';
+      const response = String(data.response || data.message || '').trim();
+      const reason = String(data.reason || '').trim();
+      const agentId = agentName ? nameToId.get(agentName) : undefined;
+      const readableAction = translateActionName(actionName);
+
+      const lines = [];
+      if (response) {
+        lines.push(response);
+      }
+      if (reason) {
+        lines.push(pickText(
+          `Why this action: ${reason}`,
+          `选择“${readableAction}”的原因：${reason}`
+        ));
+      } else if (readableAction) {
+        lines.push(pickText(
+          `Chosen action: ${readableAction}`,
+          `关联动作：${readableAction}`
+        ));
+      }
+
+      const content = lines.filter(Boolean).join('\n');
+      if (!content) return null;
+      return { ...base, type: 'AGENT_SAY', agentId, content };
+    }
+
     // Reduction action — PGG deduction events emitted by the reduce handler
     if (evType === 'reduction_action') {
       const agentName: string = data.reducer || '';
