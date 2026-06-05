@@ -447,6 +447,15 @@ class GAWorldSubprocessManager:
         work_dir = self.output_dir / "workdir"
         work_dir.mkdir(parents=True, exist_ok=True)
 
+        for child in self.gaworld_path.iterdir():
+            link_target = work_dir / child.name
+            if link_target.exists():
+                continue
+            if child.is_dir():
+                link_target.symlink_to(child)
+            elif child.is_file() and child.name != "generative_city_sim.py":
+                link_target.symlink_to(child)
+
         if os.name == "nt":
             with open(log_file, "w", encoding="utf-8") as file_obj:
                 self.process = subprocess.Popen(
