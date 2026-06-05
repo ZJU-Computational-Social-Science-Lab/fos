@@ -48,6 +48,7 @@ src/fos/backend/core/security.py
 src/fos/backend/core/timing.py
 src/fos/backend/db/base.py
 src/fos/backend/db/mixins.py
+src/fos/backend/migrations/add_user_config_column.py
 src/fos/backend/migrations/migrate_search_providers.py
 src/fos/backend/models/__init__.py
 src/fos/backend/models/data_source.py
@@ -158,6 +159,7 @@ src/fos/core/experiment/scenes/gaworld/runtime_modes.py
 src/fos/core/experiment/scenes/gaworld/scene.py
 src/fos/core/experiment/scenes/gaworld/subprocess_manager.py
 src/fos/core/experiment/scenes/gaworld/translator.py
+src/fos/core/experiment/scenes/gaworld/profiles/hangzhou_50.json
 src/fos/core/llm/__init__.py
 src/fos/core/llm/client.py
 src/fos/core/llm/generation.py
@@ -192,6 +194,8 @@ src/fos/core/simulation/results.py
 src/fos/core/tools/__init__.py
 src/fos/core/tools/web/__init__.py
 src/fos/core/tools/web/search.py
+src/fos/locales/en.json
+src/fos/locales/zh.json
 src/fos/scenarios/__init__.py
 src/fos/scenarios/basic.py
 src/fos/templates/__init__.py

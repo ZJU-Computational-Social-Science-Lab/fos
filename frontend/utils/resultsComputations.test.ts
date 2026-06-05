@@ -3,6 +3,7 @@ import type { Agent, LogEntry } from '@/types';
 import {
   listMetrics,
   computeMetricTrajectories,
+  computeMetricAggregate,
   computeEventCountByAgent,
   computeEventCountByRound,
   hydrateAgentHistoryFromLogs,
@@ -59,6 +60,35 @@ describe('computeMetricTrajectories', () => {
   });
   it('throws when metric is empty', () => {
     expect(() => computeMetricTrajectories([alice], '')).toThrow();
+  });
+});
+
+describe('computeMetricAggregate', () => {
+  it('computes per-round mean, min, and max across agents', () => {
+    const series = [
+      { agentId: 'a', agentName: 'A', values: [10, 20] },
+      { agentId: 'b', agentName: 'B', values: [20, 40] },
+    ];
+    expect(computeMetricAggregate(series)).toEqual([
+      { round: 1, mean: 15, min: 10, max: 20 },
+      { round: 2, mean: 30, min: 20, max: 40 },
+    ]);
+  });
+
+  it('aggregates only the values present in each round for ragged series', () => {
+    const series = [
+      { agentId: 'a', agentName: 'A', values: [10, 20, 30] },
+      { agentId: 'b', agentName: 'B', values: [20] },
+    ];
+    expect(computeMetricAggregate(series)).toEqual([
+      { round: 1, mean: 15, min: 10, max: 20 },
+      { round: 2, mean: 20, min: 20, max: 20 },
+      { round: 3, mean: 30, min: 30, max: 30 },
+    ]);
+  });
+
+  it('throws on an empty series array', () => {
+    expect(() => computeMetricAggregate([])).toThrow();
   });
 });
 

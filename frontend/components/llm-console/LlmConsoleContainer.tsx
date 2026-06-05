@@ -20,6 +20,7 @@ import {
 } from "../../services/models";
 import type { Provider } from "../../services/providers";
 import { useLlmConsoleStore } from "../../store/useLlmConsoleStore";
+import { getBackendErrorDetail } from "../../utils/apiError";
 import { StatusStrip } from "./StatusStrip";
 import { ProviderPanel } from "./ProviderPanel";
 import { ModelRegistryPanel } from "./ModelRegistryPanel";
@@ -160,10 +161,11 @@ export function LlmConsoleContainer() {
       });
     },
     onError: (error: any) => {
+      const detail = getBackendErrorDetail(error);
       setTestResult({
         status: "error",
         responseTime: 0,
-        errorMessage: error.message || t("components.llmConsole.testFailed"),
+        errorMessage: detail !== null ? detail : t("components.llmConsole.testFailed"),
       });
     },
   });
@@ -229,10 +231,11 @@ export function LlmConsoleContainer() {
         content: t("components.llmConsole.connectionSuccessful"),
       });
     } catch (error: any) {
+      const detail = getBackendErrorDetail(error);
       setTestResult({
         status: "error",
         responseTime: 0,
-        errorMessage: error.message || t("components.llmConsole.connectionFailed"),
+        errorMessage: detail !== null ? detail : t("components.llmConsole.connectionFailed"),
       });
     }
   };

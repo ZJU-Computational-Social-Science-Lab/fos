@@ -2,6 +2,7 @@
 This file turns saved agent history into simple result data.
 listMetrics looks through every agent and returns all metric names in sorted order.
 computeMetricTrajectories builds one value series per agent for one chosen metric.
+computeMetricAggregate combines many agent series into one mean line with min and max bounds.
 computeEventCountByAgent counts how many saved events belong to each agent.
 computeEventCountByRound counts how many saved events happened in each round.
 */
@@ -9,6 +10,7 @@ computeEventCountByRound counts how many saved events happened in each round.
 import type { Agent, LogEntry } from '@/types';
 
 export type Series = { agentId: string; agentName: string; values: number[] };
+export type MetricAggregatePoint = { round: number; mean: number; min: number; max: number };
 export type AgentCount = { agentId: string; count: number };
 export type RoundCount = { round: number; count: number };
 
@@ -47,6 +49,39 @@ export function computeMetricTrajectories(agents: Agent[], metric: string): Seri
   }
 
   return series;
+}
+
+export function computeMetricAggregate(series: Series[]): MetricAggregatePoint[] {
+  if (!Array.isArray(series) || series.length === 0) {
+    throw new Error('computeMetricAggregate: series must be a non-empty array');
+  }
+
+  const maxLen = Math.max(...series.map((s) => s.values.length));
+  if (maxLen === 0) {
+    throw new Error('computeMetricAggregate: series have no values');
+  }
+
+  const points: MetricAggregatePoint[] = [];
+
+  for (let i = 0; i < maxLen; i++) {
+    const vals: number[] = [];
+
+    for (const s of series) {
+      if (i < s.values.length) {
+        vals.push(s.values[i]);
+      }
+    }
+
+    const sum = vals.reduce((acc, v) => acc + v, 0);
+    points.push({
+      round: i + 1,
+      mean: sum / vals.length,
+      min: Math.min(...vals),
+      max: Math.max(...vals),
+    });
+  }
+
+  return points;
 }
 
 export function computeEventCountByAgent(logs: LogEntry[]): AgentCount[] {

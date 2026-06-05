@@ -1,6 +1,7 @@
 // frontend/services/models.ts
 // LLM 模型管理 API 客户端
 import { apiClient } from "./client";
+import { extractApiErrorMessage } from "../utils/apiError";
 
 export type ModelCapability = 
   | "text"
@@ -99,7 +100,7 @@ export async function testModel(
     return {
       success: false,
       responseTime: 0,
-      error: error?.response?.data?.message || String(error),
+      error: extractApiErrorMessage(error),
     };
   }
 }

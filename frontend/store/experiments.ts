@@ -13,6 +13,7 @@ import type { EnvironmentSuggestion } from '../services/environmentSuggestions';
 import { addTime } from './helpers';
 import { listMetrics, computeMetricTrajectories, hydrateAgentHistoryFromLogs } from '../utils/resultsComputations';
 import { buildSummaryPrompt } from '../utils/summaryPrompt';
+import { extractApiErrorMessage, getBackendErrorDetail } from '../utils/apiError';
 import i18n from '../i18n';
 
 export interface ExperimentsSlice {
@@ -196,7 +197,7 @@ export const createExperimentsSlice: StateCreator<
         console.error('[startAutoAdvance] Step failed:', error);
         (get() as any).addNotification?.(
           'error',
-          i18n.t('simPage.autoAdvanceError', { error: String(error) })
+          i18n.t('simPage.autoAdvanceError', { error: extractApiErrorMessage(error) })
         );
         set({
           isAutoAdvancing: false,
@@ -253,7 +254,9 @@ export const createExperimentsSlice: StateCreator<
     } catch (e) {
       console.error(e);
       set({ isGenerating: false } as any);
-      state.addNotification?.('error', i18n.t('store.comparisonAnalysisFailed') || 'Comparison analysis failed');
+      const detail = getBackendErrorDetail(e);
+      const base = i18n.t('store.comparisonAnalysisFailed') || 'Comparison analysis failed';
+      state.addNotification?.('error', detail !== null ? `${base}: ${detail}` : base);
     }
   },
 
@@ -343,7 +346,9 @@ export const createExperimentsSlice: StateCreator<
         } catch (error) {
           console.error('[advanceSimulation] Advance succeeded but failed to hydrate child node:', error);
           set({ isGenerating: false, selectedNodeId: newSelectedId } as any);
-          state.addNotification?.('warning', i18n.t('store.advanceHydrationFailed') || 'Simulation advanced, but loading the new node details failed');
+          const detail = getBackendErrorDetail(error);
+          const base = i18n.t('store.advanceHydrationFailed') || 'Simulation advanced, but loading the new node details failed';
+          state.addNotification?.('warning', detail !== null ? `${base}: ${detail}` : base);
           return;
         }
 
@@ -461,7 +466,9 @@ export const createExperimentsSlice: StateCreator<
     } catch (e) {
       console.error('advanceSimulation failed', e);
       set({ isGenerating: false } as any);
-      state.addNotification?.('error', i18n.t('store.simulationAdvanceFailed') || 'Simulation advance failed');
+      const detail = getBackendErrorDetail(e);
+      const base = i18n.t('store.simulationAdvanceFailed') || 'Simulation advance failed';
+      state.addNotification?.('error', detail !== null ? `${base}: ${detail}` : base);
     }
   },
 
@@ -496,7 +503,9 @@ export const createExperimentsSlice: StateCreator<
       }
     } catch (e) {
       console.error('branchSimulation failed', e);
-      state.addNotification?.('error', i18n.t('store.backendBranchFailed') || 'Branch creation failed');
+      const detail = getBackendErrorDetail(e);
+      const base = i18n.t('store.backendBranchFailed') || 'Branch creation failed';
+      state.addNotification?.('error', detail !== null ? `${base}: ${detail}` : base);
     }
   },
 
@@ -534,7 +543,9 @@ export const createExperimentsSlice: StateCreator<
       state.addNotification?.('success', i18n.t('store.nodeDeleted') || 'Node deleted');
     } catch (e) {
       console.error('deleteNode failed', e);
-      state.addNotification?.('error', i18n.t('store.failedToDeleteNode') || 'Failed to delete node');
+      const detail = getBackendErrorDetail(e);
+      const base = i18n.t('store.failedToDeleteNode') || 'Failed to delete node';
+      state.addNotification?.('error', detail !== null ? `${base}: ${detail}` : base);
     }
   },
 
@@ -818,7 +829,7 @@ export const createExperimentsSlice: StateCreator<
           state.addNotification?.('warning', i18n.t('store.experimentNodesTimeout') || 'Experiment nodes not available yet; please refresh or retry.');
         } catch (e) {
           console.error('Experiment error', e);
-          state.addNotification?.('error', (i18n.t('store.failedToStartExperiment') || 'Failed to start experiment') + ': ' + (e as any).message);
+          state.addNotification?.('error', (i18n.t('store.failedToStartExperiment') || 'Failed to start experiment') + ': ' + extractApiErrorMessage(e));
         }
       })();
   },
@@ -932,7 +943,9 @@ export const createExperimentsSlice: StateCreator<
     } catch (e) {
       console.error('generateReport failed', e);
       set({ isGeneratingReport: false } as any);
-      state.addNotification?.('error', i18n.t('store.reportGenerationFailed') || 'Report generation failed, please try again later');
+      const detail = getBackendErrorDetail(e);
+      const base = i18n.t('store.reportGenerationFailed') || 'Report generation failed, please try again later';
+      state.addNotification?.('error', detail !== null ? `${base}: ${detail}` : base);
     }
   },
 
@@ -961,7 +974,7 @@ export const createExperimentsSlice: StateCreator<
       }
       set({ resultsSummary: text, isGeneratingResultsSummary: false });
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
+      const message = extractApiErrorMessage(e);
       set({ isGeneratingResultsSummary: false, resultsSummaryError: message });
       throw e;
     }

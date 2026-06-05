@@ -67,6 +67,37 @@ describe('generateResultsSummary', () => {
     expect(s.resultsSummaryError).toBe('network down');
   });
 
+  it('surfaces the backend error detail when refine_report fails', async () => {
+    post.mockRejectedValue(
+      Object.assign(new Error('Request failed with status code 500'), {
+        response: { data: { error: 'DeepSeek API: 401 Unauthorized' } },
+      }),
+    );
+    useSimulationStore.setState({
+      agents: [
+        agent('a', 'Alice', {}),
+        agent('b', 'Bob', {}),
+      ],
+      logs: [
+        logWithOutcome('a', 1, { payoff: 10 }),
+        logWithOutcome('b', 1, { payoff: 8 }),
+      ],
+      currentProviderId: 7,
+    } as any);
+
+    try {
+      await expect(
+        (useSimulationStore.getState() as any).generateResultsSummary('Test', 'en'),
+      ).rejects.toThrow('Request failed with status code 500');
+
+      expect((useSimulationStore.getState() as any).resultsSummaryError).toBe(
+        'DeepSeek API: 401 Unauthorized',
+      );
+    } finally {
+      useSimulationStore.setState({ logs: [] } as any);
+    }
+  });
+
   it('throws when no LLM provider is selected, without calling the LLM', async () => {
     useSimulationStore.setState({ currentProviderId: null } as any);
     await expect(

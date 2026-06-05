@@ -75,3 +75,5 @@ _write_scene.py
 
 # Local OpenCode config
 opencode.json
+/src/fos.egg-info
+src/fos.egg-info/SOURCES.txt
