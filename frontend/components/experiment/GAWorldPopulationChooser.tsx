@@ -25,17 +25,18 @@ function PopulationChooserOption({
   onClick,
 }: PopulationChooserOptionProps) {
   const { t } = useTranslation();
-  const label = t('experimentBuilder.step4.gaworld.populationOptionLabel', {
+  const label = `${count}`;
+  const ariaLabel = t('experimentBuilder.step4.gaworld.populationOptionLabel', {
     count,
     defaultValue: `${count} residents`,
   });
   const description = count === 50
     ? t('experimentBuilder.step4.gaworld.populationOptionFull', {
-      defaultValue: 'Load the full city.',
+      defaultValue: 'Full population',
     })
     : t('experimentBuilder.step4.gaworld.populationOptionStarter', {
       count,
-      defaultValue: `Start with ${count} residents for a lighter run.`,
+      defaultValue: 'Starter population',
     });
 
   return (
@@ -44,14 +45,14 @@ function PopulationChooserOption({
       onClick={() => onClick(count)}
       className="rounded-lg border p-4 text-left transition-all"
       aria-pressed={selected}
-      aria-label={label}
+      aria-label={ariaLabel}
       style={selected
         ? { background: 'var(--ss-brand-soft)', borderColor: 'var(--ss-brand-primary)' }
         : { background: 'var(--ss-page-surface)', borderColor: 'var(--ss-border)' }}
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-base font-semibold" style={{ color: 'var(--ss-heading)' }}>
+          <div className="text-2xl font-semibold leading-none" style={{ color: 'var(--ss-heading)' }}>
             {label}
           </div>
           <div className="mt-1 text-sm" style={{ color: 'var(--ss-text-muted)' }}>

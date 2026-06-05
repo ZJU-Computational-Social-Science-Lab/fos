@@ -7,10 +7,13 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { cleanup, render, screen, fireEvent } from '@testing-library/react';
+import * as matchers from '@testing-library/jest-dom/matchers';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Step2StarterTemplate } from '../Step2StarterTemplate';
+
+expect.extend(matchers);
+afterEach(() => cleanup());
 
 const mockUseExperimentBuilder = vi.fn();
 
@@ -163,5 +166,24 @@ describe('Step2StarterTemplate GAWorld', () => {
         memory_mode: 'some_continuity',
       }),
     );
+  });
+
+  it('test_gaworld_empty_setup_uses_fast_city_system_defaults', () => {
+    const store = gaworldStore({
+      scenarioParams: {},
+      setScenarioParams: vi.fn(),
+    });
+    mockUseExperimentBuilder.mockReturnValue(store);
+
+    render(<Step2StarterTemplate />);
+
+    expect(store.setScenarioParams).toHaveBeenCalledWith({
+      execution_profile: 'fast',
+      information_mode: 'off',
+      daily_life_mode: 'stable_routines',
+      people_mode: 'simple_behavior',
+      memory_mode: 'in_the_moment',
+      seed: 42,
+    });
   });
 });
