@@ -11,6 +11,7 @@
 
 import { StateCreator } from 'zustand';
 import type { Notification, GuideMessage } from '../types';
+import { extractApiErrorMessage } from '../utils/apiError';
 
 export interface UISlice {
   // Modal states
@@ -211,7 +212,7 @@ export const createUISlice: StateCreator<
       set((prev: any) => ({ syncLogs: [...prev.syncLogs, 'Sync completed successfully!'], isSyncing: false }));
     } catch (error: any) {
       console.error('Sync failed:', error);
-      const errorMsg = error?.response?.data?.detail || error?.message || 'Unknown error';
+      const errorMsg = extractApiErrorMessage(error);
       set((prev: any) => ({ syncLogs: [...prev.syncLogs, `Sync failed: ${errorMsg}`], isSyncing: false }));
     }
   },

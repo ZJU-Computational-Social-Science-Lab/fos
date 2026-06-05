@@ -18,10 +18,10 @@ export type SummaryPromptInput = {
 };
 
 const ENGLISH_INSTRUCTION =
-  'You are a research analyst. Write a concise, publication-quality analysis in English of the following multi-agent simulation results. Identify the most significant behavioral patterns and any notable or unexpected outcomes. Use an academic tone suitable for a paper.';
+  'You are a research analyst. Write a concise, publication-quality analysis in English of the following multi-agent simulation results. Identify the most significant behavioral patterns and any notable or unexpected outcomes. Use an academic tone suitable for a paper. Return only the analysis text as plain prose. Do not wrap the response in JSON, a markdown code block, or any other format.';
 
 const CHINESE_INSTRUCTION =
-  '你是一名研究分析员。请用中文对以下多智能体模拟结果撰写一段简洁、可用于论文发表的分析。指出最显著的行为模式以及任何值得注意或意外的结果。使用适合论文的学术语气。';
+  '你是一名研究分析员。请用中文对以下多智能体模拟结果撰写一段简洁、可用于论文发表的分析。指出最显著的行为模式以及任何值得注意或意外的结果。使用适合论文的学术语气。请仅返回纯文本分析内容，不要将回复包裹在 JSON、Markdown 代码块或任何其他格式中。';
 
 const AGGREGATE_THRESHOLD = 12;
 

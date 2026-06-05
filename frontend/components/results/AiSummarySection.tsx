@@ -33,7 +33,7 @@ export function AiSummarySection({
         {isGenerating ? labels.generating : labels.generate}
       </button>
       {error !== null ? <p role="alert" className="mt-2 text-sm" style={{ color: 'var(--color-text-error, #ef4444)' }}>{error}</p> : null}
-      {summary !== null && !isGenerating ? <div className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--ss-workspace-text)' }}>{summary}</div> : null}
+      {summary !== null && !isGenerating ? <div className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--ss-workspace-text)', whiteSpace: 'pre-wrap' }}>{summary}</div> : null}
     </section>
   );
 }
