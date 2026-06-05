@@ -28,6 +28,9 @@ class Agent:
         def clear(self):
             self.history = []
 
+        def __len__(self) -> int:
+            return len(self.history)
+
     def __init__(self, name: str, **kwargs):
         self.name = name
         self.properties = kwargs.get("properties", {})
