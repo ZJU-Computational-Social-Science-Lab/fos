@@ -266,7 +266,7 @@ def _ollama_generate_url(base_url: str) -> str:
     """Converts an Ollama server URL into GAWorld's generate endpoint URL."""
     clean_url = str(base_url or "").strip().rstrip("/")
     if not clean_url:
-        clean_url = DEFAULT_FOS_OLLAMA_BASE_URL
+        clean_url = _resolve_default_ollama_base_url()
     if clean_url.endswith("/api/generate"):
         return clean_url
     if clean_url.endswith("/api"):
@@ -297,13 +297,22 @@ def _ollama_settings_from_env() -> OllamaProviderSettings | None:
     if dialect != "ollama" or not model:
         return None
     base_url = os.environ.get("LLM_BASE_URL", "").strip() or os.environ.get("OLLAMA_BASE_URL", "").strip()
-    return OllamaProviderSettings(base_url=base_url or DEFAULT_FOS_OLLAMA_BASE_URL, model=model)
+    return OllamaProviderSettings(base_url=base_url or _resolve_default_ollama_base_url(), model=model)
+
+
+def _resolve_default_ollama_base_url() -> str:
+    """Returns the Ollama base URL, preferring env vars over the hardcoded default."""
+    return (
+        os.environ.get("FOS_OLLAMA_BASE_URL", "").strip()
+        or os.environ.get("OLLAMA_BASE_URL", "").strip()
+        or DEFAULT_FOS_OLLAMA_BASE_URL
+    )
 
 
 def _default_ollama_settings() -> OllamaProviderSettings:
     """Returns FOS's default local Ollama settings."""
     return OllamaProviderSettings(
-        base_url=DEFAULT_FOS_OLLAMA_BASE_URL,
+        base_url=_resolve_default_ollama_base_url(),
         model=DEFAULT_FOS_OLLAMA_MODEL,
     )
 

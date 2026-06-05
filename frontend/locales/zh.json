@@ -1770,7 +1770,7 @@
       "logAttachment": "日志附件",
       "noActivityYet": "暂无活动",
       "setupGroup": "设置",
-      "stepGroup": "步骤"
+      "stepGroup": "步骤 {{step}}"
     },
     "multimodalInput": {
       "cropAndUploadSuccess": "裁剪并上传成功",
