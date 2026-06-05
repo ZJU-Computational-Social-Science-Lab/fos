@@ -16,6 +16,7 @@ from typing import Callable, List, Optional
 
 from fos.core.agent import Agent
 from fos.core.environment_config import EnvironmentConfig
+from fos.core.ordering import SequentialOrdering
 from fos.i18n import T
 
 logger = logging.getLogger(__name__)
@@ -139,14 +140,27 @@ class Simulator:
         scene = scene_class.deserialize(scenario_data)
         agents = [Agent.deserialize(ad) for ad in data["agents"].values()]
         env_cfg = EnvironmentConfig.deserialize(data.get("environment_config", {}))
+
+        ordering = None
+        ordering_name = data.get("ordering", "sequential")
+        if ordering_name == "sequential":
+            ordering = SequentialOrdering()
+
         sim = cls(
             agents=agents, scene=scene, clients=clients,
             broadcast_initial=False,
             max_steps_per_turn=data.get("max_steps_per_turn", 5),
             event_handler=log_handler,
             environment_config=env_cfg,
+            ordering=ordering,
         )
         sim.turns = data.get("turns", 0)
+        sim._suggestions_viewed_turn = data.get("_suggestions_viewed_turn")
+
+        ordering_state = data.get("ordering_state")
+        if ordering and ordering_state:
+            ordering.deserialize(ordering_state)
+
         return sim
 
     def are_environment_suggestions_available(self) -> bool:
