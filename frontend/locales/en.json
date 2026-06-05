@@ -1770,7 +1770,7 @@
       "logAttachment": "Log attachment",
       "noActivityYet": "No activity yet",
       "setupGroup": "Setup",
-      "stepGroup": "Step"
+      "stepGroup": "Step {{step}}"
     },
     "multimodalInput": {
       "cropAndUploadSuccess": "Crop and upload successful",
