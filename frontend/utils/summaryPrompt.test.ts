@@ -75,4 +75,13 @@ describe('buildSummaryPrompt', () => {
     });
     expect(prompt).toContain('Agent1');
   });
+
+  it('instructs the model to return plain prose without a JSON or markdown wrapper', () => {
+    const series = [{ agentId: 'a', agentName: 'Alice', values: [10, 12] }];
+    const prompt = buildSummaryPrompt({
+      title: 'T', language: 'en',
+      metrics: [{ name: 'payoff', series }],
+    });
+    expect(prompt).toMatch(/plain|no.?json|no.?markdown/i);
+  });
 });

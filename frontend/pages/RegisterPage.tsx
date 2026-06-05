@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { apiClient } from "../services/client";
 import { useTranslation } from "react-i18next";
+import { getBackendErrorDetail } from '@/utils/apiError';
 
 const COUNTRY_CODES = [
   { value: "+86", label: "+86 中国" },
@@ -60,17 +61,8 @@ export function RegisterPage() {
       setSuccess(true);
       setTimeout(() => navigate("/login"), 1500);
     } catch (err: any) {
-      // Prefer server-provided detail message if available
-      const detail = (err?.response?.data?.detail ?? err?.response?.data?.message) as any;
-      if (typeof detail === 'string' && detail.trim()) {
-        setError(detail.trim());
-      } else if (Array.isArray(detail) && detail.length) {
-        const first = detail[0];
-        const msg = String(first?.msg || first?.message || 'Registration failed');
-        setError(msg);
-      } else {
-        setError(t('auth.register.failed'));
-      }
+      const detail = getBackendErrorDetail(err);
+      setError(detail !== null ? detail : t('auth.register.failed'));
     } finally {
       setLoading(false);
     }
