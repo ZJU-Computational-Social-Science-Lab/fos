@@ -245,12 +245,20 @@ async def compare_nodes(request: Request, simulation_id: str, data: dict) -> dic
         if diffs:
             agent_diffs[name] = diffs
 
+    # node metadata for labelling
+    meta_a = a.get("meta") or {}
+    meta_b = b.get("meta") or {}
+    label_a = meta_a.get("variant_name") or meta_a.get("experiment_name") or f"Node {node_a}"
+    label_b = meta_b.get("variant_name") or meta_b.get("experiment_name") or f"Node {node_b}"
+    sim_a_state = a.get("sim")
+    sim_b_state = b.get("sim")
+    round_a = getattr(sim_a_state, "turns", None) or len(logs_a) if sim_a_state else len(logs_a)
+    round_b = getattr(sim_b_state, "turns", None) or len(logs_b) if sim_b_state else len(logs_b)
+
     # construct a conservative natural-language summary from diffs (no external LLM by default)
     parts: List[str] = []
-    if only_a:
-        parts.append(T('api.compare.node_unique_events', node=node_a, count=len(only_a)))
-    if only_b:
-        parts.append(T('api.compare.node_unique_events', node=node_b, count=len(only_b)))
+    parts.append(f"{label_a} (node {node_a}, ~{round_a} rounds): {len(only_a)} unique events")
+    parts.append(f"{label_b} (node {node_b}, ~{round_b} rounds): {len(only_b)} unique events")
     if agent_diffs:
         parts.append(T('api.compare.agent_property_diffs', count=len(agent_diffs)))
     if not parts:
@@ -296,16 +304,16 @@ async def compare_nodes(request: Request, simulation_id: str, data: dict) -> dic
                 system_msg = {
                     "role": "system",
                     "content": (
-                        "You are a concise and conservative summarizer for simulation diffs. "
-                        "Given only the provided diff examples and agent property differences, produce a short (<=3 sentences) summary in Chinese describing the most likely notable differences and avoid hallucinating any facts not present in the input. "
+                        "You are a concise summarizer comparing two simulation branches. "
+                        "Given the two nodes' metadata, unique events, and agent property differences, produce a short (<=3 sentences) summary in Chinese describing: 1) which two groups are being compared and their step counts, 2) the most likely notable behavioral differences between them, 3) any unexpected divergence. "
                         "If uncertain, say so briefly."
                     ),
                 }
                 user_msg = {
                     "role": "user",
                     "content": (
-                        f"Node A id={node_a}, unique events count={len(only_a)}. Examples:\n{examples_a}\n\n"
-                        f"Node B id={node_b}, unique events count={len(only_b)}. Examples:\n{examples_b}\n\n"
+                        f"Group A: {label_a} (node {node_a}, ~{round_a} rounds), unique events={len(only_a)}. Examples:\n{examples_a}\n\n"
+                        f"Group B: {label_b} (node {node_b}, ~{round_b} rounds), unique events={len(only_b)}. Examples:\n{examples_b}\n\n"
                         f"Agent property differences (sample):\n{agent_diff_text}\n\n"
                         "Please respond in Chinese, <= 3 sentences. Use only the above information."
                     ),

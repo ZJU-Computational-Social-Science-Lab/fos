@@ -136,6 +136,7 @@ def create_app() -> Litestar:
                 index_path,
                 content_disposition_type="inline",
                 media_type="text/html",
+                headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
             )
 
         @get("/{path:path}")

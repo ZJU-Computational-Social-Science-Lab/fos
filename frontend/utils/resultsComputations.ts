@@ -11,6 +11,7 @@ import type { Agent, LogEntry } from '@/types';
 
 export type Series = { agentId: string; agentName: string; values: number[] };
 export type MetricAggregatePoint = { round: number; mean: number; min: number; max: number };
+export type VariantAggregate = { variantName: string; points: MetricAggregatePoint[] };
 export type AgentCount = { agentId: string; count: number };
 export type RoundCount = { round: number; count: number };
 
@@ -202,4 +203,13 @@ export function hydrateAgentHistoryFromLogs(logs: LogEntry[], agents: Agent[]): 
 
     return { ...agent, history: newHistory };
   });
+}
+
+export function computeMultiVariantAggregate(
+  seriesByVariant: Record<string, Series[]>
+): VariantAggregate[] {
+  return Object.entries(seriesByVariant).map(([variantName, series]) => ({
+    variantName,
+    points: computeMetricAggregate(series),
+  }));
 }

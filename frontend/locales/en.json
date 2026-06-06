@@ -2422,9 +2422,9 @@
       }
     },
     "analyseTab": {
-      "compareDiff": "Compare diff",
+      "compareDiff": "Variants",
       "overview": "Overview",
-      "results": "Results"
+      "results": "Trajectory"
     },
     "event": {
       "addFailed": "Failed to add event",

@@ -10,6 +10,6 @@ echo "Starting Uvicorn server..."
 exec uvicorn fos.backend.main:app \
     --host ${FOS_BACKEND_HOST:-0.0.0.0} \
     --port ${FOS_BACKEND_PORT:-8000} \
-    --root-path ${FOS_BACKEND_ROOT_PATH:-} \
+    --root-path "${FOS_BACKEND_ROOT_PATH:-}" \
     --workers 2 \
     --timeout-keep-alive 75

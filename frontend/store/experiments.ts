@@ -12,7 +12,8 @@ import * as experimentsApi from '../services/experiments';
 import type { EnvironmentSuggestion } from '../services/environmentSuggestions';
 import { addTime } from './helpers';
 import { listMetrics, computeMetricTrajectories, hydrateAgentHistoryFromLogs } from '../utils/resultsComputations';
-import { buildSummaryPrompt } from '../utils/summaryPrompt';
+import { buildSummaryPrompt, buildComparisonPrompt } from '../utils/summaryPrompt';
+import type { ComparisonPromptInput } from '../utils/summaryPrompt';
 import { extractApiErrorMessage, getBackendErrorDetail } from '../utils/apiError';
 import i18n from '../i18n';
 
@@ -235,28 +236,87 @@ export const createExperimentsSlice: StateCreator<
   generateComparisonAnalysis: async () => {
     const state = get() as any;
     if (!state.currentSimulation || !state.selectedNodeId || !state.compareTargetNodeId) return;
+    const providerId = state.currentProviderId;
+    if (providerId === null || providerId === undefined) {
+      state.addNotification?.('error', i18n.t('store.noProviderSelected') || 'No LLM provider selected');
+      return;
+    }
+
+    set({ isGenerating: true, comparisonSummary: null } as any);
 
     try {
-      set({ isGenerating: true } as any);
       const simId = state.currentSimulation.id;
-      const nodeA = Number(state.selectedNodeId);
-      const nodeB = Number(state.compareTargetNodeId);
-      if (!Number.isFinite(nodeA) || !Number.isFinite(nodeB)) {
+      const token = (state.engineConfig as any).token ?? undefined;
+      const baseUrl = state.engineConfig.endpoint;
+      const nodeIds = [Number(state.selectedNodeId), Number(state.compareTargetNodeId)];
+      if (nodeIds.some((id) => !Number.isFinite(id))) {
         state.addNotification?.('error', i18n.t('store.selectedNodeNotBackend') || 'Selected node is not a backend node');
         set({ isGenerating: false } as any);
         return;
       }
 
-      const useLLM = Boolean(state.comparisonUseLLM);
-      const res = await experimentsApi.compareNodes(simId, nodeA, nodeB, useLLM);
-      const summary = res?.summary || (res?.message || '') || i18n.t('store.failedToGenerateSummary') || 'Failed to generate summary';
-      set({ comparisonSummary: summary, isGenerating: false } as any);
+      // Fetch events for both nodes
+      const { getSimEvents } = await import('../services/simulationTree');
+      const { mapBackendEventsToLogs } = await import('../store/helpers');
+      const { hydrateAgentHistoryFromLogs, listMetrics, computeMetricTrajectories } = await import('../utils/resultsComputations');
+      const agents = state.agents || [];
+
+      const rawResults = await Promise.all(
+        nodeIds.map(async (nid: number) => {
+          const rawEvents = await getSimEvents(baseUrl, simId, nid, token).catch(() => []);
+          const nodeEvents = mapBackendEventsToLogs(rawEvents, String(nid), 0, agents, false);
+          const hydrated = hydrateAgentHistoryFromLogs(nodeEvents, agents);
+          const node = (state.nodes || []).find((x: any) => x.id === String(nid));
+          const name = node?.meta?.variant_name || node?.name || `Node ${nid}`;
+          return { name, hydrated };
+        })
+      );
+
+      const validResults = rawResults.filter(Boolean) as { name: string; hydrated: any[] }[];
+      if (validResults.length < 2) {
+        state.addNotification?.('error', i18n.t('store.failedToGenerateSummary') || 'Failed to generate summary');
+        set({ isGenerating: false } as any);
+        return;
+      }
+
+      // Build comparison prompt
+      const metricsByName: Record<string, { name: string; series: any[] }[]> = {};
+      for (const r of validResults) {
+        const metricNames = listMetrics(r.hydrated);
+        metricsByName[r.name] = metricNames.map((m) => ({
+          name: m,
+          series: computeMetricTrajectories(r.hydrated, m),
+        }));
+      }
+
+      const commonMetrics = metricsByName[validResults[0].name]
+        .filter((m) => metricsByName[validResults[1].name]?.some((m2) => m2.name === m.name))
+        .map((m) => m.name);
+
+      const detectedLanguage: 'en' | 'zh' = i18n.language?.startsWith?.('zh') ? 'zh' : 'en';
+      const comparisonInput: ComparisonPromptInput = {
+        title: state.currentSimulation.name || 'Experiment',
+        language: detectedLanguage,
+        groupA: { name: validResults[0].name, metrics: metricsByName[validResults[0].name].filter((m) => commonMetrics.includes(m.name)) },
+        groupB: { name: validResults[1].name, metrics: metricsByName[validResults[1].name].filter((m) => commonMetrics.includes(m.name)) },
+      };
+
+      const prompt = buildComparisonPrompt(comparisonInput);
+      const { apiClient } = await import('../services/client');
+      const res = await apiClient.post<{ text: string }>('llm/refine_report', {
+        prompt,
+        provider_id: providerId,
+      });
+      const text = res.data.text;
+      if (typeof text !== 'string' || text.length === 0) {
+        throw new Error('LLM returned no text');
+      }
+      set({ comparisonSummary: text, isGenerating: false } as any);
     } catch (e) {
       console.error(e);
       set({ isGenerating: false } as any);
-      const detail = getBackendErrorDetail(e);
-      const base = i18n.t('store.comparisonAnalysisFailed') || 'Comparison analysis failed';
-      state.addNotification?.('error', detail !== null ? `${base}: ${detail}` : base);
+      const detail = extractApiErrorMessage(e);
+      state.addNotification?.('error', detail || i18n.t('store.comparisonAnalysisFailed') || 'Comparison analysis failed');
     }
   },
 
