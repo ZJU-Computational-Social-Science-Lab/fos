@@ -23,7 +23,7 @@ export class SimulationWorkspace {
   /** Wait for the simulation workspace to fully load */
   async waitForReady() {
     const advanceText = t('simPage.advance', this.locale);
-    await this.page.getByRole('button', { name: new RegExp(advanceText, 'i') }).waitFor({
+    await this.page.getByRole('button', { name: new RegExp(advanceText, 'i') }).first().waitFor({
       state: 'visible',
       timeout: 30_000,
     });
@@ -84,15 +84,15 @@ export class SimulationWorkspace {
     const stepsTitle = t('simPage.enterSteps', this.locale);
 
     // Set the step count
-    const stepInput = this.page.getByTitle(new RegExp(stepsTitle, 'i'));
+    const stepInput = this.page.getByTitle(new RegExp(stepsTitle, 'i')).first();
     await stepInput.clear();
     await stepInput.fill(String(rounds));
 
-    // Click "Auto-advance"
-    const autoAdvanceText = t('simPage.autoAdvance', this.locale);
-    const autoAdvanceBtn = this.page.getByRole('button', {
-      name: new RegExp(autoAdvanceText, 'i'),
-    });
+    // Click "Advance node"; the step count turns this into a multi-step run.
+    const advanceText = t('simPage.advance', this.locale);
+    const advanceBtn = this.page.getByRole('button', {
+      name: new RegExp(advanceText, 'i'),
+    }).first();
     // Wait for the button to be enabled (selected node must be a backend node)
     await this.page.waitForFunction(
       (text) => {
@@ -100,10 +100,10 @@ export class SimulationWorkspace {
         const btn = Array.from(buttons).find(b => b.textContent?.includes(text));
         return btn != null && !((btn as HTMLButtonElement).disabled);
       },
-      autoAdvanceText,
+      advanceText,
       { timeout: 15_000 },
     );
-    await autoAdvanceBtn.click();
+    await advanceBtn.click();
 
     // Wait for auto-advance to complete (Stop button disappears)
     const stopText = t('simPage.stop', this.locale);
@@ -133,7 +133,7 @@ export class SimulationWorkspace {
     const advanceText = t('simPage.advance', this.locale);
     const advanceBtn = this.page.getByRole('button', {
       name: new RegExp(advanceText, 'i'),
-    });
+    }).first();
     // Wait for the button to be enabled (selected node must be a backend node)
     await advanceBtn.waitFor({ state: 'visible', timeout: 15_000 });
     await this.page.waitForFunction(

@@ -6,7 +6,7 @@
  */
 
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { WorkspaceRunControls } from "../WorkspaceRunControls";
@@ -54,5 +54,30 @@ describe("WorkspaceRunControls", () => {
 
     expect(screen.getByRole("button", { name: "Advance node" })).toBeInTheDocument();
     expect(screen.getByRole("spinbutton", { name: "Enter steps" })).toBeInTheDocument();
+  });
+
+  it("lets a policy erosion simulation advance from the selected root node", () => {
+    const startAutoAdvance = vi.fn();
+    useSimulationStore.setState({
+      currentSimulation: {
+        id: "policy-sim-1",
+        name: "Policy erosion",
+        scenario_id: "policy_erosion",
+        scene_type: "policy_cascade_scene",
+      },
+      selectedNodeId: "root",
+      startAutoAdvance,
+    } as never);
+
+    render(<WorkspaceRunControls compact />);
+
+    const advanceButton = screen.getByRole("button", { name: "Advance node" });
+
+    expect(advanceButton).toBeEnabled();
+
+    fireEvent.click(advanceButton);
+
+    expect(startAutoAdvance).toHaveBeenCalledOnce();
+    expect(startAutoAdvance).toHaveBeenCalledWith(1);
   });
 });

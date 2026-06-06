@@ -41,9 +41,9 @@ export class ExperimentBuilder {
     this.locale = locale;
   }
 
-  /** Open the experiment builder by navigating to simulations page */
+  /** Open the preset experiment builder directly. */
   async open() {
-    await this.page.goto('/simulations/new');
+    await this.page.goto('/simulations/create/preset');
     await this.page.waitForLoadState('networkidle');
 
     // Wait for the "Next" button — it's always visible on the builder page

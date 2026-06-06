@@ -280,17 +280,32 @@ export const createExperimentsSlice: StateCreator<
         const base = state.engineConfig.endpoint;
         const token = state.engineConfig.token;
         const simId = state.currentSimulation.id;
-        const parentNumeric = Number(state.selectedNodeId);
+        let graphBefore = await getTreeGraph(base, simId, token);
+        let parentNumeric = Number(state.selectedNodeId);
 
         if (!Number.isFinite(parentNumeric)) {
-          console.error('[advanceSimulation] Invalid node ID:', state.selectedNodeId, 'Type:', typeof state.selectedNodeId);
-          state.addNotification?.('error', i18n.t('store.selectedNodeNotBackend') || 'Selected node is not a backend node');
-          set({ isGenerating: false } as any);
-          return;
+          if (state.selectedNodeId === 'root') {
+            for (let attempt = 0; attempt < 20 && !Number.isFinite(Number(graphBefore?.root)); attempt += 1) {
+              if (attempt > 0) {
+                await new Promise((resolve) => setTimeout(resolve, 500));
+              }
+              graphBefore = await getTreeGraph(base, simId, token);
+            }
+          }
+
+          const graphRoot = Number(graphBefore?.root);
+          if (state.selectedNodeId === 'root' && Number.isFinite(graphRoot)) {
+            parentNumeric = graphRoot;
+            set({ selectedNodeId: String(graphRoot) } as any);
+          } else {
+            console.error('[advanceSimulation] Invalid node ID:', state.selectedNodeId, 'Type:', typeof state.selectedNodeId);
+            state.addNotification?.('error', i18n.t('store.selectedNodeNotBackend') || 'Selected node is not a backend node');
+            set({ isGenerating: false } as any);
+            return;
+          }
         }
 
         // Track existing children before advance to detect new ones after 504
-        const graphBefore = await getTreeGraph(base, simId, token);
         const existingChildIds = new Set(
           (graphBefore?.edges || []).filter((e: any) => e.from === parentNumeric).map((e: any) => e.to)
         );

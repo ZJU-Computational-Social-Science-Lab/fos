@@ -42,7 +42,7 @@ const ContextToolbar: React.FC = () => {
 
   // Node readiness — disable actions when selected node is a placeholder
   const selectedNodeId = useSimulationStore((s) => s.selectedNodeId);
-  const selectedNodeIsReady = Number.isFinite(Number(selectedNodeId));
+  const selectedNodeIsReady = String(selectedNodeId || "").trim().length > 0;
 
   const isCompareMode = useSimulationStore((s) => s.isCompareMode);
 
