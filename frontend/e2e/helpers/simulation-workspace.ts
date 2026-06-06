@@ -1,7 +1,7 @@
 /**
  * Page object for the simulation workspace after experiment creation.
  *
- * Drives auto-advance and advance-turn controls in the ContextToolbar
+ * Drives auto-advance and advance-turn controls in the workspace log panel
  * using locale-aware selectors. Collects error toasts. Never throws —
  * all errors are collected and returned as strings.
  *
@@ -23,7 +23,7 @@ export class SimulationWorkspace {
   /** Wait for the simulation workspace to fully load */
   async waitForReady() {
     const advanceText = t('simPage.advance', this.locale);
-    await this.page.getByRole('button', { name: new RegExp(advanceText, 'i') }).first().waitFor({
+    await this.page.getByRole('button', { name: new RegExp(advanceText, 'i') }).waitFor({
       state: 'visible',
       timeout: 30_000,
     });
@@ -84,7 +84,7 @@ export class SimulationWorkspace {
     const stepsTitle = t('simPage.enterSteps', this.locale);
 
     // Set the step count
-    const stepInput = this.page.getByTitle(new RegExp(stepsTitle, 'i')).first();
+    const stepInput = this.page.getByTitle(new RegExp(stepsTitle, 'i'));
     await stepInput.clear();
     await stepInput.fill(String(rounds));
 
@@ -92,7 +92,7 @@ export class SimulationWorkspace {
     const advanceText = t('simPage.advance', this.locale);
     const advanceBtn = this.page.getByRole('button', {
       name: new RegExp(advanceText, 'i'),
-    }).first();
+    });
     // Wait for the button to be enabled (selected node must be a backend node)
     await this.page.waitForFunction(
       (text) => {
@@ -133,7 +133,7 @@ export class SimulationWorkspace {
     const advanceText = t('simPage.advance', this.locale);
     const advanceBtn = this.page.getByRole('button', {
       name: new RegExp(advanceText, 'i'),
-    }).first();
+    });
     // Wait for the button to be enabled (selected node must be a backend node)
     await advanceBtn.waitFor({ state: 'visible', timeout: 15_000 });
     await this.page.waitForFunction(

@@ -1,12 +1,11 @@
 /**
- * These tests make sure the workspace toolbar keeps a compact overflow
- * menu for lower-priority actions.
+ * These tests make sure the old workspace toolbar does not appear.
  *
- * Each test checks one visible menu behavior.
+ * Each test checks one visible thing that should stay out of the page.
  */
 
 import React from "react";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ContextToolbar from "../ContextToolbar";
 import { useSimulationStore } from "../../store";
@@ -66,34 +65,27 @@ describe("ContextToolbar", () => {
     } as never);
   });
 
-  it("shows the overflow menu when the more actions button is pressed", () => {
+  it("does not show the left toolbar overflow button", () => {
     render(<ContextToolbar />);
 
-    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
-
-    expect(screen.getByText("Analytics")).toBeInTheDocument();
-    expect(screen.getByText("Report")).toBeInTheDocument();
-    expect(screen.getByText("Export")).toBeInTheDocument();
-    expect(screen.getByText("Global knowledge")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "More actions" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Analytics")).not.toBeInTheDocument();
+    expect(screen.queryByText("Report")).not.toBeInTheDocument();
+    expect(screen.queryByText("Export")).not.toBeInTheDocument();
+    expect(screen.queryByText("Global knowledge")).not.toBeInTheDocument();
   });
 
-  it("keeps advance and steps in one control group with a single advance button", () => {
+  it("does not show the duplicate advance controls in the left toolbar", () => {
     render(<ContextToolbar />);
 
-    const group = screen.getByLabelText("Advance Controls");
-
-    const advanceButton = within(group).getByRole("button", { name: "Advance node" });
-    const stepsInput = within(group).getByRole("spinbutton", { name: "Enter steps" });
-
-    expect(advanceButton).toBeInTheDocument();
+    expect(screen.queryByLabelText("Advance Controls")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Advance node" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("spinbutton", { name: "Enter steps" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Auto advance" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Create branch" })).not.toBeInTheDocument();
-    expect(stepsInput).toBeInTheDocument();
-    expect(group).toContainElement(advanceButton);
-    expect(group).toContainElement(stepsInput);
   });
 
-  it("shows running status and agent count beside the advance controls", () => {
+  it("does not show running status or agent count in the left toolbar", () => {
     useSimulationStore.setState({
       isGenerating: true,
       agents: new Array(1247).fill(null).map((_, index) => ({
@@ -104,11 +96,11 @@ describe("ContextToolbar", () => {
 
     render(<ContextToolbar />);
 
-    expect(screen.getByText("Running")).toBeInTheDocument();
-    expect(screen.getByText("1,247 Agents")).toBeInTheDocument();
+    expect(screen.queryByText("Running")).not.toBeInTheDocument();
+    expect(screen.queryByText("1,247 Agents")).not.toBeInTheDocument();
   });
 
-  it("lets a policy erosion simulation advance from the selected root node", () => {
+  it("keeps policy erosion advance out of the left toolbar", () => {
     const startAutoAdvance = vi.fn();
     useSimulationStore.setState({
       currentSimulation: {
@@ -123,13 +115,7 @@ describe("ContextToolbar", () => {
 
     render(<ContextToolbar />);
 
-    const advanceButton = screen.getByRole("button", { name: "Advance node" });
-
-    expect(advanceButton).toBeEnabled();
-
-    fireEvent.click(advanceButton);
-
-    expect(startAutoAdvance).toHaveBeenCalledOnce();
-    expect(startAutoAdvance).toHaveBeenCalledWith(1);
+    expect(screen.queryByRole("button", { name: "Advance node" })).not.toBeInTheDocument();
+    expect(startAutoAdvance).not.toHaveBeenCalled();
   });
 });
