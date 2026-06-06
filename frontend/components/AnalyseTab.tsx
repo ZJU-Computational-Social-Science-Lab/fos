@@ -8,8 +8,8 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { BarChart3, GitCompareArrows } from "lucide-react";
-import { ComparisonView } from "./ComparisonView";
 import { ResultsView, ResultsLabels } from "./results/ResultsView";
+import { MetricComparisonView } from "./results/MetricComparisonView";
 
 type AnalyseView = "results" | "compare";
 
@@ -85,8 +85,8 @@ export const AnalyseTab: React.FC = () => {
       </div>
 
       {activeView === "compare" ? (
-        <div className="flex-1 overflow-hidden">
-          <ComparisonView />
+        <div className="flex-1 overflow-auto">
+          <MetricComparisonView language={language} />
         </div>
       ) : (
         <div className="h-full overflow-auto">

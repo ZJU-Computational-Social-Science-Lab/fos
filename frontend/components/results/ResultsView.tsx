@@ -171,6 +171,8 @@ export function ResultsView({ labels, language }: Props) {
                     metric={activeMetric}
                     meanLabel={labels.mean}
                     rangeLabel={labels.range}
+                    xLabel={language === 'zh' ? '步数' : 'Step'}
+                    yLabel={activeMetric}
                   />
                 ) : (
                   <MetricTrajectoryChart series={series} metric={activeMetric} />

@@ -139,7 +139,7 @@ const root = d3.stratify<SimNode>()
         event.stopPropagation();
         const nodeId = d.data.id;
 
-        if (isCompareModeRef.current) {
+        if (isCompareModeRef.current || event.altKey || event.ctrlKey) {
           if (nodeId !== selectedNodeIdRef.current) {
             setCompareTarget(nodeId);
           }

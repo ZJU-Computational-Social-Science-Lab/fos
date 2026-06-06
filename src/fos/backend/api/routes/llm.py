@@ -269,7 +269,7 @@ async def refine_report(request: Request, data: RefineReportRequest) -> dict:
             top_p=1.0,
             frequency_penalty=0.0,
             presence_penalty=0.0,
-            max_tokens=512,
+            max_tokens=2048,
         )
         llm = create_llm_client(cfg)
 

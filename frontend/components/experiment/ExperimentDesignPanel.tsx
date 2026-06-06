@@ -36,6 +36,7 @@ import {
 } from "../../utils/parseScenarioParams";
 import { MultimodalInput } from "../MultimodalInput";
 import ParameterField from "./ParameterField";
+import { ResourceConfig } from "./ResourceConfig";
 
 interface ExperimentDesignPanelProps {
   mode?: "modal" | "embedded";
@@ -1351,6 +1352,55 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
                               const parameterDefinitions =
                                 scenarioData?.parameter_schema?.properties || {};
 
+                              // Public Goods Game — use ResourceConfig for grouped UI
+                              if (scenarioId === 'public_goods') {
+                                const pgDefaults = {
+                                  resource_name: 'tokens',
+                                  tokens_per_round: 10,
+                                  multiplier: 1.3,
+                                  deduction_budget_per_phase: 0,
+                                  deduction_cost_ratio: 3,
+                                  deduction_anonymous: false,
+                                  show_average_contribution: false,
+                                };
+                                const resourceValues = {
+                                  resource_name: (intervention.parsedParams?.resource_name as string)
+                                    || (baseParams.resource_name as string)
+                                    || pgDefaults.resource_name,
+                                  tokens_per_round: (intervention.parsedParams?.tokens_per_round as number)
+                                    ?? (baseParams.tokens_per_round as number)
+                                    ?? pgDefaults.tokens_per_round,
+                                  multiplier: (intervention.parsedParams?.multiplier as number)
+                                    ?? (baseParams.multiplier as number)
+                                    ?? pgDefaults.multiplier,
+                                  deduction_budget_per_phase: (intervention.parsedParams?.deduction_budget_per_phase as number)
+                                    ?? (baseParams.deduction_budget_per_phase as number)
+                                    ?? pgDefaults.deduction_budget_per_phase,
+                                  deduction_cost_ratio: (intervention.parsedParams?.deduction_cost_ratio as number)
+                                    ?? (baseParams.deduction_cost_ratio as number)
+                                    ?? pgDefaults.deduction_cost_ratio,
+                                  deduction_anonymous: (intervention.parsedParams?.deduction_anonymous as boolean)
+                                    ?? (baseParams.deduction_anonymous as boolean)
+                                    ?? pgDefaults.deduction_anonymous,
+                                  show_average_contribution: (intervention.parsedParams?.show_average_contribution as boolean)
+                                    ?? (baseParams.show_average_contribution as boolean)
+                                    ?? pgDefaults.show_average_contribution,
+                                };
+                                return (
+                                  <ResourceConfig
+                                    values={resourceValues}
+                                    onChange={(key, value) =>
+                                      updateIntervention(
+                                        variant.id,
+                                        intervention.id,
+                                        'parsedParams',
+                                        { ...intervention.parsedParams, [key]: value }
+                                      )
+                                    }
+                                  />
+                                );
+                              }
+
                               if (Object.keys(parameterDefinitions).length > 0) {
                                 return (
                                   <div className="space-y-3">
@@ -1452,6 +1502,8 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
                                     scene_config?: { scenario_id?: string; scenarioId?: string };
                                   } | null
                                 )?.scene_config?.scenarioId;
+                              // Public Goods Game uses ResourceConfig with known keys
+                              if (scenarioId === 'public_goods') return null;
                               const scenarioData = scenarioId
                                 ? scenarioDataCache[scenarioId]
                                 : null;
@@ -1807,7 +1859,7 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
 
           {showPreview ? (
             <div
-              className="absolute inset-0 backdrop-blur-sm z-10 flex flex-col"
+              className="fixed inset-0 backdrop-blur-sm z-[150] flex flex-col"
               style={{ background: "var(--ss-surface)" }}
             >
               <div

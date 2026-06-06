@@ -35,7 +35,6 @@ import { useAuthStore } from "../store/auth";
 import { useTranslation } from "react-i18next";
 import { TabRail } from "../components/TabRail";
 import { PeekOverlay } from "../components/PeekOverlay";
-import ContextToolbar from "../components/ContextToolbar";
 
 // ---------------- SimulationPage ----------------
 
@@ -533,15 +532,6 @@ const SimulationPage: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {activeTab === 'workspace' && (
           <>
-            <div
-              className="flex flex-wrap items-center justify-between gap-3 border-b px-3 py-2"
-              style={{
-                background: "var(--ss-workspace-surface)",
-                borderColor: "var(--ss-workspace-border)",
-              }}
-            >
-              <ContextToolbar />
-            </div>
             <div className="flex-1 overflow-hidden relative px-3 pb-3 pt-2">
               <div className="flex gap-3 h-full">
                 <div className="w-[40%] flex flex-col">

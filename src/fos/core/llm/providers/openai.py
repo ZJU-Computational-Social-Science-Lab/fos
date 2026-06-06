@@ -183,6 +183,11 @@ def openai_chat(
         resp = client.chat.completions.create(**fallback_kwargs)
         content = (resp.choices[0].message.content or "").strip()
 
+    # Retry once for non-JSON empty responses (transient provider issues)
+    if not content and not json_mode:
+        resp = client.chat.completions.create(**kwargs)
+        content = (resp.choices[0].message.content or "").strip()
+
     if not content:
         raise ValueError(T("OpenAI-compatible provider returned empty response"))
 
