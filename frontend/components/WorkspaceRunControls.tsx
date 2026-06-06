@@ -35,7 +35,7 @@ export const WorkspaceRunControls: React.FC<WorkspaceRunControlsProps> = ({
 
   const [advanceSteps, setAdvanceSteps] = React.useState(1);
   const isRunning = isGenerating || isAutoAdvancing;
-  const selectedNodeIsReady = Number.isFinite(Number(selectedNodeId));
+  const selectedNodeIsReady = String(selectedNodeId || "").trim().length > 0;
   const agentCount = agents.length;
   const formattedAgentCount = new Intl.NumberFormat().format(agentCount);
 

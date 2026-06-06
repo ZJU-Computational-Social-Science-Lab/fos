@@ -107,4 +107,29 @@ describe("ContextToolbar", () => {
     expect(screen.getByText("Running")).toBeInTheDocument();
     expect(screen.getByText("1,247 Agents")).toBeInTheDocument();
   });
+
+  it("lets a policy erosion simulation advance from the selected root node", () => {
+    const startAutoAdvance = vi.fn();
+    useSimulationStore.setState({
+      currentSimulation: {
+        id: "policy-sim-1",
+        name: "Policy erosion",
+        scenario_id: "policy_erosion",
+        scene_type: "policy_cascade_scene",
+      },
+      selectedNodeId: "root",
+      startAutoAdvance,
+    } as never);
+
+    render(<ContextToolbar />);
+
+    const advanceButton = screen.getByRole("button", { name: "Advance node" });
+
+    expect(advanceButton).toBeEnabled();
+
+    fireEvent.click(advanceButton);
+
+    expect(startAutoAdvance).toHaveBeenCalledOnce();
+    expect(startAutoAdvance).toHaveBeenCalledWith(1);
+  });
 });
