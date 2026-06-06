@@ -285,7 +285,7 @@ export const createExperimentsSlice: StateCreator<
 
         if (!Number.isFinite(parentNumeric)) {
           if (state.selectedNodeId === 'root') {
-            for (let attempt = 0; attempt < 20 && !Number.isFinite(Number(graphBefore?.root)); attempt += 1) {
+            for (let attempt = 0; attempt < 120 && !Number.isFinite(Number(graphBefore?.root)); attempt += 1) {
               if (attempt > 0) {
                 await new Promise((resolve) => setTimeout(resolve, 500));
               }

@@ -94,4 +94,57 @@ describe('advanceSimulation root placeholder handling', () => {
     );
     expect(useSimulationStore.getState().selectedNodeId).toBe('1');
   });
+
+  it('keeps waiting when the backend root takes longer to appear', async () => {
+    vi.useFakeTimers();
+    treeMocks.getTreeGraph
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValue({
+        root: 0,
+        frontier: [0],
+        nodes: [{ id: 0, depth: 0 }, { id: 1, depth: 1 }],
+        edges: [{ from: 0, to: 1, type: 'advance' }],
+        running: [],
+      });
+
+    const advancePromise = useSimulationStore.getState().advanceSimulation();
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      await vi.advanceTimersByTimeAsync(500);
+    }
+    await advancePromise;
+    vi.useRealTimers();
+
+    expect(treeMocks.treeAdvanceChain).toHaveBeenCalledWith(
+      '/api',
+      'policy-sim-1',
+      0,
+      1,
+      undefined,
+    );
+    expect(useSimulationStore.getState().selectedNodeId).toBe('1');
+  });
 });

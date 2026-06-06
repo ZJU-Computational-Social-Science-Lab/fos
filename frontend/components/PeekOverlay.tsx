@@ -18,8 +18,6 @@ export const PeekOverlay: React.FC = () => {
   const setPeekTab = useSimulationStore((s) => s.setPeekTab);
   const setPeekOverlayActive = useSimulationStore((s) => s.setPeekOverlayActive);
 
-  // Keep the overlay in the DOM when hidden (just invisible) so that
-  // SimTree/LogViewer/Sidebar don't remount and re-initialize on every peek.
   return (
     <div
       className={`absolute top-0 right-0 bottom-0 z-30 w-[30%] max-w-[350px]
@@ -39,12 +37,15 @@ export const PeekOverlay: React.FC = () => {
       }}
     >
       <div className="h-full overflow-auto">
-        {/* Panels stay mounted to avoid re-initialization costs */}
-        <div className={peekTab === 'workspace' ? 'h-full flex gap-2 p-2' : 'hidden'}>
-          <div className="w-[40%]"><SimTree /></div>
-          <div className="flex-1"><LogViewer /></div>
-        </div>
-        <div className={peekTab === 'agents' ? 'h-full' : 'hidden'}><Sidebar /></div>
+        {peekTab === 'workspace' ? (
+          <div className="h-full flex gap-2 p-2">
+            <div className="w-[40%]"><SimTree /></div>
+            <div className="flex-1"><LogViewer /></div>
+          </div>
+        ) : null}
+        {peekTab === 'agents' ? (
+          <div className="h-full"><Sidebar /></div>
+        ) : null}
       </div>
     </div>
   );

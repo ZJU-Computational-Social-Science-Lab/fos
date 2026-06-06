@@ -84,6 +84,22 @@ describe("LogViewer", () => {
     expect(screen.getByText("No matching logs found")).toBeInTheDocument();
   });
 
+  it("shows the right side advance node button inside the log viewer", () => {
+    useSimulationStore.setState({
+      ...baseState,
+      logs: [],
+      nodes: [],
+      selectedNodeId: "root",
+      agents: [{ id: "agent-1", name: "Agent 1" }],
+      currentSimulation: null,
+    } as never);
+
+    render(<LogViewer />);
+
+    expect(screen.getByRole("button", { name: "Advance node" })).toBeInTheDocument();
+    expect(screen.getByRole("spinbutton", { name: "Enter steps" })).toBeInTheDocument();
+  });
+
   it("lets people keep multiple step groups open at the same time", () => {
     useSimulationStore.setState({
       ...baseState,
