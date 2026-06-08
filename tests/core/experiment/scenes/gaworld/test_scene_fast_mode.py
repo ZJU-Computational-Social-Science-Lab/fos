@@ -94,7 +94,7 @@ def test_launch_subprocess_disables_heavy_gaworld_features_for_fast_mode(
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     overrides = captured["config_overrides"]
     assert overrides["external_rag"]["bootstrap"]["enabled"] is False
@@ -130,7 +130,7 @@ def test_launch_subprocess_uses_coarse_time_steps_for_fast_mode(
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     assert captured["config_overrides"]["time_step_minutes"] == 120
 
@@ -161,7 +161,7 @@ def test_launch_subprocess_enables_deterministic_fast_mode_shortcuts(
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     overrides = captured["config_overrides"]
     assert overrides["routine_change"]["enabled"] is False
@@ -204,7 +204,7 @@ def test_launch_subprocess_uses_balanced_execution_profile(
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     overrides = captured["config_overrides"]
     assert overrides["external_rag"]["bootstrap"]["enabled"] is False
@@ -242,7 +242,7 @@ def test_launch_subprocess_uses_full_fidelity_execution_profile(
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     overrides = captured["config_overrides"]
     assert "time_step_minutes" not in overrides
@@ -276,7 +276,7 @@ def test_launch_subprocess_maps_information_mode_to_runtime_overrides(
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     overrides = captured["config_overrides"]
     assert overrides["news"]["enabled"] is True
@@ -307,7 +307,7 @@ def test_launch_subprocess_maps_memory_mode_to_runtime_overrides(
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     overrides = captured["config_overrides"]
     assert overrides["vector_db_top_k"] == 1
@@ -343,7 +343,7 @@ def test_launch_subprocess_explicit_city_system_modes_override_preset_defaults(
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     overrides = captured["config_overrides"]
     assert overrides["news"]["enabled"] is True
