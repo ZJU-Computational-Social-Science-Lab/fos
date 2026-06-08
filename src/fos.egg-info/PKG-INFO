@@ -9,3 +9,4 @@ Provides-Extra: dev
 Requires-Dist: pytest>=7.0; extra == "dev"
 Requires-Dist: pytest-asyncio; extra == "dev"
 Requires-Dist: pytest-cov; extra == "dev"
+Requires-Dist: APScheduler>=3.11.2; extra == "dev"
