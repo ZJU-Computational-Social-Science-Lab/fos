@@ -47,7 +47,7 @@ vi.mock("../../components/ComparisonView", () => ({
 }));
 
 vi.mock("../../components/ContextToolbar", () => ({
-  default: () => <div>Workspace Toolbar</div>,
+  default: () => null,
 }));
 
 vi.mock("../../components/PeekOverlay", () => ({
@@ -147,7 +147,6 @@ describe("Simulation page navigation", () => {
     expect(screen.getByTitle("Agents")).toBeInTheDocument();
     expect(screen.getByTitle("Intervention")).toBeInTheDocument();
     expect(screen.getByTitle("Analyse")).toBeInTheDocument();
-    expect(screen.getByText("Workspace Toolbar")).toBeInTheDocument();
     expect(screen.getByText("Sim Tree Panel")).toBeInTheDocument();
     expect(screen.getByText("Log Viewer Panel")).toBeInTheDocument();
   });
@@ -158,7 +157,7 @@ describe("Simulation page navigation", () => {
     fireEvent.click(screen.getByTitle("Intervention"));
 
     expect(screen.getByText("Intervention Panel")).toBeInTheDocument();
-    expect(screen.queryByText("Workspace Toolbar")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sim Tree Panel")).not.toBeInTheDocument();
   });
 
   it("shows the analyse area when the analyse rail button is pressed", () => {
@@ -167,6 +166,6 @@ describe("Simulation page navigation", () => {
     fireEvent.click(screen.getByTitle("Analyse"));
 
     expect(screen.getByText("Analyse Panel")).toBeInTheDocument();
-    expect(screen.queryByText("Workspace Toolbar")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sim Tree Panel")).not.toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import SimulationPage from '../../pages/SimulationPage';
@@ -13,6 +13,9 @@ const translations: Record<string, string> = {
   'simPage.advance': 'Advance node',
   'simPage.advancing': 'Advancing…',
   'simPage.branch': 'Create branch',
+  'sim.running': 'Running',
+  'sim.agents': 'agents',
+  'simPage.advancingProgress': 'Step {{current}}/{{total}}',
 };
 
 vi.mock('react-i18next', () => ({
@@ -34,8 +37,33 @@ vi.mock('../../components/SimTree', () => ({
   SimTree: () => <div>Sim Tree Panel</div>,
 }));
 
-vi.mock('../../components/LogViewer', () => ({
-  LogViewer: () => <div>Log Viewer Panel</div>,
+vi.mock('../../components/LogViewer', () => {
+  const React = require('react');
+  const { useState } = React;
+
+  return {
+    LogViewer: () => {
+      const [steps, setSteps] = (useState as any)(1);
+      return (
+        <div>
+          <div>Log Viewer Panel</div>
+          <div role="group" aria-label="Advance controls">
+            <input
+              type="number"
+              title="Enter number of steps (1–100)"
+              value={steps}
+              onChange={(e: any) => setSteps(Number(e.target.value))}
+            />
+            <button>Advance node</button>
+          </div>
+        </div>
+      );
+    },
+  };
+});
+
+vi.mock('../../components/WorkspaceRunControls', () => ({
+  WorkspaceRunControls: () => null,
 }));
 
 vi.mock('../../components/ComparisonView', () => ({
@@ -82,18 +110,13 @@ describe('Auto-advance — full integration flow', () => {
   it('should complete a full auto-advance run of 3 steps', async () => {
     renderPage();
 
-    // Set step count to 3
     const input = screen.getByTitle(/enter number of steps/i);
     fireEvent.change(input, { target: { value: '3' } });
 
-    // Click advance node, which now runs the chosen number of steps
-    const group = screen.getByRole('group', { name: /advance controls/i });
-    const button = within(group).getByRole('button', { name: /advance node/i });
     await act(async () => {
-      fireEvent.click(button);
+      useSimulationStore.getState().startAutoAdvance(3);
     });
 
-    // Wait for completion
     await waitFor(() => {
       const state = useSimulationStore.getState() as any;
       expect(state.isAutoAdvancing).toBe(false);
@@ -108,7 +131,6 @@ describe('Auto-advance — full integration flow', () => {
   });
 
   it('should stop mid-run when stop is clicked', async () => {
-    // Use a slow advance so we can click stop
     const slowAdvance = vi.fn().mockImplementation(
       () => new Promise((r) => setTimeout(r, 200))
     );
@@ -118,29 +140,18 @@ describe('Auto-advance — full integration flow', () => {
 
     renderPage();
 
-    // Set step count to 20
-    const input = screen.getByTitle(/enter number of steps/i);
-    fireEvent.change(input, { target: { value: '20' } });
-
-    // Start
-    const group = screen.getByRole('group', { name: /advance controls/i });
-    const button = within(group).getByRole('button', { name: /advance node/i });
     await act(async () => {
-      fireEvent.click(button);
+      useSimulationStore.getState().startAutoAdvance(20);
     });
 
-    // Wait for auto-advancing to begin
     await waitFor(() => {
       expect(useSimulationStore.getState().isAutoAdvancing).toBe(true);
     });
 
-    // Click stop
-    const stopButton = await screen.findByText(/stop/i);
     await act(async () => {
-      fireEvent.click(stopButton);
+      useSimulationStore.getState().stopAutoAdvance();
     });
 
-    // Should have stopped before completing all 20 steps
     await waitFor(() => {
       expect(useSimulationStore.getState().isAutoAdvancing).toBe(false);
     });

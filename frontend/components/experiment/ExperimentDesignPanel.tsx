@@ -36,6 +36,7 @@ import {
 } from "../../utils/parseScenarioParams";
 import { MultimodalInput } from "../MultimodalInput";
 import ParameterField from "./ParameterField";
+import { ResourceConfig } from "./ResourceConfig";
 
 interface ExperimentDesignPanelProps {
   mode?: "modal" | "embedded";
@@ -1348,13 +1349,13 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
                                     };
                                   } | null
                                 )?.scene_config?.parameters || {};
-                              const parameterDefinitions =
-                                scenarioData?.parameter_schema?.properties || {};
 
-                              if (Object.keys(parameterDefinitions).length > 0) {
+                              const schemaProperties =
+                                scenarioData?.parameter_schema?.properties || {};
+                              if (Object.keys(schemaProperties).length > 0) {
                                 return (
                                   <div className="space-y-3">
-                                    {Object.entries(parameterDefinitions).map(
+                                    {Object.entries(schemaProperties).map(
                                       ([key, definition]) => {
                                         const fieldLabel = humanizeBackendLabel(key);
                                         return (
@@ -1409,6 +1410,126 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
                                 );
                               }
 
+                              if (scenarioId === "public_goods") {
+                                const pgDefaults: Record<string, unknown> = {
+                                  resource_name: "tokens",
+                                  tokens_per_round: 10,
+                                  multiplier: 1.3,
+                                  deduction_budget_per_phase: 0,
+                                  deduction_cost_ratio: 3,
+                                  deduction_anonymous: false,
+                                  show_average_contribution: false,
+                                };
+                                const resourceValues = {
+                                  resource_name: String(
+                                    (intervention.parsedParams?.resource_name as string)
+                                    || (baseParams.resource_name as string)
+                                    || pgDefaults.resource_name
+                                  ),
+                                  tokens_per_round: Number(
+                                    (intervention.parsedParams?.tokens_per_round as number)
+                                    ?? (baseParams.tokens_per_round as number)
+                                    ?? pgDefaults.tokens_per_round
+                                  ),
+                                  multiplier: Number(
+                                    (intervention.parsedParams?.multiplier as number)
+                                    ?? (baseParams.multiplier as number)
+                                    ?? pgDefaults.multiplier
+                                  ),
+                                  deduction_budget_per_phase: Number(
+                                    (intervention.parsedParams?.deduction_budget_per_phase as number)
+                                    ?? (baseParams.deduction_budget_per_phase as number)
+                                    ?? pgDefaults.deduction_budget_per_phase
+                                  ),
+                                  deduction_cost_ratio: Number(
+                                    (intervention.parsedParams?.deduction_cost_ratio as number)
+                                    ?? (baseParams.deduction_cost_ratio as number)
+                                    ?? pgDefaults.deduction_cost_ratio
+                                  ),
+                                  deduction_anonymous: Boolean(
+                                    (intervention.parsedParams?.deduction_anonymous as boolean)
+                                    ?? (baseParams.deduction_anonymous as boolean)
+                                    ?? pgDefaults.deduction_anonymous
+                                  ),
+                                  show_average_contribution: Boolean(
+                                    (intervention.parsedParams?.show_average_contribution as boolean)
+                                    ?? (baseParams.show_average_contribution as boolean)
+                                    ?? pgDefaults.show_average_contribution
+                                  ),
+                                };
+                                return (
+                                  <ResourceConfig
+                                    values={resourceValues}
+                                    onChange={(key, value) =>
+                                      updateIntervention(
+                                        variant.id,
+                                        intervention.id,
+                                        "parsedParams",
+                                        { ...intervention.parsedParams, [key]: value }
+                                      )
+                                    }
+                                  />
+                                );
+                              }
+
+                              if (scenarioData?.parameters && scenarioData.parameters.length > 0) {
+                                return (
+                                  <div className="space-y-3">
+                                    {scenarioData.parameters.map((param) => {
+                                      const fieldLabel = param.label || humanizeBackendLabel(param.key);
+                                      return (
+                                        <div key={param.key} className="space-y-1">
+                                          <label
+                                            className="text-[11px] font-semibold"
+                                            style={{ color: "var(--ss-heading)" }}
+                                          >
+                                            {fieldLabel}
+                                          </label>
+                                          <ParameterField
+                                            param={{
+                                              type: (param.type === "number" || param.type === "float")
+                                                ? "integer"
+                                                : (param.type === "text" ? "string" : param.type) as "integer" | "string" | "boolean" | "array",
+                                              default: param.default ?? baseParams[param.key] ?? "",
+                                              ui_hint: param.ui_hint || "text",
+                                              min: param.min,
+                                              max: param.max,
+                                              step: param.step,
+                                              options: param.options,
+                                            }}
+                                            value={
+                                              intervention.parsedParams?.[param.key]
+                                              ?? baseParams[param.key]
+                                              ?? param.default
+                                              ?? ""
+                                            }
+                                            onChange={(nextValue) =>
+                                              updateIntervention(
+                                                variant.id,
+                                                intervention.id,
+                                                "parsedParams",
+                                                {
+                                                  ...intervention.parsedParams,
+                                                  [param.key]: nextValue,
+                                                }
+                                              )
+                                            }
+                                          />
+                                          {param.description ? (
+                                            <p
+                                              className="text-[11px]"
+                                              style={{ color: "var(--ss-text-muted)" }}
+                                            >
+                                              {param.description}
+                                            </p>
+                                          ) : null}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              }
+
                               return (
                                 <textarea
                                   value={intervention.rawParamsText || ""}
@@ -1455,9 +1576,15 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
                               const scenarioData = scenarioId
                                 ? scenarioDataCache[scenarioId]
                                 : null;
+                              const knownKeys = scenarioData?.parameter_schema?.properties
+                                ? Object.keys(scenarioData.parameter_schema.properties)
+                                : (scenarioData?.parameters || []).map((p) => p.key);
                               const unknownKeys = findUnknownKeys(
                                 intervention.parsedParams || {},
-                                scenarioData?.parameter_schema?.properties || {}
+                                knownKeys.reduce<Record<string, unknown>>((acc, key) => {
+                                  acc[key] = true;
+                                  return acc;
+                                }, {})
                               );
                               return unknownKeys.length > 0 ? (
                                 <div
