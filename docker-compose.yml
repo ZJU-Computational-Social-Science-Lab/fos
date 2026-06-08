@@ -66,8 +66,11 @@ services:
       FOS_OLLAMA_EMBED_MODEL: nomic-embed-text:latest
       OLLAMA_BASE_URL: http://fos-ollama:11434
       LLM_TIMEOUT_S: "${LLM_TIMEOUT_S:-120}"
-      LLM_MAX_CONCURRENT_PER_CLIENT: "${LLM_MAX_CONCURRENT_PER_CLIENT:-3}"
-      FOS_LLM_CONCURRENCY: "${FOS_LLM_CONCURRENCY:-3}"
+      LLM_MAX_CONCURRENT_PER_CLIENT: "${LLM_MAX_CONCURRENT_PER_CLIENT:-2}"
+      FOS_LLM_CONCURRENCY: "${FOS_LLM_CONCURRENCY:-2}"
+      FOS_UVICORN_WORKERS: "${FOS_UVICORN_WORKERS:-1}"
+      FOS_SIMTREE_IDLE_TTL_SECONDS: "${FOS_SIMTREE_IDLE_TTL_SECONDS:-3600}"
+      FOS_SIMTREE_CLEANUP_INTERVAL_SECONDS: "${FOS_SIMTREE_CLEANUP_INTERVAL_SECONDS:-300}"
       HOME: /tmp
       HF_HOME: /tmp/huggingface
       TORCH_HOME: /tmp/torch
@@ -81,7 +84,7 @@ services:
     ports:
       - "8090:8000"
     healthcheck:
-      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/live')\"" ]
+      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/ready')\"" ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -116,7 +119,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 8G
+          memory: "${FOS_APP_MEMORY_LIMIT:-8G}"
         reservations:
           memory: 4G
 
@@ -126,7 +129,7 @@ services:
     environment:
       NVIDIA_VISIBLE_DEVICES: all
       NVIDIA_DRIVER_CAPABILITIES: compute,utility
-      OLLAMA_NUM_PARALLEL: "3"
+      OLLAMA_NUM_PARALLEL: "${OLLAMA_NUM_PARALLEL:-2}"
     volumes:
       - ollama_data:/root/.ollama
     healthcheck:

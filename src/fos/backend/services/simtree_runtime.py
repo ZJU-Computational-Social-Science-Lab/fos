@@ -6,6 +6,7 @@ import logging as _logging
 import os as _os
 import re
 import sys
+import time
 from typing import Dict
 
 from fos.core.agent import Agent
@@ -115,6 +116,9 @@ def _resolve_gaworld_agent_ids(params: dict, agents: list[dict]) -> list[str]:
 class SimTreeRecord:
     def __init__(self, tree: SimTree):
         self.tree = tree
+        now = time.monotonic()
+        self.created_at = now
+        self.last_accessed_at = now
         # 用于"一棵树所有节点事件"的广播订阅（DevUI 左侧总线）
         self.subs: list[asyncio.Queue] = []
         # 正在运行的节点 ID 集合（用于只转发 running 节点的事件）
@@ -125,7 +129,25 @@ class SimTreeRecord:
         self._advance_lock: asyncio.Lock = asyncio.Lock()
 
     def replace_tree(self, tree: SimTree) -> None:
+        self.cleanup_runtime_resources()
         self.tree = tree
+        self.touch()
+
+    def touch(self) -> None:
+        self.last_accessed_at = time.monotonic()
+
+    def is_idle(self, idle_ttl_seconds: float, now: float | None = None) -> bool:
+        current_time = now if now is not None else time.monotonic()
+        return (
+            not self.running
+            and not self.subs
+            and current_time - self.last_accessed_at >= idle_ttl_seconds
+        )
+
+    def cleanup_runtime_resources(self) -> None:
+        cleanup = getattr(self.tree, "cleanup_runtime_resources", None)
+        if cleanup is not None:
+            cleanup()
 
 
 def _quiet_logger(event_type: str, data: dict) -> None:
@@ -249,6 +271,12 @@ class ExperimentRunnerAdapter:
     def reset_event_queue(self) -> None:
         """No-op for SimTree compatibility (adapter has no event queue)."""
         pass
+
+    def cleanup_runtime_resources(self) -> None:
+        """Stop scene-owned resources when the adapter leaves memory."""
+        cleanup = getattr(self.scene, "cleanup_runtime_resources", None)
+        if cleanup is not None:
+            cleanup()
 
     def emit_remaining_events(self) -> None:
         """No-op for SimTree compatibility (adapter has no event queue)."""
@@ -926,10 +954,12 @@ class SimTreeRegistry:
         key = simulation_id.upper()
         record = self._records.get(key)
         if record is not None:
+            record.touch()
             return record
         async with self._lock:
             record = self._records.get(key)
             if record is not None:
+                record.touch()
                 return record
             tree = await asyncio.to_thread(_build_tree_for_scene, scene_type, clients)
             record = SimTreeRecord(tree)
@@ -955,6 +985,7 @@ class SimTreeRegistry:
         key = sim_record.id.upper()
         record = self._records.get(key)
         if record is not None:
+            record.touch()
             if not record.running and getattr(sim_record, "latest_state", None) and record.tree.serialize() != sim_record.latest_state:
                 loop = asyncio.get_running_loop()
                 tree = SimTree.deserialize(sim_record.latest_state, clients or make_clients_from_env())
@@ -972,6 +1003,7 @@ class SimTreeRegistry:
         async with self._lock:
             record = self._records.get(key)
             if record is not None:
+                record.touch()
                 if not record.running and getattr(sim_record, "latest_state", None) and record.tree.serialize() != sim_record.latest_state:
                     loop = asyncio.get_running_loop()
                     tree = SimTree.deserialize(sim_record.latest_state, clients or make_clients_from_env())
@@ -1013,10 +1045,51 @@ class SimTreeRegistry:
             return record
 
     def remove(self, simulation_id: str) -> None:
-        self._records.pop(simulation_id.upper(), None)
+        record = self._records.pop(simulation_id.upper(), None)
+        if record is not None:
+            record.cleanup_runtime_resources()
 
     def get(self, simulation_id: str) -> SimTreeRecord | None:
-        return self._records.get(simulation_id.upper())
+        record = self._records.get(simulation_id.upper())
+        if record is not None:
+            record.touch()
+        return record
+
+    def evict_idle_records(
+        self,
+        idle_ttl_seconds: float,
+        now: float | None = None,
+        max_records: int | None = None,
+    ) -> list[str]:
+        """Remove cached trees that are idle and safe to discard."""
+        current_time = now if now is not None else time.monotonic()
+        candidates = [
+            (key, record)
+            for key, record in self._records.items()
+            if record.is_idle(idle_ttl_seconds, current_time)
+        ]
+        if max_records is not None and len(self._records) > max_records:
+            overflow = len(self._records) - max_records
+            extra_candidates = sorted(
+                [
+                    (key, record)
+                    for key, record in self._records.items()
+                    if not record.running and not record.subs
+                ],
+                key=lambda item: item[1].last_accessed_at,
+            )
+            for item in extra_candidates[:overflow]:
+                if item not in candidates:
+                    candidates.append(item)
+
+        evicted: list[str] = []
+        for key, record in candidates:
+            if self._records.get(key) is not record:
+                continue
+            record.cleanup_runtime_resources()
+            self._records.pop(key, None)
+            evicted.append(key)
+        return evicted
 
     def update_agent_knowledge(self, simulation_id: str, agent_config: dict) -> bool:
         """
@@ -1087,9 +1160,31 @@ class SimTreeRegistry:
         active_websocket_connections = sum(
             len(record.subs) for record in self._records.values()
         )
+        tree_nodes = sum(
+            len(getattr(record.tree, "nodes", {}) or {})
+            for record in self._records.values()
+        )
+        gaworld_subprocesses = 0
+        for record in self._records.values():
+            for node in getattr(record.tree, "nodes", {}).values():
+                sim = node.get("sim") if isinstance(node, dict) else None
+                scene = getattr(sim, "scene", None)
+                managers = []
+                manager = getattr(scene, "_subprocess_manager", None)
+                if manager is not None:
+                    managers.append(manager)
+                comparative = getattr(scene, "_comparative_managers", None)
+                if comparative:
+                    managers.extend(list(comparative))
+                for item in managers:
+                    is_alive = getattr(item, "is_alive", None)
+                    if is_alive is not None and is_alive():
+                        gaworld_subprocesses += 1
         return {
             "active_simulations": active_simulations,
             "active_websocket_connections": active_websocket_connections,
+            "tree_nodes": tree_nodes,
+            "gaworld_subprocesses": gaworld_subprocesses,
         }
 
     def update_global_knowledge(self, simulation_id: str, global_knowledge: dict) -> bool:

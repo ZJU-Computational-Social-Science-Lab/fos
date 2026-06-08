@@ -10,7 +10,8 @@
 #
 # Options:
 #   --target URL        Target server URL (required)
-#   --scenario NAME     Run specific scenario: baseline, concurrent-20, mixed-providers, or all (default: all)
+#   --scenario NAME     Run specific scenario: baseline, concurrent-20, concurrent-50,
+#                       mixed-providers, or all (default: all)
 #   --out DIR          Output directory for reports (default: tests/load/reports)
 
 set -euo pipefail
@@ -31,7 +32,7 @@ done
 
 if [ -z "$TARGET" ]; then
   echo "Error: --target is required"
-  echo "Usage: $0 --target http://your-server:8090 [--scenario baseline|concurrent-20|mixed-providers|all]"
+  echo "Usage: $0 --target http://your-server:8090 [--scenario baseline|concurrent-20|concurrent-50|mixed-providers|all]"
   exit 1
 fi
 
@@ -95,12 +96,16 @@ case "$SCENARIO" in
   concurrent-20)
     run_scenario "concurrent-20" "$SCRIPT_DIR/scenarios/concurrent-20.js"
     ;;
+  concurrent-50)
+    run_scenario "concurrent-50" "$SCRIPT_DIR/scenarios/concurrent-50.js"
+    ;;
   mixed-providers)
     run_scenario "mixed-providers" "$SCRIPT_DIR/scenarios/mixed-providers.js"
     ;;
   all)
     run_scenario "baseline" "$SCRIPT_DIR/scenarios/baseline.js"
     run_scenario "concurrent-20" "$SCRIPT_DIR/scenarios/concurrent-20.js"
+    run_scenario "concurrent-50" "$SCRIPT_DIR/scenarios/concurrent-50.js"
     run_scenario "mixed-providers" "$SCRIPT_DIR/scenarios/mixed-providers.js"
     ;;
   *)

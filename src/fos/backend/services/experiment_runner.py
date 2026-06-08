@@ -91,11 +91,12 @@ async def run_experiment_db(simulation_id: str, exp_id: str, turns: int) -> List
         for nid in node_ids:
             rec.running.add(int(nid))
 
-        finished = await asyncio.gather(*[_run(n) for n in node_ids])
-
-        for nid in finished:
-            if int(nid) in rec.running:
-                rec.running.remove(int(nid))
+        try:
+            finished = await asyncio.gather(*[_run(n) for n in node_ids])
+        finally:
+            for nid in node_ids:
+                if int(nid) in rec.running:
+                    rec.running.remove(int(nid))
 
         # collect per-node summaries (agents end-state, turns, sample events)
         summaries: dict = {}
@@ -217,11 +218,12 @@ async def run_variants_parallel(simulation_id: str, node_ids: List[int], turns: 
         return int(nid)
 
     tasks = [_run(n) for n in node_ids]
-    finished = await asyncio.gather(*tasks)
-
-    for nid in finished:
-        if int(nid) in rec.running:
-            rec.running.remove(int(nid))
+    try:
+        finished = await asyncio.gather(*tasks)
+    finally:
+        for nid in node_ids:
+            if int(nid) in rec.running:
+                rec.running.remove(int(nid))
 
     return finished
 
@@ -310,6 +312,7 @@ async def start_experiment_run_background(simulation_id: str, exp_id: str, turns
         # fallback: schedule internal asyncio worker and keep in-memory tracking
         task = asyncio.create_task(_run_experiment_worker(simulation_id, exp_id, run_id, int(turns)))
         _RUN_TASKS[run_id] = task
+        task.add_done_callback(lambda _task, task_run_id=run_id: _RUN_TASKS.pop(task_run_id, None))
         return run_id
 
 
@@ -377,11 +380,12 @@ async def _run_experiment_worker(simulation_id: str, exp_id: str, run_id: int, t
 
         # gather and allow cancellation
         gather_task = asyncio.gather(*[_run(n) for n in node_ids])
-        finished = await gather_task
-
-        for nid in finished:
-            if int(nid) in rec.running:
-                rec.running.remove(int(nid))
+        try:
+            finished = await gather_task
+        finally:
+            for nid in node_ids:
+                if int(nid) in rec.running:
+                    rec.running.remove(int(nid))
 
         # write results: collect per-node summaries
         summaries: dict = {}
