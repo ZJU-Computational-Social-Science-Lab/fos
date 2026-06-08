@@ -7,6 +7,9 @@
 - test_read_day_data_uses_config_agent_ids checks GAWorld output reads selected profile agent files.
 - test_read_day_data_scans_memory_when_name_map_is_empty checks output loading still works without config IDs.
 - test_run_round_launches_subprocess_on_first_round checks first run_round lazily starts GAWorld.
+- test_run_round_launches_gaworld_for_one_day checks the first advance only asks GAWorld for day one.
+- test_run_round_launches_gaworld_through_target_day checks later advances only ask GAWorld for the target day.
+- test_run_round_stops_subprocess_after_reading_day checks each advance stops GAWorld after hydration.
 - test_run_round_emits_one_event_per_translated_event checks run_round emits translated events.
 - test_run_round_logs_gaworld_diagnostics checks run_round logs the GAWorld handoff path.
 - test_run_round_skips_day_when_translation_key_missing checks key errors skip a day without crashing.
@@ -159,9 +162,13 @@ def test_run_round_launches_subprocess_on_first_round(monkeypatch) -> None:
     scene = GAWorldScene(_make_config())
     launch_calls: list[str] = []
 
-    def _fake_launch() -> None:
-        launch_calls.append("called")
-        scene._subprocess_manager = SimpleNamespace(wait_for_day=lambda *args, **kwargs: {"last_day": 1}, output_dir=Path("."))
+    def _fake_launch(target_day: int) -> None:
+        launch_calls.append(f"day-{target_day}")
+        scene._subprocess_manager = SimpleNamespace(
+            wait_for_day=lambda *args, **kwargs: {"last_day": 1},
+            output_dir=Path("."),
+            kill=lambda: None,
+        )
 
     monkeypatch.setattr(scene, "_launch_subprocess", _fake_launch)
     monkeypatch.setattr(scene, "_read_day_data", lambda day_num: {"day": day_num, "agents": []})
@@ -174,14 +181,129 @@ def test_run_round_launches_subprocess_on_first_round(monkeypatch) -> None:
 
     asyncio.run(scene.run_round(lambda _event_type, _payload: None))
 
-    assert launch_calls == ["called"]
+    assert launch_calls == ["day-1"]
+
+
+def test_run_round_launches_gaworld_for_one_day(tmp_path: Path, monkeypatch) -> None:
+    config = _make_config()
+    config.parameters["output_dir"] = tmp_path / "gaworld-output"
+    config.parameters["gaworld_path"] = tmp_path / "GAWorld"
+    captured: dict[str, Any] = {}
+
+    class FakeManager:
+        def __init__(self, **kwargs: Any) -> None:
+            captured.update(kwargs)
+            self.output_dir = kwargs["output_dir"]
+
+        def launch(self) -> None:
+            captured["launched"] = True
+
+        def wait_for_day(self, day: int, **_kwargs: Any) -> dict[str, Any]:
+            return {"last_day": day}
+
+        def kill(self) -> None:
+            captured["killed"] = True
+
+    monkeypatch.setattr(scene_module, "load_profiles", lambda: [])
+    monkeypatch.setattr(scene_module, "export_profiles_csv", lambda _profiles, _path: None)
+    monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
+
+    scene = GAWorldScene(config)
+    monkeypatch.setattr(scene, "_read_day_data", lambda day_num: {"day": day_num, "agents": []})
+    scene.initialize(llm_client=object())
+    scene._translator = SimpleNamespace(
+        translate_day=lambda _day_data: [],
+        translate_state_updates=lambda _day_data: {},
+    )
+
+    asyncio.run(scene.run_round(lambda _event_type, _payload: None))
+
+    assert captured["config_overrides"]["sim_days"] == 1
+
+
+def test_run_round_launches_gaworld_through_target_day(tmp_path: Path, monkeypatch) -> None:
+    config = _make_config()
+    config.parameters["output_dir"] = tmp_path / "gaworld-output"
+    config.parameters["gaworld_path"] = tmp_path / "GAWorld"
+    captured: dict[str, Any] = {}
+
+    class FakeManager:
+        def __init__(self, **kwargs: Any) -> None:
+            captured.update(kwargs)
+            self.output_dir = kwargs["output_dir"]
+
+        def launch(self) -> None:
+            captured["launched"] = True
+
+        def wait_for_day(self, day: int, **_kwargs: Any) -> dict[str, Any]:
+            return {"last_day": day}
+
+        def kill(self) -> None:
+            captured["killed"] = True
+
+    monkeypatch.setattr(scene_module, "load_profiles", lambda: [])
+    monkeypatch.setattr(scene_module, "export_profiles_csv", lambda _profiles, _path: None)
+    monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
+
+    scene = GAWorldScene(config)
+    scene.current_round = 4
+    monkeypatch.setattr(scene, "_read_day_data", lambda day_num: {"day": day_num, "agents": []})
+    scene.initialize(llm_client=object())
+    scene._translator = SimpleNamespace(
+        translate_day=lambda _day_data: [],
+        translate_state_updates=lambda _day_data: {},
+    )
+
+    asyncio.run(scene.run_round(lambda _event_type, _payload: None))
+
+    assert captured["config_overrides"]["sim_days"] == 5
+
+
+def test_run_round_stops_subprocess_after_reading_day(monkeypatch) -> None:
+    scene = GAWorldScene(_make_config())
+    calls: list[str] = []
+
+    class FakeManager:
+        output_dir = Path(".")
+
+        def wait_for_day(self, day: int, **_kwargs: Any) -> dict[str, Any]:
+            calls.append(f"wait-{day}")
+            return {"last_day": day}
+
+        def kill(self) -> None:
+            calls.append("kill")
+
+    def _fake_launch(_target_day: int) -> None:
+        scene._subprocess_manager = FakeManager()
+
+    def _fake_read(day_num: int) -> dict[str, Any]:
+        calls.append(f"read-{day_num}")
+        return {"day": day_num, "agents": []}
+
+    monkeypatch.setattr(scene, "_launch_subprocess", _fake_launch)
+    monkeypatch.setattr(scene, "_read_day_data", _fake_read)
+
+    scene.initialize(llm_client=object())
+    scene._translator = SimpleNamespace(
+        translate_day=lambda _day_data: [],
+        translate_state_updates=lambda _day_data: {},
+    )
+
+    asyncio.run(scene.run_round(lambda _event_type, _payload: None))
+
+    assert calls == ["wait-1", "read-1", "kill"]
+    assert scene._subprocess_manager is None
 
 
 def test_run_round_emits_one_event_per_translated_event(monkeypatch) -> None:
     scene = GAWorldScene(_make_config())
 
-    def _fake_launch() -> None:
-        scene._subprocess_manager = SimpleNamespace(wait_for_day=lambda *args, **kwargs: {"last_day": 1}, output_dir=Path("."))
+    def _fake_launch(_target_day: int) -> None:
+        scene._subprocess_manager = SimpleNamespace(
+            wait_for_day=lambda *args, **kwargs: {"last_day": 1},
+            output_dir=Path("."),
+            kill=lambda: None,
+        )
 
     monkeypatch.setattr(scene, "_launch_subprocess", _fake_launch)
     monkeypatch.setattr(scene, "_read_day_data", lambda day_num: {"day": day_num, "agents": []})
@@ -207,7 +329,7 @@ def test_run_round_uses_extended_gaworld_timeout(monkeypatch) -> None:
     scene = GAWorldScene(_make_config())
     captured: dict[str, Any] = {}
 
-    def _fake_launch() -> None:
+    def _fake_launch(_target_day: int) -> None:
         def _wait_for_day(day: int, timeout: float = 0, **_kwargs: Any) -> dict[str, Any]:
             captured["day"] = day
             captured["timeout"] = timeout
@@ -216,6 +338,7 @@ def test_run_round_uses_extended_gaworld_timeout(monkeypatch) -> None:
         scene._subprocess_manager = SimpleNamespace(
             wait_for_day=_wait_for_day,
             output_dir=Path("."),
+            kill=lambda: None,
         )
 
     monkeypatch.setattr(scene, "_launch_subprocess", _fake_launch)
@@ -236,10 +359,11 @@ def test_run_round_logs_gaworld_diagnostics(monkeypatch, caplog) -> None:
     scene = GAWorldScene(_make_config())
     caplog.set_level("INFO", logger=scene_module.__name__)
 
-    def _fake_launch() -> None:
+    def _fake_launch(_target_day: int) -> None:
         scene._subprocess_manager = SimpleNamespace(
             wait_for_day=lambda *args, **kwargs: {"last_day": 1},
             output_dir=Path("."),
+            kill=lambda: None,
         )
 
     monkeypatch.setattr(scene, "_launch_subprocess", _fake_launch)
@@ -263,8 +387,12 @@ def test_run_round_logs_gaworld_diagnostics(monkeypatch, caplog) -> None:
 def test_run_round_skips_day_when_translation_key_missing(monkeypatch) -> None:
     scene = GAWorldScene(_make_config())
 
-    def _fake_launch() -> None:
-        scene._subprocess_manager = SimpleNamespace(wait_for_day=lambda *args, **kwargs: {"last_day": 1}, output_dir=Path("."))
+    def _fake_launch(_target_day: int) -> None:
+        scene._subprocess_manager = SimpleNamespace(
+            wait_for_day=lambda *args, **kwargs: {"last_day": 1},
+            output_dir=Path("."),
+            kill=lambda: None,
+        )
 
     monkeypatch.setattr(scene, "_launch_subprocess", _fake_launch)
     monkeypatch.setattr(scene, "_read_day_data", lambda day_num: {"day": day_num, "agents": []})
@@ -303,7 +431,7 @@ def test_launch_subprocess_passes_gaworld_output_paths(tmp_path: Path, monkeypat
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     overrides = captured["config_overrides"]
     assert overrides["memory_dir"] == str(output_dir / "memory")
@@ -342,7 +470,7 @@ def test_launch_subprocess_passes_profiles_as_gaworld_csv_path(tmp_path: Path, m
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     overrides = captured["config_overrides"]
     assert len(exported_paths) == 1
@@ -373,7 +501,7 @@ def test_launch_subprocess_uses_config_agent_ids_when_text_field_is_blank(
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     assert captured["config_overrides"]["agent_ids"] == ["1", "2"]
 
@@ -410,7 +538,7 @@ def test_launch_subprocess_uses_explicit_agent_ids_when_text_field_is_blank(
 
     scene = GAWorldScene(config)
     scene.initialize(llm_client=object())
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     assert captured["config_overrides"]["agent_ids"] == ["34", "35"]
     assert exported_profiles == [["34", "35"]]
@@ -438,7 +566,7 @@ def test_launch_subprocess_disables_local_environment_and_distributed_services(
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     overrides = captured["config_overrides"]
     assert overrides["environment_config_path"] == ""
@@ -468,7 +596,7 @@ def test_launch_subprocess_disables_optional_gaworld_extensions_and_real_work(
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     overrides = captured["config_overrides"]
     assert overrides["real_work"]["enabled"] is False
@@ -508,7 +636,7 @@ def test_launch_subprocess_routes_real_work_paths_under_fos_output_when_enabled(
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     real_work = captured["config_overrides"]["real_work"]
     assert real_work["enabled"] is True
@@ -541,7 +669,7 @@ def test_launch_subprocess_omits_empty_profiles_csv_override(tmp_path: Path, mon
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     assert exported_paths == []
     assert "csv_path" not in captured["config_overrides"]
@@ -574,7 +702,7 @@ def test_launch_subprocess_uses_fos_ollama_provider_config(tmp_path: Path, monke
 
     scene = GAWorldScene(config)
     scene.initialize(llm_client=object(), provider_clients={1: provider_client})
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     llm = captured["config_overrides"]["llm"]
     assert llm["providers"]["fos_ollama"]["type"] == "ollama"
@@ -607,7 +735,7 @@ def test_launch_subprocess_uses_ollama_environment_config(tmp_path: Path, monkey
 
     scene = GAWorldScene(config)
     scene.initialize(llm_client=object())
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     llm = captured["config_overrides"]["llm"]
     assert llm["providers"]["fos_ollama"]["url"] == "http://127.0.0.1:11434/api/generate"
@@ -645,7 +773,7 @@ def test_launch_subprocess_does_not_inject_provider_api_key(tmp_path: Path, monk
 
     scene = GAWorldScene(config)
     scene.initialize(llm_client=object(), provider_clients={1: provider_client})
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     assert captured["env_overrides"] == {}
 
@@ -680,7 +808,7 @@ def test_launch_subprocess_ignores_gaworld_api_key_and_uses_default_fos_ollama(
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     llm = captured["config_overrides"]["llm"]
     assert llm["providers"]["fos_ollama"]["type"] == "ollama"
@@ -722,7 +850,7 @@ def test_launch_subprocess_defaults_to_fos_ollama_without_warning(tmp_path: Path
     monkeypatch.setattr(scene_module, "GAWorldSubprocessManager", FakeManager)
 
     scene = GAWorldScene(config)
-    scene._launch_subprocess()
+    scene._launch_subprocess(1)
 
     llm = captured["config_overrides"]["llm"]
     assert llm["routing"]["default"] == "fos_ollama"

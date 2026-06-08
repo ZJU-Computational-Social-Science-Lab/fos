@@ -4,7 +4,7 @@
 - initialize sets up mapping and translator without starting subprocesses.
 - _agent_id_from_config reads one agent ID from config.
 - _agent_file_ids chooses the GAWorld agent output files to read.
-- _launch_subprocess prepares GAWorld input files and starts run managers.
+- _launch_subprocess prepares GAWorld input files and starts bounded run managers.
 - _build_llm_env_overrides passes only GAWorld-specific LLM keys to GAWorld.
 - _build_output_overrides tells GAWorld where to save every output file.
 - _build_execution_profile_overrides picks the GAWorld runtime profile FOS uses.
@@ -54,7 +54,6 @@ DEFAULT_FOS_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
 DEFAULT_FOS_OLLAMA_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
 GAWORLD_WAIT_TIMEOUT_S = 1800
 FAST_MODE_TIME_STEP_MINUTES = 120
-DEFAULT_RUNTIME_SIM_DAYS = 365
 DEFAULT_EXECUTION_PROFILE = "fast"
 
 
@@ -407,8 +406,9 @@ class GAWorldScene(ExperimentScene):
 
         return _ollama_settings_from_env() or _default_ollama_settings()
 
-    def _launch_subprocess(self) -> None:
+    def _launch_subprocess(self, target_day: int) -> None:
         launch_started_at = time.perf_counter()
+        bounded_sim_days = max(1, int(target_day))
         profiles = load_profiles()
         if self._agent_ids:
             selected = set(self._agent_ids)
@@ -421,7 +421,7 @@ class GAWorldScene(ExperimentScene):
             self.config.parameters.get("execution_profile", DEFAULT_EXECUTION_PROFILE)
         )
         config_overrides = {
-            "sim_days": DEFAULT_RUNTIME_SIM_DAYS,
+            "sim_days": bounded_sim_days,
             "seed": self._seed,
             **_build_output_overrides(output_dir),
             **_build_hermetic_runtime_overrides(
@@ -476,6 +476,8 @@ class GAWorldScene(ExperimentScene):
                 env_overrides=env_overrides,
                 env_removals=env_removals,
             )
+            for manager in self._comparative_managers:
+                manager.preserve_output = True
             self._subprocess_manager = self._comparative_managers[1]
             return
 
@@ -499,7 +501,7 @@ class GAWorldScene(ExperimentScene):
         self.current_round += 1
         day_num = self.current_round
         if self._subprocess_manager is None:
-            self._launch_subprocess()
+            self._launch_subprocess(day_num)
             logger.info(f"GAWorld subprocess launched for day {self.current_round}")
             if self._subprocess_manager is not None:
                 output_dir = self._subprocess_manager.output_dir
@@ -510,9 +512,13 @@ class GAWorldScene(ExperimentScene):
         if self._subprocess_manager is None or self._translator is None:
             raise RuntimeError("gaworld.error.not_initialized")
 
-        sim_state = self._subprocess_manager.wait_for_day(day_num, timeout=GAWORLD_WAIT_TIMEOUT_S)
+        try:
+            sim_state = self._subprocess_manager.wait_for_day(day_num, timeout=GAWORLD_WAIT_TIMEOUT_S)
+            day_data = self._read_day_data(day_num)
+        finally:
+            self.cleanup_runtime_resources()
+
         logger.info(f"GAWorld day {day_num} sim_state: {sim_state}")
-        day_data = self._read_day_data(day_num)
         logger.info(f"GAWorld day {day_num} agents_data: {day_data}")
 
         try:
