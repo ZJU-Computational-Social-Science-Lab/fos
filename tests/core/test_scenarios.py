@@ -166,3 +166,109 @@ def test_interaction_mode_is_valid_enum_value():
         if "interaction_mode" in scenario:
             assert scenario["interaction_mode"] in valid_modes, \
                 f"Scenario {scenario['id']} has invalid interaction_mode: {scenario['interaction_mode']}"
+
+
+class TestScenarioParameterFrontendContract:
+    """
+    Regression tests ensuring every scenario's parameters array can be
+    rendered by the frontend ExperimentDesignPanel.
+
+    The frontend expects each parameter to have: key, label, type, default,
+    and ui_hint. A previous bug (commit 2c0e5ab) caused the panel to look
+    for a non-existent parameter_schema.properties field instead of using
+    the parameters array, so all parameter fields disappeared.
+    """
+
+    @staticmethod
+    def _required_param_keys():
+        return {"key", "label", "type", "default", "ui_hint"}
+
+    def test_every_scenario_parameter_has_required_frontend_keys(self):
+        """Each parameter must have all keys the frontend ParameterField needs."""
+        for scenario in get_all_scenarios():
+            for param in scenario["parameters"]:
+                missing = self._required_param_keys() - set(param.keys())
+                assert not missing, (
+                    f"Scenario '{scenario['id']}' param '{param.get('key', '?')}' "
+                    f"missing frontend keys: {missing}"
+                )
+
+    def test_public_goods_has_resource_parameters(self):
+        """Public Goods Game must expose resource_name, tokens_per_round, multiplier."""
+        scenario = get_scenario("public_goods")
+        assert scenario is not None
+        keys = {p["key"] for p in scenario["parameters"]}
+        for required_key in (
+            "resource_name",
+            "tokens_per_round",
+            "multiplier",
+        ):
+            assert required_key in keys, (
+                f"public_goods missing required parameter: {required_key}"
+            )
+
+    def test_public_goods_has_deduction_parameters(self):
+        """Public Goods Game must expose deduction settings for punishment mechanics."""
+        scenario = get_scenario("public_goods")
+        assert scenario is not None
+        keys = {p["key"] for p in scenario["parameters"]}
+        for required_key in (
+            "deduction_budget_per_phase",
+            "deduction_cost_ratio",
+            "deduction_anonymous",
+        ):
+            assert required_key in keys, (
+                f"public_goods missing deduction parameter: {required_key}"
+            )
+
+    def test_parameter_type_is_valid_frontend_type(self):
+        """Parameter types must be one the frontend can handle."""
+        valid_types = {"integer", "number", "float", "string", "text", "boolean", "array"}
+        for scenario in get_all_scenarios():
+            for param in scenario["parameters"]:
+                assert param["type"] in valid_types, (
+                    f"Scenario '{scenario['id']}' param '{param['key']}' "
+                    f"has invalid type '{param['type']}'. Must be one of {valid_types}"
+                )
+
+    def test_parameter_ui_hint_is_valid_frontend_hint(self):
+        """Parameter ui_hint must be one the frontend ParameterField recognizes."""
+        valid_hints = {
+            "slider", "number", "percentage", "text", "textarea",
+            "select", "toggle", "list", "multiselect", "key_value",
+            "drag_list",
+        }
+        for scenario in get_all_scenarios():
+            for param in scenario["parameters"]:
+                assert param["ui_hint"] in valid_hints, (
+                    f"Scenario '{scenario['id']}' param '{param['key']}' "
+                    f"has invalid ui_hint '{param['ui_hint']}'. Must be one of {valid_hints}"
+                )
+
+    def test_numeric_params_have_default_values(self):
+        """Numeric parameters must have a default value for frontend rendering."""
+        for scenario in get_all_scenarios():
+            for param in scenario["parameters"]:
+                if param["type"] in ("number", "integer", "float"):
+                    assert "default" in param and param["default"] is not None, (
+                        f"Scenario '{scenario['id']}' param '{param['key']}' "
+                        f"is numeric but has no default value"
+                    )
+
+    def test_select_params_have_options(self):
+        """Parameters with ui_hint='select' must provide options."""
+        for scenario in get_all_scenarios():
+            for param in scenario["parameters"]:
+                if param["ui_hint"] == "select":
+                    assert "options" in param and len(param["options"]) > 0, (
+                        f"Scenario '{scenario['id']}' param '{param['key']}' "
+                        f"uses select ui_hint but has no options"
+                    )
+
+    def test_no_scenario_returns_parameter_schema(self):
+        """Backend scenarios must NOT return parameter_schema (frontend uses parameters array)."""
+        for scenario in get_all_scenarios():
+            assert "parameter_schema" not in scenario, (
+                f"Scenario '{scenario['id']}' should not have parameter_schema. "
+                f"Frontend uses the parameters array directly."
+            )
