@@ -11,7 +11,7 @@ import type { ExperimentVariant, SimulationReport, SocialNetwork, SimNode } from
 import * as experimentsApi from '../services/experiments';
 import type { EnvironmentSuggestion } from '../services/environmentSuggestions';
 import { addTime } from './helpers';
-import { listMetrics, computeMetricTrajectories, hydrateAgentHistoryFromLogs } from '../utils/resultsComputations';
+import { listMetrics, computeMetricTrajectories, hydrateAgentHistoryFromLogs, filterLogsToSelectedBranch } from '../utils/resultsComputations';
 import { buildSummaryPrompt } from '../utils/summaryPrompt';
 import { extractApiErrorMessage, getBackendErrorDetail } from '../utils/apiError';
 import i18n from '../i18n';
@@ -974,7 +974,12 @@ export const createExperimentsSlice: StateCreator<
       if (providerId === null || providerId === undefined) {
         throw new Error('generateResultsSummary: no LLM provider selected');
       }
-      const hydratedAgents = hydrateAgentHistoryFromLogs(state.logs, state.agents);
+      const branchLogs = filterLogsToSelectedBranch(
+        state.logs || [],
+        state.nodes || [],
+        state.selectedNodeId,
+      );
+      const hydratedAgents = hydrateAgentHistoryFromLogs(branchLogs, state.agents);
       const metrics = listMetrics(hydratedAgents).map((name) => ({
         name,
         series: computeMetricTrajectories(hydratedAgents, name),

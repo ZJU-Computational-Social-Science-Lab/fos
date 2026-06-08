@@ -25,6 +25,7 @@ import { SYSTEM_TEMPLATES, generateNodes, mapGraphToNodes, DEFAULT_TIME_CONFIG, 
 import { getApiBase } from '../services/base';
 import i18n from '../i18n';
 import type { Provider } from '../services/providers';
+import { selectSerializedNodeId } from '../services/simulationSnapshots';
 
 export interface SimulationSlice {
   // State
@@ -228,9 +229,10 @@ export const createSimulationSlice: StateCreator<
             meta: n.meta || {}
           }));
 
+          const selectedSnapshotNodeId = selectSerializedNodeId(nodesRaw2);
           let agents2: any[] = [];
           try {
-            const firstNode = nodesRaw2.find((n: any) => Number(n.id) === Number(nodes2[0]?.id));
+            const firstNode = nodesRaw2.find((n: any) => String(n.id) === selectedSnapshotNodeId);
             const simSnap2 = firstNode?.sim || {};
             const latestAgents2 = simSnap2?.agents || re.agents || [];
             if (Array.isArray(latestAgents2)) {
@@ -271,7 +273,7 @@ export const createSimulationSlice: StateCreator<
             set({
               currentSimulation: sim,
               nodes: nodes2,
-              selectedNodeId: nodes2[0]?.id ?? null,
+              selectedNodeId: selectedSnapshotNodeId,
               agents: agents2,
               rawEvents: [],
               logs: []
@@ -301,9 +303,10 @@ export const createSimulationSlice: StateCreator<
             meta: n.meta || {}
           }));
 
+          const selectedSnapshotNodeId = selectSerializedNodeId(nodesRaw);
           let agents: any[] = [];
           if (Array.isArray(nodesRaw)) {
-            const matched = nodesRaw.find((n: any) => Number(n.id) === Number(nodes[0]?.id));
+            const matched = nodesRaw.find((n: any) => String(n.id) === selectedSnapshotNodeId);
             const simSnap = matched?.sim || {};
             const latestAgents = simSnap?.agents || latest.agents || [];
             if (latestAgents && typeof latestAgents === 'object') {
@@ -344,7 +347,7 @@ export const createSimulationSlice: StateCreator<
 
           // Attempt to fetch events for the selected node if numeric
           let events: any[] = [];
-          const selectedNodeNumeric = nodes[0]?.id ? Number(nodes[0].id) : null;
+          const selectedNodeNumeric = selectedSnapshotNodeId ? Number(selectedSnapshotNodeId) : null;
           if (selectedNodeNumeric != null && Number.isFinite(selectedNodeNumeric)) {
             events = await getSimEvents(base, id, selectedNodeNumeric, token).catch(() => []);
           }
@@ -354,7 +357,7 @@ export const createSimulationSlice: StateCreator<
           set({
             currentSimulation: { ...sim, socialNetwork },
             nodes,
-            selectedNodeId: nodes[0]?.id ?? null,
+            selectedNodeId: selectedSnapshotNodeId,
             agents,
             rawEvents: events || [],
             logs

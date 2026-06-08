@@ -1,7 +1,14 @@
+/**
+ * This file shows the analysis page for a simulation.
+ *
+ * ResultsView lets people generate an AI summary, pick metrics, and inspect
+ * charts for the currently selected branch.
+ */
+
 import React, { useState } from 'react';
 import { useSimulationStore } from '@/store';
 import { useAuthStore } from '@/store/auth';
-import { listMetrics, computeMetricTrajectories, computeMetricAggregate, computeEventCountByAgent, hydrateAgentHistoryFromLogs } from '@/utils/resultsComputations';
+import { listMetrics, computeMetricTrajectories, computeMetricAggregate, computeEventCountByAgent, hydrateAgentHistoryFromLogs, filterLogsToSelectedBranch } from '@/utils/resultsComputations';
 import { generateMarkdownReport } from '@/utils/markdownReport';
 import { AggregateTrajectoryChart } from './AggregateTrajectoryChart';
 import { MetricTrajectoryChart } from './MetricTrajectoryChart';
@@ -34,6 +41,8 @@ function downloadFile(filename: string, content: string, mime: string) {
 export function ResultsView({ labels, language }: Props) {
   const agents = useSimulationStore((s: any) => s.agents);
   const logs = useSimulationStore((s: any) => s.logs);
+  const nodes = useSimulationStore((s: any) => s.nodes);
+  const selectedNodeId = useSimulationStore((s: any) => s.selectedNodeId);
   const currentSimulation = useSimulationStore((s: any) => s.currentSimulation);
   const engineConfig = useSimulationStore((s: any) => s.engineConfig);
   const resultsSummary = useSimulationStore((s: any) => s.resultsSummary);
@@ -52,7 +61,8 @@ export function ResultsView({ labels, language }: Props) {
     agents.length > AGGREGATE_THRESHOLD ? 'aggregate' : 'per-agent'
   );
 
-  const hydratedAgents = hydrateAgentHistoryFromLogs(logs, agents);
+  const branchLogs = filterLogsToSelectedBranch(logs, nodes, selectedNodeId);
+  const hydratedAgents = hydrateAgentHistoryFromLogs(branchLogs, agents);
   const title: string = currentSimulation.name;
   const metrics = listMetrics(hydratedAgents);
   const activeMetric = metrics.includes(selectedMetric)
@@ -103,7 +113,7 @@ export function ResultsView({ labels, language }: Props) {
   };
 
   const nameById = new Map((hydratedAgents as any[]).map((a) => [a.id, a.name]));
-  const activityBars = computeEventCountByAgent(logs).map((c) => ({
+  const activityBars = computeEventCountByAgent(branchLogs).map((c) => ({
     label: nameById.has(c.agentId) ? (nameById.get(c.agentId) as string) : c.agentId,
     value: c.count,
   }));

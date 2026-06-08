@@ -58,4 +58,13 @@ describe('findUnknownKeys', () => {
   it('handles empty params', () => {
     expect(findUnknownKeys({}, base)).toEqual([]);
   });
+
+  it('treats public goods average contribution as known for older saved configs', () => {
+    expect(
+      findUnknownKeys(
+        { show_average_contribution: true },
+        { resource_name: 'tokens', tokens_per_round: 10, multiplier: 1.3 },
+      ),
+    ).toEqual([]);
+  });
 });

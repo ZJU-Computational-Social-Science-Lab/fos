@@ -1,3 +1,13 @@
+/**
+ * This file turns saved simulation snapshots into the app state people see.
+ *
+ * mapBackendAgents turns saved agent data into UI agents.
+ * mapSerializedNodes turns saved tree data into UI nodes.
+ * selectSerializedNodeId chooses which saved node should reopen.
+ * buildSerializedSnapshot packages saved nodes, agents, and step counts.
+ * withSimulationSocialNetwork keeps a saved social network on the simulation.
+ */
+
 import type { Agent, SimNode, SocialNetwork } from "../types";
 
 type RawAgentLike = Record<string, any>;
@@ -104,6 +114,37 @@ export const mapSerializedNodes = (
   }));
 };
 
+export const selectSerializedNodeId = (
+  nodesRaw: Array<Record<string, any>>,
+): string | null => {
+  if (!Array.isArray(nodesRaw) || nodesRaw.length === 0) {
+    return null;
+  }
+
+  const parentIds = new Set(
+    nodesRaw
+      .map((node) => node.parent)
+      .filter((parent) => parent !== null && parent !== undefined)
+      .map((parent) => String(parent)),
+  );
+  const leaves = nodesRaw.filter((node) => !parentIds.has(String(node.id)));
+  const candidates = leaves.length > 0 ? leaves : nodesRaw;
+
+  const selected = candidates.reduce((best, node) => {
+    const bestDepth = Number(best?.depth ?? 0) || 0;
+    const nodeDepth = Number(node?.depth ?? 0) || 0;
+    if (nodeDepth > bestDepth) {
+      return node;
+    }
+    if (nodeDepth === bestDepth && Number(node?.id) > Number(best?.id)) {
+      return node;
+    }
+    return best;
+  }, candidates[0]);
+
+  return selected?.id === undefined ? null : String(selected.id);
+};
+
 export const buildSerializedSnapshot = (
   snapshot: RawSnapshotLike | null | undefined,
   getNodeName: (id: number | string) => string,
@@ -115,7 +156,7 @@ export const buildSerializedSnapshot = (
 } => {
   const nodesRaw = Array.isArray(snapshot?.nodes) ? snapshot.nodes : [];
   const nodes = mapSerializedNodes(nodesRaw, getNodeName);
-  const selectedNodeId = nodes[0]?.id ?? null;
+  const selectedNodeId = selectSerializedNodeId(nodesRaw);
   const selectedNode =
     nodesRaw.find((node) => String(node.id) === selectedNodeId) || nodesRaw[0] || null;
   const simSnapshot = selectedNode?.sim || {};

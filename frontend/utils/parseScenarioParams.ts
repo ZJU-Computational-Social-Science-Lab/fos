@@ -51,5 +51,9 @@ export function findUnknownKeys(
   params: Record<string, ScenarioParamValue>,
   baseParams: Record<string, unknown>,
 ): string[] {
-  return Object.keys(params).filter(k => !(k in baseParams));
+  const compatibilityKeys = new Set(["show_average_contribution"]);
+
+  return Object.keys(params).filter(
+    (key) => !(key in baseParams) && !compatibilityKeys.has(key),
+  );
 }
