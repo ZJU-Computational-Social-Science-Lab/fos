@@ -17,7 +17,7 @@
 
 import { test, expect } from './fixtures';
 import { getAllScenarios, SCENARIOS } from './fixtures/scenario-fixtures';
-import { runScenario, ScenarioResult } from './helpers/run-scenario';
+import { runScenario, type ScenarioResult } from './helpers/run-scenario';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -40,8 +40,15 @@ for (const scenario of allScenarios) {
     console.log(
       `[${locale}] [${scenario.id}] status=${result.status} ` +
       `ui_errors=${result.uiErrors.length} ` +
+      `backend_errors=${result.backendErrors.length} ` +
+      `warnings=${result.warnings.length} ` +
       `duration=${result.durationMs}ms`
     );
+
+    expect(result.uiErrors).toEqual([]);
+    expect(result.backendErrors).toEqual([]);
+    expect(result.warnings).toEqual([]);
+    expect(result.status).toBe('passed');
   });
 }
 
@@ -63,18 +70,17 @@ test('custom scenario — prompt-based simulation', async ({ page, authedPage, l
   }
   resultsByLocale[locale].push(result);
 
-  // Assert: no crash
-  expect(result.status).not.toBe('crashed');
-
-  // Assert: no UI errors displayed
+  // Assert: no visible, backend, or runner failures were recorded.
   expect(result.uiErrors).toEqual([]);
-
-  // Assert: status is passed or at worst ui_errors (never crashed/timeout)
-  expect(['passed', 'ui_errors']).toContain(result.status);
+  expect(result.backendErrors).toEqual([]);
+  expect(result.warnings).toEqual([]);
+  expect(result.status).toBe('passed');
 
   console.log(
     `[${locale}] [custom] status=${result.status} ` +
     `ui_errors=${result.uiErrors.length} ` +
+    `backend_errors=${result.backendErrors.length} ` +
+    `warnings=${result.warnings.length} ` +
     `duration=${result.durationMs}ms`
   );
 });

@@ -23,6 +23,7 @@ interface ScenarioResult {
   status: 'passed' | 'ui_errors' | 'crashed' | 'timeout' | 'unknown';
   uiErrors: string[];
   warnings: string[];
+  backendErrors: string[];
   testResultFiles: string[];
   durationMs: number;
 }
@@ -45,6 +46,14 @@ function printReport(locale: string, results: ScenarioResult[]) {
     if (r.uiErrors.length > 0) {
       console.log('  UI Errors:');
       for (const err of r.uiErrors) {
+        console.log(`    - ${err}`);
+      }
+    }
+
+    const backendErrors = r.backendErrors || [];
+    if (backendErrors.length > 0) {
+      console.log('  Backend Errors:');
+      for (const err of backendErrors) {
         console.log(`    - ${err}`);
       }
     }

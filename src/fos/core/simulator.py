@@ -53,6 +53,7 @@ class Simulator:
             self.ordering.set_simulation(self)
         self.event_queue = Queue()
         self.order_iter = self.ordering.iter() if self.ordering else iter([])
+        self.last_runtime_error: RuntimeError | None = None
 
         if broadcast_initial:
             for agent in agents:
@@ -177,6 +178,7 @@ class Simulator:
 
     def run(self, max_turns=1000):
         turns = 0
+        self.last_runtime_error = None
         if hasattr(self.scene, "reset_for_run"):
             self.scene.reset_for_run()
         while True:
@@ -217,10 +219,20 @@ class Simulator:
                         if bool(pass_control):
                             yielded = True
                             break
-                except Exception:
+                except Exception as error:
                     logger.exception("Exception during agent turn", extra={"agent": agent.name})
-                    continue_turn = False
-                    break
+                    self.last_runtime_error = RuntimeError(
+                        f"Agent {agent.name} turn failed: {error}"
+                    )
+                    self.emit_event(
+                        "error",
+                        {
+                            "agent": agent.name,
+                            "error_type": type(error).__name__,
+                            "message": str(error),
+                        },
+                    )
+                    return
                 steps += 1
                 if yielded:
                     continue_turn = False

@@ -571,7 +571,12 @@ class PolicyCascadeRuntimeMixin:
             next_idx = self.tier_order.index(tier) + 1
             if next_idx < len(self.tier_order):
                 self.state["current_tier_idx"] = next_idx
-                if (self.state.get("social_network") or {}) and not self._active_targets_for_tier(self.tier_order[next_idx]) and not self._private_recipient_names():
+                if (
+                    self.state.get("task_mode") == "cascade"
+                    and (self.state.get("social_network") or {})
+                    and not self._active_targets_for_tier(self.tier_order[next_idx])
+                    and not self._private_recipient_names()
+                ):
                     simulator.emit_event(
                         "cascade_network_dead_end",
                         self._cascade_dead_end_data(agent),

@@ -8,7 +8,7 @@
  * Exports: runScenario, ScenarioResult
  */
 
-import { Page } from '@playwright/test';
+import type { ConsoleMessage, Page, Request, Response } from '@playwright/test';
 import { ExperimentBuilder } from './experiment-builder';
 import { SimulationWorkspace } from './simulation-workspace';
 import { ResultCollector } from './result-collector';
@@ -22,8 +22,49 @@ export interface ScenarioResult {
   status: 'passed' | 'ui_errors' | 'crashed' | 'timeout' | 'unknown';
   uiErrors: string[];
   warnings: string[];
+  backendErrors: string[];
   testResultFiles: string[];
   durationMs: number;
+}
+
+export function formatBackendResponseFailure(
+  status: number,
+  method: string,
+  rawUrl: string,
+): string {
+  let displayUrl = rawUrl;
+  try {
+    const parsed = new URL(rawUrl);
+    displayUrl = `${parsed.pathname}${parsed.search}`;
+  } catch {
+    displayUrl = rawUrl;
+  }
+  return `HTTP ${status} ${method} ${displayUrl}`;
+}
+
+export function determineScenarioStatus(
+  result: Pick<ScenarioResult, 'status' | 'uiErrors' | 'warnings' | 'backendErrors'>,
+): ScenarioResult['status'] {
+  if (result.status === 'crashed' || result.status === 'timeout') {
+    return result.status;
+  }
+  if (
+    result.uiErrors.length > 0
+    || result.warnings.length > 0
+    || result.backendErrors.length > 0
+  ) {
+    return 'ui_errors';
+  }
+  return 'passed';
+}
+
+function isBackendApiUrl(rawUrl: string): boolean {
+  try {
+    const parsed = new URL(rawUrl);
+    return parsed.pathname.startsWith('/api/');
+  } catch {
+    return rawUrl.includes('/api/');
+  }
 }
 
 export async function runScenario(
@@ -38,12 +79,50 @@ export async function runScenario(
     status: 'unknown',
     uiErrors: [],
     warnings: [],
+    backendErrors: [],
     testResultFiles: [],
     durationMs: 0,
   };
 
   const collector = new ResultCollector(scenario.id);
   const start = Date.now();
+  const seenBackendErrors = new Set<string>();
+
+  const recordBackendError = (message: string): void => {
+    if (seenBackendErrors.has(message)) return;
+    seenBackendErrors.add(message);
+    result.backendErrors.push(message);
+  };
+
+  const responseHandler = (response: Response): void => {
+    const rawUrl = response.url();
+    if (!isBackendApiUrl(rawUrl) || response.status() < 500) return;
+    recordBackendError(
+      formatBackendResponseFailure(
+        response.status(),
+        response.request().method(),
+        rawUrl,
+      ),
+    );
+  };
+
+  const requestFailedHandler = (request: Request): void => {
+    const rawUrl = request.url();
+    if (!isBackendApiUrl(rawUrl)) return;
+    const failureText = request.failure()?.errorText || 'request failed';
+    recordBackendError(`${request.method()} ${rawUrl}: ${failureText}`);
+  };
+
+  const consoleHandler = (message: ConsoleMessage): void => {
+    if (message.type() !== 'error') return;
+    const text = message.text();
+    if (!text.includes('[getTreeGraph] Failed to fetch tree graph')) return;
+    recordBackendError(text);
+  };
+
+  page.on('response', responseHandler);
+  page.on('requestfailed', requestFailedHandler);
+  page.on('console', consoleHandler);
 
   try {
     const builder = new ExperimentBuilder(page, locale);
@@ -76,10 +155,15 @@ export async function runScenario(
     // Collect errors again after running
     result.uiErrors.push(...await workspace.collectErrorMessages());
 
-    result.status = result.uiErrors.length === 0 ? 'passed' : 'ui_errors';
+    result.status = determineScenarioStatus(result);
   } catch (err) {
     result.status = 'crashed';
     result.uiErrors.push(String(err));
+    result.status = determineScenarioStatus(result);
+  } finally {
+    page.off('response', responseHandler);
+    page.off('requestfailed', requestFailedHandler);
+    page.off('console', consoleHandler);
   }
 
   // Always try to collect test_results/ files
@@ -89,6 +173,7 @@ export async function runScenario(
     result.warnings.push(`Failed to collect test_results: ${String(collectErr)}`);
   }
 
+  result.status = determineScenarioStatus(result);
   result.durationMs = Date.now() - start;
   return result;
 }

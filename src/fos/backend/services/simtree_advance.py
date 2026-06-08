@@ -24,4 +24,7 @@ async def run_simulator_for_advance(
     except (RuntimeError, FileNotFoundError) as error:
         logger.exception("simulation runtime failed during tree advance")
         return error
+    runtime_error = getattr(simulator, "last_runtime_error", None)
+    if isinstance(runtime_error, RuntimeError):
+        return runtime_error
     return None

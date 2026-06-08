@@ -11,6 +11,14 @@ Contains: Agent
 # subclass) and delete this file. See:
 # docs/plans/policy-cascade-port-investigation.md
 
+from __future__ import annotations
+
+import json
+import re
+from typing import Any
+
+from fos.core.agent.parsing import strip_thinking_tokens
+
 
 class Agent:
     """Minimal legacy Agent for Pipeline B scenes."""
@@ -52,12 +60,48 @@ class Agent:
             "role_prompt": self.role_prompt,
             "user_profile": self.user_profile,
             "language": self.language,
-            "action_space": list(self.action_space),
+            "action_space": [_serialize_action(action) for action in self.action_space],
             "knowledge_base": list(self.knowledge_base),
             "documents": dict(self.documents),
             "score": self.score,
             "short_memory": self.short_memory.get_all(),
         }
+
+    def process(
+        self,
+        clients: dict[str, Any],
+        initiative: bool = False,
+        scene: Any | None = None,
+    ) -> list[dict[str, Any]]:
+        """Ask the model for one legacy action and return it as plain data."""
+        client = _select_chat_client(clients, self.properties)
+        prompt = self._build_prompt(scene, initiative)
+        messages = [*self.short_memory.get_all(), {"role": "user", "content": prompt}]
+        response = client.chat(messages, json_mode=True)
+        cleaned = strip_thinking_tokens(str(response or ""))
+        action = _parse_action_response(cleaned)
+        self.short_memory.append("user", prompt)
+        self.short_memory.append("assistant", cleaned)
+        return [action] if action else []
+
+    def _build_prompt(self, scene: Any | None, initiative: bool) -> str:
+        """Build the short prompt used by the old policy cascade runner."""
+        parts = [f"You are {self.name}."]
+        if self.user_profile:
+            parts.append(self.user_profile)
+        if self.role_prompt:
+            parts.append(self.role_prompt)
+        if scene is not None and hasattr(scene, "get_behavior_guidelines"):
+            parts.append(str(scene.get_behavior_guidelines()))
+        if scene is not None and hasattr(scene, "get_agent_status_prompt"):
+            parts.append(str(scene.get_agent_status_prompt(self)))
+        actions = [_serialize_action(action) for action in self.action_space]
+        if actions:
+            parts.append("Available actions: " + ", ".join(actions))
+        if initiative:
+            parts.append("Take initiative if the scene calls for it.")
+        parts.append('Reply as JSON, for example {"action":"yield"}.')
+        return "\n\n".join(part for part in parts if part)
 
     def add_env_feedback(self, msg: str) -> None:
         self.short_memory.append("system", msg)
@@ -82,3 +126,42 @@ class Agent:
         for entry in data.get("short_memory", []):
             agent.short_memory.append(entry.get("role", ""), entry.get("content", ""))
         return agent
+
+
+def _select_chat_client(clients: dict[str, Any], properties: dict) -> Any:
+    """Pick the chat client the old agent should use."""
+    provider_id = properties.get("provider_id")
+    if provider_id is not None and provider_id in clients:
+        return clients[provider_id]
+    client = clients.get("chat") or clients.get("default")
+    if client is None:
+        raise RuntimeError("No chat client is available for legacy agent processing")
+    return client
+
+
+def _serialize_action(action: Any) -> str:
+    """Turn an action object or string into a saved action name."""
+    if isinstance(action, str):
+        return action
+    name = getattr(action, "NAME", None) or getattr(action, "name", None)
+    return str(name or action.__class__.__name__)
+
+
+def _parse_action_response(response: str) -> dict[str, Any]:
+    """Turn a model response into one action dictionary."""
+    text = response.strip()
+    if not text:
+        return {}
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+    match = re.search(r'<Action\s+name="([^"]+)"\s*(?:/|>(.*?)</Action>)', text, re.DOTALL)
+    if not match:
+        return {"action": "send_message", "message": text}
+    action: dict[str, Any] = {"action": match.group(1)}
+    for key, value in re.findall(r"<(\w+)>(.*?)</\1>", match.group(2) or "", re.DOTALL):
+        action[key] = value.strip()
+    return action
