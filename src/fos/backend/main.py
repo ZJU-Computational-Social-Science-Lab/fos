@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 from litestar import Litestar, Router, get
@@ -23,6 +24,9 @@ try:
     from .services.polling_service import PollingService
 except ModuleNotFoundError:
     PollingService = None
+
+
+_simtree_cleanup_task: asyncio.Task | None = None
 
 
 async def _start_polling_service() -> None:
@@ -70,6 +74,40 @@ async def _initialize_vector_store() -> None:
         print("[vector_store] Using JSON fallback mode")
 
 
+async def _start_simtree_cleanup() -> None:
+    """Start the periodic cleanup for idle in-memory simulation trees."""
+    global _simtree_cleanup_task
+    settings = get_settings()
+    interval = int(settings.simtree_cleanup_interval_seconds or 0)
+    idle_ttl = int(settings.simtree_idle_ttl_seconds or 0)
+    if interval <= 0 or idle_ttl <= 0:
+        return
+    if _simtree_cleanup_task is not None and not _simtree_cleanup_task.done():
+        return
+
+    async def _cleanup_loop() -> None:
+        from fos.backend.services.simtree_runtime import SIM_TREE_REGISTRY
+
+        while True:
+            await asyncio.sleep(interval)
+            evicted = SIM_TREE_REGISTRY.evict_idle_records(
+                idle_ttl_seconds=idle_ttl,
+                max_records=settings.simtree_max_records,
+            )
+            if evicted:
+                print(f"[simtree_cleanup] evicted idle records: {evicted}")
+
+    _simtree_cleanup_task = asyncio.create_task(_cleanup_loop())
+
+
+def _stop_simtree_cleanup() -> None:
+    """Stop the periodic cleanup task during app shutdown."""
+    global _simtree_cleanup_task
+    if _simtree_cleanup_task is not None and not _simtree_cleanup_task.done():
+        _simtree_cleanup_task.cancel()
+    _simtree_cleanup_task = None
+
+
 def internal_error_handler(request: Request, exc: Exception) -> Response:
     # Let HTTPExceptions (4xx auth errors, etc.) pass through with their own status code.
     if isinstance(exc, HTTPException):
@@ -105,6 +143,7 @@ def create_app() -> Litestar:
 
     api_prefix = settings.api_prefix or "/api"
     api_routes = Router(path=api_prefix, route_handlers=[api_router])
+    api_routes_css = Router(path="/css/fos/api", route_handlers=[api_router])
 
     # Static uploads
     root_dir = Path(__file__).resolve().parents[3]
@@ -116,7 +155,7 @@ def create_app() -> Litestar:
         name="uploads",
     )
 
-    route_handlers = [api_routes, upload_router]
+    route_handlers = [api_routes, api_routes_css, upload_router]
 
     # 只在生产模式（有 dist 目录）时服务静态文件
     dist_dir = Path(settings.frontend_dist_path or root_dir / "frontend" / "dist").resolve()
@@ -127,6 +166,11 @@ def create_app() -> Litestar:
             path="/assets",
             directories=[str(dist_dir / "assets")],
             name="frontend-assets",
+        )
+        assets_router_css = create_static_files_router(
+            path="/css/fos/assets",
+            directories=[str(dist_dir / "assets")],
+            name="frontend-assets-css-fos",
         )
 
         index_path = str(index_file)
@@ -150,7 +194,7 @@ def create_app() -> Litestar:
         # Also serve the SPA under legacy path `/css/fos` so links/bookmarks
         # like `/css/fos/login` continue to work.
         spa_router_css = Router(path="/css/fos", route_handlers=[home_page, spa_fallback])
-        route_handlers.extend([assets_router, spa_router, spa_router_css])
+        route_handlers.extend([assets_router, assets_router_css, spa_router, spa_router_css])
 
     base_router = Router(path=settings.backend_root_path, route_handlers=route_handlers)
 
@@ -159,8 +203,17 @@ def create_app() -> Litestar:
             methods = route.methods or ["WS"]
             print(f"[litestar] {sorted(methods)} {route.path}")
 
-    on_startup = [set_app_start_time, _prepare_database, _initialize_vector_store, _start_polling_service, _log_routes]
-    on_shutdown = [PollingService.get_instance().shutdown] if PollingService is not None else []
+    on_startup = [
+        set_app_start_time,
+        _prepare_database,
+        _initialize_vector_store,
+        _start_polling_service,
+        _start_simtree_cleanup,
+        _log_routes,
+    ]
+    on_shutdown = [_stop_simtree_cleanup]
+    if PollingService is not None:
+        on_shutdown.append(PollingService.get_instance().shutdown)
 
     app_kwargs: dict = {
         "route_handlers": [base_router],

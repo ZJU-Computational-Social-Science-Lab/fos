@@ -1,78 +1,116 @@
 /**
- * Concurrent load test: 50 users running game theory experiments simultaneously.
- * Uses three real experiment scenarios with LLM-backed agents.
+ * Presentation load test: 50 concurrent users with limited heavy simulation work.
  *
- * Scenarios: Prisoner's Dilemma, Public Goods Game, Open Discussion
- * Run: k6 run -e BASE_URL=http://localhost:8000 tests/load/scenarios/concurrent-50.js
+ * This models Saturday demo traffic: many people browse and inspect simulations,
+ * while only a smaller subset triggers LLM-backed advances at the same time.
+ *
+ * Run: k6 run -e BASE_URL=http://localhost:8090 tests/load/scenarios/concurrent-50.js
  */
 
 import http from "k6/http";
 import { check, group, sleep } from "k6";
-import { Trend, Counter, Gauge } from "k6/metrics";
-import { authenticate, createSimulation, advanceChain, checkHealth, SCENARIOS } from "../lib/helpers.js";
+import { Counter, Gauge, Trend } from "k6/metrics";
+import {
+  authenticate,
+  createSimulation,
+  advanceChain,
+  checkHealth,
+  SCENARIOS,
+} from "../lib/helpers.js";
 
 const createSimDuration = new Trend("create_simulation_duration", true);
 const advanceDuration = new Trend("advance_chain_duration", true);
-const errorCount = new Counter("errors");
+const readyFailures = new Counter("readiness_failures");
+const badGatewayCount = new Counter("bad_gateway_responses");
 const activeSims = new Gauge("active_simulations");
+const treeNodes = new Gauge("tree_nodes");
 
 const scenarioKeys = Object.keys(SCENARIOS);
 
 export const options = {
   stages: [
-    { duration: "60s", target: 50 },  // Ramp to 50 users over 60s
-    { duration: "120s", target: 50 }, // Hold 50 users for 2 min
-    { duration: "30s", target: 0 },   // Ramp down
+    { duration: "2m", target: 50 },
+    { duration: "2h", target: 50 },
+    { duration: "2m", target: 0 },
   ],
   thresholds: {
-    http_req_duration: ["p(90)<300000"],       // 5 min for LLM calls
-    http_req_failed: ["rate<0.3"],             // Allow 30% failure under heavier load
-    create_simulation_duration: ["p(90)<10000"],
-    advance_chain_duration: ["p(90)<300000"],  // 5 min for advance with real LLM
+    http_req_failed: ["rate<0.02"],
+    http_req_duration: ["p(95)<10000"],
+    create_simulation_duration: ["p(95)<15000"],
+    advance_chain_duration: ["p(95)<300000"],
+    readiness_failures: ["count==0"],
+    bad_gateway_responses: ["count==0"],
   },
 };
 
-const BASE_URL = __ENV.BASE_URL || "http://localhost:8000";
+const BASE_URL = __ENV.BASE_URL || "http://localhost:8090";
+
+function recordStatus(response) {
+  if (response.status === 502) {
+    badGatewayCount.add(1);
+  }
+}
+
+function checkReadiness() {
+  const response = http.get(`${BASE_URL}/api/health/ready`);
+  recordStatus(response);
+  const ok = check(response, { "ready ok": (r) => r.status === 200 });
+  if (!ok) {
+    readyFailures.add(1);
+  }
+}
 
 export default function () {
   const vuId = __VU;
-  // Round-robin scenario selection across VUs
-  const scenarioKey = scenarioKeys[(vuId - 1) % scenarioKeys.length];
-  const scenario = SCENARIOS[scenarioKey];
+  const scenario = SCENARIOS[scenarioKeys[(vuId - 1) % scenarioKeys.length]];
 
-  group(`VU ${vuId}: ${scenario.name}`, () => {
+  group(`VU ${vuId}: presentation flow`, () => {
+    if (vuId % 10 === 1) {
+      checkReadiness();
+    }
+
     const token = authenticate(BASE_URL);
     if (!token) {
-      errorCount.add(1);
       return;
     }
 
-    // Create simulation with this VU's assigned scenario
+    recordStatus(http.get(`${BASE_URL}/`, { timeout: "20s" }));
+    recordStatus(http.get(`${BASE_URL}/dashboard`, { timeout: "20s" }));
+    recordStatus(http.get(`${BASE_URL}/api/scenes`, {
+      headers: { Authorization: `Bearer ${token}` },
+      timeout: "20s",
+    }));
+
     let sim;
-    group("Create Simulation", () => {
+    if (vuId % 2 === 0) {
       const start = Date.now();
-      sim = createSimulation(BASE_URL, token, `Load Test ${scenario.name} VU${vuId}`, scenario);
+      sim = createSimulation(BASE_URL, token, `Presentation VU${vuId}`, scenario);
       createSimDuration.add(Date.now() - start);
-      if (!sim?.id) {
-        errorCount.add(1);
-      }
-    });
+    }
 
-    if (!sim?.id) return;
+    if (sim?.id) {
+      recordStatus(http.get(`${BASE_URL}/api/simulations/${sim.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: "20s",
+      }));
+      recordStatus(http.get(`${BASE_URL}/api/simulations/${sim.id}/tree/graph`, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: "20s",
+      }));
+    }
 
-    // Advance tree (1 turn)
-    group("Advance Chain", () => {
+    if (sim?.id && vuId % 10 === 0) {
       const start = Date.now();
       advanceChain(BASE_URL, token, sim.id, 1);
       advanceDuration.add(Date.now() - start);
-    });
+    }
 
-    // Check health
     const health = checkHealth(BASE_URL);
     if (health) {
       activeSims.add(health.active_simulations || 0);
+      treeNodes.add(health.tree_nodes || 0);
     }
 
-    sleep(1);
+    sleep(2);
   });
 }

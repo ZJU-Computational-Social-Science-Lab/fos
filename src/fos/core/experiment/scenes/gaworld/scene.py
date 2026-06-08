@@ -583,5 +583,17 @@ class GAWorldScene(ExperimentScene):
         data["skipped_days"] = list(self.skipped_days)
         return data
 
+    def cleanup_runtime_resources(self) -> None:
+        """Stop GAWorld child processes owned by this scene."""
+        managers: list[GAWorldSubprocessManager] = []
+        if self._subprocess_manager is not None:
+            managers.append(self._subprocess_manager)
+        if self._comparative_managers is not None:
+            managers.extend(self._comparative_managers)
+        for manager in managers:
+            manager.kill()
+        self._subprocess_manager = None
+        self._comparative_managers = None
+
     def is_complete(self) -> bool:
         return False

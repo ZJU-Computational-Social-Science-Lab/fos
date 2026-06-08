@@ -61,6 +61,11 @@ class Settings(BaseSettings):
     max_advance_turns_per_request: int = 50
     max_frontier_nodes_per_request: int = 50
 
+    # In-memory simulation cache controls
+    simtree_idle_ttl_seconds: int = 3600
+    simtree_cleanup_interval_seconds: int = 300
+    simtree_max_records: int | None = None
+
     # File upload configuration
     upload_dir: str = "uploads"
     upload_base_url: str = "/uploads"

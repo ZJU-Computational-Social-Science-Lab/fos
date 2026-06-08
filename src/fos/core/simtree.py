@@ -108,6 +108,19 @@ class SimTree:
         # 在绑定的 loop 上启动后台任务
         self._gc_task = self._loop.create_task(_gc_loop())
 
+    def cleanup_runtime_resources(self) -> None:
+        """Stop background tasks and child processes owned by this tree."""
+        if self._gc_task is not None and not self._gc_task.done():
+            self._gc_task.cancel()
+        self._gc_task = None
+        for node in list(self.nodes.values()):
+            sim = node.get("sim")
+            if sim is None:
+                continue
+            cleanup = getattr(sim, "cleanup_runtime_resources", None)
+            if cleanup is not None:
+                cleanup()
+
     def _next_id(self) -> int:
         i = self._seq
         self._seq = i + 1
