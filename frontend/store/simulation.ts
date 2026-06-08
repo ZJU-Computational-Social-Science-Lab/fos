@@ -56,7 +56,7 @@ export interface SimulationSlice {
   exitSimulation: () => void;
   resetSimulation: () => Promise<void>;
   deleteSimulation: () => Promise<void>;
-  selectNode: (id: string) => void;
+  selectNode: (id: string) => Promise<void>;
   updateSocialNetwork: (network: SocialNetwork) => Promise<void>;
   loadSimulations: () => Promise<void>;
   loadSimulationById: (id: string) => Promise<void>;
@@ -725,7 +725,76 @@ export const createSimulationSlice: StateCreator<
     get().addNotification?.('success', '模板已删除');
   },
 
-  selectNode: (id) => set({ selectedNodeId: id }),
+  selectNode: async (id) => {
+    const state = get();
+    if (state.selectedNodeId === id) return;
+    set({ selectedNodeId: id });
+
+    const sim = state.currentSimulation;
+    if (!sim?.id) return;
+
+    const nodeNumeric = Number(id);
+    if (!Number.isFinite(nodeNumeric)) return;
+
+    const base = state.engineConfig.endpoint;
+    const token = (state.engineConfig as any).token;
+
+    try {
+      const { getSimEvents, getSimState } = await import('../services/simulationTree');
+
+      const [simState, events] = await Promise.all([
+        getSimState(base, sim.id, nodeNumeric, token).catch(() => null),
+        getSimEvents(base, sim.id, nodeNumeric, token).catch(() => []),
+      ]);
+
+      const fresh = get();
+      if (fresh.selectedNodeId !== id) return;
+
+      if (simState) {
+        const turnVal = Number(simState?.turns ?? 0) || 0;
+        const agents = (simState?.agents || []).map((a: any, idx: number) => {
+          const fallbackRole = a.properties && (a.properties.role || a.properties.title || a.properties.position);
+          const fallbackProfile = a.profile || a.user_profile || a.userProfile || (a.properties && (a.properties.profile || a.properties.description)) || '';
+          const llmProviders = fresh.llmProviders || [];
+          const providerId = a.properties?.provider_id || a.provider_id || a.providerId;
+          let llmConfig = a.llmConfig || a.llm_config;
+          if (!llmConfig?.provider && providerId != null && llmProviders.length > 0) {
+            const provider = llmProviders.find((p: any) => p.id === Number(providerId));
+            if (provider) llmConfig = { provider: provider.provider || provider.name, model: provider.model || 'default' };
+          }
+          if (!llmConfig?.provider) llmConfig = { provider: 'backend', model: 'default' };
+
+          return {
+            id: `a-${idx}-${a.name}`,
+            name: a.name,
+            role: a.role || fallbackRole || '',
+            avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(a.name || String(idx))}`,
+            profile: fallbackProfile,
+            llmConfig,
+            properties: a.properties || {},
+            history: {},
+            memory: (a.short_memory || []).map((m: any, j: number) => ({
+              id: `m-${idx}-${j}`,
+              round: turnVal,
+              content: String(m.content ?? ''),
+              type: (String(m.role ?? '') === 'assistant' || String(m.role ?? '') === 'user') ? 'dialogue' : 'observation',
+              timestamp: new Date().toISOString()
+            })),
+            knowledgeBase: a.knowledgeBase || []
+          };
+        });
+
+        const logs = mapBackendEventsToLogs(events || [], id, turnVal, agents, true);
+        set({ agents, rawEvents: events || [], logs });
+      } else {
+        const agents = fresh.agents || [];
+        const logs = mapBackendEventsToLogs(events || [], id, 0, agents, true);
+        set({ rawEvents: events || [], logs });
+      }
+    } catch (e) {
+      console.warn('selectNode: failed to fetch events for node', id, e);
+    }
+  },
 
   updateSocialNetwork: async (network) => {
     const currentSim = get().currentSimulation;
