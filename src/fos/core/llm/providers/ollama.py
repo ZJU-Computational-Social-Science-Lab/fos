@@ -21,6 +21,15 @@ import httpx
 from fos.i18n import T
 
 
+def _normalize_ollama_base_url(base_url: str | None) -> str:
+    """Choose the Ollama URL the client should connect to."""
+    import os
+    url = (base_url or os.getenv("OLLAMA_BASE_URL") or "http://127.0.0.1:11434").rstrip("/")
+    if url == "http://localhost:11434":
+        return "http://127.0.0.1:11434"
+    return url
+
+
 def create_ollama_client(base_url: str | None = None, timeout: float = 30) -> httpx.Client:
     """
     Create an httpx client for Ollama API.
@@ -32,9 +41,7 @@ def create_ollama_client(base_url: str | None = None, timeout: float = 30) -> ht
     Returns:
         Configured httpx client instance
     """
-    import os
-    if not base_url:
-        base_url = os.getenv("OLLAMA_BASE_URL") or "http://127.0.0.1:11434"
+    base_url = _normalize_ollama_base_url(base_url)
     return httpx.Client(base_url=base_url, timeout=timeout)
 
 
@@ -309,7 +316,5 @@ def clone_ollama_client(base_url: str | None, timeout: float) -> httpx.Client:
     Returns:
         New httpx client instance
     """
-    import os
-    if not base_url:
-        base_url = os.getenv("OLLAMA_BASE_URL") or "http://127.0.0.1:11434"
+    base_url = _normalize_ollama_base_url(base_url)
     return httpx.Client(base_url=base_url, timeout=timeout)

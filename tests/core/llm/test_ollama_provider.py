@@ -68,6 +68,13 @@ class TestClientCreation:
         )
 
     @patch("fos.core.llm.providers.ollama.httpx.Client")
+    def test_localhost_base_url_uses_loopback_ip(self, mock_cls):
+        create_ollama_client(base_url="http://localhost:11434", timeout=60)
+        mock_cls.assert_called_once_with(
+            base_url="http://127.0.0.1:11434", timeout=60
+        )
+
+    @patch("fos.core.llm.providers.ollama.httpx.Client")
     def test_env_var_override(self, mock_cls):
         import os
         with patch.dict(os.environ, {"OLLAMA_BASE_URL": "http://env:5555"}):
@@ -90,6 +97,13 @@ class TestClientCreation:
         clone_ollama_client("http://host:1234", 45)
         mock_cls.assert_called_once_with(
             base_url="http://host:1234", timeout=45
+        )
+
+    @patch("fos.core.llm.providers.ollama.httpx.Client")
+    def test_clone_localhost_base_url_uses_loopback_ip(self, mock_cls):
+        clone_ollama_client("http://localhost:11434", 45)
+        mock_cls.assert_called_once_with(
+            base_url="http://127.0.0.1:11434", timeout=45
         )
 
 
