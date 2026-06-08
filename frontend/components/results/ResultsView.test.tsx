@@ -1,3 +1,10 @@
+/**
+ * These tests check that the analysis page shows the right data.
+ *
+ * Each test sets up a small simulation and checks the text, charts, export,
+ * or branch filtering a person should see.
+ */
+
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ResultsView } from './ResultsView';
@@ -89,6 +96,31 @@ describe('ResultsView', () => {
     expect(container.querySelectorAll('polyline')).toHaveLength(2);
     expect(screen.getByText('Alice')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Generate' })).toBeTruthy();
+  });
+
+  it('uses only the selected branch path when log outcomes come from several branches', () => {
+    useSimulationStore.setState({
+      currentSimulation: sim('Public goods'),
+      selectedNodeId: '4',
+      nodes: [
+        { id: '0', parentId: null, name: 'Root', depth: 0, isLeaf: false },
+        { id: '1', parentId: '0', name: 'Branch A', depth: 1, isLeaf: false },
+        { id: '2', parentId: '0', name: 'Branch B', depth: 1, isLeaf: false },
+        { id: '4', parentId: '1', name: 'Leaf A', depth: 2, isLeaf: true },
+        { id: '5', parentId: '2', name: 'Leaf B', depth: 2, isLeaf: true },
+      ],
+      agents: [agent('a', 'Alice', {})],
+      logs: [
+        { ...logWithOutcome('a', 1, { amount: 5 }), id: 'branch-a', nodeId: '4' },
+        { ...logWithOutcome('a', 1, { amount: 10 }), id: 'branch-b', nodeId: '5' },
+      ],
+      resultsSummary: null, isGeneratingResultsSummary: false, resultsSummaryError: null,
+    } as any);
+
+    render(<ResultsView labels={labels} language="en" />);
+
+    expect(screen.getAllByText('5').length).toBeGreaterThan(0);
+    expect(screen.queryByText('10')).toBeNull();
   });
 
   it('auto-selects aggregate mode and renders a band polygon when agents exceed the threshold', () => {

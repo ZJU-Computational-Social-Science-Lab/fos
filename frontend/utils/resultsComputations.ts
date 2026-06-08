@@ -7,12 +7,47 @@ computeEventCountByAgent counts how many saved events belong to each agent.
 computeEventCountByRound counts how many saved events happened in each round.
 */
 
-import type { Agent, LogEntry } from '@/types';
+import type { Agent, LogEntry, SimNode } from '@/types';
 
 export type Series = { agentId: string; agentName: string; values: number[] };
 export type MetricAggregatePoint = { round: number; mean: number; min: number; max: number };
 export type AgentCount = { agentId: string; count: number };
 export type RoundCount = { round: number; count: number };
+
+export function filterLogsToSelectedBranch(
+  logs: LogEntry[],
+  nodes: SimNode[],
+  selectedNodeId: string | null | undefined,
+): LogEntry[] {
+  if (!Array.isArray(logs)) {
+    throw new Error('filterLogsToSelectedBranch: logs must be an array');
+  }
+
+  if (!selectedNodeId || !Array.isArray(nodes) || nodes.length === 0) {
+    return logs;
+  }
+
+  const nodesById = new Map(nodes.map((node) => [node.id, node]));
+  if (!nodesById.has(selectedNodeId)) {
+    return logs;
+  }
+
+  const branchIds = new Set<string>();
+  let currentId: string | null | undefined = selectedNodeId;
+
+  while (currentId) {
+    const currentNode = nodesById.get(currentId);
+    if (!currentNode || branchIds.has(currentNode.id)) {
+      break;
+    }
+    branchIds.add(currentNode.id);
+    currentId = currentNode.parentId;
+  }
+
+  return logs.filter(
+    (log) => !log.nodeId || !nodesById.has(log.nodeId) || branchIds.has(log.nodeId),
+  );
+}
 
 export function listMetrics(agents: Agent[]): string[] {
   if (!Array.isArray(agents)) {

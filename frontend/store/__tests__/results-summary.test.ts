@@ -1,3 +1,10 @@
+/**
+ * These tests check how the store builds an AI analysis summary.
+ *
+ * They verify metric extraction, empty data handling, branch filtering, and the
+ * request sent to the summary service.
+ */
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/services/client', () => ({ apiClient: { post: vi.fn() } }));
@@ -136,5 +143,31 @@ describe('generateResultsSummary', () => {
     const s = useSimulationStore.getState() as any;
     expect(s.resultsSummary).toBe('The agents cooperated.');
     expect(s.resultsSummaryError).toBeNull();
+  });
+
+  it('builds the summary from the selected branch path only', async () => {
+    post.mockResolvedValue({ data: { text: 'Branch A only.' } } as any);
+    useSimulationStore.setState({
+      selectedNodeId: '4',
+      nodes: [
+        { id: '0', parentId: null, name: 'Root', depth: 0, isLeaf: false },
+        { id: '1', parentId: '0', name: 'Branch A', depth: 1, isLeaf: false },
+        { id: '2', parentId: '0', name: 'Branch B', depth: 1, isLeaf: false },
+        { id: '4', parentId: '1', name: 'Leaf A', depth: 2, isLeaf: true },
+        { id: '5', parentId: '2', name: 'Leaf B', depth: 2, isLeaf: true },
+      ],
+      agents: [agent('a', 'Alice', {})],
+      logs: [
+        { ...logWithOutcome('a', 1, { amount: 5 }), id: 'branch-a', nodeId: '4' },
+        { ...logWithOutcome('a', 1, { amount: 10 }), id: 'branch-b', nodeId: '5' },
+      ],
+      currentProviderId: 7,
+    } as any);
+
+    await (useSimulationStore.getState() as any).generateResultsSummary('Test', 'en');
+
+    const [, body] = post.mock.calls[0] as any;
+    expect(body.prompt).toContain('- Alice: 5 (final: 5)');
+    expect(body.prompt).not.toContain('- Alice: 10 (final: 10)');
   });
 });
