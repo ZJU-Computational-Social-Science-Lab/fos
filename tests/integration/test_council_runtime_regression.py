@@ -68,6 +68,7 @@ def _make_council_scene() -> CouncilExperimentScene:
             },
             description="Council test",
             locale="en",
+            social_network={"edges": [("Alice", "Bob")]},
         )
     )
 
@@ -94,6 +95,68 @@ def test_council_scene_switches_actions_when_voting_starts() -> None:
 
     assert scene.get_scene_actions("Alice") == ["vote_yes", "vote_no", "abstain"]
     assert "Current Phase: voting" in scene.get_agent_status_prompt("Alice")
+
+
+def test_council_voting_prompt_hides_speak_and_skip_actions() -> None:
+    """Voting prompts should show only vote actions, not deliberation actions."""
+    scene = _make_council_scene()
+
+    class CapturingLlm:
+        """Small LLM stub that records the prompt and returns one vote action."""
+
+        def __init__(self) -> None:
+            self.messages: list[list[dict[str, str]]] = []
+
+        def chat(self, messages, json_mode=False):
+            _ = json_mode
+            self.messages.append(messages)
+            return '{"action": "vote_yes"}'
+
+    llm = CapturingLlm()
+    scene.initialize(llm)
+    scene.cycle_phase = CouncilCyclePhase.VOTING
+    scene.facilitator.transition_to_voting("Build a new library.")
+    scene.state.extensions["voting_started"] = True
+
+    asyncio.run(scene.runner._prompt_agent(scene.agents[0], round_num=2))
+    prompt = llm.messages[0][0]["content"]
+
+    assert 'Valid actions: "vote_yes", "vote_no", "abstain"' in prompt
+    assert "- speak:" not in prompt
+    assert "- skip:" not in prompt
+
+
+def test_council_prompt_hides_explicit_social_network_section() -> None:
+    """Council prompts should rely on filtered context instead of a neighbor list."""
+    scene = _make_council_scene()
+
+    class CapturingLlm:
+        """Small LLM stub that records the prompt and returns one action."""
+
+        def __init__(self) -> None:
+            self.messages: list[list[dict[str, str]]] = []
+
+        def chat(self, messages, json_mode=False):
+            _ = json_mode
+            self.messages.append(messages)
+            return '{"action": "skip"}'
+
+    llm = CapturingLlm()
+    scene.initialize(llm)
+    scene.round_context_manager.record_action_with_observers(
+        agent_name="Bob",
+        action_name="speak",
+        parameters={"message": "Visible to Alice"},
+        round_num=1,
+        summary="Bob spoke: Visible to Alice",
+    )
+
+    asyncio.run(scene.runner._prompt_agent(scene.agents[0], round_num=2))
+    prompt = llm.messages[0][0]["content"]
+
+    assert "Visible to Alice" in prompt
+    assert "## Your Social Network" not in prompt
+    assert "Your social network neighbors:" not in prompt
 
 
 def test_council_chamber_runtime_prompts_all_five_agents() -> None:
@@ -137,3 +200,55 @@ def test_open_discussion_runtime_builds_the_normal_scene() -> None:
 
     assert isinstance(scene, ExperimentScene)
     assert not isinstance(scene, CouncilExperimentScene)
+
+
+def test_council_prior_round_context_hides_non_neighbour_speech() -> None:
+    """Council context should only show prior speech from visible neighbours."""
+    scene = CouncilExperimentScene(
+        ExperimentConfig(
+            scenario_id="council",
+            agents=[
+                {"name": "Alice", "role_prompt": "You are Alice."},
+                {"name": "Bob", "role_prompt": "You are Bob."},
+                {"name": "Cara", "role_prompt": "You are Cara."},
+            ],
+            actions=[],
+            parameters={
+                "proposal_text": "Build a new library.",
+                "deliberation_rounds": 2,
+                "voting_threshold": 0.5,
+            },
+            description="Council test",
+            locale="en",
+            social_network={"edges": [("Alice", "Bob")]},
+        )
+    )
+
+    scene.round_context_manager.record_action_with_observers(
+        agent_name="Cara",
+        action_name="speak",
+        parameters={"message": "Keep this private."},
+        round_num=1,
+        summary="Cara spoke: Keep this private.",
+    )
+
+    context = scene.get_prior_round_context("Alice")
+
+    assert "Cara spoke" not in context
+
+
+def test_council_initialize_shares_one_context_manager_with_runner() -> None:
+    """Council prompts and handlers should write to the same visibility log."""
+    scene = _make_council_scene()
+
+    class StubLlm:
+        """Small LLM stub that always skips cleanly."""
+
+        def chat(self, messages, json_mode=False):
+            _ = messages, json_mode
+            return '{"action": "skip"}'
+
+    scene.initialize(StubLlm())
+
+    assert scene.runner is not None
+    assert scene.round_context_manager is scene.runner.context_manager

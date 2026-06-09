@@ -1,19 +1,36 @@
 """
-Python handlers for complex action logic.
+This file holds the small pieces of action logic used during experiments.
 
-Some actions need more than declarative effects - they need
-actual code to compute state changes. This module provides
-those handlers.
-
-Contains: handle_move, handle_talk, handle_council_speak,
-          handle_start_voting, handle_vote, handle_conclude,
-          handle_reduce
+Each function handles one kind of move, like speaking, voting, or moving
+around a map, and returns a clear result that the rest of the system can log.
 """
 import logging
 from typing import Any
 from fos.core.experiment.state import ExperimentState
 
 logger = logging.getLogger(__name__)
+
+
+def _get_council_observers(
+    agent_name: str,
+    state: ExperimentState,
+    scene: Any,
+) -> list[str]:
+    """Pick who can see a council action based on the scene network."""
+    if hasattr(scene, "get_visible_observers"):
+        return list(scene.get_visible_observers(agent_name))
+
+    config = getattr(scene, "config", None)
+    social_network = getattr(config, "social_network", {}) or {}
+    edges = social_network.get("edges", [])
+    if not edges:
+        return list(state.agents.keys())
+
+    neighbors = [b for a, b in edges if a == agent_name]
+    neighbors.extend(a for a, b in edges if b == agent_name)
+    return sorted(set([agent_name, *neighbors]))
+
+    return list(state.agents.keys())
 
 
 def handle_move(agent_name: str, params: dict, state: ExperimentState) -> dict[str, Any]:
@@ -106,14 +123,13 @@ def handle_council_speak(action_data: dict, agent_name: str, state: ExperimentSt
 
     # Record to round context manager if available
     if hasattr(scene, 'round_context_manager'):
-        all_agents = list(state.agents.keys())
         scene.round_context_manager.record_action(
             agent_name=agent_name,
             action_name="speak",
             parameters={"message": message},
             round_num=getattr(scene, 'round_num', 1),
             summary=summary,
-            observed_by=all_agents
+            observed_by=_get_council_observers(agent_name, state, scene),
         )
 
     return {"success": True, "summary": summary}
@@ -185,14 +201,13 @@ def handle_vote(action_data: dict, agent_name: str, state: ExperimentState, scen
 
     # Record to context manager
     if hasattr(scene, 'round_context_manager'):
-        all_agents = list(state.agents.keys())
         scene.round_context_manager.record_action(
             agent_name=agent_name,
             action_name="vote",
             parameters={"choice": choice},
             round_num=getattr(scene, 'round_num', 1),
             summary=summary,
-            observed_by=all_agents
+            observed_by=_get_council_observers(agent_name, state, scene),
         )
 
     return {"success": True, "summary": summary}

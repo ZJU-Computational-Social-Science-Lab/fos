@@ -360,6 +360,11 @@ def build_reprompt(
             sections.append("\n=== SECTION 2: SCENARIO ===")
         sections.append(f"\n{T('experiment.section_scenario', locale=locale)}\n{scenario_text}")
 
+        if neighbor_context:
+            if include_section_markers:
+                sections.append("\n=== SECTION 3.5: SOCIAL NETWORK ===")
+            sections.append(f"\n{T('experiment.section_social_network', locale=locale)}\n{neighbor_context}")
+
         # Section 4: Context (truncated if needed)
         if include_section_markers:
             sections.append("\n=== SECTION 4: CONTEXT ===")

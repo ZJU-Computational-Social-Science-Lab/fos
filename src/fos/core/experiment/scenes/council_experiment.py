@@ -1,16 +1,9 @@
 """
-Council experiment scene for multi-round deliberation and voting.
+This file runs the council-style experiment with debate rounds and voting.
 
-Extends ExperimentScene to provide round-based execution with automatic
-multi-round context management for council deliberations. This migration
-fixes BUG-CTX-01 where agents did not receive prior-round context.
-
-Key features:
-- Round tracking via experiment runner (not manual)
-- Multi-round deliberation context via RoundContextManager
-- Phase-based action filtering via SystemFacilitator
-
-Exports: CouncilExperimentScene
+It keeps track of which stage the meeting is in, stores what each person
+has seen so far, and makes sure only connected neighbours can see each
+other's speeches and votes when a social network is set.
 """
 import logging
 from enum import Enum
@@ -80,19 +73,22 @@ class CouncilExperimentScene(ExperimentScene):
         # Note: self.round_num is set to 1 at end of __init__, facilitator defaults to 1
         self.facilitator.current_round_num = 1
 
-        # Round context manager for multi-round deliberation (REFACTOR-COUNCIL-04)
-        # Use scope_type="all" so all agents see all speeches and votes
-        # recent_window=3 keeps last 3 rounds of context for token efficiency
-        # primacy_keep=True preserves first impressions
+        # Council experiments use neighbour visibility so the network changes
+        # what each person can read from prior rounds.
         info_model = InformationModel(
-            scope_type="all",
+            scope_type="neighborhood",
             recent_window=3,
             primacy_keep=True,
-            include_scores=False,  # Council games don't use scores
+            include_scores=False,
         )
+        self._round_context_scene_state = {
+            "state": self.state,
+            "graph": self.config.social_network,
+            "social_network": self.config.social_network,
+        }
         self.round_context_manager = RoundContextManager(
             information_model=info_model,
-            scene_state=self.state.extensions,
+            scene_state=self._round_context_scene_state,
             all_agent_names=[a.get("name") for a in config.agents],
         )
 
@@ -106,6 +102,40 @@ class CouncilExperimentScene(ExperimentScene):
         self.rounds_in_cycle_phase: int = 0
 
         logger.info(f"CouncilExperimentScene initialized with {len(self.agents)} agents")
+
+    def initialize(self, llm_client: Any, provider_clients: dict | None = None) -> None:
+        """Build the shared runner, then force council visibility to neighbours."""
+        super().initialize(llm_client, provider_clients)
+        if self.runner is None:
+            raise RuntimeError("Council runner was not initialized")
+
+        info_model = InformationModel(
+            scope_type="neighborhood",
+            recent_window=3,
+            primacy_keep=True,
+            include_scores=False,
+        )
+        self.runner.information_model = info_model
+        self.runner.context_manager = RoundContextManager(
+            information_model=info_model,
+            scene_state=self.runner.scene_state,
+            all_agent_names=[a.name for a in self.agents],
+        )
+        self.runner.controller.context_manager = self.runner.context_manager
+        self.round_context_manager = self.runner.context_manager
+
+    def get_visible_observers(self, agent_name: str) -> list[str]:
+        """Return the agent plus any directly connected neighbours."""
+        return self.round_context_manager.information_model.get_observers(
+            for_agent=agent_name,
+            scene_state=self._round_context_scene_state,
+            all_agent_names=[a.name for a in self.agents],
+            round_num=self.round_num,
+        )
+
+    def include_social_network_section(self) -> bool:
+        """Council prompts use filtered context, so no separate neighbor list is needed."""
+        return False
 
     def get_prior_round_context(self, agent_name: str) -> str:
         """Get multi-round deliberation context for an agent.
@@ -172,7 +202,7 @@ class CouncilExperimentScene(ExperimentScene):
         """Record an action to the multi-round context manager.
 
         Called by action handlers (speak, vote) to make actions visible
-        to all agents in subsequent rounds.
+        to the acting agent and their neighbours in subsequent rounds.
 
         Args:
             agent_name: Agent who performed the action
@@ -186,7 +216,7 @@ class CouncilExperimentScene(ExperimentScene):
             parameters=parameters,
             round_num=self.round_num,
             summary=summary,
-            observed_by=[a.name for a in self.agents],
+            observed_by=self.get_visible_observers(agent_name),
         )
 
     def get_scene_actions(self, agent_name: str) -> list[str]:
