@@ -44,6 +44,7 @@ export const options = {
 };
 
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8090";
+const API_PREFIX = __ENV.API_PREFIX || "/api";
 
 function recordStatus(response) {
   if (response.status === 502) {
@@ -52,7 +53,7 @@ function recordStatus(response) {
 }
 
 function checkReadiness() {
-  const response = http.get(`${BASE_URL}/api/health/ready`);
+  const response = http.get(`${BASE_URL}${API_PREFIX}/health/ready`);
   recordStatus(response);
   const ok = check(response, { "ready ok": (r) => r.status === 200 });
   if (!ok) {
@@ -76,7 +77,7 @@ export default function () {
 
     recordStatus(http.get(`${BASE_URL}/`, { timeout: "20s" }));
     recordStatus(http.get(`${BASE_URL}/dashboard`, { timeout: "20s" }));
-    recordStatus(http.get(`${BASE_URL}/api/scenes`, {
+    recordStatus(http.get(`${BASE_URL}${API_PREFIX}/scenes`, {
       headers: { Authorization: `Bearer ${token}` },
       timeout: "20s",
     }));
@@ -89,11 +90,11 @@ export default function () {
     }
 
     if (sim?.id) {
-      recordStatus(http.get(`${BASE_URL}/api/simulations/${sim.id}`, {
+      recordStatus(http.get(`${BASE_URL}${API_PREFIX}/simulations/${sim.id}`, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: "20s",
       }));
-      recordStatus(http.get(`${BASE_URL}/api/simulations/${sim.id}/tree/graph`, {
+      recordStatus(http.get(`${BASE_URL}${API_PREFIX}/simulations/${sim.id}/tree/graph`, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: "20s",
       }));

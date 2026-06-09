@@ -31,6 +31,7 @@ export const options = {
 };
 
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8090";
+const API_PREFIX = __ENV.API_PREFIX || "/api";
 
 export default function () {
   const vuId = __VU;

@@ -18,6 +18,7 @@ set -euo pipefail
 
 TARGET=""
 SCENARIO="all"
+API_PREFIX="${FOS_API_PREFIX:-/api}"
 OUT_DIR="tests/load/reports"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
@@ -33,6 +34,9 @@ done
 if [ -z "$TARGET" ]; then
   echo "Error: --target is required"
   echo "Usage: $0 --target http://your-server:8090 [--scenario baseline|concurrent-20|concurrent-50|mixed-providers|all]"
+  echo ""
+  echo "  Set FOS_API_PREFIX to override the API path (default: /api)."
+  echo "  For production deployments use: FOS_API_PREFIX=/css/fos/api $0 --target http://server:8090"
   exit 1
 fi
 
@@ -43,8 +47,8 @@ fi
 
 # Verify server is reachable
 echo "Checking server connectivity at $TARGET ..."
-if ! python3 -c "import urllib.request; urllib.request.urlopen('${TARGET}/api/health/live')" 2>/dev/null; then
-  echo "Error: Could not reach $TARGET/api/health/live"
+if ! python3 -c "import urllib.request; urllib.request.urlopen('${TARGET}${API_PREFIX}/health/live')" 2>/dev/null; then
+  echo "Error: Could not reach $TARGET${API_PREFIX}/health/live"
   echo "Make sure your server is running and the --target URL is correct."
   exit 1
 fi
@@ -66,6 +70,7 @@ run_scenario() {
 
   k6 run \
     --env BASE_URL="$TARGET" \
+    --env API_PREFIX="$API_PREFIX" \
     --out json="$report" \
     --summary-export="${OUT_DIR}/${TIMESTAMP}_${name}_summary.json" \
     "$script" || true

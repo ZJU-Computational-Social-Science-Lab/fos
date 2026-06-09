@@ -10,6 +10,8 @@
 import http from "k6/http";
 import { check } from "k6";
 
+const API_PREFIX = __ENV.API_PREFIX || "/api";
+
 // Single shared test account — all VUs log in as this user.
 // For load testing purposes this is fine; we're stressing the backend,
 // not testing per-user isolation.
@@ -77,7 +79,7 @@ export const SCENARIOS = {
  */
 export function authenticate(baseUrl) {
   const res = http.post(
-    `${baseUrl}/api/auth/login`,
+    `${baseUrl}${API_PREFIX}/auth/login`,
     JSON.stringify({ email: TEST_EMAIL, password: TEST_PASSWORD }),
     { headers: { "Content-Type": "application/json" } }
   );
@@ -108,7 +110,7 @@ export function createSimulation(baseUrl, token, name, scenario = SCENARIOS.pris
     agent_config: scenario.agent_config,
   };
 
-  const res = http.post(`${baseUrl}/api/simulations`, JSON.stringify(payload), {
+  const res = http.post(`${baseUrl}${API_PREFIX}/simulations`, JSON.stringify(payload), {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
@@ -131,7 +133,7 @@ export function createSimulation(baseUrl, token, name, scenario = SCENARIOS.pris
  */
 export function advanceChain(baseUrl, token, simId, turns) {
   const res = http.post(
-    `${baseUrl}/api/simulations/${simId}/tree/advance_chain`,
+    `${baseUrl}${API_PREFIX}/simulations/${simId}/tree/advance_chain`,
     JSON.stringify({ parent: 0, turns: turns }),
     {
       headers: {
@@ -153,7 +155,7 @@ export function advanceChain(baseUrl, token, simId, turns) {
  * Check the health endpoint and return metrics.
  */
 export function checkHealth(baseUrl) {
-  const res = http.get(`${baseUrl}/api/health`);
+  const res = http.get(`${baseUrl}${API_PREFIX}/health`);
   check(res, { "health ok": (r) => r.status === 200 });
   return res.json();
 }
