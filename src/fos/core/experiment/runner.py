@@ -929,6 +929,9 @@ class ExperimentRunner:
             neighbors = [b for a, b in edges if a == agent.name] + [a for a, b in edges if b == agent.name]
             if neighbors:
                 neighbor_context = f"Your social network neighbors: {', '.join(neighbors)}."
+        if self.scene and hasattr(self.scene, "include_social_network_section"):
+            if not self.scene.include_social_network_section():
+                neighbor_context = ""
 
         # Feedback buffer injection: include any environment feedback
         # from the previous turn in the agent's context so they see

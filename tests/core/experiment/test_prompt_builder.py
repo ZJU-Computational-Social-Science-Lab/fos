@@ -273,6 +273,27 @@ def test_build_reprompt_plain_text_mode():
     assert "Your response:" in reprompt
 
 
+def test_build_reprompt_plain_text_mode_keeps_social_network_context():
+    """Plain-text follow-ups should still show the visible neighbour section."""
+    agent = ExperimentAgent(
+        name="Frank",
+        properties={"age_group": "adult", "profession": "manager"},
+        llm_config=None,
+    )
+
+    reprompt = build_reprompt(
+        agent=agent,
+        game_config=PRISONERS_DILEMMA,
+        context_summary="Round history",
+        chosen_action="speak",
+        parameter_schema={"message": {"description": "what you say aloud"}},
+        mode="plain_text",
+        neighbor_context="Your social network neighbors: Bob.",
+    )
+
+    assert "Your social network neighbors: Bob." in reprompt
+
+
 def test_build_agent_description_string_properties():
     """String properties are formatted correctly."""
     props = {

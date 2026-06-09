@@ -140,6 +140,20 @@ class TestHandleCouncilSpeak:
         assert recorded["agent_name"] == "Alice"
         assert recorded["round_num"] == 3
 
+    def test_speak_records_only_neighbour_observers(self):
+        state = _make_state(["Alice", "Bob", "Cara"])
+        recorded = {}
+        rcm = type("RCM", (), {
+            "record_action": lambda self, **kw: recorded.update(kw),
+        })()
+        scene = _make_scene(
+            round_context_manager=rcm,
+            round_num=3,
+            config=_make_scene(social_network={"edges": [("Alice", "Bob")]}),
+        )
+        handle_council_speak({"message": "Hi"}, "Alice", state, scene)
+        assert sorted(recorded["observed_by"]) == ["Alice", "Bob"]
+
 
 # ── handle_start_voting ──────────────────────────────────────────────────
 
@@ -231,6 +245,21 @@ class TestHandleVote:
         state.extensions["voting_started"] = True
         handle_abstain({}, "Alice", state, _make_scene())
         assert state.extensions["votes"]["Alice"] == "abstain"
+
+    def test_vote_records_only_neighbour_observers(self):
+        state = _make_state(["Alice", "Bob", "Cara"])
+        state.extensions["voting_started"] = True
+        recorded = {}
+        rcm = type("RCM", (), {
+            "record_action": lambda self, **kw: recorded.update(kw),
+        })()
+        scene = _make_scene(
+            round_context_manager=rcm,
+            round_num=2,
+            config=_make_scene(social_network={"edges": [("Alice", "Bob")]}),
+        )
+        handle_vote({"choice": "yes"}, "Alice", state, scene)
+        assert sorted(recorded["observed_by"]) == ["Alice", "Bob"]
 
 
 # ── handle_conclude ───────────────────────────────────────────────────────
