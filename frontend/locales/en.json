@@ -3756,7 +3756,9 @@
     "reportNoSummary": "Not generated yet.",
     "reportFinalValues": "Final values",
     "reportAgent": "Agent",
-    "reportFinalValue": "Final value"
+    "reportFinalValue": "Final value",
+    "branch": "Branch",
+    "selectBranch": "Select branch"
   },
   "topologyExplorer": {
     "activeBranch": "Active Branch",

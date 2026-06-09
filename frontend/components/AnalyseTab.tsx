@@ -3,6 +3,7 @@
  *
  * AnalyseTab shows overview stats and also gives compare diff its own
  * home inside the analysis area.
+ * The component chooses which analysis sub-view is visible.
  */
 
 import React from "react";
@@ -35,6 +36,8 @@ export const AnalyseTab: React.FC = () => {
     reportFinalValues: t("results.reportFinalValues"),
     reportAgent: t("results.reportAgent"),
     reportFinalValue: t("results.reportFinalValue"),
+    branch: t("results.branch"),
+    selectBranch: t("results.selectBranch"),
   };
 
   return (

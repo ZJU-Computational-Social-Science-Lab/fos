@@ -3,11 +3,18 @@
  *
  * ResultsView lets people generate an AI summary, pick metrics, and inspect
  * charts for the currently selected branch.
+ * downloadFile saves report text onto the user's computer.
+ * getBranchDisplayId gets the best short label for a branch.
+ * sortBranchNodes orders branches from root to deeper child branches.
+ * formatBranchOption turns a branch into readable dropdown text.
+ * getSelectedBranchValue keeps the dropdown valid while branch data loads.
+ * reportBranchSelectionError logs a failed branch switch.
  */
 
 import React, { useState } from 'react';
 import { useSimulationStore } from '@/store';
 import { useAuthStore } from '@/store/auth';
+import type { SimNode } from '@/types';
 import { listMetrics, computeMetricTrajectories, computeMetricAggregate, computeEventCountByAgent, hydrateAgentHistoryFromLogs, filterLogsToSelectedBranch } from '@/utils/resultsComputations';
 import { generateMarkdownReport } from '@/utils/markdownReport';
 import { AggregateTrajectoryChart } from './AggregateTrajectoryChart';
@@ -21,6 +28,7 @@ export type ResultsLabels = {
   exportCsv: string; exportReport: string; noActivity: string;
   reportSummary: string; reportNoSummary: string; reportFinalValues: string;
   reportAgent: string; reportFinalValue: string;
+  branch: string; selectBranch: string;
   perAgent: string; aggregate: string; mean: string; range: string;
 };
 
@@ -38,28 +46,62 @@ function downloadFile(filename: string, content: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
-export function ResultsView({ labels, language }: Props) {
-  const agents = useSimulationStore((s: any) => s.agents);
-  const logs = useSimulationStore((s: any) => s.logs);
-  const nodes = useSimulationStore((s: any) => s.nodes);
-  const selectedNodeId = useSimulationStore((s: any) => s.selectedNodeId);
-  const currentSimulation = useSimulationStore((s: any) => s.currentSimulation);
-  const engineConfig = useSimulationStore((s: any) => s.engineConfig);
-  const resultsSummary = useSimulationStore((s: any) => s.resultsSummary);
-  const isGeneratingResultsSummary = useSimulationStore((s: any) => s.isGeneratingResultsSummary);
-  const resultsSummaryError = useSimulationStore((s: any) => s.resultsSummaryError);
-  const generateResultsSummary = useSimulationStore((s: any) => s.generateResultsSummary);
+function getBranchDisplayId(node: SimNode): string {
+  return node.display_id || node.id;
+}
 
-  const [selectedMetric, setSelectedMetric] = useState<string>('');
+function sortBranchNodes(nodes: SimNode[]): SimNode[] {
+  return [...nodes].sort(
+    (left, right) =>
+      left.depth - right.depth || getBranchDisplayId(left).localeCompare(getBranchDisplayId(right)),
+  );
+}
 
-  if (!currentSimulation || !Array.isArray(logs)) {
-    return <div>{labels.noData}</div>;
+function formatBranchOption(node: SimNode): string {
+  const baseLabel = `${getBranchDisplayId(node)} - ${node.name || node.id}`;
+  if (!node.worldTime) {
+    return baseLabel;
   }
 
+  return `${baseLabel} (${node.worldTime})`;
+}
+
+function getSelectedBranchValue(nodes: SimNode[], selectedNodeId: string | null): string {
+  if (!selectedNodeId) {
+    return '';
+  }
+
+  return nodes.some((node) => node.id === selectedNodeId) ? selectedNodeId : '';
+}
+
+function reportBranchSelectionError(error: unknown): void {
+  console.error('Failed to select simulation branch', error);
+}
+
+export function ResultsView({ labels, language }: Props) {
+  const agents = useSimulationStore((state) => state.agents);
+  const logs = useSimulationStore((state) => state.logs);
+  const nodes = useSimulationStore((state) => state.nodes);
+  const selectedNodeId = useSimulationStore((state) => state.selectedNodeId);
+  const selectNode = useSimulationStore((state) => state.selectNode);
+  const currentSimulation = useSimulationStore((state) => state.currentSimulation);
+  const engineConfig = useSimulationStore((state) => state.engineConfig);
+  const resultsSummary = useSimulationStore((state) => state.resultsSummary);
+  const isGeneratingResultsSummary = useSimulationStore((state) => state.isGeneratingResultsSummary);
+  const resultsSummaryError = useSimulationStore((state) => state.resultsSummaryError);
+  const generateResultsSummary = useSimulationStore((state) => state.generateResultsSummary);
+
+  const [selectedMetric, setSelectedMetric] = useState<string>('');
   const AGGREGATE_THRESHOLD = 12;
   const [viewMode, setViewMode] = useState<'per-agent' | 'aggregate'>(() =>
     agents.length > AGGREGATE_THRESHOLD ? 'aggregate' : 'per-agent'
   );
+  const sortedNodes = React.useMemo(() => sortBranchNodes(nodes), [nodes]);
+  const selectedBranchValue = getSelectedBranchValue(sortedNodes, selectedNodeId);
+
+  if (!currentSimulation || !Array.isArray(logs)) {
+    return <div>{labels.noData}</div>;
+  }
 
   const branchLogs = filterLogsToSelectedBranch(logs, nodes, selectedNodeId);
   const hydratedAgents = hydrateAgentHistoryFromLogs(branchLogs, agents);
@@ -74,7 +116,7 @@ export function ResultsView({ labels, language }: Props) {
 
   const onGenerate = () => { generateResultsSummary(title, language); };
   const onExportCsv = async () => {
-    const token = (engineConfig as any).token ?? useAuthStore.getState().accessToken ?? undefined;
+    const token = engineConfig.token ?? useAuthStore.getState().accessToken ?? undefined;
     const baseUrl = engineConfig.endpoint;
 
     const response = await fetch(
@@ -104,6 +146,13 @@ export function ResultsView({ labels, language }: Props) {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
+  const onBranchChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    if (!event.target.value) {
+      return;
+    }
+
+    void Promise.resolve(selectNode(event.target.value)).catch(reportBranchSelectionError);
+  };
   const onExportMarkdown = () => {
     const md = generateMarkdownReport(
       { title, metrics: metrics.map((m) => ({ name: m, series: computeMetricTrajectories(hydratedAgents, m) })), summary: resultsSummary },
@@ -112,7 +161,7 @@ export function ResultsView({ labels, language }: Props) {
     downloadFile(title + '_report.md', md, 'text/markdown');
   };
 
-  const nameById = new Map((hydratedAgents as any[]).map((a) => [a.id, a.name]));
+  const nameById = new Map(hydratedAgents.map((agent) => [agent.id, agent.name]));
   const activityBars = computeEventCountByAgent(branchLogs).map((c) => ({
     label: nameById.has(c.agentId) ? (nameById.get(c.agentId) as string) : c.agentId,
     value: c.count,
@@ -129,6 +178,41 @@ export function ResultsView({ labels, language }: Props) {
               style={{ color: 'var(--ss-workspace-muted)', letterSpacing: '0.05em' }}>
               AI Analysis
             </div>
+            {sortedNodes.length > 0 && (
+              <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label
+                  htmlFor="results-branch-select"
+                  style={{ fontSize: '12px', fontWeight: 600, color: 'var(--ss-workspace-muted)', whiteSpace: 'nowrap' }}
+                >
+                  {labels.branch}
+                </label>
+                <select
+                  id="results-branch-select"
+                  aria-label={labels.branch}
+                  value={selectedBranchValue}
+                  onChange={onBranchChange}
+                  style={{
+                    fontSize: '13px',
+                    borderRadius: '4px',
+                    border: '1px solid var(--ss-workspace-border)',
+                    background: 'var(--ss-workspace-surface)',
+                    color: 'var(--ss-workspace-text)',
+                    padding: '2px 6px',
+                    flex: 1,
+                    maxWidth: '320px',
+                  }}
+                >
+                  {selectedBranchValue === '' && (
+                    <option value="">{labels.selectBranch}</option>
+                  )}
+                  {sortedNodes.map((node) => (
+                    <option key={node.id} value={node.id}>
+                      {formatBranchOption(node)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <AiSummarySection
               summary={resultsSummary}
               isGenerating={isGeneratingResultsSummary}
