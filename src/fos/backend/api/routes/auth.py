@@ -68,7 +68,9 @@ async def register(data: RegisterRequest) -> UserPublic:
 @post("/login")
 async def login(data: LoginRequest) -> TokenPair:
     async with get_session() as session:
-        result = await session.execute(select(User).where(User.email == data.email))
+        result = await session.execute(
+            select(User).where(User.email == data.email).with_for_update()
+        )
         user = result.scalar_one_or_none()
         if user is None or not verify_password(data.password, user.hashed_password):
             raise HTTPException(status_code=401, detail=T("api.errors.invalid_credentials"))
@@ -80,7 +82,6 @@ async def login(data: LoginRequest) -> TokenPair:
         access_token, access_exp = create_access_token(str(user.id))
         refresh_token, refresh_exp = create_refresh_token(str(user.id))
 
-        # Remove old refresh tokens for this user to prevent accumulation
         await session.execute(
             delete(RefreshToken).where(RefreshToken.user_id == user.id)
         )
