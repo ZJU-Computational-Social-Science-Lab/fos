@@ -3790,6 +3790,8 @@
     "reportNoSummary": "尚未生成",
     "reportFinalValues": "最终数值",
     "reportAgent": "智能体",
-    "reportFinalValue": "最终值"
+    "reportFinalValue": "最终值",
+    "branch": "分支",
+    "selectBranch": "选择分支"
   }
 }
