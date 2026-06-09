@@ -189,6 +189,7 @@ def _build_generated_council_agents(llm_client: LLMClient) -> list[dict[str, obj
 
 def _build_council_scene(config_agents: list[dict[str, object]]) -> CouncilExperimentScene:
     """Build a small fixed council scene with one hidden non-neighbour path."""
+    agent_names = [str(agent["name"]) for agent in config_agents]
     return CouncilExperimentScene(
         ExperimentConfig(
             scenario_id="council_chamber",
@@ -200,7 +201,7 @@ def _build_council_scene(config_agents: list[dict[str, object]]) -> CouncilExper
                 "voting_threshold": 0.5,
             },
             description="Council pilot test",
-            social_network={"edges": [["Alice", "Bob"], ["Bob", "Cara"]]},
+            social_network={"edges": [[agent_names[0], agent_names[1]], [agent_names[1], agent_names[2]]]},
             locale="en",
         )
     )

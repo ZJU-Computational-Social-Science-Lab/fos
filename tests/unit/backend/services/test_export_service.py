@@ -119,6 +119,39 @@ def test_export_events_to_csv():
     assert "tokens_per_round" in csv_content
 
 
+def test_export_events_to_csv_does_not_add_blank_rows() -> None:
+    """Test CSV export keeps one physical line per row on Windows."""
+    from fos.backend.services.export_service import export_events
+
+    events = [
+        {
+            "sequence": 1,
+            "tree_node_id": 1,
+            "event_type": "AGENT_ACTION",
+            "payload": {
+                "action": {"name": "allocate", "parameters": {"amount": 12}},
+                "agent": "Agent 1",
+            },
+            "created_at": datetime(2026, 3, 30, 14, 30, 0),
+        }
+    ]
+
+    csv_content = export_events(events, {"tokens_per_round": 10}, "csv")
+
+    assert "\r\r\n" not in csv_content
+    assert csv_content.count("\n") == 2
+
+
+def test_export_events_to_csv_header_only_does_not_add_blank_rows() -> None:
+    """Test header-only CSV export does not insert spacer rows."""
+    from fos.backend.services.export_service import export_events
+
+    csv_content = export_events([], {"tokens_per_round": 10}, "csv")
+
+    assert "\r\r\n" not in csv_content
+    assert csv_content.count("\n") == 1
+
+
 def test_export_events_to_json():
     """Test exporting events to JSON format."""
     import json
