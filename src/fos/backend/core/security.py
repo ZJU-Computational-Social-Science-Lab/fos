@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -24,7 +25,7 @@ def create_access_token(subject: str, expires_delta: timedelta | None = None) ->
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=settings.access_token_exp_minutes)
     )
-    payload = {"sub": subject, "exp": expire}
+    payload = {"sub": subject, "exp": expire, "jti": str(uuid.uuid4())}
     token = jwt.encode(
         payload,
         settings.jwt_signing_key.get_secret_value(),
@@ -37,7 +38,7 @@ def create_refresh_token(subject: str) -> tuple[str, datetime]:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=settings.refresh_token_exp_minutes
     )
-    payload = {"sub": subject, "exp": expire, "type": "refresh"}
+    payload = {"sub": subject, "exp": expire, "type": "refresh", "jti": str(uuid.uuid4())}
     token = jwt.encode(
         payload,
         settings.jwt_signing_key.get_secret_value(),
