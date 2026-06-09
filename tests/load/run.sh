@@ -52,7 +52,7 @@ if ! python3 -c "import urllib.request; urllib.request.urlopen('${TARGET}${API_P
   echo "Make sure your server is running and the --target URL is correct."
   exit 1
 fi
-echo "Server reachable. Test users will be auto-registered by the k6 helpers on first run."
+echo "Server reachable. Make sure loaduser1 through loaduser50 already exist before running concurrent tests."
 echo ""
 
 mkdir -p "$OUT_DIR"

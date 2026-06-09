@@ -40,6 +40,12 @@ if settings.database_url.startswith("sqlite"):
     if settings.db_pool_timeout is None:
         engine_kwargs["pool_timeout"] = 60
 else:
+    if settings.db_pool_size is None:
+        engine_kwargs["pool_size"] = 20
+    if settings.db_max_overflow is None:
+        engine_kwargs["max_overflow"] = 20
+    if settings.db_pool_timeout is None:
+        engine_kwargs["pool_timeout"] = 60
     if settings.db_pool_pre_ping is None:
         engine_kwargs["pool_pre_ping"] = True
     if settings.db_pool_recycle is None:

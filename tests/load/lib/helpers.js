@@ -9,14 +9,14 @@
 
 import http from "k6/http";
 import { check } from "k6";
+import { buildLoadUserForVu, createVuTokenCache } from "./loadUsers.js";
 
 const API_PREFIX = __ENV.API_PREFIX || "/api";
 
 // Single shared test account — all VUs log in as this user.
 // For load testing purposes this is fine; we're stressing the backend,
 // not testing per-user isolation.
-const TEST_EMAIL = "test@test.com.cn";
-const TEST_PASSWORD = "test";
+const tokenCache = createVuTokenCache(loginForVu);
 
 /**
  * Pre-built experiment scenario configs for load testing.
@@ -78,15 +78,28 @@ export const SCENARIOS = {
  * Uses the shared test account — no registration needed.
  */
 export function authenticate(baseUrl) {
+  const vuId = Number(globalThis.__VU || 1);
+  return tokenCache.getTokenForVu(baseUrl, vuId);
+}
+
+/**
+ * Log in one VU with its matching load-test account.
+ *
+ * @param {string} baseUrl - Target server URL
+ * @param {number} vuId - The k6 virtual user number
+ * @returns {string|null}
+ */
+function loginForVu(baseUrl, vuId) {
+  const user = buildLoadUserForVu(vuId);
   const res = http.post(
     `${baseUrl}${API_PREFIX}/auth/login`,
-    JSON.stringify({ email: TEST_EMAIL, password: TEST_PASSWORD }),
+    JSON.stringify(user),
     { headers: { "Content-Type": "application/json" } }
   );
 
   const ok = check(res, { "login ok": (r) => r.status === 200 || r.status === 201 });
   if (!ok) {
-    console.error(`Login failed: ${res.status} ${res.body}`);
+    console.error(`Login failed for ${user.email}: ${res.status} ${res.body}`);
     return null;
   }
 
