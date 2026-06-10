@@ -6,6 +6,7 @@ from pathlib import Path
 from litestar import Litestar, Router, get
 from litestar.config.cors import CORSConfig
 from litestar.config.compression import CompressionConfig
+from litestar.config.response_cache import CacheControlHeader
 from litestar.connection import Request
 from litestar.enums import MediaType
 from litestar.exceptions import HTTPException
@@ -167,13 +168,13 @@ def create_app() -> Litestar:
             path="/assets",
             directories=[str(dist_dir / "assets")],
             name="frontend-assets",
-            cache_control="public, max-age=31536000, immutable",
+            cache_control=CacheControlHeader(public=True, max_age=31536000, immutable=True),
         )
         assets_router_css = create_static_files_router(
             path="/css/fos/assets",
             directories=[str(dist_dir / "assets")],
             name="frontend-assets-css-fos",
-            cache_control="public, max-age=31536000, immutable",
+            cache_control=CacheControlHeader(public=True, max_age=31536000, immutable=True),
         )
 
         index_path = str(index_file)
