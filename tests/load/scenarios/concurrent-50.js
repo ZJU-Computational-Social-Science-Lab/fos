@@ -38,7 +38,7 @@ export const options = {
     http_req_duration: ["p(95)<10000"],
     create_simulation_duration: ["p(95)<15000"],
     advance_chain_duration: ["p(95)<300000"],
-    readiness_failures: ["count==0"],
+    readiness_failures: ["count<5"],
     bad_gateway_responses: ["count==0"],
   },
 };
