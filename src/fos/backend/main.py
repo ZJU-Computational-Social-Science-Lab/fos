@@ -6,8 +6,8 @@ from pathlib import Path
 from litestar import Litestar, Router, get
 from litestar.config.cors import CORSConfig
 from litestar.config.compression import CompressionConfig
-from litestar.config.response_cache import CacheControlHeader
 from litestar.connection import Request
+from litestar.datastructures import CacheControlHeader
 from litestar.enums import MediaType
 from litestar.exceptions import HTTPException
 from sqlalchemy.exc import NoResultFound
