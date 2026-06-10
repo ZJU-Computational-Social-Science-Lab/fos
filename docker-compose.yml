@@ -119,9 +119,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: "${FOS_APP_MEMORY_LIMIT:-8G}"
+          memory: "${FOS_APP_MEMORY_LIMIT:-16G}"
         reservations:
-          memory: 4G
+          memory: 8G
 
   ollama:
     image: ollama/ollama:latest
