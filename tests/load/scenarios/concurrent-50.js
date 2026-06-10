@@ -75,8 +75,6 @@ export default function () {
       return;
     }
 
-    recordStatus(http.get(`${BASE_URL}/`, { timeout: "20s" }));
-    recordStatus(http.get(`${BASE_URL}/dashboard`, { timeout: "20s" }));
     recordStatus(http.get(`${BASE_URL}${API_PREFIX}/scenes`, {
       headers: { Authorization: `Bearer ${token}` },
       timeout: "20s",
