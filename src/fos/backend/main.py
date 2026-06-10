@@ -184,7 +184,6 @@ def create_app() -> Litestar:
                 index_path,
                 content_disposition_type="inline",
                 media_type="text/html",
-                headers={"Cache-Control": "no-cache"},
             )
 
         @get("/{path:path}")
@@ -227,7 +226,7 @@ def create_app() -> Litestar:
         "cors_config": cors_config,
         "debug": settings.debug,
         "openapi_config": OpenAPIConfig(title=settings.app_name, version="1.0.0"),
-        "compression_config": CompressionConfig(backend="gzip", gzip_level=6),
+        "compression_config": CompressionConfig(backend="gzip", gzip_compress_level=6),
         "middleware": [LocaleMiddleware],
         "exception_handlers": {Exception: internal_error_handler},
     }
