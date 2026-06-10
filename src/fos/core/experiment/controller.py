@@ -30,6 +30,25 @@ from fos.core.llm.client import LLMClient
 logger = logging.getLogger(__name__)
 
 
+def _coerce_param(value: Any) -> Any:
+    if isinstance(value, (int, float, bool, str)):
+        return value
+    if isinstance(value, dict):
+        for key in ("value", "amount", "number", "num"):
+            if key in value:
+                inner = value[key]
+                if isinstance(inner, (int, float)):
+                    return inner
+        if len(value) == 1:
+            inner = next(iter(value.values()))
+            if isinstance(inner, (int, float, bool, str)):
+                return inner
+        return str(value)
+    if isinstance(value, list) and len(value) == 1:
+        return _coerce_param(value[0])
+    return value
+
+
 def _repair_single_choose_action(
     result: dict[str, Any],
     game_config: GameConfig,
@@ -395,7 +414,7 @@ class ExperimentController:
                     # JSON response: parse and extract expected parameters
                     cleaned = extract_json(followup_response)
                     parsed_followup = json.loads(cleaned)
-                    parameters = {k: parsed_followup.get(k) for k in param_schema.keys() if k in parsed_followup}
+                    parameters = {k: _coerce_param(parsed_followup.get(k)) for k in param_schema.keys() if k in parsed_followup}
                     parameter_source = "followup_json"
 
                 debug_log.append(f"  final_parameter_source: {parameter_source}\n")

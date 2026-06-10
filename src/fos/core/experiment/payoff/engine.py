@@ -271,6 +271,10 @@ class PayoffEngine:
             if not action.skipped:
                 if action.action_name in ("contribute", "allocate"):
                     attempted_amount = action.parameters.get("amount", 0)
+                    if not isinstance(attempted_amount, (int, float)):
+                        raise TypeError(
+                            f"Expected numeric 'amount' parameter, got {type(attempted_amount).__name__}: {attempted_amount!r}"
+                        )
 
                     # Validate contribution against agent's token balance
                     if state is not None:
