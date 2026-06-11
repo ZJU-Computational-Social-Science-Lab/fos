@@ -12,6 +12,7 @@ import {
 } from "../services/simulations";
 import { TitleCard } from "../components/TitleCard";
 import { useSimulationStore } from "../store";
+import "../styles/routes/saved.css";
 
 type SavedSimulation = {
   id: string;

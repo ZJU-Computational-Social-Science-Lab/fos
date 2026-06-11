@@ -67,7 +67,7 @@ vi.mock("../../components/ExperimentBuilderModal", () => ({
 }));
 
 vi.mock("../../components/SyncModal", () => ({
-  default: () => null,
+  SyncModal: () => null,
 }));
 
 vi.mock("../../components/HelpModal", () => ({
@@ -140,7 +140,7 @@ describe("Simulation page navigation", () => {
     });
   });
 
-  it("shows the workspace rail button and opens the workspace first", () => {
+  it("shows the workspace rail button and opens the workspace first", async () => {
     renderPage();
 
     expect(screen.getByTitle("Workspace")).toBeInTheDocument();
@@ -148,24 +148,24 @@ describe("Simulation page navigation", () => {
     expect(screen.getByTitle("Intervention")).toBeInTheDocument();
     expect(screen.getByTitle("Analyse")).toBeInTheDocument();
     expect(screen.getByText("Sim Tree Panel")).toBeInTheDocument();
-    expect(screen.getByText("Log Viewer Panel")).toBeInTheDocument();
+    expect(await screen.findByText("Log Viewer Panel")).toBeInTheDocument();
   });
 
-  it("shows the intervention area when the intervention rail button is pressed", () => {
+  it("shows the intervention area when the intervention rail button is pressed", async () => {
     renderPage();
 
     fireEvent.click(screen.getByTitle("Intervention"));
 
-    expect(screen.getByText("Intervention Panel")).toBeInTheDocument();
+    expect(await screen.findByText("Intervention Panel")).toBeInTheDocument();
     expect(screen.queryByText("Sim Tree Panel")).not.toBeInTheDocument();
   });
 
-  it("shows the analyse area when the analyse rail button is pressed", () => {
+  it("shows the analyse area when the analyse rail button is pressed", async () => {
     renderPage();
 
     fireEvent.click(screen.getByTitle("Analyse"));
 
-    expect(screen.getByText("Analyse Panel")).toBeInTheDocument();
+    expect(await screen.findByText("Analyse Panel")).toBeInTheDocument();
     expect(screen.queryByText("Sim Tree Panel")).not.toBeInTheDocument();
   });
 });

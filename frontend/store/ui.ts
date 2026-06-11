@@ -185,9 +185,6 @@ export const createUISlice: StateCreator<
       set((prev: any) => ({ syncLogs: [...prev.syncLogs, `Agents: ${agents.length}`] }));
       set((prev: any) => ({ syncLogs: [...prev.syncLogs, `Nodes: ${nodes.length}`] }));
 
-      // Import API service
-      const { apiClient } = await import('../services/client');
-
       // Sync simulation state to backend
       const syncPayload = {
         simulation_id: currentSim.id,
@@ -207,7 +204,8 @@ export const createUISlice: StateCreator<
 
       set((prev: any) => ({ syncLogs: [...prev.syncLogs, 'Sending data to backend...'] }));
 
-      await apiClient.post(`simulations/${currentSim.id}/sync`, syncPayload);
+      const { postRuntimeJson } = await import('../services/runtimeApi');
+      await postRuntimeJson(`simulations/${currentSim.id}/sync`, syncPayload);
 
       set((prev: any) => ({ syncLogs: [...prev.syncLogs, 'Sync completed successfully!'], isSyncing: false }));
     } catch (error: any) {
@@ -230,8 +228,8 @@ export const createUISlice: StateCreator<
 
     try {
       // Call backend guide API
-      const { apiClient } = await import('../services/client');
-      const response = await apiClient.post<{ message: string }>('llm/guide', {
+      const { postRuntimeJson } = await import('../services/runtimeApi');
+      const response = await postRuntimeJson<{ message: string }>('llm/guide', {
         history: get().guideMessages.map((m) => ({
           role: m.role,
           content: m.content
@@ -241,7 +239,7 @@ export const createUISlice: StateCreator<
       const assistantMessage: GuideMessage = {
         id: `guide-${Date.now()}`,
         role: 'assistant',
-        content: response.data.message || ''
+        content: response.message || ''
       };
       set((state) => ({
         guideMessages: [...state.guideMessages, assistantMessage],

@@ -173,14 +173,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // Edge case: token expires in less than 5 minutes - refresh immediately via reactive mechanism
     if (timeUntilRefresh <= 0) {
-      console.log("Token expires soon - refreshing immediately");
-      // Import API_BASE_URL dynamically to avoid circular dependency
-      import("../services/client").then(({ API_BASE_URL }) => {
-        fetch(`${API_BASE_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${state.accessToken}` }
-        }).catch(() => {
+      import("../services/authRuntime").then(({ pingAuthenticatedSession }) => {
+        pingAuthenticatedSession(state.accessToken!).catch(() => {
           // 401 will trigger reactive refresh in client.ts
         });
+      }).catch(() => {
+        // 401 will trigger reactive refresh in client.ts
       });
       return;
     }
@@ -191,7 +189,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Re-check conditions at execution time
       if (!currentState.webSocketConnected) {
-        console.log("WebSocket no longer connected - skipping refresh");
         return;
       }
 
@@ -201,21 +198,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       try {
-        const { API_BASE_URL } = await import("../services/client");
-        const response = await fetch(`${API_BASE_URL}/auth/token/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: currentState.refreshToken }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Token refresh failed: ${response.status}`);
-        }
-
-        const data = await response.json();
+        const { refreshSessionTokens } = await import("../services/authRuntime");
+        const data = await refreshSessionTokens(currentState.refreshToken);
         currentState.updateTokens(data.access_token, data.refresh_token);
-
-        console.log("Proactive token refresh successful");
         currentState.setupProactiveRefresh();
       } catch (error) {
         console.error("Proactive token refresh failed:", error);
@@ -224,7 +209,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }, timeUntilRefresh);
 
     set({ refreshTimerId: timerId });
-    console.log(`Proactive refresh scheduled in ${Math.round(timeUntilRefresh / 1000 / 60)} minutes`);
   },
 
   clearProactiveRefresh: () => {

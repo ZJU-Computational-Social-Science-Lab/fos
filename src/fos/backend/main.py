@@ -7,12 +7,11 @@ from litestar import Litestar, Router, get
 from litestar.config.cors import CORSConfig
 from litestar.config.compression import CompressionConfig
 from litestar.connection import Request
-from litestar.datastructures import CacheControlHeader
 from litestar.enums import MediaType
 from litestar.exceptions import HTTPException
 from sqlalchemy.exc import NoResultFound
 from litestar.openapi import OpenAPIConfig
-from litestar.response import File, Response
+from litestar.response import Response
 from litestar.static_files import create_static_files_router
 
 from .api.routes import router as api_router
@@ -21,6 +20,7 @@ from .core.database import engine
 from .db.base import Base
 from .middleware import LocaleMiddleware
 from .api.routes.health import set_app_start_time
+from .static_assets import build_static_file_response, resolve_safe_dist_file
 
 try:
     from .services.polling_service import PollingService
@@ -164,41 +164,63 @@ def create_app() -> Litestar:
     index_file = dist_dir / "index.html"
 
     if dist_dir.is_dir() and index_file.is_file():
-        assets_router = create_static_files_router(
-            path="/assets",
-            directories=[str(dist_dir / "assets")],
-            name="frontend-assets",
-            cache_control=CacheControlHeader(public=True, max_age=31536000, immutable=True),
-        )
-        assets_router_css = create_static_files_router(
-            path="/css/fos/assets",
-            directories=[str(dist_dir / "assets")],
-            name="frontend-assets-css-fos",
-            cache_control=CacheControlHeader(public=True, max_age=31536000, immutable=True),
-        )
+        immutable_cache_control = "public, max-age=31536000, immutable"
+        html_cache_control = "no-cache"
+        static_cache_control = "public, max-age=3600"
 
-        index_path = str(index_file)
+        def _serve_dist_file(request: Request, relative_path: str, cache_control: str) -> Response[bytes] | None:
+            resolved_file = resolve_safe_dist_file(dist_dir, relative_path)
+            if resolved_file is None:
+                return None
+            return build_static_file_response(request, resolved_file, cache_control)
 
-        def _spa_response() -> File:
-            return File(
-                index_path,
-                content_disposition_type="inline",
-                media_type="text/html",
-            )
+        def _spa_response(request: Request) -> Response[bytes]:
+            return build_static_file_response(request, index_file, html_cache_control)
+
+        @get("/assets/{file_path:path}")
+        async def assets(request: Request, file_path: str) -> Response[bytes]:
+            response = _serve_dist_file(request, f"assets/{file_path}", immutable_cache_control)
+            if response is None:
+                return Response(content=b"", status_code=404)
+            return response
+
+        @get("/css/fos/assets/{file_path:path}")
+        async def assets_css(request: Request, file_path: str) -> Response[bytes]:
+            response = _serve_dist_file(request, f"assets/{file_path}", immutable_cache_control)
+            if response is None:
+                return Response(content=b"", status_code=404)
+            return response
 
         @get("/{path:path}")
-        async def spa_fallback(path: str = "") -> File:
-            return _spa_response()
+        async def spa_fallback(request: Request, path: str = "") -> Response[bytes]:
+            if path:
+                response = _serve_dist_file(request, path, static_cache_control)
+                if response is not None:
+                    return response
+            return _spa_response(request)
 
         @get("/")
-        async def home_page() -> File:
-            return _spa_response()
+        async def home_page(request: Request) -> Response[bytes]:
+            return _spa_response(request)
 
-        spa_router = Router(path="/", route_handlers=[home_page, spa_fallback])
-        # Also serve the SPA under legacy path `/css/fos` so links/bookmarks
-        # like `/css/fos/login` continue to work.
-        spa_router_css = Router(path="/css/fos", route_handlers=[home_page, spa_fallback])
-        route_handlers.extend([assets_router, assets_router_css, spa_router, spa_router_css])
+        @get("/css/fos/{path:path}")
+        async def spa_fallback_css(request: Request, path: str = "") -> Response[bytes]:
+            if path:
+                response = _serve_dist_file(request, path, static_cache_control)
+                if response is not None:
+                    return response
+            return _spa_response(request)
+
+        @get("/css/fos")
+        async def home_page_css(request: Request) -> Response[bytes]:
+            return _spa_response(request)
+
+        spa_router = Router(path="/", route_handlers=[home_page, spa_fallback, assets])
+        spa_router_css = Router(
+            path="/",
+            route_handlers=[home_page_css, spa_fallback_css, assets_css],
+        )
+        route_handlers.extend([spa_router, spa_router_css])
 
     base_router = Router(path=settings.backend_root_path, route_handlers=route_handlers)
 

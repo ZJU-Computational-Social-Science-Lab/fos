@@ -3,7 +3,7 @@
  * LandingPage shows the welcome areas, the preview media, the capability cards, the example scenes, and the final action choices.
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Archive,
   ArrowRight,
@@ -21,6 +21,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useThemeStore } from "../store/theme";
 import { getBilibiliEmbedUrl, isBilibiliConfigured } from "../config/video";
+import "../styles/routes/landing.css";
 
 import sceneBehaviorImage from "../assets/landing/scene-behavior.png";
 import sceneInstitutionImage from "../assets/landing/scene-institution.png";
@@ -33,6 +34,9 @@ import networkTopologyImage from "../assets/tutorial/09-network-topology.png";
 export function LandingPage() {
   const { t } = useTranslation();
   const mode = useThemeStore((state) => state.mode);
+  const hasExternalPreview = isBilibiliConfigured();
+  const previewStageRef = useRef<HTMLDivElement | null>(null);
+  const [isPreviewActive, setIsPreviewActive] = useState(!hasExternalPreview);
   const themeClass = mode === "dark" ? "is-dark" : "is-light";
   const heroSubtitle = String(t("landing.hero.sub"));
   const heroSubtitleLines = heroSubtitle
@@ -68,6 +72,31 @@ export function LandingPage() {
 
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (!hasExternalPreview || isPreviewActive || !previewStageRef.current) {
+      return;
+    }
+
+    const previewObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsPreviewActive(true);
+            previewObserver.disconnect();
+          }
+        });
+      },
+      {
+        threshold: 0.35,
+        rootMargin: "160px 0px",
+      }
+    );
+
+    previewObserver.observe(previewStageRef.current);
+
+    return () => previewObserver.disconnect();
+  }, [hasExternalPreview, isPreviewActive]);
 
   const heroTags = [
     t("landing.hero.tag1"),
@@ -274,8 +303,11 @@ export function LandingPage() {
           </div>
 
           <div className="ss-landing__preview-grid">
-            <div className="ss-landing__preview-stage ss-landing__preview-stage--video">
-              {isBilibiliConfigured() ? (
+            <div
+              ref={previewStageRef}
+              className="ss-landing__preview-stage ss-landing__preview-stage--video"
+            >
+              {hasExternalPreview && isPreviewActive ? (
                 <iframe
                   className="ss-landing__preview-video"
                   src={getBilibiliEmbedUrl()}
@@ -284,6 +316,15 @@ export function LandingPage() {
                   allowFullScreen
                   title={String(t("landing.preview.title"))}
                 />
+              ) : hasExternalPreview ? (
+                <button
+                  type="button"
+                  className="ss-landing__button ss-landing__button--primary ss-landing__preview-activator"
+                  onClick={() => setIsPreviewActive(true)}
+                >
+                  <span>{t("landing.preview.cta")}</span>
+                  <ArrowRight size={16} />
+                </button>
               ) : (
                 <video
                   className="ss-landing__preview-video"
@@ -291,6 +332,7 @@ export function LandingPage() {
                   loop
                   muted
                   playsInline
+                  preload="metadata"
                   aria-label={String(t("landing.preview.title"))}
                 />
               )}
@@ -324,6 +366,9 @@ export function LandingPage() {
                   src={experimentDesignImage}
                   alt="FOS experiment design interface"
                   className="ss-landing__capability-image"
+                  loading="lazy"
+                  decoding="async"
+                  fetchPriority="low"
                 />
               </div>
             </article>
@@ -341,6 +386,9 @@ export function LandingPage() {
                   src={realtimeObservationImage}
                   alt="Real-time simulation observation interface"
                   className="ss-landing__capability-thumb-img"
+                  loading="lazy"
+                  decoding="async"
+                  fetchPriority="low"
                 />
               </div>
             </article>
@@ -358,6 +406,9 @@ export function LandingPage() {
                   src={networkTopologyImage}
                   alt="Branch and compare simulation timelines"
                   className="ss-landing__capability-thumb-img"
+                  loading="lazy"
+                  decoding="async"
+                  fetchPriority="low"
                 />
               </div>
             </article>
@@ -391,6 +442,9 @@ export function LandingPage() {
                     src={card.image}
                     alt={card.title}
                     className="ss-landing__scene-img"
+                    loading="lazy"
+                    decoding="async"
+                    fetchPriority="low"
                   />
                 </div>
                 <div className="ss-landing__scene-content">

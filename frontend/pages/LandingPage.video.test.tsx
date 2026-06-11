@@ -1,14 +1,14 @@
 /**
  * This file tests the landing page preview media.
  * render_landing_page shows the page inside a router so links work in the test.
- * test_landing_page_shows_local_preview_video_when_external_video_is_not_configured checks that the page shows a built-in video player instead of a placeholder when no external video is set.
+ * test_landing_page_shows_local_preview_video_when_external_video_is_not_configured checks that the page shows a built-in video player when no external video is set.
+ * test_landing_page_waits_to_load_external_preview_until_people_ask_for_it checks that the external iframe stays deferred until someone clicks the preview button.
  */
 
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { beforeAll, describe, expect, it, vi } from "vitest";
-
-import { LandingPage } from "./LandingPage";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -75,7 +75,13 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-function render_landing_page(): ReturnType<typeof render> {
+vi.mock("../config/video", () => ({
+  isBilibiliConfigured: () => false,
+  getBilibiliEmbedUrl: () => "https://player.bilibili.com/player.html?bvid=demo",
+}));
+
+async function render_landing_page(): Promise<ReturnType<typeof render>> {
+  const { LandingPage } = await import("./LandingPage");
   return render(
     <MemoryRouter>
       <LandingPage />
@@ -103,9 +109,13 @@ beforeAll(() => {
   vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
 });
 
+beforeEach(() => {
+  vi.resetModules();
+});
+
 describe("LandingPage preview video", () => {
-  it("test_landing_page_shows_local_preview_video_when_external_video_is_not_configured", () => {
-    const { container } = render_landing_page();
+  it("test_landing_page_shows_local_preview_video_when_external_video_is_not_configured", async () => {
+    const { container } = await render_landing_page();
 
     expect(screen.queryByText("Please configure the preview video")).not.toBeInTheDocument();
 
@@ -115,5 +125,23 @@ describe("LandingPage preview video", () => {
     expect(previewVideo).toHaveAttribute("loop");
     expect(previewVideo?.muted).toBe(true);
     expect(previewVideo?.playsInline).toBe(true);
+  });
+
+  it("test_landing_page_waits_to_load_external_preview_until_people_ask_for_it", async () => {
+    vi.doMock("../config/video", () => ({
+      isBilibiliConfigured: () => true,
+      getBilibiliEmbedUrl: () => "https://player.bilibili.com/player.html?bvid=BV1demo",
+    }));
+
+    const { container } = await render_landing_page();
+    const user = userEvent.setup();
+
+    expect(container.querySelector("iframe")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "View live engine" }));
+
+    const previewFrame = container.querySelector("iframe");
+    expect(previewFrame).toBeInTheDocument();
+    expect(previewFrame).toHaveAttribute("src", "https://player.bilibili.com/player.html?bvid=BV1demo");
   });
 });

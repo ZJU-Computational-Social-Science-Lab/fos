@@ -5,9 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 
 import App from "./App";
 import "./styles.css";
-import "./i18n";
-
-console.log(">>> index.tsx loaded, starting React...");
+import { initializeI18n } from "./i18n";
 
 const rawBaseUrl = import.meta.env.BASE_URL;
 const basename =
@@ -40,6 +38,13 @@ const tree = (
 );
 
 // 开发环境不套 StrictMode，生产环境再套
-ReactDOM.createRoot(rootElement).render(
-  import.meta.env.PROD ? <React.StrictMode>{tree}</React.StrictMode> : tree
-);
+initializeI18n()
+  .then(() => {
+    ReactDOM.createRoot(rootElement).render(
+      import.meta.env.PROD ? <React.StrictMode>{tree}</React.StrictMode> : tree
+    );
+  })
+  .catch((error: unknown) => {
+    console.error("Failed to start translations", error);
+    throw error;
+  });

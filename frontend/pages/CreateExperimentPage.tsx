@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowRight, Sparkles } from "lucide-react";
 
 import { Card } from "../components/ui/card";
+import "../styles/routes/experiment-setup.css";
 
 export function CreateExperimentPage() {
   const { t } = useTranslation();

@@ -18,6 +18,7 @@ import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { SimTree } from "../components/SimTree";
 import { ToastContainer } from "../components/Toast";
 import { useSimulationStore } from "../store";
+import "../styles/routes/topology.css";
 import { useAuthStore } from "../store/auth";
 import { useThemeStore } from "../store/theme";
 import type { SimNode } from "../types";

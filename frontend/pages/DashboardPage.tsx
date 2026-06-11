@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { listProviders } from "../services/providers";
 import { listScenes } from "../services/scenes";
 import { listSimulations } from "../services/simulations";
+import "../styles/routes/product.css";
 
 const getStatusTone = (status: string) => {
   if (status === "active") {

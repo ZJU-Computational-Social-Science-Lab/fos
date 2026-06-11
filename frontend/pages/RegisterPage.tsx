@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { apiClient } from "../services/client";
 import { useTranslation } from "react-i18next";
 import { getBackendErrorDetail } from '@/utils/apiError';
+import "../styles/routes/auth.css";
 
 const COUNTRY_CODES = [
   { value: "+86", label: "+86 中国" },

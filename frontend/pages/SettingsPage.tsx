@@ -18,6 +18,7 @@ import {
 
 import { AppSelect } from "../components/AppSelect";
 import { TitleCard } from "../components/TitleCard";
+import "../styles/routes/settings.css";
 import { DataSourceSettings } from "../components/DataSourceSettings";
 import { ProviderManagementPage } from "../components/provider-management/ProviderManagementPage";
 import {
