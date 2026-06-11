@@ -5,7 +5,6 @@ from pathlib import Path
 
 from litestar import Litestar, Router, get
 from litestar.config.cors import CORSConfig
-from litestar.config.compression import CompressionConfig
 from litestar.connection import Request
 from litestar.enums import MediaType
 from litestar.exceptions import HTTPException
@@ -248,7 +247,6 @@ def create_app() -> Litestar:
         "cors_config": cors_config,
         "debug": settings.debug,
         "openapi_config": OpenAPIConfig(title=settings.app_name, version="1.0.0"),
-        "compression_config": CompressionConfig(backend="gzip", gzip_compress_level=6),
         "middleware": [LocaleMiddleware],
         "exception_handlers": {Exception: internal_error_handler},
     }
