@@ -286,6 +286,7 @@ def build_prompt(
             )
         else:
             sections.append(T("experiment.response_actions", locale=locale, actions=actions_formatted, field=field))
+            sections.append(T("experiment.response_optional_message", locale=locale, field=field))
     else:  # integer
         sections.append(T("experiment.response_integer", locale=locale, min=game_config.min, max=game_config.max, field=field))
 
