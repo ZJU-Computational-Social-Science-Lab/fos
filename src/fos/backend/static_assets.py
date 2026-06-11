@@ -8,6 +8,7 @@ This file serves built frontend files in a browser-friendly way.
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 import mimetypes
 from pathlib import Path
@@ -47,7 +48,7 @@ def resolve_safe_dist_file(dist_dir: Path, relative_path: str) -> Path | None:
     return resolved_path
 
 
-def build_static_file_response(
+async def build_static_file_response(
     request: Request,
     file_path: Path,
     cache_control: str,
@@ -61,8 +62,9 @@ def build_static_file_response(
     }
     if variant.content_encoding is not None:
         headers["Content-Encoding"] = variant.content_encoding
+    content = await asyncio.to_thread(variant.path.read_bytes)
     return Response(
-        content=variant.path.read_bytes(),
+        content=content,
         media_type=media_type or "application/octet-stream",
         headers=headers,
     )
