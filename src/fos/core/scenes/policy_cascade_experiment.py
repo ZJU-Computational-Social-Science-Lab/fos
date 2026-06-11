@@ -13,10 +13,12 @@ Contains: PolicyCascadeExperimentScene, _SimulatorAdapter
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Callable, Dict, List, Optional
 
 from fos.core.experiment.scene import ExperimentScene
 from fos.core.experiment.config import ExperimentConfig
+from fos.core.experiment.runner import ActionResult
 from fos.core.scenes.policy_cascade.base import PolicyCascadeBaseMixin
 from fos.core.scenes.policy_cascade.constants import _parse_tier_order, DEFAULT_TIER_ORDER
 from fos.core.scenes.policy_cascade.distortion import PolicyCascadeDistortionMixin
@@ -26,6 +28,8 @@ from fos.core.scenes.policy_cascade.prompts import PolicyCascadePromptMixin
 from fos.core.scenes.policy_cascade.runtime import PolicyCascadeRuntimeMixin
 from fos.core.scenes.policy_cascade.state import PolicyCascadeStateMixin
 from fos.core.scenes.policy_cascade.threads import PolicyCascadeThreadMixin
+
+logger = logging.getLogger(__name__)
 
 
 class PolicyCascadeExperimentScene(
@@ -157,19 +161,86 @@ class PolicyCascadeExperimentScene(
         # Build the name->agent dict used by mixin C methods
         self._agents_dict = {a.name: a for a in self.agents}
 
+    def get_scene_actions(self, agent_name: str) -> list[str] | None:
+        """Filter available actions by cascade state.
+
+        Pipeline A compatibility: accepts agent name string,
+        returns action name strings for the frontend and runner.
+        """
+        agent = self._agents_dict.get(agent_name)
+        if agent is None:
+            return None
+        try:
+            actions = PolicyCascadeRuntimeMixin.get_scene_actions(self, agent)
+            return [getattr(a, 'NAME', str(a).lower()) for a in actions]
+        except Exception:
+            return None
+
     async def run_round(self, event_emitter):
         """Run one round, storing event_emitter for mixin use."""
         self._event_emitter = event_emitter
         self._current_round += 1
         # Refresh agent dict (agents may have been updated)
         self._agents_dict = {a.name: a for a in self.agents}
+
+        # Initialize cascade tier mapping from agent properties
+        self._rebuild_tiers()
+
+        # Cascade initialization: transition from notice mode to cascade
+        # when there is policy text that hasn't been cascaded yet.
+        if self.state.get("task_mode") == "notice" and self.state.get("latest_notice"):
+            desc = self._clean_policy_text(str(self.state.get("latest_notice", "")))
+            if desc and not self.state.get("latest_policy"):
+                self.state["policy_version"] = int(self.state.get("policy_version", 0) or 0) + 1
+                self.state["latest_policy"] = desc
+                self.state["source_policy"] = desc
+                self.state["relayed_policy"] = desc
+                self.state["task_mode"] = "cascade"
+                self.state["notice_kind"] = "execution"
+                self._set_force_complete_current_cascade(True)
+                self._reset_agents_for_new_policy(self.simulator)
+                self.state["complete"] = False
+                self._rebuild_tiers()
+                self._normalize_active_tier()
+
+        # If cascade is already complete, don't run another round
+        if self.state.get("complete"):
+            return None
+
+        # Only prompt agents in the current active cascade tier
+        active_tier = self._active_tier()
+        tier_agents = self._agents_by_tier.get(active_tier, [])
+        runner = getattr(self, 'runner', None)
+        original_agents = None
+        if runner is not None and tier_agents:
+            original_agents = list(runner.agents)
+            runner.agents = [a for a in original_agents if a.name in tier_agents]
+            logger.info(
+                "[POLICY CASCADE] Running tier %s: %d agents (%s)",
+                active_tier, len(runner.agents), [a.name for a in runner.agents],
+            )
+
         # Swap to ExperimentState for super().run_round() which
         # accesses self.state.round, .history, .agents
         cascade_state = self.state
         self.state = self._experiment_state
-        result = await super().run_round(event_emitter)
+        try:
+            result = await super().run_round(event_emitter)
+        finally:
+            if runner is not None and original_agents is not None:
+                runner.agents = original_agents
         self._experiment_state = self.state
         self.state = cascade_state
+
+        # Post-round cascade advancement: mark each agent that acted
+        # as seen for their tier and advance to next tier when all done.
+        if result is not None:
+            for action in result.actions:
+                if action.success and not action.skipped:
+                    agent = self._agents_dict.get(action.agent_name)
+                    if agent is not None:
+                        self.post_turn(agent, self.simulator)
+
         return result
 
     # ------------------------------------------------------------------
