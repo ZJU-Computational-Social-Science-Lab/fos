@@ -8,7 +8,7 @@
 import http from "k6/http";
 import { check, group } from "k6";
 import { Trend } from "k6/metrics";
-import { authenticate, createSimulation, advanceChain, checkHealth } from "../lib/helpers.js";
+import { authenticate, createSimulation, advanceChain, checkHealth, cleanupAllLoadUserSims } from "../lib/helpers.js";
 
 const createSimDuration = new Trend("create_simulation_duration", true);
 const advanceDuration = new Trend("advance_chain_duration", true);
@@ -25,6 +25,10 @@ export const options = {
 
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8000";
 const API_PREFIX = __ENV.API_PREFIX || "/api";
+
+export function teardown() {
+  cleanupAllLoadUserSims(BASE_URL, 1);
+}
 
 export default function () {
   group("Baseline: Single User", () => {

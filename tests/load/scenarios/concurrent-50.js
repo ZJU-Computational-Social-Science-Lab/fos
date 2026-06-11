@@ -16,6 +16,7 @@ import {
   advanceChain,
   checkHealth,
   SCENARIOS,
+  cleanupAllLoadUserSims,
 } from "../lib/helpers.js";
 
 const createSimDuration = new Trend("create_simulation_duration", true);
@@ -59,6 +60,10 @@ function checkReadiness() {
   if (!ok) {
     readyFailures.add(1);
   }
+}
+
+export function teardown() {
+  cleanupAllLoadUserSims(BASE_URL, 50);
 }
 
 export default function () {

@@ -389,6 +389,36 @@ async def delete_simulation(
         SIM_TREE_REGISTRY.remove(simulation_id)
 
 
+@delete("/all", status_code=204)
+async def delete_all_user_simulations(
+    request: Request,
+) -> None:
+    """
+    Delete all simulations for the authenticated user.
+
+    Removes every simulation owned by the current user, including their
+    tree nodes, logs, snapshots, and sync logs. Also removes each
+    simulation from the runtime registry.
+
+    Args:
+        request: Litestar request with auth token
+
+    Raises:
+        HTTPException: If authentication fails
+    """
+    token = extract_bearer_token(request)
+    async with get_session() as session:
+        current_user = await resolve_current_user(session, token)
+        result = await session.execute(
+            select(Simulation).where(Simulation.owner_id == current_user.id)
+        )
+        sims = result.scalars().all()
+        for sim in sims:
+            SIM_TREE_REGISTRY.remove(sim.id)
+            await session.delete(sim)
+        await session.commit()
+
+
 @patch("/{simulation_id:str}/agents/llm-config")
 async def update_agent_llm_config(
     request: Request,

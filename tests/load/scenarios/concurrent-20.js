@@ -9,7 +9,7 @@
 import http from "k6/http";
 import { check, group, sleep } from "k6";
 import { Trend, Counter, Gauge } from "k6/metrics";
-import { authenticate, createSimulation, advanceChain, checkHealth, SCENARIOS } from "../lib/helpers.js";
+import { authenticate, createSimulation, advanceChain, checkHealth, SCENARIOS, cleanupAllLoadUserSims } from "../lib/helpers.js";
 
 const createSimDuration = new Trend("create_simulation_duration", true);
 const advanceDuration = new Trend("advance_chain_duration", true);
@@ -34,6 +34,10 @@ export const options = {
 
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8000";
 const API_PREFIX = __ENV.API_PREFIX || "/api";
+
+export function teardown() {
+  cleanupAllLoadUserSims(BASE_URL, 20);
+}
 
 export default function () {
   const vuId = __VU;
