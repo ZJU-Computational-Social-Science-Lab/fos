@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import groupQrImage from "../assets/fos-wechat-group-qr.jpeg";
+import "../styles/routes/product.css";
 
 type MeetingPublishStatus = "pending" | "published";
 

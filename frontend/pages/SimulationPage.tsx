@@ -9,23 +9,6 @@
 
 import React from "react";
 import { SimTree } from "../components/SimTree";
-import { Sidebar } from "../components/Sidebar";
-import { LogViewer } from "../components/LogViewer";
-import { ComparisonView } from "../components/ComparisonView";
-import { ExperimentBuilderModal } from "../components/ExperimentBuilderModal";
-import SyncModal from "../components/SyncModal";
-import { HelpModal } from "../components/HelpModal";
-import { AnalyticsPanel } from "../components/AnalyticsPanel";
-import { AnalyseTab } from "../components/AnalyseTab";
-import { ExportModal } from "../components/ExportModal";
-import { ExperimentDesignModal } from "../components/ExperimentDesignModal";
-import { TimeSettingsModal } from "../components/TimeSettingsModal";
-import { TemplateSaveModal } from "../components/TemplateSaveModal";
-import { NetworkEditorModal } from "../components/NetworkEditorModal";
-import { ReportModal } from "../components/ReportModal";
-import { GlobalKnowledgePanel } from "../components/GlobalKnowledgePanel";
-import { GuideAssistant } from "../components/GuideAssistant";
-import { InterventionTab } from "../components/InterventionTab";
 import { ToastContainer } from "../components/Toast";
 import { useSimulationStore } from "../store";
 import { useNavigate, useParams } from "react-router-dom";
@@ -33,8 +16,63 @@ import { getSimulation as apiGetSimulation } from "../services/simulations";
 import { getTreeGraph, getSimEvents, getSimState, getRehydrate } from "../services/simulationTree";
 import { useAuthStore } from "../store/auth";
 import { useTranslation } from "react-i18next";
+import { useShallow } from "zustand/react/shallow";
 import { TabRail } from "../components/TabRail";
 import { PeekOverlay } from "../components/PeekOverlay";
+import { getWorkspaceOverlayMountState } from "./simulationPageRender";
+import "../styles/routes/workspace.css";
+
+const Sidebar = React.lazy(() =>
+  import("../components/Sidebar").then((module) => ({ default: module.Sidebar }))
+);
+const LogViewer = React.lazy(() =>
+  import("../components/LogViewer").then((module) => ({ default: module.LogViewer }))
+);
+const ComparisonView = React.lazy(() =>
+  import("../components/ComparisonView").then((module) => ({ default: module.ComparisonView }))
+);
+const ExperimentBuilderModal = React.lazy(() =>
+  import("../components/ExperimentBuilderModal").then((module) => ({ default: module.ExperimentBuilderModal }))
+);
+const SyncModal = React.lazy(() =>
+  import("../components/SyncModal").then((module) => ({ default: module.SyncModal }))
+);
+const HelpModal = React.lazy(() =>
+  import("../components/HelpModal").then((module) => ({ default: module.HelpModal }))
+);
+const AnalyticsPanel = React.lazy(() =>
+  import("../components/AnalyticsPanel").then((module) => ({ default: module.AnalyticsPanel }))
+);
+const AnalyseTab = React.lazy(() =>
+  import("../components/AnalyseTab").then((module) => ({ default: module.AnalyseTab }))
+);
+const ExportModal = React.lazy(() =>
+  import("../components/ExportModal").then((module) => ({ default: module.ExportModal }))
+);
+const ExperimentDesignModal = React.lazy(() =>
+  import("../components/ExperimentDesignModal").then((module) => ({ default: module.ExperimentDesignModal }))
+);
+const TimeSettingsModal = React.lazy(() =>
+  import("../components/TimeSettingsModal").then((module) => ({ default: module.TimeSettingsModal }))
+);
+const TemplateSaveModal = React.lazy(() =>
+  import("../components/TemplateSaveModal").then((module) => ({ default: module.TemplateSaveModal }))
+);
+const NetworkEditorModal = React.lazy(() =>
+  import("../components/NetworkEditorModal").then((module) => ({ default: module.NetworkEditorModal }))
+);
+const ReportModal = React.lazy(() =>
+  import("../components/ReportModal").then((module) => ({ default: module.ReportModal }))
+);
+const GlobalKnowledgePanel = React.lazy(() =>
+  import("../components/GlobalKnowledgePanel").then((module) => ({ default: module.GlobalKnowledgePanel }))
+);
+const GuideAssistant = React.lazy(() =>
+  import("../components/GuideAssistant").then((module) => ({ default: module.GuideAssistant }))
+);
+const InterventionTab = React.lazy(() =>
+  import("../components/InterventionTab").then((module) => ({ default: module.InterventionTab }))
+);
 
 // ---------------- SimulationPage ----------------
 
@@ -50,6 +88,20 @@ const SimulationPage: React.FC = () => {
   const currentSimulation = useSimulationStore((state) => state.currentSimulation);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasRestored = useAuthStore((s) => s.hasRestored);
+  const workspaceOverlayState = useSimulationStore(useShallow((state) => ({
+      isWizardOpen: state.isWizardOpen,
+      isHelpModalOpen: state.isHelpModalOpen,
+      isAnalyticsOpen: state.isAnalyticsOpen,
+      isExportOpen: state.isExportOpen,
+      isExperimentDesignerOpen: state.isExperimentDesignerOpen,
+      isTimeSettingsOpen: state.isTimeSettingsOpen,
+      isSaveTemplateOpen: state.isSaveTemplateOpen,
+      isNetworkEditorOpen: state.isNetworkEditorOpen,
+      isReportModalOpen: state.isReportModalOpen,
+      globalKnowledgeOpen: state.globalKnowledgeOpen,
+      isGuideOpen: state.isGuideOpen,
+    })));
+  const workspaceOverlayMounts = getWorkspaceOverlayMountState(workspaceOverlayState);
 
   React.useEffect(() => {
     (async () => {
@@ -538,7 +590,9 @@ const SimulationPage: React.FC = () => {
                   <SimTree layoutDirection="vertical" />
                 </div>
                 <div className="flex-1 flex flex-col">
-                  {isCompareMode ? <ComparisonView /> : <LogViewer />}
+                  <React.Suspense fallback={null}>
+                    {isCompareMode ? <ComparisonView /> : <LogViewer />}
+                  </React.Suspense>
                 </div>
               </div>
               <PeekOverlay />
@@ -548,36 +602,44 @@ const SimulationPage: React.FC = () => {
 
         {activeTab === 'agents' && (
           <div className="flex-1 overflow-hidden">
-            <Sidebar />
+            <React.Suspense fallback={null}>
+              <Sidebar />
+            </React.Suspense>
           </div>
         )}
 
         {activeTab === 'intervention' && (
           <div className="flex-1 overflow-hidden">
-            <InterventionTab />
+            <React.Suspense fallback={null}>
+              <InterventionTab />
+            </React.Suspense>
           </div>
         )}
 
         {activeTab === 'analyse' && (
           <div className="flex-1 overflow-hidden">
-            <AnalyseTab />
+            <React.Suspense fallback={null}>
+              <AnalyseTab />
+            </React.Suspense>
           </div>
         )}
       </div>
 
       {/* Modals */}
-      <ExperimentBuilderModal />
-      <HelpModal />
-      <AnalyticsPanel />
-      <ExportModal />
-      <ExperimentDesignModal />
-      <TimeSettingsModal />
-      <TemplateSaveModal />
-      <NetworkEditorModal />
-      <ReportModal />
-      <GlobalKnowledgePanel />
-      <GuideAssistant />
-      <SyncModal />
+      <React.Suspense fallback={null}>
+        {workspaceOverlayMounts.experimentBuilder ? <ExperimentBuilderModal /> : null}
+        {workspaceOverlayMounts.help ? <HelpModal /> : null}
+        {workspaceOverlayMounts.analytics ? <AnalyticsPanel /> : null}
+        {workspaceOverlayMounts.export ? <ExportModal /> : null}
+        {workspaceOverlayMounts.experimentDesigner ? <ExperimentDesignModal /> : null}
+        {workspaceOverlayMounts.timeSettings ? <TimeSettingsModal /> : null}
+        {workspaceOverlayMounts.templateSave ? <TemplateSaveModal /> : null}
+        {workspaceOverlayMounts.networkEditor ? <NetworkEditorModal /> : null}
+        {workspaceOverlayMounts.report ? <ReportModal /> : null}
+        {workspaceOverlayMounts.globalKnowledge ? <GlobalKnowledgePanel /> : null}
+        {workspaceOverlayMounts.guide ? <GuideAssistant /> : null}
+        <SyncModal />
+      </React.Suspense>
       <ToastContainer />
     </div>
   );

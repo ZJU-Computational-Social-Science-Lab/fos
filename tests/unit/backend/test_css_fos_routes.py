@@ -14,4 +14,4 @@ def test_app_serves_css_fos_api_and_assets() -> None:
     source = Path("src/fos/backend/main.py").read_text(encoding="utf-8")
 
     assert 'path="/css/fos/api"' in source
-    assert 'path="/css/fos/assets"' in source
+    assert '"/css/fos/assets/{file_path:path}"' in source

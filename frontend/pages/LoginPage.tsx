@@ -5,6 +5,7 @@ import { ArrowRight, AtSign, LockKeyhole } from "lucide-react";
 
 import { apiClient } from "../services/client";
 import { useAuthStore } from "../store/auth";
+import "../styles/routes/auth.css";
 
 type LoginResponse = {
   access_token: string;

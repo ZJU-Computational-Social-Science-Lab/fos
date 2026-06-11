@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '../components/ui/button';
+import "../styles/routes/experiment-setup.css";
 import { Card } from '../components/ui/card';
 import {
   ActionsDraftPanel,

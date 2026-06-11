@@ -5,7 +5,6 @@ import { getApiBase } from "./base";
 import { getApiLanguage } from "./i18nUtils";
 
 export const API_BASE_URL = getApiBase().replace(/\/+$/, "");
-console.log("Api base url is :", API_BASE_URL);
 
 // 统一导出的 axios 客户端
 export const apiClient = axios.create({

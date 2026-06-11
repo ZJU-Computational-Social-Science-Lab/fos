@@ -32,7 +32,8 @@ vi.mock('../i18n', () => ({
     t: (key: string, params?: Record<string, any>) => (globalThis as any).i18n.t(key, params),
     language: 'en',
     init: vi.fn(() => Promise.resolve())
-  }
+  },
+  setLanguage: vi.fn(() => Promise.resolve()),
 }));
 
 // Mock API client

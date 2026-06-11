@@ -1065,6 +1065,8 @@
   .ss-landing__scenes,
   .ss-landing__final {
     position: relative;
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 800px;
   }
 
   .ss-landing__capability-head {

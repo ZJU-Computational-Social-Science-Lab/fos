@@ -9,7 +9,6 @@ import { getApiLanguage } from "./i18nUtils";
  * 统一的后端基础 URL（例如 http://localhost:8000/api）
  */
 export const API_BASE_URL = getApiBase().replace(/\/+$/, "");
-console.log("Api base url is :", API_BASE_URL);
 
 /**
  * 旧前端使用的 axios 客户端，给 Login/Register/Admin/Providers 等用

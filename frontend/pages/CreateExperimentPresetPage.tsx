@@ -13,6 +13,7 @@ import {
   getActionType,
   type CreateTemplateRequest,
 } from '../services/experiment-templates';
+import "../styles/routes/experiment-setup.css";
 
 type BuilderLocationState = {
   preserveBuilderState?: boolean;

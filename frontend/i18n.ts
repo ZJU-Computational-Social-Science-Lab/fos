@@ -1,10 +1,11 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import en from './locales/en.json';
-import zh from './locales/zh.json';
-import { enDesign, zhDesign } from './locales/design';
-;(window as any).i18next = i18n;
+import {
+  getInitialLocaleModules,
+  loadLocaleModule,
+  type SupportedLanguage,
+} from './utils/localeLoader';
 
 const STORAGE_KEY = 'fos.lang';
 
@@ -29,7 +30,7 @@ function mergeLocale(
   return merged;
 }
 
-function detectLanguage(): 'en' | 'zh' {
+function detectLanguage(): SupportedLanguage {
   const stored = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
   if (stored === 'en' || stored === 'zh') return stored;
   if (typeof navigator !== 'undefined') {
@@ -39,21 +40,55 @@ function detectLanguage(): 'en' | 'zh' {
   return 'en';
 }
 
-export function setLanguage(lang: 'en' | 'zh') {
-  localStorage.setItem(STORAGE_KEY, lang);
-  i18n.changeLanguage(lang);
+async function ensureLanguageResources(lang: SupportedLanguage): Promise<void> {
+  if (i18n.hasResourceBundle(lang, 'translation')) {
+    return;
+  }
+
+  const localeModule = await loadLocaleModule(lang);
+  i18n.addResourceBundle(
+    lang,
+    'translation',
+    mergeLocale(
+      localeModule.messages as Record<string, unknown>,
+      localeModule.design as Record<string, unknown>,
+    ),
+    true,
+    true,
+  );
 }
 
-i18n
-  .use(initReactI18next)
-  .init({
-    resources: {
-      en: { translation: mergeLocale(en as Record<string, unknown>, enDesign as Record<string, unknown>) },
-      zh: { translation: mergeLocale(zh as Record<string, unknown>, zhDesign as Record<string, unknown>) },
-    },
-    lng: detectLanguage(),
-    fallbackLng: 'en',
-    interpolation: { escapeValue: false },
-  });
+export async function setLanguage(lang: SupportedLanguage) {
+  localStorage.setItem(STORAGE_KEY, lang);
+  await ensureLanguageResources(lang);
+  await i18n.changeLanguage(lang);
+}
+
+const initialLanguage = detectLanguage();
+const i18nReady = (async () => {
+  const initialLocaleModules = await getInitialLocaleModules(initialLanguage);
+
+  await i18n
+    .use(initReactI18next)
+    .init({
+      resources: {
+        [initialLocaleModules.active.language]: {
+          translation: mergeLocale(
+            initialLocaleModules.active.messages as Record<string, unknown>,
+            initialLocaleModules.active.design as Record<string, unknown>,
+          ),
+        },
+      },
+      lng: initialLanguage,
+      fallbackLng: 'en',
+      interpolation: { escapeValue: false },
+    });
+
+  ;(window as any).i18next = i18n;
+})();
+
+export function initializeI18n(): Promise<void> {
+  return i18nReady;
+}
 
 export default i18n;
