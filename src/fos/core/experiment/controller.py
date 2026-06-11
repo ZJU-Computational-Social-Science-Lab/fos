@@ -250,6 +250,9 @@ class ExperimentController:
         }
 
         summary = f"{agent.name} chose {action_value}"
+        if parameters:
+            param_str = ", ".join(f"{k}={v}" for k, v in parameters.items())
+            summary = f"{agent.name} chose {action_value} ({param_str})"
         skipped = str(action_value).lower() == "skip"
         if game_config.name == "custom" and str(action_value).lower() == "speak":
             message = parameters.get("message")
