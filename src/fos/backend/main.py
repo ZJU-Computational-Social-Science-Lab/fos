@@ -167,25 +167,25 @@ def create_app() -> Litestar:
         html_cache_control = "no-cache"
         static_cache_control = "public, max-age=3600"
 
-        def _serve_dist_file(request: Request, relative_path: str, cache_control: str) -> Response[bytes] | None:
+        async def _serve_dist_file(request: Request, relative_path: str, cache_control: str) -> Response[bytes] | None:
             resolved_file = resolve_safe_dist_file(dist_dir, relative_path)
             if resolved_file is None:
                 return None
-            return build_static_file_response(request, resolved_file, cache_control)
+            return await build_static_file_response(request, resolved_file, cache_control)
 
-        def _spa_response(request: Request) -> Response[bytes]:
-            return build_static_file_response(request, index_file, html_cache_control)
+        async def _spa_response(request: Request) -> Response[bytes]:
+            return await build_static_file_response(request, index_file, html_cache_control)
 
         @get("/assets/{file_path:path}")
         async def assets(request: Request, file_path: str) -> Response[bytes]:
-            response = _serve_dist_file(request, f"assets/{file_path}", immutable_cache_control)
+            response = await _serve_dist_file(request, f"assets/{file_path}", immutable_cache_control)
             if response is None:
                 return Response(content=b"", status_code=404)
             return response
 
         @get("/css/fos/assets/{file_path:path}")
         async def assets_css(request: Request, file_path: str) -> Response[bytes]:
-            response = _serve_dist_file(request, f"assets/{file_path}", immutable_cache_control)
+            response = await _serve_dist_file(request, f"assets/{file_path}", immutable_cache_control)
             if response is None:
                 return Response(content=b"", status_code=404)
             return response
@@ -193,26 +193,26 @@ def create_app() -> Litestar:
         @get("/{path:path}")
         async def spa_fallback(request: Request, path: str = "") -> Response[bytes]:
             if path:
-                response = _serve_dist_file(request, path, static_cache_control)
+                response = await _serve_dist_file(request, path, static_cache_control)
                 if response is not None:
                     return response
-            return _spa_response(request)
+            return await _spa_response(request)
 
         @get("/")
         async def home_page(request: Request) -> Response[bytes]:
-            return _spa_response(request)
+            return await _spa_response(request)
 
         @get("/css/fos/{path:path}")
         async def spa_fallback_css(request: Request, path: str = "") -> Response[bytes]:
             if path:
-                response = _serve_dist_file(request, path, static_cache_control)
+                response = await _serve_dist_file(request, path, static_cache_control)
                 if response is not None:
                     return response
-            return _spa_response(request)
+            return await _spa_response(request)
 
         @get("/css/fos")
         async def home_page_css(request: Request) -> Response[bytes]:
-            return _spa_response(request)
+            return await _spa_response(request)
 
         spa_router = Router(path="/", route_handlers=[home_page, spa_fallback, assets])
         spa_router_css = Router(
