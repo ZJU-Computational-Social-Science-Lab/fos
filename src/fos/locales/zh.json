@@ -1349,7 +1349,6 @@
     "first_round": "这是第一轮——没有之前的上下文。",
     "json_only": "不要使用Markdown格式。不要解释。只输出JSON。",
     "response_actions": "## 你的回应\n有效动作：{actions}\n只返回JSON：{{\"{field}\": \"<动作>\"}}",
-    "response_optional_message": "你也可以包含一个可选的\"message\"字段来说明你的理由，例如{{\"{field}\": \"<动作>\", \"message\": \"...\"}}",
     "response_integer": "## 你的回应\n从 {min} 到 {max} 中选择一个数字。\n只返回JSON：{{\"{field}\": <数字>}}",
     "round_format": "第 {round_num} 轮：{actions}",
     "previous_rounds": "之前的轮次：\n{rounds}",

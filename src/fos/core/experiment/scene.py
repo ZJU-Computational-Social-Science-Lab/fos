@@ -706,6 +706,10 @@ class ExperimentScene:
         Discussion scenarios (council_chamber, open_discussion, werewolf, contagion)
         need plain_text follow-up for Speak actions.
 
+        Communication actions (notify, announce, report, etc.) detected by keyword
+        also get plain_text follow-up so agents only need to pick an action first,
+        then provide message content on a second prompt.
+
         Fallback: Auto-detect speak-like actions for any scenario, including "custom".
 
         Args:
@@ -742,6 +746,22 @@ class ExperimentScene:
             if action_name.lower() in ("speak", "say", "talk") and action_name not in followup_modes:
                 followup_modes[action_name] = "plain_text"
                 logger.info(f"[FOLLOWUP] Auto-detected speak action '{action_name}' (scenario_id={self.config.scenario_id})")
+
+        # Detect communication actions that need message content
+        # Agents first pick just the action name (simple), then get reprompted
+        # for their message content (follow-up prompt).
+        communication_prefixes = (
+            "notify", "announce", "report", "escalate", "consult",
+            "send_", "tell", "reply", "message", "propose",
+            "respond", "forward", "relay", "transmit",
+        )
+        for action_name in action_names:
+            if action_name in followup_modes:
+                continue
+            lower_name = action_name.lower()
+            if any(lower_name.startswith(p) for p in communication_prefixes):
+                followup_modes[action_name] = "plain_text"
+                logger.info(f"[FOLLOWUP] Detected communication action '{action_name}' (scenario_id={self.config.scenario_id})")
 
         logger.debug(f"[FOLLOWUP] Final followup_modes={followup_modes}")
         return followup_modes
