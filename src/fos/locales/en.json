@@ -1349,7 +1349,6 @@
     "first_round": "This is the first round - no previous context.",
     "json_only": "No markdown. No explanation. Only JSON.",
     "response_actions": "## Your Response\nValid actions: {actions}\nRespond with ONLY JSON: {{\"{field}\": \"<action>\"}}",
-    "response_optional_message": "You MAY also include an optional \"message\" field with your reasoning, e.g. {{\"{field}\": \"<action>\", \"message\": \"...\"}}",
     "response_integer": "## Your Response\nChoose a number from {min} to {max}.\nRespond with ONLY JSON: {{\"{field}\": <number>}}",
     "round_format": "Round {round_num}: {actions}",
     "previous_rounds": "Previous rounds:\n{rounds}",
