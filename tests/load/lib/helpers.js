@@ -165,6 +165,41 @@ export function advanceChain(baseUrl, token, simId, turns) {
 }
 
 /**
+ * Delete all simulations owned by each load test user.
+ *
+ * Iterates VU 1 through maxVu, logs in as each loaduser,
+ * and deletes all their simulations via the bulk endpoint.
+ * Safe to call even if a user has no simulations.
+ */
+export function cleanupAllLoadUserSims(baseUrl, maxVu) {
+  for (let vu = 1; vu <= maxVu; vu++) {
+    const user = buildLoadUserForVu(vu);
+    const res = http.post(`${baseUrl}${API_PREFIX}/auth/login`, JSON.stringify(user), {
+      headers: { "Content-Type": "application/json" },
+    });
+    if (res.status !== 200 && res.status !== 201) {
+      console.error(`Teardown login failed for ${user.email}: ${res.status}`);
+      continue;
+    }
+
+    const body = res.json();
+    const token = body.access_token || body.token || null;
+    if (!token) {
+      console.error(`Teardown no token for ${user.email}`);
+      continue;
+    }
+
+    const delRes = http.del(`${baseUrl}${API_PREFIX}/simulations/all`, null, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (delRes.status !== 204) {
+      console.error(`Teardown cleanup failed for ${user.email}: ${delRes.status}`);
+    }
+  }
+  console.log(`Teardown: cleaned up simulations for ${maxVu} load users`);
+}
+
+/**
  * Check the health endpoint and return metrics.
  */
 export function checkHealth(baseUrl) {
