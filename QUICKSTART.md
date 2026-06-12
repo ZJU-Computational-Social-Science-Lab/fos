@@ -97,7 +97,7 @@ ollama list
 ### Backend won't start?
 ```cmd
 # Install dependencies if missing
-pip install -r requirements.txt
+pip install -r requirements-test.txt
 
 # Or update pip
 python -m pip install --upgrade pip
