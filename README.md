@@ -40,11 +40,16 @@ python -m venv venv
 .\venv\Scripts\Activate.ps1
 
 # Install backend dependencies
-pip install -r requirements.txt
+pip install -r requirements-test.txt
 
 # Install frontend dependencies
 cd frontend && npm install && cd ..
 ```
+
+Run every automated suite with `python scripts/run_full_tests.py`. The complete
+Playwright run requires an active Ollama provider whose configured model is
+installed locally. Routine CI runs deterministic browser smoke tests without
+Ollama.
 
 #### 2. Configure Environment Variables
 
@@ -146,7 +151,7 @@ python -m venv venv
 .\venv\Scripts\Activate.ps1
 
 # 安装后端依赖
-pip install -r requirements.txt
+pip install -r requirements-test.txt
 
 # 安装前端依赖
 cd frontend && npm install && cd ..
