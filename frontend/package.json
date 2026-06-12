@@ -10,6 +10,10 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test e2e/css-fos-smoke.spec.ts e2e/route-reliability.spec.ts e2e/research-import.spec.ts",
+    "test:e2e:health": "playwright test e2e/health-check.spec.ts",
+    "test:e2e:real": "playwright test e2e/real-llm.spec.ts --project=en",
     "test:i18n": "vitest run __tests__/i18n.strict.test.ts",
     "test:i18n:audit": "vitest run __tests__/i18n.audit.test.ts"
   },

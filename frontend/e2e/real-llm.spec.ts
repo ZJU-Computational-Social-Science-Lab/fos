@@ -2,22 +2,13 @@
  * Real-LLM E2E tests using local Ollama.
  *
  * Validates core browser workflows with a real local Ollama model.
- * Opt-in only — requires FOS_TEST_REAL_LLM=1 plus a running
- * Ollama instance with the specified model.  No fake / mock / external
- * LLM fallback.
+ * Requires a configured, active local Ollama provider. No fake, mock,
+ * external-provider fallback, or silent skip is allowed.
  *
  * Scenarios covered:
  *   1. Custom Scenario v1  (speak + skip)
  *   2. Public Goods Game   (allocate / keep / reduce)
  *   3. Prisoner's Dilemma  (cooperate / defect)
- *
- * Required env vars:
- *   FOS_TEST_REAL_LLM=1
- *   FOS_TEST_LLM_PROVIDER=ollama  (default)
- *   FOS_TEST_LLM_MODEL=<model>    (e.g. qwen3:4b)
- *
- * Optional:
- *   OLLAMA_BASE_URL=http://localhost:11434
  *
  * Exports: (Playwright test suite)
  */
@@ -28,25 +19,6 @@ import { ExperimentBuilder } from './helpers/experiment-builder';
 import { SimulationWorkspace } from './helpers/simulation-workspace';
 
 // ---------------------------------------------------------------------------
-// Environment gating
-// ---------------------------------------------------------------------------
-
-const REAL_LLM = process.env.FOS_TEST_REAL_LLM === '1';
-const LLM_PROVIDER = process.env.FOS_TEST_LLM_PROVIDER || 'ollama';
-const LLM_MODEL = process.env.FOS_TEST_LLM_MODEL || '';
-
-test.beforeEach(async ({ locale }) => {
-  test.skip(!REAL_LLM,
-    'Set FOS_TEST_REAL_LLM=1 to enable real-LLM E2E tests');
-  test.skip(LLM_PROVIDER !== 'ollama',
-    'Real-LLM E2E tests require Ollama. Set FOS_TEST_LLM_PROVIDER=ollama');
-  test.skip(!LLM_MODEL,
-    'Set FOS_TEST_LLM_MODEL to a locally installed Ollama model');
-  test.skip(locale !== 'en',
-    'Real-LLM E2E tests run in English only');
-});
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -54,7 +26,7 @@ test.beforeEach(async ({ locale }) => {
  * Fetch active Ollama provider IDs from the API.
  *
  * Calls GET /api/providers inside the browser context (reuses auth session)
- * and filters for active Ollama providers.  Skips the test if none found.
+ * and filters for active Ollama providers. It verifies the selected provider.
  */
 async function getOllamaProviderIds(page: Page, count: number): Promise<number[]> {
   const providers: Array<{ id: number; provider: string; is_active: boolean }> =
@@ -71,10 +43,29 @@ async function getOllamaProviderIds(page: Page, count: number): Promise<number[]
     .filter(p => p.provider === 'ollama' && p.is_active)
     .map(p => p.id);
 
-  test.skip(
-    ollamaIds.length === 0,
-    'No active Ollama provider found. Configure one in Settings > Providers.',
-  );
+  if (ollamaIds.length === 0) {
+    throw new Error(
+      'No active Ollama provider found. Configure one in Settings > Providers.',
+    );
+  }
+
+  const testResult = await page.evaluate(async (providerId) => {
+    const token = localStorage.getItem('fos.access');
+    const response = await fetch(`/api/providers/${providerId}/test`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    return {
+      ok: response.ok,
+      status: response.status,
+      body: await response.text(),
+    };
+  }, ollamaIds[0]);
+  if (!testResult.ok) {
+    throw new Error(
+      `Ollama provider preflight failed with HTTP ${testResult.status}: ${testResult.body}`,
+    );
+  }
 
   // Repeat if fewer providers than agents
   const ids: number[] = [];

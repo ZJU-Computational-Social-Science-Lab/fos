@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  formatBackendRequestFailure,
   determineScenarioStatus,
   formatBackendResponseFailure,
   type ScenarioResult,
@@ -68,5 +69,35 @@ describe('formatBackendResponseFailure', () => {
     );
 
     expect(message).toBe('HTTP 500 GET /api/simulations/E6BF/tree/graph');
+  });
+});
+
+describe('formatBackendRequestFailure', () => {
+  it('test_browser_cancelled_request_is_ignored', () => {
+    expect(formatBackendRequestFailure(
+      'GET',
+      'http://127.0.0.1:5173/api/providers',
+      'net::ERR_ABORTED',
+    )).toBeNull();
+  });
+
+  it('test_navigation_cancelled_request_is_ignored', () => {
+    expect(formatBackendRequestFailure(
+      'GET',
+      'http://127.0.0.1:5173/api/scenes',
+      'NS_BINDING_ABORTED',
+    )).toBeNull();
+  });
+
+  it.each([
+    'net::ERR_CONNECTION_REFUSED',
+    'net::ERR_NAME_NOT_RESOLVED',
+    'net::ERR_TIMED_OUT',
+  ])('test_real_network_failure_is_reported: %s', (failureText) => {
+    expect(formatBackendRequestFailure(
+      'GET',
+      'http://127.0.0.1:5173/api/providers',
+      failureText,
+    )).toBe(`GET /api/providers: ${failureText}`);
   });
 });

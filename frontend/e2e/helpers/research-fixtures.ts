@@ -30,8 +30,12 @@ export interface ResearchFixtureFiles {
 }
 
 function resolvePython(): string {
+  const virtualenvPython = process.platform === 'win32'
+    ? path.join(repoRoot, '.venv', 'Scripts', 'python.exe')
+    : path.join(repoRoot, '.venv', 'bin', 'python');
   const candidates = [
     process.env.FOS_FIXTURE_PYTHON,
+    virtualenvPython,
     'python',
     'python3',
   ].filter(Boolean) as string[];
