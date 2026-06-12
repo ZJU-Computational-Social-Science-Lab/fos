@@ -1,51 +1,63 @@
+/**
+ * This file keeps a broken page from leaving the website empty.
+ *
+ * ErrorBoundary catches page drawing errors, shows what happened, and lets the person retry or reload.
+ */
+
 import React from "react";
-import { useTranslation } from "react-i18next";
 
-type Props = {
+import i18n from "../i18n";
+
+interface Props {
   children: React.ReactNode;
-};
+}
 
-type State = {
+interface State {
   hasError: boolean;
-  error: any;
-};
+  error: Error | null;
+}
 
-export function ErrorBoundary({ children }: Props) {
-  const { t } = useTranslation();
-  const [state, setState] = React.useState<State>({ hasError: false, error: null });
+export class ErrorBoundary extends React.Component<Props, State> {
+  public state: State = { hasError: false, error: null };
 
-  React.useEffect(() => {
-    const handleError = (error: any) => {
-      console.error("React ErrorBoundary Caught:", error);
-      setState({ hasError: true, error });
+  public static getDerivedStateFromError(error: unknown): State {
+    return {
+      hasError: true,
+      error: error instanceof Error ? error : new Error(String(error)),
     };
+  }
 
-    const handleErrorEvent = (event: ErrorEvent) => {
-      handleError(event.error);
-    };
+  public componentDidCatch(error: Error, info: React.ErrorInfo): void {
+    console.error("Page rendering failed", error, info);
+  }
 
-    window.addEventListener("error", handleErrorEvent);
-    return () => window.removeEventListener("error", handleErrorEvent);
-  }, []);
-
-  // Static method for class component compatibility
-  (ErrorBoundary as any).getDerivedStateFromError = (error: any) => {
-    return { hasError: true, error };
+  private retry = (): void => {
+    this.setState({ hasError: false, error: null });
   };
 
-  if (state.hasError) {
+  private reload = (): void => {
+    window.location.reload();
+  };
+
+  public render(): React.ReactNode {
+    if (!this.state.hasError) {
+      return this.props.children;
+    }
+
     return (
-      <div style={{ padding: 24, fontFamily: "monospace" }}>
-        <h1>{t('components.errorBoundary.title')}</h1>
-        <p style={{ color: "#b91c1c" }}>
-          {String(state.error)}
-        </p>
-        <p style={{ marginTop: 16 }}>
-          {t('components.errorBoundary.instructions')}
-        </p>
+      <div className="route-error" role="alert">
+        <h1>{i18n.t("components.errorBoundary.title")}</h1>
+        <p className="route-error__message">{this.state.error?.message}</p>
+        <p>{i18n.t("components.errorBoundary.instructions")}</p>
+        <div className="route-error__actions">
+          <button type="button" className="ss-button-secondary" onClick={this.retry}>
+            {i18n.t("components.errorBoundary.retry")}
+          </button>
+          <button type="button" className="ss-button" onClick={this.reload}>
+            {i18n.t("components.errorBoundary.reload")}
+          </button>
+        </div>
       </div>
     );
   }
-
-  return <>{children}</>;
 }

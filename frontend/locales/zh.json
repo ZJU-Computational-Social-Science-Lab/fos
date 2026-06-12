@@ -1981,7 +1981,9 @@
     },
     "errorBoundary": {
       "title": "前端运行时出错（不是后端问题）",
-      "instructions": "请把上面这行红字错误信息，或者浏览器控制台（F12 Console）里红色那行，截图或复制给开发团队。"
+      "instructions": "请把上面这行红字错误信息，或者浏览器控制台（F12 Console）里红色那行，截图或复制给开发团队。",
+      "retry": "重试",
+      "reload": "重新加载页面"
     },
     "llmConsole": {
       "batchImport": {

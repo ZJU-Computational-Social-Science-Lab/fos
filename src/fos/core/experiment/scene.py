@@ -20,6 +20,110 @@ from fos.i18n import T
 logger = logging.getLogger(__name__)
 
 
+def _policy_cascade_action_definitions(locale: str) -> list[dict[str, Any]]:
+    """Build the shared cascade-style action list for policy communication scenes."""
+    return [
+        {
+            "id": "send_message",
+            "name": "send_message",
+            "description": T("experiment.action.send_message", locale=locale),
+            "parameters": [
+                {
+                    "name": "message",
+                    "type": "string",
+                    "description": "Message content to send",
+                }
+            ],
+        },
+        {
+            "id": "yield",
+            "name": "yield",
+            "description": T("experiment.action.yield", locale=locale),
+            "parameters": [],
+        },
+        {
+            "id": "report_upward",
+            "name": "report_upward",
+            "description": T("experiment.action.report_upward", locale=locale),
+            "parameters": [
+                {
+                    "name": "target",
+                    "type": "string",
+                    "description": "Name of the direct superior to report to",
+                },
+                {
+                    "name": "message",
+                    "type": "string",
+                    "description": "Execution difficulty report",
+                },
+            ],
+        },
+        {
+            "id": "escalate_complaint",
+            "name": "escalate_complaint",
+            "description": T("experiment.action.escalate_complaint", locale=locale),
+            "parameters": [
+                {
+                    "name": "target",
+                    "type": "string",
+                    "description": "Name of the higher-level superior to contact",
+                },
+                {
+                    "name": "message",
+                    "type": "string",
+                    "description": "Escalation report content",
+                },
+            ],
+        },
+        {
+            "id": "consult_peer",
+            "name": "consult_peer",
+            "description": T("experiment.action.consult_peer", locale=locale),
+            "parameters": [
+                {
+                    "name": "target",
+                    "type": "string",
+                    "description": "Name of the peer to consult",
+                },
+                {
+                    "name": "message",
+                    "type": "string",
+                    "description": "Consultation message",
+                },
+            ],
+        },
+        {
+            "id": "notify_subordinate",
+            "name": "notify_subordinate",
+            "description": T("experiment.action.notify_subordinate", locale=locale),
+            "parameters": [
+                {
+                    "name": "target",
+                    "type": "string",
+                    "description": "Name of the directly connected subordinate to notify",
+                },
+                {
+                    "name": "message",
+                    "type": "string",
+                    "description": "Private notification content",
+                },
+            ],
+        },
+        {
+            "id": "announce_policy_adjustment",
+            "name": "announce_policy_adjustment",
+            "description": T("experiment.action.announce_policy_adjustment", locale=locale),
+            "parameters": [
+                {
+                    "name": "message",
+                    "type": "string",
+                    "description": "Policy adjustment announcement",
+                }
+            ],
+        },
+    ]
+
+
 def _extract_custom_response_payload(parameters: dict[str, Any]) -> dict[str, str]:
     """Pull the custom-visible reply fields out of action parameters."""
     response = str(
@@ -469,6 +573,8 @@ class ExperimentScene:
             scenario = None
 
         scenario_actions = scenario.get("actions", []) if scenario else []
+        if self._uses_policy_cascade_actions():
+            scenario_actions = _policy_cascade_action_definitions(self.config.locale)
         if not scenario_actions and scenario and scenario.get("category_actions"):
             category_actions = scenario.get("category_actions", [])
             default_action_ids = scenario.get("default_action_ids", [])
@@ -656,6 +762,9 @@ class ExperimentScene:
             pass
 
         followup_modes = self._get_action_followup_modes(action_names)
+        for action_name, mode in followup_modes.items():
+            if action_name in action_schemas:
+                action_schemas[action_name]["mode"] = mode
 
         # FEAT-PGG: Handle reduce action based on deduction_budget_per_phase
         # When budget > 0: ensure reduce action is available
@@ -699,6 +808,10 @@ class ExperimentScene:
             # Actions that require follow-up reprompt for free-text input
             action_followup_modes=followup_modes,
         )
+
+    def _uses_policy_cascade_actions(self) -> bool:
+        """Tell whether this scenario should use the cascade communication action set."""
+        return self.config.scenario_id == "policy_erosion"
 
     def _get_action_followup_modes(self, action_names: list[str]) -> dict[str, str]:
         """Determine which actions require follow-up prompts.

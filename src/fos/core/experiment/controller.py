@@ -30,6 +30,16 @@ from fos.core.llm.client import LLMClient
 logger = logging.getLogger(__name__)
 
 
+def _summary_parameters(parameters: Dict[str, Any]) -> Dict[str, Any]:
+    """Keep only user-facing execution parameters for action summaries."""
+    ignored_keys = {"reasoning", "reason", "rationale"}
+    return {
+        key: value
+        for key, value in parameters.items()
+        if key not in ignored_keys
+    }
+
+
 def _coerce_param(value: Any) -> Any:
     if isinstance(value, (int, float, bool, str)):
         return value
@@ -249,9 +259,10 @@ class ExperimentController:
             if key != game_config.output_field
         }
 
+        visible_parameters = _summary_parameters(parameters)
         summary = f"{agent.name} chose {action_value}"
-        if parameters:
-            param_str = ", ".join(f"{k}={v}" for k, v in parameters.items())
+        if visible_parameters:
+            param_str = ", ".join(f"{k}={v}" for k, v in visible_parameters.items())
             summary = f"{agent.name} chose {action_value} ({param_str})"
         skipped = str(action_value).lower() == "skip"
         if game_config.name == "custom" and str(action_value).lower() == "speak":

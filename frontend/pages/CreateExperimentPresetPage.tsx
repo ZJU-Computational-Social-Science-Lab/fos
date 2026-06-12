@@ -1,3 +1,10 @@
+/**
+ * This file runs the guided preset experiment builder.
+ *
+ * CreateExperimentPresetPage restores requested builder state, loads a linked scenario,
+ * launches the finished simulation, and optionally saves a personal template.
+ */
+
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -7,7 +14,7 @@ import { useExperimentBuilder } from '../store/experiment-builder';
 import { useSimulationStore } from '../store';
 import { getAllScenarios } from '../services/scenarios';
 import { ExperimentBuilder } from '../components/experiment/ExperimentBuilder';
-import { launchExperimentFromBuilderState } from '../components/ExperimentBuilderModal';
+import { launchExperimentFromBuilderState } from '../services/launchExperiment';
 import {
   createExperimentTemplate,
   getActionType,

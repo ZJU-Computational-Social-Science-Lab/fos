@@ -124,6 +124,55 @@ def test_custom_game_config_preserves_action_parameter_schema():
     }
 
 
+def test_policy_erosion_game_config_uses_cascade_actions_with_plain_text_followups():
+    """Policy erosion should use cascade-style communication actions."""
+    config = ExperimentConfig(
+        scenario_id="policy_erosion",
+        agents=[{"name": "Alice"}],
+        actions=[],
+        parameters={
+            "policy_text": "Keep the office open late this week.",
+        },
+    )
+
+    scene = ExperimentScene(config)
+    game_config = scene._create_game_config()
+
+    assert game_config.actions == [
+        "send_message",
+        "yield",
+        "report_upward",
+        "escalate_complaint",
+        "consult_peer",
+        "notify_subordinate",
+        "announce_policy_adjustment",
+    ]
+    assert game_config.action_followup_modes == {
+        "send_message": "plain_text",
+        "report_upward": "plain_text",
+        "escalate_complaint": "plain_text",
+        "consult_peer": "plain_text",
+        "notify_subordinate": "plain_text",
+        "announce_policy_adjustment": "plain_text",
+    }
+    assert game_config.action_schemas["send_message"]["schema"] == {
+        "message": {
+            "type": "string",
+            "description": "Message content to send",
+        }
+    }
+    assert game_config.action_schemas["notify_subordinate"]["schema"] == {
+        "target": {
+            "type": "string",
+            "description": "Name of the directly connected subordinate to notify",
+        },
+        "message": {
+            "type": "string",
+            "description": "Private notification content",
+        },
+    }
+
+
 # FEAT-PGG: Deduction action filtering tests (renamed from punishment)
 
 def test_reduce_action_excluded_when_budget_zero():

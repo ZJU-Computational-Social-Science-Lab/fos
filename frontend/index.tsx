@@ -1,3 +1,9 @@
+/**
+ * This file starts the website after translations are ready.
+ *
+ * It creates the shared query cache, applies the configured base path, and mounts App.
+ */
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -40,9 +46,7 @@ const tree = (
 // 开发环境不套 StrictMode，生产环境再套
 initializeI18n()
   .then(() => {
-    ReactDOM.createRoot(rootElement).render(
-      import.meta.env.PROD ? <React.StrictMode>{tree}</React.StrictMode> : tree
-    );
+    ReactDOM.createRoot(rootElement).render(tree);
   })
   .catch((error: unknown) => {
     console.error("Failed to start translations", error);
