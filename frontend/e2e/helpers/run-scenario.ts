@@ -42,6 +42,30 @@ export function formatBackendResponseFailure(
   return `HTTP ${status} ${method} ${displayUrl}`;
 }
 
+export function formatBackendRequestFailure(
+  method: string,
+  rawUrl: string,
+  failureText: string,
+): string | null {
+  const normalizedFailure = failureText.toUpperCase();
+  if (
+    normalizedFailure.includes('ERR_ABORTED')
+    || normalizedFailure.includes('BINDING_ABORTED')
+    || normalizedFailure.includes('REQUEST_ABORTED')
+  ) {
+    return null;
+  }
+
+  let displayUrl = rawUrl;
+  try {
+    const parsed = new URL(rawUrl);
+    displayUrl = `${parsed.pathname}${parsed.search}`;
+  } catch {
+    displayUrl = rawUrl;
+  }
+  return `${method} ${displayUrl}: ${failureText}`;
+}
+
 export function determineScenarioStatus(
   result: Pick<ScenarioResult, 'status' | 'uiErrors' | 'warnings' | 'backendErrors'>,
 ): ScenarioResult['status'] {
@@ -110,7 +134,12 @@ export async function runScenario(
     const rawUrl = request.url();
     if (!isBackendApiUrl(rawUrl)) return;
     const failureText = request.failure()?.errorText || 'request failed';
-    recordBackendError(`${request.method()} ${rawUrl}: ${failureText}`);
+    const failure = formatBackendRequestFailure(
+      request.method(),
+      rawUrl,
+      failureText,
+    );
+    if (failure) recordBackendError(failure);
   };
 
   const consoleHandler = (message: ConsoleMessage): void => {

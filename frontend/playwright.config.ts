@@ -21,7 +21,12 @@ import os from 'os';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const repoRoot = resolve(__dirname, '..');
-const backendPython = process.env.FOS_PLAYWRIGHT_PYTHON || process.env.PYTHON || 'python';
+const virtualenvPython = process.platform === 'win32'
+  ? resolve(repoRoot, '.venv', 'Scripts', 'python.exe')
+  : resolve(repoRoot, '.venv', 'bin', 'python');
+const backendPython = process.env.FOS_PLAYWRIGHT_PYTHON
+  || process.env.PYTHON
+  || (existsSync(virtualenvPython) ? virtualenvPython : 'python');
 const playwrightOutputDir = resolve(os.tmpdir(), 'fos-playwright-results');
 const playwrightReportPath = resolve(os.tmpdir(), 'fos-playwright-report.json');
 const pythonPath = resolve(repoRoot, 'src');
@@ -37,6 +42,7 @@ export default defineConfig({
   globalSetup: resolve(__dirname, 'e2e/global-setup.ts'),
   testDir: './e2e',
   fullyParallel: false,        // Sequential — LLM backend can't handle parallel
+  workers: 1,
   retries: 0,                  // No retries — see failures as-is
   timeout: 300_000,            // 5 min per scenario (LLM × N agents × 3 rounds)
   expect: {
@@ -80,6 +86,7 @@ export default defineConfig({
     },
     {
       name: 'zh',
+      testIgnore: /real-llm\.spec\.ts/,
       use: {
         browserName: 'chromium',
         channel: browserChannel,

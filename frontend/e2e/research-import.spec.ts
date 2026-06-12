@@ -32,7 +32,33 @@ async function openResearchBuilder(page: import('@playwright/test').Page, locale
 
 async function waitForAnalysisToPopulate(page: import('@playwright/test').Page) {
   await expect(page.getByTestId('research-background-draft')).not.toHaveValue('', { timeout: 20_000 });
-  await expect(page.getByTestId('research-source-section').first()).toBeVisible({ timeout: 20_000 });
+}
+
+async function selectDeterministicRecognition(
+  page: import('@playwright/test').Page,
+  locale: string,
+) {
+  const label = locale === 'zh' ? '硬识别模式' : 'Deterministic recognition';
+  await page.getByRole('button', { name: new RegExp(label, 'i') }).click();
+}
+
+async function openAdvancedReview(
+  page: import('@playwright/test').Page,
+  locale: string,
+) {
+  const label = locale === 'zh' ? '高级修改与校对' : 'Advanced edits and review';
+  await page.getByRole('button', { name: new RegExp(label, 'i') }).click();
+  await expect(page.getByRole('button', { name: /semantic schema|实验语义骨架/i })).toBeVisible();
+}
+
+async function openSemanticSchema(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: /semantic schema|实验语义骨架/i }).click();
+  await expect(page.getByTestId('research-semantic-schema')).toBeVisible();
+}
+
+async function openValidationNotes(page: import('@playwright/test').Page) {
+  await page.getByRole('button', { name: /^(validation notes|校对依据)/i }).click();
+  await expect(page.getByTestId('research-source-section').first()).toBeVisible();
 }
 
 test('research import from scanned PDF reconstructs a preset-backed public goods draft', async ({ page, authedPage, locale }) => {
@@ -151,16 +177,22 @@ test('research import from scanned PDF reconstructs a preset-backed public goods
   });
 
   await openResearchBuilder(page, locale);
+  await selectDeterministicRecognition(page, locale);
   await page.getByTestId('research-upload-input').setInputFiles(files.scannedPdfPath);
 
   await expect(page.getByTestId('research-source-file-card')).toContainText('fehr_gaechter_public_goods_2000-scanned.pdf', {
     timeout: 60_000,
   });
   await waitForAnalysisToPopulate(page);
+  await openAdvancedReview(page, locale);
+  await openSemanticSchema(page);
+  await openValidationNotes(page);
   await expect(page.getByTestId('research-extraction-summary')).toContainText(/ocr|manual-text|ghostscript-text/i);
   await expect(page.getByTestId('research-page-preview').first()).toContainText(/public goods|shared public account/i);
   await expect(page.getByTestId('research-semantic-schema')).toContainText(/research goal|研究目标/i);
-  await expect(page.getByTestId('builder-mode-recommended')).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    page.getByTestId('builder-mode-recommended').getByRole('button'),
+  ).toHaveAttribute('aria-pressed', 'true');
 
   await page.getByTestId('research-background-draft').fill(
     'Reviewed public goods reconstruction for builder handoff. Participants choose how much of a 20 token endowment to contribute to a shared pool.'
@@ -168,12 +200,14 @@ test('research import from scanned PDF reconstructs a preset-backed public goods
   await page.getByTestId('research-continue-button').click();
 
   await page.waitForURL(/\/simulations\/create\/preset/, { timeout: 60_000 });
-  await expect(page.getByTestId('builder-step2-description')).toHaveValue(/Reviewed public goods reconstruction/, { timeout: 30_000 });
+  await expect(page.getByRole('textbox', {
+    name: /scenario description|场景描述/i,
+  })).toHaveValue(/Reviewed public goods reconstruction/, { timeout: 30_000 });
 
   await page.getByRole('button', { name: /back|返回/i }).first().click();
   await page.waitForURL(/\/simulations\/create\/custom/, { timeout: 60_000 });
   await expect(page.getByTestId('research-background-draft')).toHaveValue(/Reviewed public goods reconstruction/, { timeout: 30_000 });
-  await expect(page.getByTestId('research-source-section').first()).toBeVisible({ timeout: 30_000 });
+  await openAdvancedReview(page, locale);
 });
 
 test("research import from pasted prisoner's dilemma text can be handed back as a custom scenario", async ({ page, authedPage, locale }) => {
@@ -245,10 +279,13 @@ test("research import from pasted prisoner's dilemma text can be handed back as 
   });
 
   await openResearchBuilder(page, locale);
+  await selectDeterministicRecognition(page, locale);
   await page.getByTestId('research-source-text').fill(fixture.text);
   await page.getByTestId('research-analyze-button').click();
 
   await waitForAnalysisToPopulate(page);
+  await openAdvancedReview(page, locale);
+  await openValidationNotes(page);
   await page.getByTestId('builder-mode-custom').click();
   await expect(page.getByTestId('builder-mode-custom')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('research-evidence-card').first()).toBeVisible();
@@ -259,7 +296,10 @@ test("research import from pasted prisoner's dilemma text can be handed back as 
   await page.getByTestId('research-continue-button').click();
 
   await page.waitForURL(/\/simulations\/create\/preset/, { timeout: 60_000 });
-  await expect(page.getByTestId('builder-step2-custom-prompt')).toHaveValue(/prisoner's dilemma reconstruction/i, { timeout: 30_000 });
+  await expect(page.getByRole('textbox', { name: /custom scenario prompt|自定义场景提示/i })).toHaveValue(
+    /prisoner's dilemma reconstruction/i,
+    { timeout: 30_000 },
+  );
 
   const nextButton = page.getByRole('button', { name: /next|下一步/i }).last();
   await nextButton.click();
