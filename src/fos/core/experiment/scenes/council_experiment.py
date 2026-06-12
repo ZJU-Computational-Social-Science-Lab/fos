@@ -107,7 +107,7 @@ class CouncilExperimentScene(ExperimentScene):
         """Build the shared runner, then force council visibility to neighbours."""
         super().initialize(llm_client, provider_clients)
         if self.runner is None:
-            raise RuntimeError("Council runner was not initialized")
+            raise RuntimeError(T("api.errors.council_runner_not_initialized"))
 
         info_model = InformationModel(
             scope_type="neighborhood",

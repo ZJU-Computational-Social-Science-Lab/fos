@@ -141,6 +141,12 @@
       "provider_not_configured": "未配置LLM提供商",
       "provider_invalid": "无效的LLM提供商类型",
       "provider_api_key_required": "需要LLM API密钥",
+      "ollama_unreachable": "无法连接位于 {base_url} 的 Ollama：{detail}",
+      "ollama_models_missing": "缺少 Ollama 模型：{models}",
+      "simtree_root_missing": "未创建 SimTree 根节点",
+      "legacy_chat_client_missing": "旧版智能体处理没有可用的聊天客户端",
+      "contribution_amount_not_numeric": "参数“amount”应为数值，实际为 {type_name}：{value}",
+      "council_runner_not_initialized": "议会运行器尚未初始化",
       "provider_model_required": "需要指定LLM模型",
       "missing_bearer_token": "缺少Bearer令牌",
       "tree_node_not_found": "树节点未找到",
@@ -1392,6 +1398,18 @@
       "consult_peer": "咨询同级",
       "notify_subordinate": "通知下级",
       "announce_policy_adjustment": "宣布政策调整"
+    },
+    "action_parameter": {
+      "message_content": "要发送的消息内容",
+      "direct_superior": "要汇报的直属上级姓名",
+      "execution_difficulty": "执行困难报告",
+      "higher_superior": "要联系的更高层级上级姓名",
+      "escalation_report": "越级报告内容",
+      "peer_name": "要咨询的同级姓名",
+      "consultation_message": "协商消息",
+      "subordinate_name": "要通知的直属下级姓名",
+      "private_notification": "私下通知内容",
+      "policy_adjustment": "政策调整公告"
     },
     "scenario": {
       "social_norm": {

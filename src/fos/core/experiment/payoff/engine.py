@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from fos.core.experiment.state import ExperimentState
 
 from fos.core.experiment.controller import ActionResult
+from fos.i18n import T
 
 logger = logging.getLogger(__name__)
 
@@ -273,7 +274,11 @@ class PayoffEngine:
                     attempted_amount = action.parameters.get("amount", 0)
                     if not isinstance(attempted_amount, (int, float)):
                         raise TypeError(
-                            f"Expected numeric 'amount' parameter, got {type(attempted_amount).__name__}: {attempted_amount!r}"
+                            T(
+                                "api.errors.contribution_amount_not_numeric",
+                                type_name=type(attempted_amount).__name__,
+                                value=repr(attempted_amount),
+                            )
                         )
 
                     # Validate contribution against agent's token balance

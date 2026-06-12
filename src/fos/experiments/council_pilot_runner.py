@@ -1,23 +1,19 @@
 """
 This file runs a realistic council pilot with local Ollama models.
 
-Each function has one simple job:
-- default_proposals gives the three proposal texts from the experiment spec
-- build_network_variants makes the three network shapes for one agent list
-- build_mixed_model_agents generates demographic agents and assigns models
-- run_full_council_pilot runs all proposal and network combinations
-- combine_branch_csv_exports stacks all branch CSV rows into one readable file
-- main lets us run the pilot from the command line
+default_proposals gives the three proposal texts, build_network_variants makes
+three network shapes, and build_mixed_model_agents creates and assigns agents.
+run_full_council_pilot runs every combination, combine_branch_csv_exports joins
+the results, and main lets people run the pilot from the command line.
 """
 
 from __future__ import annotations
 
-import argparse
 import csv
 import io
 import json
 import random
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -31,6 +27,7 @@ from fos.core.llm.client import LLMClient
 from fos.core.llm.generation import generate_agents_with_archetypes
 from fos.core.llm_config import LLMConfig
 from fos.core.simtree import SimTree
+from fos.i18n import T
 
 
 DEFAULT_COUNCIL_MODELS = [
@@ -128,7 +125,9 @@ def _make_edge(left: str, right: str) -> tuple[str, str]:
 
 def _json_get(base_url: str, route: str) -> dict[str, Any]:
     """Read one JSON response from Ollama."""
-    request = Request(base_url.rstrip("/") + route, headers={"Accept": "application/json"})
+    request = Request(
+        base_url.rstrip("/") + route, headers={"Accept": "application/json"}
+    )
     with urlopen(request, timeout=5) as response:
         return json.loads(response.read().decode("utf-8"))
 
@@ -138,12 +137,16 @@ def ensure_ollama_models_available(base_url: str, model_names: list[str]) -> Non
     try:
         payload = _json_get(base_url, "/api/tags")
     except (HTTPError, URLError, TimeoutError, OSError) as exc:
-        raise RuntimeError(f"Ollama is not reachable at {base_url}: {exc}") from exc
+        raise RuntimeError(
+            T("api.errors.ollama_unreachable", base_url=base_url, detail=str(exc))
+        ) from exc
 
     installed = {str(model["name"]) for model in payload.get("models", [])}
     missing = [name for name in model_names if name not in installed]
     if missing:
-        raise RuntimeError(f"Missing Ollama models: {', '.join(missing)}")
+        raise RuntimeError(
+            T("api.errors.ollama_models_missing", models=", ".join(missing))
+        )
 
 
 def make_ollama_client(model_name: str, base_url: str, temperature: float) -> LLMClient:
@@ -203,7 +206,9 @@ def _build_holme_kim_edges(agent_names: list[str], seed: int) -> list[list[str]]
         new_name = agent_names[index]
         chosen: set[str] = set()
         while len(chosen) < 2:
-            chosen.add(_pick_weighted_name(rng, agent_names[:index], degree_map, chosen))
+            chosen.add(
+                _pick_weighted_name(rng, agent_names[:index], degree_map, chosen)
+            )
         chosen_names = list(chosen)
         for chosen_name in chosen_names:
             edge = _make_edge(new_name, chosen_name)
@@ -213,7 +218,8 @@ def _build_holme_kim_edges(agent_names: list[str], seed: int) -> list[list[str]]
         if rng.random() < 0.35:
             friend = chosen_names[0]
             others = [
-                name for name in agent_names[:index]
+                name
+                for name in agent_names[:index]
                 if name not in {friend, chosen_names[1]}
             ]
             if others:
@@ -255,8 +261,12 @@ def _build_sbm_edges(agent_names: list[str], seed: int) -> list[list[str]]:
 def build_network_variants(agent_names: list[str], seed: int) -> list[NetworkVariant]:
     """Build the three network variants used in the pilot."""
     return [
-        NetworkVariant("small_world", {"edges": _build_small_world_edges(agent_names, seed)}),
-        NetworkVariant("holme_kim", {"edges": _build_holme_kim_edges(agent_names, seed + 1)}),
+        NetworkVariant(
+            "small_world", {"edges": _build_small_world_edges(agent_names, seed)}
+        ),
+        NetworkVariant(
+            "holme_kim", {"edges": _build_holme_kim_edges(agent_names, seed + 1)}
+        ),
         NetworkVariant("sbm", {"edges": _build_sbm_edges(agent_names, seed + 2)}),
     ]
 
@@ -332,7 +342,9 @@ def _build_council_scene(
     )
 
 
-def _node_logs_to_export_events(node_id: int, node_logs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _node_logs_to_export_events(
+    node_id: int, node_logs: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """Convert branch node logs into the export service event shape."""
     events: list[dict[str, Any]] = []
     for sequence, log in enumerate(node_logs):
@@ -411,14 +423,18 @@ def run_full_council_pilot(
 
     for proposal in default_proposals():
         scene = _build_council_scene(agents, proposal, {"edges": []})
-        adapter = ExperimentRunnerAdapter(scene, {"chat": generator_client, "default": generator_client})
+        adapter = ExperimentRunnerAdapter(
+            scene, {"chat": generator_client, "default": generator_client}
+        )
         tree = SimTree.new(adapter, adapter.clients)
         root_id = tree.root
         if root_id is None:
-            raise RuntimeError("SimTree root was not created")
+            raise RuntimeError(T("api.errors.simtree_root_missing"))
 
         for network in networks:
-            branch_id = tree.branch(root_id, [{"op": "network_replace", "network": network.network}])
+            branch_id = tree.branch(
+                root_id, [{"op": "network_replace", "network": network.network}]
+            )
             finished_id = tree.advance(branch_id, turns=4)
             node = tree.nodes[finished_id]
             node_logs = list(node.get("logs") or [])
@@ -458,40 +474,9 @@ def run_full_council_pilot(
 
 def main() -> None:
     """Run the full council pilot from the command line."""
-    parser = argparse.ArgumentParser(description="Run the mixed-model council pilot.")
-    parser.add_argument(
-        "--output-dir",
-        default="artifacts/full_council_three_topic_run",
-        help="Folder where combined CSV and summary files will be written.",
-    )
-    parser.add_argument(
-        "--models",
-        default=",".join(DEFAULT_COUNCIL_MODELS),
-        help="Comma-separated Ollama model names.",
-    )
-    parser.add_argument("--agents", type=int, default=12, help="How many agents to generate.")
-    parser.add_argument("--seed", type=int, default=7, help="Random seed for agents and networks.")
-    parser.add_argument("--temperature", type=float, default=0.7, help="LLM temperature.")
-    parser.add_argument("--base-url", default="http://localhost:11434", help="Ollama base URL.")
-    args = parser.parse_args()
+    from fos.experiments.council_pilot_cli import run_council_pilot_cli
 
-    summary = run_full_council_pilot(
-        output_dir=Path(args.output_dir),
-        model_names=[model.strip() for model in args.models.split(",") if model.strip()],
-        total_agents=args.agents,
-        seed=args.seed,
-        temperature=args.temperature,
-        base_url=args.base_url,
-    )
-    print(
-        json.dumps(
-            {
-                "output_dir": str(Path(args.output_dir).resolve()),
-                "run_count": len(summary["runs"]),
-            },
-            indent=2,
-        )
-    )
+    run_council_pilot_cli()
 
 
 if __name__ == "__main__":

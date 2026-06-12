@@ -141,6 +141,12 @@
       "provider_not_configured": "LLM provider not configured",
       "provider_invalid": "Invalid LLM provider dialect",
       "provider_api_key_required": "LLM API key required",
+      "ollama_unreachable": "Ollama is not reachable at {base_url}: {detail}",
+      "ollama_models_missing": "Missing Ollama models: {models}",
+      "simtree_root_missing": "SimTree root was not created",
+      "legacy_chat_client_missing": "No chat client is available for legacy agent processing",
+      "contribution_amount_not_numeric": "Expected numeric 'amount' parameter, got {type_name}: {value}",
+      "council_runner_not_initialized": "Council runner was not initialized",
       "provider_model_required": "LLM model required",
       "missing_bearer_token": "Missing bearer token",
       "tree_node_not_found": "Tree node not found",
@@ -1392,6 +1398,18 @@
       "consult_peer": "Consult a peer",
       "notify_subordinate": "Notify subordinate",
       "announce_policy_adjustment": "Announce policy adjustment"
+    },
+    "action_parameter": {
+      "message_content": "Message content to send",
+      "direct_superior": "Name of the direct superior to report to",
+      "execution_difficulty": "Execution difficulty report",
+      "higher_superior": "Name of the higher-level superior to contact",
+      "escalation_report": "Escalation report content",
+      "peer_name": "Name of the peer to consult",
+      "consultation_message": "Consultation message",
+      "subordinate_name": "Name of the directly connected subordinate to notify",
+      "private_notification": "Private notification content",
+      "policy_adjustment": "Policy adjustment announcement"
     },
     "scenario": {
       "social_norm": {

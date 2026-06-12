@@ -18,6 +18,7 @@ import re
 from typing import Any
 
 from fos.core.agent.parsing import strip_thinking_tokens
+from fos.i18n import T
 
 
 class Agent:
@@ -135,7 +136,7 @@ def _select_chat_client(clients: dict[str, Any], properties: dict) -> Any:
         return clients[provider_id]
     client = clients.get("chat") or clients.get("default")
     if client is None:
-        raise RuntimeError("No chat client is available for legacy agent processing")
+        raise RuntimeError(T("api.errors.legacy_chat_client_missing"))
     return client
 
 
