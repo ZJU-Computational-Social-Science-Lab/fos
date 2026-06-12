@@ -201,7 +201,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const { refreshSessionTokens } = await import("../services/authRuntime");
         const data = await refreshSessionTokens(currentState.refreshToken);
         currentState.updateTokens(data.access_token, data.refresh_token);
-        currentState.setupProactiveRefresh();
       } catch (error) {
         console.error("Proactive token refresh failed:", error);
         // Don't clear session - reactive handler in client.ts will deal with 401

@@ -6,6 +6,11 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi, beforeAll, afterAll } from "vitest";
 
+const authRuntimeMocks = vi.hoisted(() => ({
+  refreshSessionTokens: vi.fn(),
+  pingAuthenticatedSession: vi.fn(),
+}));
+
 // Mock the client module BEFORE importing auth store
 vi.mock("../services/client", () => ({
   API_BASE_URL: "http://localhost:8000/api",
@@ -15,6 +20,11 @@ vi.mock("../services/client", () => ({
     put: vi.fn(),
     delete: vi.fn()
   }
+}));
+
+vi.mock("../services/authRuntime", () => ({
+  refreshSessionTokens: authRuntimeMocks.refreshSessionTokens,
+  pingAuthenticatedSession: authRuntimeMocks.pingAuthenticatedSession,
 }));
 
 import { useAuthStore } from "../store/auth";
@@ -48,6 +58,8 @@ describe("Proactive Token Refresh", () => {
       webSocketConnected: false,
     });
     vi.clearAllTimers();
+    authRuntimeMocks.refreshSessionTokens.mockReset();
+    authRuntimeMocks.pingAuthenticatedSession.mockReset();
     localStorage.clear();
   });
 
@@ -188,12 +200,16 @@ describe("Proactive Token Refresh", () => {
   });
 
   describe("timer scheduling", () => {
-    it("should schedule refresh for 5 minutes before expiry", () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-
+    it("test_refresh_runs_five_minutes_before_token_expiry", async () => {
+      const timeoutSpy = vi.spyOn(globalThis, "setTimeout");
       // Create a token that expires in 20 minutes
       const futureExpiry = Math.floor(Date.now() / 1000) + 20 * 60;
       const mockToken = createMockToken(futureExpiry);
+      const refreshedExpiry = Math.floor(Date.now() / 1000) + 60 * 60;
+      authRuntimeMocks.refreshSessionTokens.mockResolvedValue({
+        access_token: createMockToken(refreshedExpiry),
+        refresh_token: "next-refresh-token",
+      });
 
       useAuthStore.getState().setSession({
         accessToken: mockToken,
@@ -205,17 +221,33 @@ describe("Proactive Token Refresh", () => {
 
       // Should schedule refresh for 15 minutes from now (20 - 5)
       expect(useAuthStore.getState().refreshTimerId).not.toBeNull();
-      expect(consoleSpy).toHaveBeenCalled();
+      const refreshTimers = timeoutSpy.mock.calls.filter(([, delay]) => (
+        typeof delay === "number" && delay >= 14 * 60 * 1000
+      ));
+      expect(refreshTimers).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(14 * 60 * 1000);
+      expect(authRuntimeMocks.refreshSessionTokens).not.toHaveBeenCalled();
 
-      consoleSpy.mockRestore();
+      await vi.advanceTimersByTimeAsync(60 * 1000);
+      await vi.waitFor(() => {
+        expect(authRuntimeMocks.refreshSessionTokens).toHaveBeenCalledOnce();
+      });
+      expect(authRuntimeMocks.refreshSessionTokens).toHaveBeenCalledWith("refresh-token");
+      expect(useAuthStore.getState().refreshToken).toBe("next-refresh-token");
+      expect(useAuthStore.getState().refreshTimerId).not.toBeNull();
+      const scheduledRefreshes = timeoutSpy.mock.calls.filter(([, delay]) => (
+        typeof delay === "number" && delay >= 14 * 60 * 1000
+      ));
+      expect(scheduledRefreshes).toHaveLength(2);
+      timeoutSpy.mockRestore();
     });
 
-    it("should refresh immediately when token expires in less than 5 minutes", () => {
-      const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-
+    it("test_near_expiry_token_pings_immediately_without_a_timer", async () => {
+      const timerCountBefore = vi.getTimerCount();
       // Create a token that expires in 3 minutes
       const futureExpiry = Math.floor(Date.now() / 1000) + 3 * 60;
       const mockToken = createMockToken(futureExpiry);
+      authRuntimeMocks.pingAuthenticatedSession.mockResolvedValue(undefined);
 
       useAuthStore.setState({
         accessToken: mockToken,
@@ -228,9 +260,30 @@ describe("Proactive Token Refresh", () => {
 
       // Should not set a timer since refresh is immediate
       expect(useAuthStore.getState().refreshTimerId).toBeNull();
-      expect(consoleSpy).toHaveBeenCalledWith("Token expires soon - refreshing immediately");
+      expect(vi.getTimerCount()).toBe(timerCountBefore);
+      await vi.waitFor(() => {
+        expect(authRuntimeMocks.pingAuthenticatedSession).toHaveBeenCalledWith(mockToken);
+      });
+    });
 
-      consoleSpy.mockRestore();
+    it("test_near_expiry_ping_rejection_is_handled", async () => {
+      const futureExpiry = Math.floor(Date.now() / 1000) + 3 * 60;
+      const mockToken = createMockToken(futureExpiry);
+      authRuntimeMocks.pingAuthenticatedSession.mockRejectedValue(new Error("network unavailable"));
+
+      useAuthStore.setState({
+        accessToken: mockToken,
+        refreshToken: "refresh-token",
+        isAuthenticated: true,
+        webSocketConnected: true,
+      });
+
+      useAuthStore.getState().setupProactiveRefresh();
+
+      await vi.waitFor(() => {
+        expect(authRuntimeMocks.pingAuthenticatedSession).toHaveBeenCalledOnce();
+      });
+      expect(useAuthStore.getState().refreshTimerId).toBeNull();
     });
   });
 });
