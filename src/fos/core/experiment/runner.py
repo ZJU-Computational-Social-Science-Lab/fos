@@ -1122,10 +1122,21 @@ class ExperimentRunner:
             # Add schemas for game config actions that specify followup modes
             if self.game_config.action_followup_modes:
                 for action_name, mode in self.game_config.action_followup_modes.items():
-                    action_schemas[action_name] = {
-                        "schema": {"message": {"type": "string", "description": T("Content for {action_name}", action_name=action_name)}},
-                        "mode": mode,
-                    }
+                    existing_schema = action_schemas.get(action_name, {})
+                    if "schema" in existing_schema:
+                        merged_schema = dict(existing_schema)
+                        merged_schema["mode"] = mode
+                        action_schemas[action_name] = merged_schema
+                    else:
+                        action_schemas[action_name] = {
+                            "schema": {
+                                "message": {
+                                    "type": "string",
+                                    "description": T("Content for {action_name}", action_name=action_name),
+                                }
+                            },
+                            "mode": mode,
+                        }
                     logger.debug(f"[RUNNER] Added action_schema for '{action_name}': mode={mode}")
 
             if self.scene and getattr(getattr(self.scene, "config", None), "scenario_id", None) == "custom":

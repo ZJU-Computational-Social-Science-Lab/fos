@@ -1,3 +1,10 @@
+/**
+ * This file shows the main website navigation on large and small screens.
+ *
+ * NavBar marks the current page, opens the mobile menu, changes theme and language,
+ * handles sign-out, and starts downloading destination pages when links are focused.
+ */
+
 import { useEffect, useState } from "react";
 import { Menu, MoonStar, SunMedium, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -5,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useAuthStore } from "../store/auth";
 import { useThemeStore } from "../store/theme";
+import { prefetchRoute } from "../routes/lazyRoutes";
 
 const DESKTOP_BREAKPOINT_QUERY = "(min-width: 961px)";
 
@@ -70,6 +78,8 @@ export function NavBar({ variant = "default" }: { variant?: NavBarVariant }) {
       <Link
         key={item.to}
         to={item.to}
+        onMouseEnter={() => prefetchRoute(item.to)}
+        onFocus={() => prefetchRoute(item.to)}
         className={`nav-link ${extraClass} ${
           location.pathname.startsWith(item.to) ? "active" : ""
         }`.trim()}

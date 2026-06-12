@@ -260,6 +260,13 @@ PROPOSE_TRADE_ACTION = _make_record_only("propose_trade", "Offer to exchange res
 FORM_CONTRACT_ACTION = _make_record_only("form_contract", "Propose a formal cooperative agreement")
 HONOR_CONTRACT_ACTION = _make_record_only("honor_contract", "Fulfill an existing agreement")
 DEFECT_FROM_CONTRACT_ACTION = _make_record_only("defect_from_contract", "Break an agreement for personal gain")
+SEND_MESSAGE_ACTION = _make_record_only("send_message", "Send a message to the group")
+YIELD_ACTION = _make_record_only("yield", "Pass or pause without sending a message")
+REPORT_UPWARD_ACTION = _make_record_only("report_upward", "Report execution difficulty to a direct superior")
+ESCALATE_COMPLAINT_ACTION = _make_record_only("escalate_complaint", "Escalate a complaint to a higher-level superior")
+CONSULT_PEER_ACTION = _make_record_only("consult_peer", "Privately consult a connected peer on the same tier")
+NOTIFY_SUBORDINATE_ACTION = _make_record_only("notify_subordinate", "Privately notify a directly connected subordinate")
+ANNOUNCE_POLICY_ADJUSTMENT_ACTION = _make_record_only("announce_policy_adjustment", "Issue a policy adjustment announcement")
 
 
 # === Grid World Record-Only Actions ===
@@ -315,6 +322,13 @@ ACTION_REGISTRY: dict[str, ActionDefinition] = {
     "form_contract": FORM_CONTRACT_ACTION,
     "honor_contract": HONOR_CONTRACT_ACTION,
     "defect_from_contract": DEFECT_FROM_CONTRACT_ACTION,
+    "send_message": SEND_MESSAGE_ACTION,
+    "yield": YIELD_ACTION,
+    "report_upward": REPORT_UPWARD_ACTION,
+    "escalate_complaint": ESCALATE_COMPLAINT_ACTION,
+    "consult_peer": CONSULT_PEER_ACTION,
+    "notify_subordinate": NOTIFY_SUBORDINATE_ACTION,
+    "announce_policy_adjustment": ANNOUNCE_POLICY_ADJUSTMENT_ACTION,
     # Grid World record-only actions
     "look_around": LOOK_AROUND_ACTION,
     "rest": REST_ACTION,

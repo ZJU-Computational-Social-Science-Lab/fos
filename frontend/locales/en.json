@@ -1981,7 +1981,9 @@
     },
     "errorBoundary": {
       "title": "Frontend Runtime Error (Not a Backend Issue)",
-      "instructions": "Please copy or screenshot the red error message above, or the red line in the browser console (F12), and share it with the development team."
+      "instructions": "Please copy or screenshot the red error message above, or the red line in the browser console (F12), and share it with the development team.",
+      "retry": "Try again",
+      "reload": "Reload page"
     },
     "workspace": {
       "agentObservation": {

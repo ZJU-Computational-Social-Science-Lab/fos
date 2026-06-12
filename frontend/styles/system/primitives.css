@@ -1,3 +1,7 @@
+/*
+ * This file defines reusable layout, button, loading, and message styles used across pages.
+ */
+
 @layer components {
   .app-container {
     min-height: 100%;
@@ -1243,4 +1247,38 @@
     flex-direction: row;
     flex-wrap: wrap;
   }
+}
+.route-loading {
+  display: flex;
+  min-height: 12rem;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--ss-text-muted);
+}
+
+.route-loading--compact {
+  min-height: 5rem;
+}
+
+.route-error {
+  margin: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid var(--ss-danger);
+  border-radius: var(--ss-radius-lg);
+  background: var(--ss-danger-soft);
+  color: var(--ss-text);
+}
+
+.route-error__message {
+  color: var(--ss-danger);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.route-error__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
 }

@@ -259,6 +259,76 @@ class TestExperimentSceneState:
             )
         ]
 
+    def test_policy_erosion_round_uses_two_step_message_followup(self):
+        config = ExperimentConfig(
+            scenario_id="policy_erosion",
+            round_visibility="sequential",
+            description="Policy cascade follow-up.",
+            parameters={"policy_text": "Keep the office open late this week."},
+            agents=[
+                {"name": "Alice", "llmConfig": {"dialect": "mock"}},
+            ],
+            actions=[],
+        )
+        scene = ExperimentScene(config)
+
+        class StubLLM:
+            def __init__(self) -> None:
+                self.responses = [
+                    '{"action": "send_message", "message": "debug only"}',
+                    "We need a clearer explanation before frontline rollout.",
+                ]
+                self.prompts: list[str] = []
+                self.json_modes: list[bool] = []
+                self.index = 0
+
+            def chat(self, messages, json_mode=False):
+                self.prompts.append(messages[-1]["content"])
+                self.json_modes.append(json_mode)
+                response = self.responses[self.index]
+                self.index += 1
+                return response
+
+        llm = StubLLM()
+        scene.initialize(llm)
+
+        emitted = []
+        result = asyncio.run(scene.run_round(lambda event_type, data: emitted.append((event_type, data))))
+
+        assert result.completed is True
+        assert len(llm.prompts) == 2
+        assert llm.json_modes == [True, False]
+        assert '"send_message"' in llm.prompts[0]
+        assert '"yield"' in llm.prompts[0]
+        assert '"report_upward"' in llm.prompts[0]
+        assert "You chose to send_message. Please provide your response." in llm.prompts[1]
+        assert result.actions[0].action_name == "send_message"
+        assert result.actions[0].parameters == {
+            "message": "We need a clearer explanation before frontline rollout."
+        }
+        assert emitted == [
+            (
+                "experiment_action",
+                {
+                    "agent": "Alice",
+                    "action": "send_message",
+                    "parameters": {
+                        "message": "We need a clearer explanation before frontline rollout."
+                    },
+                    "summary": (
+                        "Alice chose send_message "
+                        "(message=We need a clearer explanation before frontline rollout.)"
+                    ),
+                    "payoff": None,
+                    "round": 1,
+                    "success": True,
+                    "skipped": False,
+                    "record_only": True,
+                    "effect_applied": False,
+                },
+            )
+        ]
+
     def test_custom_contribute_action_writes_state_and_survives_serialize(self):
         config = ExperimentConfig(
             scenario_id="custom",

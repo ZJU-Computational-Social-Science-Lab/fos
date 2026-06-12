@@ -9,6 +9,9 @@
 
 import React from "react";
 import { SimTree } from "../components/SimTree";
+import { Sidebar } from "../components/Sidebar";
+import { LogViewer } from "../components/LogViewer";
+import { SyncModal } from "../components/SyncModal";
 import { ToastContainer } from "../components/Toast";
 import { useSimulationStore } from "../store";
 import { useNavigate, useParams } from "react-router-dom";
@@ -19,23 +22,15 @@ import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import { TabRail } from "../components/TabRail";
 import { PeekOverlay } from "../components/PeekOverlay";
+import { RouteLoading } from "../components/RouteLoading";
 import { getWorkspaceOverlayMountState } from "./simulationPageRender";
 import "../styles/routes/workspace.css";
 
-const Sidebar = React.lazy(() =>
-  import("../components/Sidebar").then((module) => ({ default: module.Sidebar }))
-);
-const LogViewer = React.lazy(() =>
-  import("../components/LogViewer").then((module) => ({ default: module.LogViewer }))
-);
 const ComparisonView = React.lazy(() =>
   import("../components/ComparisonView").then((module) => ({ default: module.ComparisonView }))
 );
 const ExperimentBuilderModal = React.lazy(() =>
   import("../components/ExperimentBuilderModal").then((module) => ({ default: module.ExperimentBuilderModal }))
-);
-const SyncModal = React.lazy(() =>
-  import("../components/SyncModal").then((module) => ({ default: module.SyncModal }))
 );
 const HelpModal = React.lazy(() =>
   import("../components/HelpModal").then((module) => ({ default: module.HelpModal }))
@@ -590,9 +585,9 @@ const SimulationPage: React.FC = () => {
                   <SimTree layoutDirection="vertical" />
                 </div>
                 <div className="flex-1 flex flex-col">
-                  <React.Suspense fallback={null}>
-                    {isCompareMode ? <ComparisonView /> : <LogViewer />}
-                  </React.Suspense>
+                  {isCompareMode ? (
+                    <React.Suspense fallback={<RouteLoading compact />}><ComparisonView /></React.Suspense>
+                  ) : <LogViewer />}
                 </div>
               </div>
               <PeekOverlay />
@@ -602,15 +597,13 @@ const SimulationPage: React.FC = () => {
 
         {activeTab === 'agents' && (
           <div className="flex-1 overflow-hidden">
-            <React.Suspense fallback={null}>
-              <Sidebar />
-            </React.Suspense>
+            <Sidebar />
           </div>
         )}
 
         {activeTab === 'intervention' && (
           <div className="flex-1 overflow-hidden">
-            <React.Suspense fallback={null}>
+            <React.Suspense fallback={<RouteLoading compact />}>
               <InterventionTab />
             </React.Suspense>
           </div>
@@ -618,7 +611,7 @@ const SimulationPage: React.FC = () => {
 
         {activeTab === 'analyse' && (
           <div className="flex-1 overflow-hidden">
-            <React.Suspense fallback={null}>
+            <React.Suspense fallback={<RouteLoading compact />}>
               <AnalyseTab />
             </React.Suspense>
           </div>
@@ -626,7 +619,7 @@ const SimulationPage: React.FC = () => {
       </div>
 
       {/* Modals */}
-      <React.Suspense fallback={null}>
+      <React.Suspense fallback={<RouteLoading compact />}>
         {workspaceOverlayMounts.experimentBuilder ? <ExperimentBuilderModal /> : null}
         {workspaceOverlayMounts.help ? <HelpModal /> : null}
         {workspaceOverlayMounts.analytics ? <AnalyticsPanel /> : null}
@@ -638,8 +631,8 @@ const SimulationPage: React.FC = () => {
         {workspaceOverlayMounts.report ? <ReportModal /> : null}
         {workspaceOverlayMounts.globalKnowledge ? <GlobalKnowledgePanel /> : null}
         {workspaceOverlayMounts.guide ? <GuideAssistant /> : null}
-        <SyncModal />
       </React.Suspense>
+      <SyncModal />
       <ToastContainer />
     </div>
   );

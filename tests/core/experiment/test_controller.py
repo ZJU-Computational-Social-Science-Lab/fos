@@ -11,6 +11,18 @@ from fos.core.experiment.agent import ExperimentAgent
 from fos.core.llm_config import LLMConfig
 
 
+class StubFollowupLLMClient:
+    """Small fake LLM client that returns one canned follow-up reply."""
+
+    def __init__(self, response: str) -> None:
+        self.response = response
+        self.calls: list[dict[str, object]] = []
+
+    def chat(self, messages: list[dict[str, str]], json_mode: bool = True) -> str:
+        self.calls.append({"messages": messages, "json_mode": json_mode})
+        return self.response
+
+
 @pytest.mark.asyncio
 async def test_process_valid_response():
     """Process a valid LLM response."""
@@ -214,6 +226,72 @@ async def test_action_result_contains_required_fields():
     assert result.round_num == 2
     assert result.summary == "Frank chose defect"
     assert result.skipped is False
+
+
+@pytest.mark.asyncio
+async def test_communication_action_triggers_plain_text_followup_and_logs_it():
+    kernel = ExperimentKernel()
+    context_manager = RoundContextManager()
+    controller = ExperimentController(kernel, context_manager)
+
+    agent = ExperimentAgent(
+        name="Manager",
+        properties={},
+        llm_config=LLMConfig(dialect="mock"),
+    )
+    game_config = GameConfig(
+        name="policy_erosion",
+        description="Policy cascade follow-up.",
+        action_type="discrete",
+        actions=["notify_subordinate", "yield"],
+        payoff_type="none",
+        grouping_mode="individual",
+    )
+    llm_client = StubFollowupLLMClient("Please tell the district offices to delay enforcement by one day.")
+
+    result = await controller.process_response_with_followup(
+        raw_json='{"action": "notify_subordinate", "message": "debug only"}',
+        agent=agent,
+        game_config=game_config,
+        llm_client=llm_client,
+        round_num=3,
+        action_schemas={
+            "notify_subordinate": {
+                "schema": {
+                    "target": {
+                        "type": "string",
+                        "description": "Name of the subordinate",
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Private notification content",
+                    },
+                },
+                "mode": "plain_text",
+            }
+        },
+    )
+
+    assert result.success is True
+    assert result.action_name == "notify_subordinate"
+    assert result.parameters == {
+        "message": "Please tell the district offices to delay enforcement by one day."
+    }
+    assert result.summary == (
+        "Manager chose notify_subordinate "
+        "(message=Please tell the district offices to delay enforcement by one day.)"
+    )
+    assert llm_client.calls == [
+        {
+            "messages": llm_client.calls[0]["messages"],
+            "json_mode": False,
+        }
+    ]
+    debug_text = "".join(result.debug_log)
+    assert "FOLLOW-UP PROMPT REQUIRED" in debug_text
+    assert "--- FOLLOW-UP PROMPT ---" in debug_text
+    assert "--- FOLLOW-UP RESPONSE ---" in debug_text
+    assert "should_follow_up: True" in debug_text
 
 
 @pytest.mark.asyncio
