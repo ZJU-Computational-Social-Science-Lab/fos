@@ -10,6 +10,7 @@ import {
   QrCode,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import meetingQrImage from "../assets/fos-meeting-qr.jpeg";
 import groupQrImage from "../assets/fos-wechat-group-qr.jpeg";
 import "../styles/routes/product.css";
 
@@ -20,25 +21,27 @@ const RELEASE_PAGE_PATH = "/meeting";
 const RELEASE_INFO = {
   title: "FOS 平台线上发布演示会",
   welcome: "欢迎体验 FOS 平台。本页会持续更新最新会议安排、入会方式和二维码信息。",
-  expectedTime: "预计于 2026 年 6 月 13 日 14:00 左右举行",
-  note: "当前会议时间仍在最终确认中。正式的会议二维码、会议号和入会链接会在这里第一时间更新，请以本页内容为准。",
-  latestNotice: "如当前仍显示“稍后发布”，说明我们还在做最后确认。会议正式信息发布后，本页会同步更新。",
+  expectedTime: "暂定于 2026 年 6 月 21 日 14:00 举行",
+  note: "会议时间暂定为 2026 年 6 月 21 日 14:00，可通过下方二维码、会议号或入会链接加入腾讯会议。",
+  latestNotice: "会议二维码、会议号和入会链接已更新，请以本页内容为准。",
 } as const;
 
 const MEETING_INFO: {
   status: MeetingPublishStatus;
+  scheduledTime: string;
   meetingId: string;
   joinLink: string;
-  qrImageUrl: string;
+  qrImageUrl: typeof meetingQrImage;
   statusLabel: string;
   publishHint: string;
 } = {
-  status: "pending",
-  meetingId: "",
-  joinLink: "",
-  qrImageUrl: "",
-  statusLabel: "会议信息稍后发布",
-  publishHint: "最终确定后，这里会更新会议二维码、会议号和直达链接。",
+  status: "published",
+  scheduledTime: "2026 年 6 月 21 日 14:00",
+  meetingId: "358-469-384",
+  joinLink: "https://meeting.tencent.com/dm/TVd7gT8bMN2b",
+  qrImageUrl: meetingQrImage,
+  statusLabel: "会议信息已发布",
+  publishHint: "可扫码加入腾讯会议，也可以使用会议号或入会链接加入。",
 };
 
 export function ReleaseDemoPage() {
@@ -173,6 +176,15 @@ export function ReleaseDemoPage() {
             </div>
 
             <div className="ss-release-page__meeting-info">
+              <div className="ss-release-page__info-row">
+                <span className="ss-release-page__info-label">会议时间</span>
+                <strong className="ss-release-page__info-value">
+                  {meetingPublished && MEETING_INFO.scheduledTime
+                    ? MEETING_INFO.scheduledTime
+                    : "稍后发布"}
+                </strong>
+              </div>
+
               <div className="ss-release-page__info-row">
                 <span className="ss-release-page__info-label">会议号</span>
                 <strong className="ss-release-page__info-value">
