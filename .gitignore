@@ -77,3 +77,4 @@ _write_scene.py
 opencode.json
 /src/fos.egg-info
 src/fos.egg-info/SOURCES.txt
+run_fos.sh
