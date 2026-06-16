@@ -131,7 +131,7 @@ def gemini_chat(
     Returns:
         Generated text response
     """
-    from google.genai.types import GenerateContentConfig
+    from google.genai.types import GenerateContentConfig, ThinkingConfig
 
     contents = normalize_messages_for_gemini(messages, allow_vision, safe_urls_func)
 
@@ -145,6 +145,13 @@ def gemini_chat(
 
     if json_mode:
         config_kwargs["response_mime_type"] = "application/json"
+
+    # Layer 1: unconditionally disable thinking/reasoning mode.
+    # Some models (Gemini 2.5 Pro) reject thinking_budget=0, so catch gracefully.
+    try:
+        config_kwargs["thinking_config"] = ThinkingConfig(thinking_budget=0)
+    except Exception:
+        pass  # Layer 2 stripping handles anything that leaks through
 
     resp = client.generate_content(
         contents=contents,

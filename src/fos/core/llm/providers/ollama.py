@@ -203,6 +203,8 @@ def ollama_chat(
             "top_p": top_p,
             "num_predict": max_tokens,
         },
+        # Layer 1: unconditionally disable thinking mode.
+        "think": False,
     }
 
     # Note: We don't use payload["format"] = "json" because some Ollama models

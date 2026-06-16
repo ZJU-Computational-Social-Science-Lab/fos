@@ -147,6 +147,10 @@ def openai_chat(
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
 
+    # Layer 1: unconditionally disable thinking/reasoning mode.
+    # Non-thinking models silently ignore this parameter.
+    kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
+
     resp = client.chat.completions.create(**kwargs)
     content = (resp.choices[0].message.content or "").strip()
 
