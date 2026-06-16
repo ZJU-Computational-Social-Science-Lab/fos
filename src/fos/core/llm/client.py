@@ -30,6 +30,8 @@ from typing import List, Dict, Any
 from fos.backend.core.timing import log_time
 from fos.i18n import T
 
+from fos.core.agent.parsing import strip_thinking_tokens
+
 from .llm_config import LLMConfig
 from .validation import validate_media_url
 from .providers import _MockModel, _import_openai, _import_gemini, _import_ollama
@@ -252,67 +254,72 @@ class LLMClient:
         """
         supports_vision = bool(getattr(self.provider, "supports_vision", False))
 
-        if self.provider.dialect == "openai":
+        def _call_openai():
             openai = _get_openai()
-            def _do():
-                return openai["openai_chat"](
-                    client=self.client,
-                    model=self.provider.model,
-                    messages=messages,
-                    temperature=self.provider.temperature,
-                    max_tokens=self.provider.max_tokens,
-                    frequency_penalty=self.provider.frequency_penalty,
-                    presence_penalty=self.provider.presence_penalty,
-                    timeout=self.timeout_s,
-                    allow_vision=supports_vision,
-                    safe_urls_func=validate_media_url,
-                    json_mode=json_mode,
-                )
-            return self._with_timeout_and_retry(_do)
+            return openai["openai_chat"](
+                client=self.client,
+                model=self.provider.model,
+                messages=messages,
+                temperature=self.provider.temperature,
+                max_tokens=self.provider.max_tokens,
+                frequency_penalty=self.provider.frequency_penalty,
+                presence_penalty=self.provider.presence_penalty,
+                timeout=self.timeout_s,
+                allow_vision=supports_vision,
+                safe_urls_func=validate_media_url,
+                json_mode=json_mode,
+            )
 
-        if self.provider.dialect == "gemini":
+        def _call_gemini():
             gemini = _get_gemini()
-            def _do():
-                return gemini["gemini_chat"](
-                    client=self.client,
-                    model=self.provider.model,
-                    messages=messages,
-                    temperature=self.provider.temperature,
-                    max_tokens=self.provider.max_tokens,
-                    top_p=self.provider.top_p,
-                    frequency_penalty=self.provider.frequency_penalty,
-                    presence_penalty=self.provider.presence_penalty,
-                    safe_urls_func=validate_media_url,
-                    allow_vision=supports_vision,
-                    json_mode=json_mode,
-                )
-            return self._with_timeout_and_retry(_do)
+            return gemini["gemini_chat"](
+                client=self.client,
+                model=self.provider.model,
+                messages=messages,
+                temperature=self.provider.temperature,
+                max_tokens=self.provider.max_tokens,
+                top_p=self.provider.top_p,
+                frequency_penalty=self.provider.frequency_penalty,
+                presence_penalty=self.provider.presence_penalty,
+                safe_urls_func=validate_media_url,
+                allow_vision=supports_vision,
+                json_mode=json_mode,
+            )
 
-        if self.provider.dialect == "mock":
-            def _do():
-                openai = _get_openai()
-                msgs = openai["normalize_messages_for_openai"](messages, False, validate_media_url)
-                return self.client.chat(msgs, json_mode=json_mode)
-            return self._with_timeout_and_retry(_do)
+        def _call_mock():
+            openai = _get_openai()
+            msgs = openai["normalize_messages_for_openai"](messages, False, validate_media_url)
+            return self.client.chat(msgs, json_mode=json_mode)
 
-        if self.provider.dialect == "ollama":
+        def _call_ollama():
             ollama = _get_ollama()
-            def _do():
-                return ollama["ollama_chat"](
-                    client=self.client,
-                    model=self.provider.model,
-                    messages=messages,
-                    temperature=self.provider.temperature,
-                    top_p=self.provider.top_p,
-                    max_tokens=self.provider.max_tokens,
-                    timeout=self.timeout_s,
-                    allow_vision=supports_vision,
-                    safe_urls_func=validate_media_url,
-                    json_mode=json_mode,
-                )
-            return self._with_timeout_and_retry(_do)
+            return ollama["ollama_chat"](
+                client=self.client,
+                model=self.provider.model,
+                messages=messages,
+                temperature=self.provider.temperature,
+                top_p=self.provider.top_p,
+                max_tokens=self.provider.max_tokens,
+                timeout=self.timeout_s,
+                allow_vision=supports_vision,
+                safe_urls_func=validate_media_url,
+                json_mode=json_mode,
+            )
 
-        raise ValueError(T("Unknown LLM dialect: {dialect}", dialect=self.provider.dialect))
+        if self.provider.dialect == "openai":
+            result = self._with_timeout_and_retry(_call_openai)
+        elif self.provider.dialect == "gemini":
+            result = self._with_timeout_and_retry(_call_gemini)
+        elif self.provider.dialect == "mock":
+            result = self._with_timeout_and_retry(_call_mock)
+        elif self.provider.dialect == "ollama":
+            result = self._with_timeout_and_retry(_call_ollama)
+        else:
+            raise ValueError(T("Unknown LLM dialect: {dialect}", dialect=self.provider.dialect))
+
+        # Layer 2: strip any thinking/reasoning tokens that leaked through
+        # (strip_thinking_tokens handles None/falsy by returning empty string)
+        return strip_thinking_tokens(str(result or ""))
 
     # -------------------------------------------------------------------------
     # Completion API
