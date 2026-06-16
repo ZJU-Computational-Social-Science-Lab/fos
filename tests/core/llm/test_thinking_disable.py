@@ -9,11 +9,14 @@ from fos.core.agent.parsing import strip_thinking_tokens
 # strip_thinking_tokens() unit tests
 # ---------------------------------------------------------------------------
 
+
 class TestStripThinkingTokens:
     """Verify all known thinking token formats are stripped."""
 
     def test_xml_think_tags(self):
-        assert strip_thinking_tokens('<think>some reasoning</think>{"a":1}') == '{"a":1}'
+        assert (
+            strip_thinking_tokens('<think>some reasoning</think>{"a":1}') == '{"a":1}'
+        )
 
     def test_xml_reasoning_tags(self):
         assert strip_thinking_tokens('<reasoning>why</reasoning>{"a":1}') == '{"a":1}'
@@ -41,7 +44,10 @@ class TestStripThinkingTokens:
         assert result == '{"a":1}'
 
     def test_kimi_markers(self):
-        assert strip_thinking_tokens('\u25c1think\u25b7stuff\u25c1/think\u25b7{"a":1}') == '{"a":1}'
+        assert (
+            strip_thinking_tokens('\u25c1think\u25b7stuff\u25c1/think\u25b7{"a":1}')
+            == '{"a":1}'
+        )
 
     def test_bracket_markup(self):
         assert strip_thinking_tokens('[THINK]thoughts[/THINK]{"a":1}') == '{"a":1}'
@@ -75,7 +81,7 @@ class TestStripThinkingTokens:
         assert strip_thinking_tokens(original) == original
 
     def test_empty_input(self):
-        assert strip_thinking_tokens('') == ''
+        assert strip_thinking_tokens("") == ""
 
     def test_multiple_think_blocks(self):
         text = '<think>a</think>text<think>b</think>{"c":1}'
@@ -94,6 +100,7 @@ class TestStripThinkingTokens:
 # Provider parameter tests (verify disable params are sent)
 # ---------------------------------------------------------------------------
 
+
 class TestOpenAIThinkingDisableParam:
     """Verify openai_chat passes thinking disable parameter."""
 
@@ -104,31 +111,30 @@ class TestOpenAIThinkingDisableParam:
         captured_kwargs = {}
 
         class FakeChoice:
-            message = type('msg', (), {'content': '{"ok": true}'})()
+            message = type("msg", (), {"content": '{"ok": true}'})()
 
         class FakeResp:
             choices = [FakeChoice()]
 
-        class FakeCompletions:
-            @staticmethod
-            def create(**kwargs):
-                captured_kwargs.update(kwargs)
-                return FakeResp()
-
         class FakeClient:
-            chat = FakeCompletions()
+            class chat:
+                class completions:
+                    @staticmethod
+                    def create(**kwargs):
+                        captured_kwargs.update(kwargs)
+                        return FakeResp()
 
         def fake_normalize(msgs, vision, safe):
             return msgs
 
         monkeypatch.setattr(
-            'fos.core.llm.providers.openai.normalize_messages_for_openai',
+            "fos.core.llm.providers.openai.normalize_messages_for_openai",
             fake_normalize,
         )
 
         openai_chat(
             client=FakeClient(),
-            model='deepseek-reasoner',
+            model="deepseek-reasoner",
             messages=[],
             temperature=0.0,
             max_tokens=100,
@@ -136,14 +142,14 @@ class TestOpenAIThinkingDisableParam:
             presence_penalty=0.0,
             timeout=30.0,
             allow_vision=False,
-            safe_urls_func=lambda u: 'valid',
+            safe_urls_func=lambda u: "valid",
             json_mode=False,
         )
 
-        assert 'extra_body' in captured_kwargs, (
+        assert "extra_body" in captured_kwargs, (
             f"expected extra_body in kwargs, got keys: {list(captured_kwargs.keys())}"
         )
-        assert captured_kwargs['extra_body'] == {"thinking": {"type": "disabled"}}
+        assert captured_kwargs["extra_body"] == {"thinking": {"type": "disabled"}}
 
 
 class TestOllamaThinkingDisableParam:
@@ -174,24 +180,24 @@ class TestOllamaThinkingDisableParam:
             return msgs
 
         monkeypatch.setattr(
-            'fos.core.llm.providers.ollama.normalize_messages_for_ollama',
+            "fos.core.llm.providers.ollama.normalize_messages_for_ollama",
             fake_normalize,
         )
 
         ollama_chat(
             client=FakeClient(),
-            model='qwen3',
+            model="qwen3",
             messages=[],
             temperature=0.0,
             top_p=1.0,
             max_tokens=100,
             timeout=30.0,
             allow_vision=False,
-            safe_urls_func=lambda u: 'valid',
+            safe_urls_func=lambda u: "valid",
             json_mode=False,
         )
 
-        assert captured_payload.get('think') is False, (
+        assert captured_payload.get("think") is False, (
             f"expected think=False in payload, got: {captured_payload}"
         )
 
@@ -211,34 +217,34 @@ class TestGeminiThinkingDisableParam:
         class FakeModel:
             @staticmethod
             def generate_content(contents, config):
-                captured_config['config'] = config
+                captured_config["config"] = config
                 return FakeResp()
 
         def fake_normalize(msgs, vision, safe):
             return msgs
 
         monkeypatch.setattr(
-            'fos.core.llm.providers.gemini.normalize_messages_for_gemini',
+            "fos.core.llm.providers.gemini.normalize_messages_for_gemini",
             fake_normalize,
         )
 
         gemini_chat(
             client=FakeModel(),
-            model='gemini-2.0-flash',
+            model="gemini-2.0-flash",
             messages=[],
             temperature=0.0,
             max_tokens=100,
             top_p=1.0,
             frequency_penalty=0.0,
             presence_penalty=0.0,
-            safe_urls_func=lambda u: 'valid',
+            safe_urls_func=lambda u: "valid",
             allow_vision=False,
             json_mode=False,
         )
 
-        config = captured_config.get('config')
+        config = captured_config.get("config")
         assert config is not None, "expected GenerateContentConfig to be captured"
-        tc = getattr(config, 'thinking_config', None)
+        tc = getattr(config, "thinking_config", None)
         assert tc is not None, (
             "expected thinking_config on GenerateContentConfig, got None"
         )
@@ -266,7 +272,7 @@ class TestGeminiThinkingGracefulDegrade:
             return msgs
 
         monkeypatch.setattr(
-            'fos.core.llm.providers.gemini.normalize_messages_for_gemini',
+            "fos.core.llm.providers.gemini.normalize_messages_for_gemini",
             fake_normalize,
         )
 
@@ -278,19 +284,20 @@ class TestGeminiThinkingGracefulDegrade:
                 self.thinking_budget = thinking_budget
 
         import fos.core.llm.providers.gemini as gemini_mod
-        monkeypatch.setattr(gemini_mod, 'ThinkingConfig', RaisingThinkingConfig)
+
+        monkeypatch.setattr(gemini_mod, "ThinkingConfig", RaisingThinkingConfig)
 
         # Should not raise — should catch the exception and proceed
         result = gemini_chat(
             client=FakeModel(),
-            model='gemini-2.5-pro',
+            model="gemini-2.5-pro",
             messages=[],
             temperature=0.0,
             max_tokens=100,
             top_p=1.0,
             frequency_penalty=0.0,
             presence_penalty=0.0,
-            safe_urls_func=lambda u: 'valid',
+            safe_urls_func=lambda u: "valid",
             allow_vision=False,
             json_mode=False,
         )
