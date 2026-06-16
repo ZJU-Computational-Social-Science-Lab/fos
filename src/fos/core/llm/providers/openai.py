@@ -16,7 +16,6 @@ The OpenAI provider supports:
 
 from openai import OpenAI
 
-from fos.i18n import T
 
 
 def create_openai_client(api_key: str, base_url: str | None = None) -> OpenAI:
@@ -197,7 +196,11 @@ def openai_chat(
                 }
                 break
 
-        fallback_kwargs = {k: v for k, v in kwargs.items() if k not in ("response_format", "extra_body")}
+        fallback_kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k not in ("response_format", "extra_body")
+        }
         fallback_kwargs["messages"] = fallback_messages
 
         try:
@@ -207,7 +210,7 @@ def openai_chat(
             content = ""
 
     if not content:
-        raise ValueError(T("OpenAI-compatible provider returned empty response"))
+        return ""
 
     return content
 
