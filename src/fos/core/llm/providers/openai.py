@@ -17,7 +17,6 @@ The OpenAI provider supports:
 from openai import OpenAI
 
 
-
 def create_openai_client(api_key: str, base_url: str | None = None) -> OpenAI:
     """
     Create an OpenAI SDK client instance.
@@ -202,6 +201,10 @@ def openai_chat(
             if k not in ("response_format", "extra_body")
         }
         fallback_kwargs["messages"] = fallback_messages
+        # Bump max_tokens for the fallback — the added "IMPORTANT" prefix
+        # consumes some token budget, and models like Gemma need more room.
+        if fallback_kwargs.get("max_tokens", 0) < 1024:
+            fallback_kwargs["max_tokens"] = 1024
 
         try:
             resp = client.chat.completions.create(**fallback_kwargs)
