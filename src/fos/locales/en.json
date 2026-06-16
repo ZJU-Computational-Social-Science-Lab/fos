@@ -1354,7 +1354,7 @@
     "agent_embodiment": "You are a {role}. {description} When responding, think and react as this person would — not as a neutral assistant.",
     "first_round": "This is the first round - no previous context.",
     "json_only": "No markdown. No explanation. Only JSON.",
-    "response_actions": "## Your Response\nValid actions: {actions}\nRespond with ONLY JSON: {{\"{field}\": \"<action>\"}}",
+    "response_actions": "## Your Response\nValid actions: {actions}\nRespond with ONLY JSON: {{\"{field}\": \"{example}\"}}",
     "response_integer": "## Your Response\nChoose a number from {min} to {max}.\nRespond with ONLY JSON: {{\"{field}\": <number>}}",
     "round_format": "Round {round_num}: {actions}",
     "previous_rounds": "Previous rounds:\n{rounds}",

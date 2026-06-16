@@ -285,7 +285,7 @@ def build_prompt(
                 '{"action": "skip", "message": null}'
             )
         else:
-            sections.append(T("experiment.response_actions", locale=locale, actions=actions_formatted, field=field))
+            sections.append(T("experiment.response_actions", locale=locale, actions=actions_formatted, field=field, example=actions_to_show[0] if actions_to_show else "speak"))
     else:  # integer
         sections.append(T("experiment.response_integer", locale=locale, min=game_config.min, max=game_config.max, field=field))
 
