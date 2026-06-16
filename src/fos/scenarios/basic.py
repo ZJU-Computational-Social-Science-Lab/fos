@@ -12,11 +12,12 @@ from typing import Dict
 from fos.i18n import T
 from fos.core.llm.client import create_llm_client
 from fos.core.llm_config import LLMConfig, guess_supports_vision
+from fos.backend.services.provider_dialect import normalize_provider_dialect
 
 
 def make_clients_from_env() -> Dict[str, object]:
     """Create LLM clients from environment variables."""
-    dialect = os.getenv("LLM_DIALECT", "mock").lower()
+    dialect = normalize_provider_dialect(os.getenv("LLM_DIALECT", "mock"))
     if dialect not in {"openai", "gemini", "mock", "ollama"}:
         raise ValueError(T("Unsupported LLM dialect: {dialect}", dialect=dialect))
 
@@ -32,7 +33,8 @@ def make_clients_from_env() -> Dict[str, object]:
         dialect=dialect,
         api_key=os.getenv("LLM_API_KEY", ""),
         model=model,
-        base_url=os.getenv("LLM_BASE_URL") or ("http://127.0.0.1:11434" if dialect == "ollama" else None),
+        base_url=os.getenv("LLM_BASE_URL")
+        or ("http://127.0.0.1:11434" if dialect == "ollama" else None),
         temperature=float(os.getenv("LLM_TEMPERATURE", "0.7")),
         top_p=float(os.getenv("LLM_TOP_P", "1.0")),
         frequency_penalty=float(os.getenv("LLM_FREQUENCY_PENALTY", "0.0")),

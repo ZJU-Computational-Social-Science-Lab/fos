@@ -65,8 +65,7 @@ async def _initialize_vector_store() -> None:
 
     if settings.use_chromadb:
         initialize_vector_store(
-            use_chromadb=True,
-            persist_dir=settings.chromadb_persist_dir
+            use_chromadb=True, persist_dir=settings.chromadb_persist_dir
         )
         print(f"[vector_store] ChromaDB initialized at {settings.chromadb_persist_dir}")
     else:
@@ -126,8 +125,11 @@ def internal_error_handler(request: Request, exc: Exception) -> Response:
             status_code=404,
         )
     import logging
+
     logging.getLogger(__name__).error(f"Unhandled exception: {exc}", exc_info=True)
-    return Response(content={"error": str(exc)}, media_type=MediaType.JSON, status_code=500)
+    return Response(
+        content={"error": str(exc)}, media_type=MediaType.JSON, status_code=500
+    )
 
 
 def create_app() -> Litestar:
@@ -159,7 +161,9 @@ def create_app() -> Litestar:
     route_handlers = [api_routes, api_routes_css, upload_router]
 
     # 只在生产模式（有 dist 目录）时服务静态文件
-    dist_dir = Path(settings.frontend_dist_path or root_dir / "frontend" / "dist").resolve()
+    dist_dir = Path(
+        settings.frontend_dist_path or root_dir / "frontend" / "dist"
+    ).resolve()
     index_file = dist_dir / "index.html"
 
     if dist_dir.is_dir() and index_file.is_file():
@@ -167,25 +171,35 @@ def create_app() -> Litestar:
         html_cache_control = "no-cache"
         static_cache_control = "public, max-age=3600"
 
-        async def _serve_dist_file(request: Request, relative_path: str, cache_control: str) -> Response[bytes] | None:
+        async def _serve_dist_file(
+            request: Request, relative_path: str, cache_control: str
+        ) -> Response[bytes] | None:
             resolved_file = resolve_safe_dist_file(dist_dir, relative_path)
             if resolved_file is None:
                 return None
-            return await build_static_file_response(request, resolved_file, cache_control)
+            return await build_static_file_response(
+                request, resolved_file, cache_control
+            )
 
         async def _spa_response(request: Request) -> Response[bytes]:
-            return await build_static_file_response(request, index_file, html_cache_control)
+            return await build_static_file_response(
+                request, index_file, html_cache_control
+            )
 
         @get("/assets/{file_path:path}")
         async def assets(request: Request, file_path: str) -> Response[bytes]:
-            response = await _serve_dist_file(request, f"assets/{file_path}", immutable_cache_control)
+            response = await _serve_dist_file(
+                request, f"assets/{file_path}", immutable_cache_control
+            )
             if response is None:
                 return Response(content=b"", status_code=404)
             return response
 
         @get("/css/fos/assets/{file_path:path}")
         async def assets_css(request: Request, file_path: str) -> Response[bytes]:
-            response = await _serve_dist_file(request, f"assets/{file_path}", immutable_cache_control)
+            response = await _serve_dist_file(
+                request, f"assets/{file_path}", immutable_cache_control
+            )
             if response is None:
                 return Response(content=b"", status_code=404)
             return response

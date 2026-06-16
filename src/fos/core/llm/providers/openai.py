@@ -16,6 +16,8 @@ The OpenAI provider supports:
 
 from openai import OpenAI
 
+from fos.i18n import T
+
 
 def create_openai_client(api_key: str, base_url: str | None = None) -> OpenAI:
     """
@@ -158,7 +160,8 @@ def openai_chat(
 
     try:
         resp = client.chat.completions.create(**kwargs)
-        content = (resp.choices[0].message.content or "").strip()
+        msg = resp.choices[0].message
+        content = (msg.content or getattr(msg, "reasoning_content", None) or "").strip()
         if content:
             return content
     except Exception as exc:
@@ -199,11 +202,7 @@ def openai_chat(
 
         used_fallback = True
 
-        fallback_kwargs = {
-            k: v
-            for k, v in kwargs.items()
-            if k != "response_format"
-        }
+        fallback_kwargs = {k: v for k, v in kwargs.items() if k != "response_format"}
         fallback_kwargs["messages"] = fallback_messages
         # Bump max_tokens for the fallback — the added "IMPORTANT" prefix
         # consumes some token budget, and models like Gemma need more room.
@@ -212,7 +211,10 @@ def openai_chat(
 
         try:
             resp = client.chat.completions.create(**fallback_kwargs)
-            content = (resp.choices[0].message.content or "").strip()
+            msg = resp.choices[0].message
+            content = (
+                msg.content or getattr(msg, "reasoning_content", None) or ""
+            ).strip()
         except Exception:
             content = ""
 
