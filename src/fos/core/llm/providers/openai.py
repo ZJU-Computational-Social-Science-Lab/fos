@@ -170,6 +170,8 @@ def openai_chat(
             raise
         content = ""
 
+    used_fallback = False
+
     # Fallback for providers (e.g., Ollama OpenAI-compatible, lms) that
     # return empty content or reject json_object when response_format is set.
     # Retry once without response_format and prepend an explicit JSON-only
@@ -195,10 +197,12 @@ def openai_chat(
                 }
                 break
 
+        used_fallback = True
+
         fallback_kwargs = {
             k: v
             for k, v in kwargs.items()
-            if k not in ("response_format", "extra_body")
+            if k != "response_format"
         }
         fallback_kwargs["messages"] = fallback_messages
         # Bump max_tokens for the fallback — the added "IMPORTANT" prefix
@@ -213,7 +217,9 @@ def openai_chat(
             content = ""
 
     if not content:
-        return ""
+        if used_fallback:
+            return ""
+        raise ValueError(T("OpenAI-compatible provider returned empty response"))
 
     return content
 

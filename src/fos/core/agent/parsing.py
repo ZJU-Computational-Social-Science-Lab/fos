@@ -25,6 +25,10 @@ def strip_thinking_tokens(text: str) -> str:
     if not text:
         return text
 
+    # --- Phase 1: strip known thinking patterns from the ENTIRE text ---
+    # These patterns use known delimiters that won't appear in legitimate
+    # JSON content (angle brackets, pipes, special markers, etc.).
+
     # Strip leading "JSON" prefix some models emit before <think>
     # Runs BEFORE XML strip so it catches "JSON<think>...</think>{\"action\":...}"
     # as a unit before the XML regex strips the inner <think> block.
@@ -102,33 +106,6 @@ def strip_thinking_tokens(text: str) -> str:
         flags=re.DOTALL | re.IGNORECASE | re.MULTILINE,
     )
 
-    # Format tokens like <|channel|>, <|constrain|>, <|message|> (GPT-OSS, etc.)
-    # Runs AFTER paired markers so <|thinking|>...</|thinking|> is handled first.
-    text = re.sub(
-        r"<\|[a-z_]+\|>\s*",
-        "",
-        text,
-        flags=re.IGNORECASE,
-    )
-
-    # Strip leading "JSON" prefix some models emit before <think>
-    # e.g., "JSON<think>...</think>{\"action\":...}"
-    text = re.sub(
-        r"^[A-Za-z]+<think>.*?</think>\s*",
-        "",
-        text,
-        flags=re.DOTALL | re.IGNORECASE,
-    )
-
-    # Strip natural-language prefix ending with "JSON" before the actual JSON
-    # e.g., "final JSON{\"answer\": \"no\"}" (GPT-OSS, etc.)
-    text = re.sub(
-        r"^[\w\s]*JSON\s*(?=\{)",
-        "",
-        text,
-        flags=re.IGNORECASE,
-    )
-
     # Bare /think, /reasoning, /analysis markers at start of line
     text = re.sub(
         r"(^|\n)\s*/(?:think|reasoning|analysis)\b.*?(?=\n|\Z)",
@@ -143,5 +120,34 @@ def strip_thinking_tokens(text: str) -> str:
         "",
         text,
     )
+
+    # --- Phase 2: strip format tokens and prefixes from BEFORE the JSON ---
+    # These patterns are scope-restricted to the region before the first
+    # JSON brace so they can't corrupt data inside JSON string values.
+
+    json_start = text.find("{")
+    if json_start != -1:
+        prefix = text[:json_start]
+        body = text[json_start:]
+
+        # Format tokens like <|channel|>, <|constrain|>, <|message|> (GPT-OSS, etc.)
+        prefix = re.sub(
+            r"<\|[a-z_]+\|>\s*",
+            "",
+            prefix,
+            flags=re.IGNORECASE,
+        )
+
+        # Strip known GPT-OSS prefixes ending with "JSON"
+        # Only matches short prefixes like "final JSON" or "JSON" —
+        # not arbitrary natural language that happens to end with JSON.
+        prefix = re.sub(
+            r"^(?:final\s+)?JSON\s*$",
+            "",
+            prefix,
+            flags=re.IGNORECASE,
+        )
+
+        text = prefix + body
 
     return text.strip()
