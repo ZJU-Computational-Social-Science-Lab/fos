@@ -3,8 +3,8 @@
 Verifies thinking tokens are stripped from a real thinking-capable model
 running on LM Studio's OpenAI-compatible endpoint.
 
-Requires LM Studio running on http://localhost:1234/v1 with a thinking-capable
-model loaded. Skipped if server is unreachable.
+Requires LM Studio running on http://127.0.0.1:1234/v1 with a thinking-capable
+model (e.g., qwen/qwen3.6-35b-a3b) loaded. Skipped if server is unreachable.
 """
 
 import json
@@ -17,7 +17,7 @@ def _lms_reachable() -> bool:
     try:
         import httpx
 
-        resp = httpx.get("http://localhost:1234/v1/models", timeout=3)
+        resp = httpx.get("http://127.0.0.1:1234/v1/models", timeout=3)
         return resp.status_code == 200
     except Exception:
         return False
@@ -25,7 +25,7 @@ def _lms_reachable() -> bool:
 
 pytestmark = pytest.mark.skipif(
     not _lms_reachable(),
-    reason="LM Studio not reachable at http://localhost:1234/v1",
+    reason="LM Studio not reachable at http://127.0.0.1:1234/v1",
 )
 
 
@@ -38,10 +38,10 @@ def test_lms_thinking_disabled():
     config = LLMConfig(
         dialect="openai",
         api_key="not-needed",
-        model="auto",  # LM Studio auto-selects loaded model when "auto" is used
-        base_url="http://localhost:1234/v1",
-        max_tokens=256,
-        temperature=0.0,
+        model="qwen/qwen3.6-35b-a3b",
+        base_url="http://127.0.0.1:1234/v1",
+        max_tokens=512,
+        temperature=0.1,
     )
 
     client = LLMClient(config)
