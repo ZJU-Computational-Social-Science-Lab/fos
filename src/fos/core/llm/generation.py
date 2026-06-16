@@ -176,7 +176,6 @@ def generate_archetype_template(
         return fallback_template()
 
     cleaned = response.strip()
-    cleaned = re.sub(r'<think[\s\S]*?</think\s*>', '', cleaned)
     if cleaned.startswith("```"):
         cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned)
         cleaned = re.sub(r'\s*```$', '', cleaned)
