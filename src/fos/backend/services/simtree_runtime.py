@@ -301,6 +301,12 @@ class ExperimentRunnerAdapter:
             from fos.core.experiment.scenes.gaworld import GAWorldScene
 
             scene = GAWorldScene.deserialize_config(scene_data)
+        elif scene_type == "policy_cascade_experiment" or scenario_id == "policy_cascade":
+            from fos.core.scenes.policy_cascade_experiment import (
+                PolicyCascadeExperimentScene,
+            )
+
+            scene = PolicyCascadeExperimentScene.deserialize_config(scene_data)
         else:
             scene = ExperimentScene.deserialize_config(scene_data)
 

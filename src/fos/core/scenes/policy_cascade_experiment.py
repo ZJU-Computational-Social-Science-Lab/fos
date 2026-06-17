@@ -14,11 +14,13 @@ Contains: PolicyCascadeExperimentScene, _SimulatorAdapter
 from __future__ import annotations
 
 import logging
+from copy import deepcopy
 from typing import Any, Callable, Dict, List, Optional
 
 from fos.core.experiment.scene import ExperimentScene
 from fos.core.experiment.config import ExperimentConfig
 from fos.core.experiment.runner import ActionResult
+from fos.core.experiment.state import ExperimentState
 from fos.core.scenes.policy_cascade.base import PolicyCascadeBaseMixin
 from fos.core.scenes.policy_cascade.constants import _parse_tier_order, DEFAULT_TIER_ORDER
 from fos.core.scenes.policy_cascade.distortion import PolicyCascadeDistortionMixin
@@ -127,6 +129,91 @@ class PolicyCascadeExperimentScene(
         self._agents_dict: Dict[str, Any] = {}
         self._current_round: int = 0
         self._event_emitter: Optional[Callable] = None
+
+    def serialize_config(self) -> dict:
+        """Serialize the full Pipeline A scene plus cascade-specific state."""
+
+        agents = []
+        for agent in self.agents:
+            llm = getattr(agent, "llm_config", None)
+            llm_config = None
+            if llm is not None:
+                llm_config = (
+                    llm.model_dump()
+                    if hasattr(llm, "model_dump")
+                    else dict(llm)
+                    if isinstance(llm, dict)
+                    else {
+                        "dialect": llm.dialect,
+                        "api_key": llm.api_key,
+                        "model": llm.model,
+                        "base_url": llm.base_url,
+                        "temperature": llm.temperature,
+                        "top_p": llm.top_p,
+                        "frequency_penalty": llm.frequency_penalty,
+                        "presence_penalty": llm.presence_penalty,
+                        "max_tokens": llm.max_tokens,
+                        "supports_vision": llm.supports_vision,
+                    }
+                )
+            agents.append(
+                {
+                    "name": agent.name,
+                    "properties": dict(agent.properties),
+                    "llm_config": llm_config,
+                    "role_prompt": agent.role_prompt,
+                    "provider_id": agent.provider_id,
+                    "action_history": list(agent.action_history),
+                    "score": agent.score,
+                    "knowledge_base": list(agent.knowledge_base),
+                    "documents": dict(agent.documents),
+                }
+            )
+
+        return {
+            "type": self.TYPE,
+            "config": {
+                "agents": agents,
+                "actions": self.config.actions,
+                "parameters": self.config.parameters,
+                "state_schema": self.config.state_schema,
+                "description": self.config.description,
+                "scenario_id": self.config.scenario_id,
+                "round_visibility": self.config.round_visibility,
+                "social_network": self.config.social_network,
+                "locale": self.config.locale,
+                "global_knowledge": self.global_knowledge,
+            },
+            "current_round": self.current_round,
+            "history": deepcopy(self._history),
+            "state": self._experiment_state.to_dict(),
+            "policy_cascade_state": deepcopy(self.state),
+            "pending_host_messages": deepcopy(self._pending_host_messages),
+            "pgg_phase": self._pgg_phase,
+        }
+
+    @classmethod
+    def deserialize_config(cls, data: dict) -> "PolicyCascadeExperimentScene":
+        """Restore a policy cascade experiment from a SimTree snapshot."""
+
+        config = ExperimentConfig(**data["config"])
+        scene = cls(config)
+        scene.current_round = data.get("current_round", 0)
+        scene._current_round = scene.current_round
+        scene._history = deepcopy(data.get("history", []))
+        if data.get("state") is not None:
+            scene._experiment_state = ExperimentState.from_dict(data["state"])
+        scene.state = deepcopy(data.get("policy_cascade_state", scene.state))
+        scene._pending_host_messages = deepcopy(data.get("pending_host_messages", []))
+        scene._pgg_phase = data.get("pgg_phase", "allocate")
+        scene.tier_order = _parse_tier_order(
+            scene.state.get("tier_order")
+            or config.parameters.get("tier_order")
+            or DEFAULT_TIER_ORDER
+        )
+        scene._agents_by_tier = {tier: [] for tier in scene.tier_order}
+        scene._agents_dict = {a.name: a for a in scene.agents}
+        return scene
 
     # ------------------------------------------------------------------
     # Pipeline A -> Pipeline B adapter properties
