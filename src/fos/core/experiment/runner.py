@@ -1176,6 +1176,10 @@ class ExperimentRunner:
                 result.action_name = "skip"
                 result.summary = f"{agent.name} skipped"
 
+            scene_action_hook = getattr(self.scene, "process_runner_action_result", None)
+            if scene_action_hook is not None:
+                result = scene_action_hook(result, agent)
+
             # Write all debug output atomically (prompt + response + controller + followup)
             await self._write_debug_atomically(debug_buffer)
 

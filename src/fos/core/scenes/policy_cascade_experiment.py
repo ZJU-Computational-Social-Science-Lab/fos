@@ -21,6 +21,7 @@ from fos.core.experiment.scene import ExperimentScene
 from fos.core.experiment.config import ExperimentConfig
 from fos.core.experiment.runner import ActionResult
 from fos.core.experiment.state import ExperimentState
+from fos.core.event import MessageEvent
 from fos.core.scenes.policy_cascade.base import PolicyCascadeBaseMixin
 from fos.core.scenes.policy_cascade.constants import _parse_tier_order, DEFAULT_TIER_ORDER
 from fos.core.scenes.policy_cascade.distortion import PolicyCascadeDistortionMixin
@@ -34,6 +35,20 @@ from fos.core.scenes.policy_cascade.threads import PolicyCascadeThreadMixin
 logger = logging.getLogger(__name__)
 
 
+class _PipelineAActionTerminal:
+    def parse_and_handle_action(self, action_data, agent, simulator):
+        action_name = str(action_data.get("action") or "").strip()
+        if action_name == "send_message":
+            message = str(action_data.get("message") or "").strip()
+            if not message:
+                return False, {"error": "message required"}, "message required", {}, True
+            self.deliver_message(MessageEvent(agent.name, message), agent, simulator)
+            return True, {"message": message}, f"{agent.name} sent a message", {}, True
+        if action_name == "yield":
+            return True, {}, f"{agent.name} skipped", {}, True
+        return False, {"error": f"unknown action: {action_name}"}, f"unknown action: {action_name}", {}, True
+
+
 class PolicyCascadeExperimentScene(
     PolicyCascadeRuntimeMixin,
     PolicyCascadePromptMixin,
@@ -43,6 +58,7 @@ class PolicyCascadeExperimentScene(
     PolicyCascadeStateMixin,
     PolicyCascadeDistortionMixin,
     PolicyCascadeBaseMixin,
+    _PipelineAActionTerminal,
     ExperimentScene,
 ):
     """Pipeline A implementation of the policy cascade scene.
@@ -263,6 +279,40 @@ class PolicyCascadeExperimentScene(
         except Exception:
             return None
 
+    def process_runner_action_result(self, result: ActionResult, agent) -> ActionResult:
+        """Apply policy cascade action semantics to Pipeline A runner output."""
+
+        payload = {"action": result.action_name, **(result.parameters or {})}
+        runtime_state = getattr(self, "_policy_cascade_runtime_state", self.state)
+        active_state = self.state
+        self.state = runtime_state
+        try:
+            success, action_result, summary, meta, _ = self.parse_and_handle_action(
+                payload,
+                agent,
+                self.simulator,
+            )
+        finally:
+            self.state = active_state
+        action_name = str(payload.get("action") or result.action_name)
+        parameters = {key: value for key, value in payload.items() if key != "action"}
+        if isinstance(action_result, dict):
+            parameters.update({key: value for key, value in action_result.items() if key not in {"error"}})
+        if meta:
+            parameters["meta"] = meta
+
+        return ActionResult(
+            success=success,
+            action_name=action_name,
+            parameters=parameters,
+            summary=summary or result.summary,
+            agent_name=result.agent_name,
+            round_num=result.round_num,
+            skipped=(not success) or action_name in {"skip", "yield"},
+            error="" if success else str(action_result.get("error", result.error) if isinstance(action_result, dict) else result.error),
+            debug_log=result.debug_log,
+        )
+
     async def run_round(self, event_emitter):
         """Run one round, storing event_emitter for mixin use."""
         self._event_emitter = event_emitter
@@ -310,12 +360,14 @@ class PolicyCascadeExperimentScene(
         # Swap to ExperimentState for super().run_round() which
         # accesses self.state.round, .history, .agents
         cascade_state = self.state
+        self._policy_cascade_runtime_state = cascade_state
         self.state = self._experiment_state
         try:
             result = await super().run_round(event_emitter)
         finally:
             if runner is not None and original_agents is not None:
                 runner.agents = original_agents
+            self._policy_cascade_runtime_state = cascade_state
         self._experiment_state = self.state
         self.state = cascade_state
 
