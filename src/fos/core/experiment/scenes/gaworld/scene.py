@@ -25,11 +25,15 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from fos.core.experiment.runner import RoundResult
 from fos.core.experiment.scene import ExperimentScene
-from fos.core.experiment.scenes.gaworld.profiles import export_profiles_csv, load_profiles
+from fos.core.experiment.scenes.gaworld.profiles import (
+    export_profiles_csv,
+    load_profiles,
+)
 from fos.core.experiment.scenes.gaworld.runtime_modes import (
     build_daily_life_overrides,
     build_information_overrides,
@@ -38,42 +42,59 @@ from fos.core.experiment.scenes.gaworld.runtime_modes import (
     has_explicit_city_system_mode,
     merge_nested_overrides,
 )
-from fos.core.experiment.scenes.gaworld.subprocess_manager import GAWorldSubprocessManager
+from fos.core.experiment.scenes.gaworld.subprocess_manager import (
+    GAWorldSubprocessManager,
+)
 from fos.core.experiment.scenes.gaworld.translator import GAWorldOutputTranslator
 
 logger = logging.getLogger(__name__)
 
-GAWORLD_LLM_ENV_KEYS = (
+GAWORLD_LLM_ENV_KEYS: tuple[str, ...] = (
     "GAWORLD_LLM_API_KEY",
     "MINIMAX_API_KEY",
     "ANTHROPIC_AUTH_TOKEN",
     "ANTHROPIC_API_KEY",
 )
-FOS_OLLAMA_PROVIDER_NAME = "fos_ollama"
-DEFAULT_FOS_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
-DEFAULT_FOS_OLLAMA_MODEL = "qwen3:4b-instruct-2507-q4_K_M"
+FOS_GAWORLD_PROVIDER_NAME = "fos_provider"
+GAWORLD_API_KEY_ENV = "GAWORLD_LLM_API_KEY"
 GAWORLD_WAIT_TIMEOUT_S = 1800
 FAST_MODE_TIME_STEP_MINUTES = 120
 DEFAULT_EXECUTION_PROFILE = "fast"
 
+# Map FOS LLM dialect to GAWorld provider type.
+_DIALECT_TO_GAWORLD_TYPE: dict[str, str] = {
+    "ollama": "ollama",
+    "openai": "openai",
+    "anthropic": "anthropic",
+}
+
+# Dialects with OpenAI-compatible APIs that GAWorld's openai provider can call.
+_OPENAI_COMPATIBLE_DIALECTS = {"openai", "deepseek", "lmstudio", "vllm", "llamacpp"}
+
 
 @dataclass(frozen=True)
-class OllamaProviderSettings:
-    """Stores the Ollama endpoint GAWorld needs."""
+class LLMProviderSettings:
+    """LLM provider configuration FOS passes down to GAWorld."""
 
-    base_url: str
+    dialect: str
     model: str
+    base_url: str = ""
+    api_key: str = ""
     timeout: int = 600
 
 
-def _normalize_selected_agent_ids(raw_agent_ids: Any, agents: list[dict[str, Any]]) -> list[str]:
+def _normalize_selected_agent_ids(
+    raw_agent_ids: Any, agents: list[dict[str, Any]]
+) -> list[str]:
     """Chooses the requested GAWorld IDs from text first, then explicit agents."""
     if isinstance(raw_agent_ids, str):
         ids = [part.strip() for part in raw_agent_ids.split(",") if part.strip()]
         if ids:
             return ids
     elif isinstance(raw_agent_ids, list):
-        ids = [str(agent_id).strip() for agent_id in raw_agent_ids if str(agent_id).strip()]
+        ids = [
+            str(agent_id).strip() for agent_id in raw_agent_ids if str(agent_id).strip()
+        ]
         if ids:
             return ids
 
@@ -207,7 +228,9 @@ def _normalize_execution_profile(raw_value: Any) -> str:
     return DEFAULT_EXECUTION_PROFILE
 
 
-def _build_execution_profile_overrides(profile: str, output_dir: Path) -> dict[str, Any]:
+def _build_execution_profile_overrides(
+    profile: str, output_dir: Path
+) -> dict[str, Any]:
     """Returns runtime overrides for the selected GAWorld execution profile."""
     if profile == "full_fidelity":
         return {}
@@ -233,7 +256,9 @@ def _build_city_system_runtime_overrides(parameters: dict[str, Any]) -> dict[str
     return overrides
 
 
-def _build_hermetic_runtime_overrides(output_dir: Path, enable_real_work: bool = False) -> dict[str, Any]:
+def _build_hermetic_runtime_overrides(
+    output_dir: Path, enable_real_work: bool = False
+) -> dict[str, Any]:
     """Turns off optional GAWorld services unless FOS explicitly re-enables them."""
     return {
         "environment_config_path": "",
@@ -261,77 +286,102 @@ def _build_hermetic_runtime_overrides(output_dir: Path, enable_real_work: bool =
     }
 
 
-def _ollama_generate_url(base_url: str) -> str:
-    """Converts an Ollama server URL into GAWorld's generate endpoint URL."""
-    clean_url = str(base_url or "").strip().rstrip("/")
-    if not clean_url:
-        clean_url = _resolve_default_ollama_base_url()
-    if clean_url.endswith("/api/generate"):
-        return clean_url
-    if clean_url.endswith("/api"):
-        return f"{clean_url}/generate"
-    return f"{clean_url}/api/generate"
-
-
-def _ollama_settings_from_client(client: Any) -> OllamaProviderSettings | None:
-    """Reads Ollama settings from a FOS LLMClient-like object."""
+def _provider_settings_from_client(client: Any) -> LLMProviderSettings | None:
+    """Reads LLM settings from a FOS LLMClient-like object."""
     provider = getattr(client, "provider", None)
     if provider is None:
         return None
     dialect = str(getattr(provider, "dialect", "") or "").lower()
-    if dialect != "ollama":
-        return None
     model = str(getattr(provider, "model", "") or "").strip()
-    if not model:
+    if (
+        not model
+        or dialect not in _DIALECT_TO_GAWORLD_TYPE
+        and dialect not in _OPENAI_COMPATIBLE_DIALECTS
+    ):
         return None
-    base_url = str(getattr(provider, "base_url", "") or "").strip() or "http://localhost:11434"
+    base_url = str(getattr(provider, "base_url", "") or "").strip()
+    api_key = str(
+        getattr(provider, "api_key", "") or os.environ.get("LLM_API_KEY", "")
+    ).strip()
     timeout = int(float(getattr(client, "timeout_s", 600) or 600))
-    return OllamaProviderSettings(base_url=base_url, model=model, timeout=timeout)
+    return LLMProviderSettings(
+        dialect=dialect,
+        model=model,
+        base_url=base_url,
+        api_key=api_key,
+        timeout=timeout,
+    )
 
 
-def _ollama_settings_from_env() -> OllamaProviderSettings | None:
-    """Reads Ollama settings from FOS environment variables."""
+def _provider_settings_from_env() -> LLMProviderSettings | None:
+    """Reads LLM settings from FOS environment variables (LLM_DIALECT, LLM_MODEL, etc.)."""
     dialect = os.environ.get("LLM_DIALECT", "").strip().lower()
     model = os.environ.get("LLM_MODEL", "").strip()
-    if dialect != "ollama" or not model:
+    if not dialect or not model:
         return None
-    base_url = os.environ.get("LLM_BASE_URL", "").strip() or os.environ.get("OLLAMA_BASE_URL", "").strip()
-    return OllamaProviderSettings(base_url=base_url or _resolve_default_ollama_base_url(), model=model)
-
-
-def _resolve_default_ollama_base_url() -> str:
-    """Returns the Ollama base URL, preferring env vars over the hardcoded default."""
-    return (
-        os.environ.get("FOS_OLLAMA_BASE_URL", "").strip()
-        or os.environ.get("OLLAMA_BASE_URL", "").strip()
-        or DEFAULT_FOS_OLLAMA_BASE_URL
+    if (
+        dialect not in _DIALECT_TO_GAWORLD_TYPE
+        and dialect not in _OPENAI_COMPATIBLE_DIALECTS
+    ):
+        return None
+    base_url = os.environ.get("LLM_BASE_URL", "").strip()
+    api_key = os.environ.get("LLM_API_KEY", "").strip()
+    return LLMProviderSettings(
+        dialect=dialect, model=model, base_url=base_url, api_key=api_key
     )
 
 
-def _default_ollama_settings() -> OllamaProviderSettings:
-    """Returns FOS's default local Ollama settings."""
-    return OllamaProviderSettings(
-        base_url=_resolve_default_ollama_base_url(),
-        model=DEFAULT_FOS_OLLAMA_MODEL,
-    )
+def _resolve_gaworld_provider_type(dialect: str) -> str:
+    """Map FOS LLM dialect to GAWorld provider type.
+
+    OpenAI-compatible dialects (openai, deepseek, lmstudio, vllm, llamacpp)
+    all map to GAWorld's ``openai`` provider type.
+    """
+    dialect = dialect.lower()
+    if dialect in _DIALECT_TO_GAWORLD_TYPE:
+        return _DIALECT_TO_GAWORLD_TYPE[dialect]
+    if dialect in _OPENAI_COMPATIBLE_DIALECTS:
+        return "openai"
+    return "ollama"
 
 
-def _build_ollama_config_overrides(settings: OllamaProviderSettings) -> dict[str, Any]:
-    """Builds GAWorld config overrides for the resolved Ollama provider."""
+def _build_llm_config_overrides(settings: LLMProviderSettings) -> dict[str, Any]:
+    """Builds GAWorld config overrides for the resolved LLM provider."""
+    gaworld_type = _resolve_gaworld_provider_type(settings.dialect)
+
+    provider_cfg: dict[str, Any] = {
+        "type": gaworld_type,
+        "model": settings.model,
+        "timeout": settings.timeout,
+    }
+
+    if gaworld_type == "ollama":
+        clean_url = (
+            str(settings.base_url or "").strip().rstrip("/") or "http://localhost:11434"
+        )
+        if clean_url.endswith("/api/generate"):
+            provider_cfg["url"] = clean_url
+        elif clean_url.endswith("/api"):
+            provider_cfg["url"] = f"{clean_url}/generate"
+        else:
+            provider_cfg["url"] = f"{clean_url}/api/generate"
+    else:
+        provider_cfg["base_url"] = (
+            settings.base_url.rstrip("/")
+            if settings.base_url
+            else "https://api.openai.com/v1"
+        )
+        provider_cfg["api_key_env"] = GAWORLD_API_KEY_ENV
+
     return {
         "llm": {
             "providers": {
-                FOS_OLLAMA_PROVIDER_NAME: {
-                    "type": "ollama",
-                    "url": _ollama_generate_url(settings.base_url),
-                    "model": settings.model,
-                    "timeout": settings.timeout,
-                },
+                FOS_GAWORLD_PROVIDER_NAME: provider_cfg,
             },
             "routing": {
-                "default": FOS_OLLAMA_PROVIDER_NAME,
+                "default": FOS_GAWORLD_PROVIDER_NAME,
                 "tasks": {
-                    "schedule": FOS_OLLAMA_PROVIDER_NAME,
+                    "schedule": FOS_GAWORLD_PROVIDER_NAME,
                 },
             },
         },
@@ -347,11 +397,15 @@ class GAWorldScene(ExperimentScene):
         super().__init__(config)
         params = config.parameters or {}
         self.skipped_days: list[int] = []
-        self._agent_ids = _normalize_selected_agent_ids(params.get("agent_ids", []), config.agents)
+        self._agent_ids = _normalize_selected_agent_ids(
+            params.get("agent_ids", []), config.agents
+        )
         self._seed: int = int(params.get("seed", 0) or 0)
         self._translator: GAWorldOutputTranslator | None = None
         self._subprocess_manager: GAWorldSubprocessManager | None = None
-        self._comparative_managers: tuple[GAWorldSubprocessManager, GAWorldSubprocessManager] | None = None
+        self._comparative_managers: (
+            tuple[GAWorldSubprocessManager, GAWorldSubprocessManager] | None
+        ) = None
         self._provider_clients: dict = {}
         self._agent_name_map: dict[int, str] = {}
 
@@ -376,7 +430,9 @@ class GAWorldScene(ExperimentScene):
         try:
             return int(str(raw_agent_id).strip())
         except ValueError:
-            logger.warning("gaworld.warning.invalid_agent_id", extra={"agent_id": raw_agent_id})
+            logger.warning(
+                "gaworld.warning.invalid_agent_id", extra={"agent_id": raw_agent_id}
+            )
             return None
 
     def _agent_file_ids(self, memory_dir: Path) -> list[int]:
@@ -386,25 +442,43 @@ class GAWorldScene(ExperimentScene):
 
         file_ids: list[int] = []
         for actions_path in memory_dir.glob("agent_*_actions.json"):
-            raw_agent_id = actions_path.name.removeprefix("agent_").removesuffix("_actions.json")
+            raw_agent_id = actions_path.name.removeprefix("agent_").removesuffix(
+                "_actions.json"
+            )
             try:
                 file_ids.append(int(raw_agent_id))
             except ValueError:
-                logger.warning("gaworld.warning.invalid_agent_file", extra={"path": str(actions_path)})
+                logger.warning(
+                    "gaworld.warning.invalid_agent_file",
+                    extra={"path": str(actions_path)},
+                )
         return sorted(file_ids)
 
-    def _resolve_ollama_settings(self) -> OllamaProviderSettings | None:
-        """Finds the Ollama settings FOS is already using."""
-        settings = _ollama_settings_from_client(getattr(self, "llm_client", None))
+    def _resolve_llm_settings(self) -> LLMProviderSettings:
+        """Resolve LLM configuration from FOS providers, env vars, or defaults.
+
+        Priority: instance llm_client → provider_clients → env vars → Ollama fallback.
+        """
+        settings = _provider_settings_from_client(getattr(self, "llm_client", None))
         if settings is not None:
             return settings
 
         for client in self._provider_clients.values():
-            settings = _ollama_settings_from_client(client)
+            settings = _provider_settings_from_client(client)
             if settings is not None:
                 return settings
 
-        return _ollama_settings_from_env() or _default_ollama_settings()
+        settings = _provider_settings_from_env()
+        if settings is not None:
+            return settings
+
+        # Fallback: default Ollama (preserves backward compatibility)
+        return LLMProviderSettings(
+            dialect="ollama",
+            model="qwen3:4b-instruct-2507-q4_K_M",
+            base_url=os.environ.get("OLLAMA_BASE_URL", "").strip()
+            or "http://127.0.0.1:11434",
+        )
 
     def _launch_subprocess(self, target_day: int) -> None:
         launch_started_at = time.perf_counter()
@@ -416,7 +490,9 @@ class GAWorldScene(ExperimentScene):
 
         temp_dir = Path(tempfile.mkdtemp(prefix="gaworld_"))
         output_dir = Path(self.config.parameters.get("output_dir", temp_dir / "output"))
-        enable_real_work = bool(self.config.parameters.get("enable_gaworld_real_work", False))
+        enable_real_work = bool(
+            self.config.parameters.get("enable_gaworld_real_work", False)
+        )
         execution_profile = _normalize_execution_profile(
             self.config.parameters.get("execution_profile", DEFAULT_EXECUTION_PROFILE)
         )
@@ -439,9 +515,11 @@ class GAWorldScene(ExperimentScene):
             export_profiles_csv(profiles, profiles_path)
             config_overrides["csv_path"] = str(profiles_path)
         config_overrides["agent_ids"] = list(self._agent_ids)
-        ollama_settings = self._resolve_ollama_settings()
-        config_overrides.update(_build_ollama_config_overrides(ollama_settings))
+        llm_settings = self._resolve_llm_settings()
+        config_overrides.update(_build_llm_config_overrides(llm_settings))
         env_overrides: dict[str, str] = {}
+        if llm_settings.api_key:
+            env_overrides[GAWORLD_API_KEY_ENV] = llm_settings.api_key
         env_removals = set(GAWORLD_LLM_ENV_KEYS)
 
         gaworld_path_str = (
@@ -497,7 +575,9 @@ class GAWorldScene(ExperimentScene):
             output_dir,
         )
 
-    async def run_round(self, event_emitter: Callable[[str, dict], None]) -> RoundResult:
+    async def run_round(
+        self, event_emitter: Callable[[str, dict], None]
+    ) -> RoundResult:
         self.current_round += 1
         day_num = self.current_round
         if self._subprocess_manager is None:
@@ -508,12 +588,16 @@ class GAWorldScene(ExperimentScene):
                 logger.info(f"GAWorld output_dir: {output_dir}")
                 logger.info(f"GAWorld output_dir exists: {output_dir.exists()}")
                 logger.info(f"GAWorld output file: {output_dir / 'gaworld.log'}")
-                logger.info(f"GAWorld diagnostic snapshot file: {output_dir / 'gaworld_wait_status.json'}")
+                logger.info(
+                    f"GAWorld diagnostic snapshot file: {output_dir / 'gaworld_wait_status.json'}"
+                )
         if self._subprocess_manager is None or self._translator is None:
             raise RuntimeError("gaworld.error.not_initialized")
 
         try:
-            sim_state = self._subprocess_manager.wait_for_day(day_num, timeout=GAWORLD_WAIT_TIMEOUT_S)
+            sim_state = self._subprocess_manager.wait_for_day(
+                day_num, timeout=GAWORLD_WAIT_TIMEOUT_S
+            )
             day_data = self._read_day_data(day_num)
         finally:
             self.cleanup_runtime_resources()
@@ -529,7 +613,8 @@ class GAWorldScene(ExperimentScene):
                 logger.warning(
                     "GAWorld day %d produced 0 events — agents_in_data=%d, "
                     "agent_name_map=%s, day_data_keys=%s",
-                    day_num, len(agents_in_data),
+                    day_num,
+                    len(agents_in_data),
                     list(self._agent_name_map.keys())[:5],
                     list(day_data.keys()),
                 )
@@ -564,22 +649,36 @@ class GAWorldScene(ExperimentScene):
             logger.warning(
                 "GAWorld day %d: no agent file IDs found — memory_dir=%s, exists=%s, "
                 "agent_name_map_keys=%s",
-                day_num, memory_dir, memory_dir.exists(),
+                day_num,
+                memory_dir,
+                memory_dir.exists(),
                 list(self._agent_name_map.keys())[:5],
             )
             if memory_dir.exists():
                 all_files = list(memory_dir.iterdir())
-                logger.warning("GAWorld memory_dir files: %s", [f.name for f in all_files[:20]])
+                logger.warning(
+                    "GAWorld memory_dir files: %s", [f.name for f in all_files[:20]]
+                )
         for agent_id in file_ids:
             actions_path = memory_dir / f"agent_{agent_id}_actions.json"
             state_path = memory_dir / f"agent_{agent_id}.json"
-            actions = json.loads(actions_path.read_text(encoding="utf-8")) if actions_path.exists() else []
-            state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {}
+            actions = (
+                json.loads(actions_path.read_text(encoding="utf-8"))
+                if actions_path.exists()
+                else []
+            )
+            state = (
+                json.loads(state_path.read_text(encoding="utf-8"))
+                if state_path.exists()
+                else {}
+            )
             agent_data = {"id": agent_id, "actions": actions, "state": state}
             if isinstance(state, dict):
                 agent_data.update(state)
             agents_data.append(agent_data)
-        logger.info(f"GAWorld day {day_num} read {len(agents_data)} agent records from {len(file_ids)} file IDs")
+        logger.info(
+            f"GAWorld day {day_num} read {len(agents_data)} agent records from {len(file_ids)} file IDs"
+        )
 
         return {"day": day_num, "round": day_num, "agents": agents_data}
 

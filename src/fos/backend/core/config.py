@@ -1,11 +1,17 @@
 from functools import lru_cache
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 # Dangerous default values that must not be used in production
-_DANGEROUS_JWT_KEYS = {"change-me", "please-change-me", "secret", "jwt-secret", "your-secret-key"}
+_DANGEROUS_JWT_KEYS = {
+    "change-me",
+    "please-change-me",
+    "secret",
+    "jwt-secret",
+    "your-secret-key",
+}
 _DANGEROUS_ADMIN_PASSWORDS = {"zjucss107", "admin", "password", "changeme"}
 _DANGEROUS_DB_PASSWORDS = {"fos", "postgres", "password", "admin"}
 
@@ -66,6 +72,13 @@ class Settings(BaseSettings):
     simtree_cleanup_interval_seconds: int = 300
     simtree_max_records: int | None = None
 
+    # GAWorld integration
+    gaworld_path: str | None = Field(
+        default=None,
+        validation_alias="GAWORLD_PATH",
+        description="Filesystem path to the GAWorld repository",
+    )
+
     # File upload configuration
     upload_dir: str = "uploads"
     upload_base_url: str = "/uploads"
@@ -74,8 +87,12 @@ class Settings(BaseSettings):
     upload_enable_ocr: bool = False
     upload_ocr_lang: str | None = None
     upload_backend: str = "local"  # local | cloud
-    upload_cloud_base_url: str | None = None  # used when upload_backend = cloud; still writes locally but returns cloud URL
-    upload_cloud_dir: str | None = None  # optional: when cloud backend is enabled, write to this directory (e.g., mounted bucket)
+    upload_cloud_base_url: str | None = (
+        None  # used when upload_backend = cloud; still writes locally but returns cloud URL
+    )
+    upload_cloud_dir: str | None = (
+        None  # optional: when cloud backend is enabled, write to this directory (e.g., mounted bucket)
+    )
 
     # Vector Store (ChromaDB) Configuration
     use_chromadb: bool = False
@@ -90,7 +107,11 @@ class Settings(BaseSettings):
 
     @property
     def email_enabled(self) -> bool:
-        return self.email_smtp_host is not None and self.email_smtp_port is not None and self.email_from is not None
+        return (
+            self.email_smtp_host is not None
+            and self.email_smtp_port is not None
+            and self.email_from is not None
+        )
 
     @property
     def is_production(self) -> bool:
@@ -121,7 +142,10 @@ class Settings(BaseSettings):
             )
 
         # Admin password
-        if self.admin_password and self.admin_password.lower() in _DANGEROUS_ADMIN_PASSWORDS:
+        if (
+            self.admin_password
+            and self.admin_password.lower() in _DANGEROUS_ADMIN_PASSWORDS
+        ):
             errors.append(
                 "ADMIN_PASSWORD is set to a known default. "
                 "Set ADMIN_PASSWORD to a strong, unique password."
