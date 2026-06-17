@@ -1380,7 +1380,7 @@ export function CreateExperimentCustomPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="text-sm font-semibold" style={{ color: 'var(--ss-heading)' }}>
-                      {t('createExperiment.customBuilder.modeDeterministicTitle', { defaultValue: '硬识别模式' })}
+                      {t('createExperiment.customBuilder.modeDeterministicTitle', { defaultValue: '本地识别模式' })}
                     </div>
                     <p className="mt-2 text-sm leading-6" style={{ color: 'var(--ss-text)' }}>
                       {t('createExperiment.customBuilder.modeDeterministicBody', { defaultValue: '主要靠后端预处理、规则抽取和模板匹配完成识别，完全不依赖 provider。适合本地小模型能力偏弱、希望不消耗 token 先得到可编辑草案的用户，但复杂论文的识别能力会更有限。' })}

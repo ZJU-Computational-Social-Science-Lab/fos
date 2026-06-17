@@ -179,7 +179,7 @@
       "builderPathTitle": "回到标准 Builder 的方式",
       "recognitionModeTitle": "识别模式",
       "recognitionModeHint": "开始分析前，先选择使用纯后端硬识别，还是调用已配置的 Provider 模型进行识别。",
-      "modeDeterministicTitle": "硬识别模式",
+      "modeDeterministicTitle": "本地识别模式",
       "modeDeterministicShort": "只用后端识别，不调用 Provider，也不消耗 token，但复杂论文的识别能力更弱。",
       "modeDeterministicBody": "该模式主要依靠后端预处理、规则抽取和模板匹配，不会调用任何 Provider，因此不消耗 token，适合本地小模型能力较弱的情况，但对复杂论文的识别能力会更有限。",
       "modeProviderTitle": "接入 Provider 智能识别",
