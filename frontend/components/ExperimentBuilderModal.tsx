@@ -152,9 +152,9 @@ export function launchExperimentFromBuilderState({
       name,
       description: resolvedDescription,
       category: (scenarioData?.category || 'custom') as string,
-      sceneType: isPolicyErosion
-        ? 'policy_cascade_experiment'
-        : isLegacyPolicyCascade ? 'policy_cascade_scene' : isNewArchitecture ? 'experiment' : 'generic',
+      sceneType: isPolicyErosion || isLegacyPolicyCascade
+        ? 'policy_cascade_scene'
+        : isNewArchitecture ? 'experiment' : 'generic',
       agents: customAgents,
       defaultTimeConfig: {
         baseTime: new Date().toISOString(),
@@ -346,9 +346,9 @@ export const ExperimentBuilderModal: React.FC<ExperimentBuilderModalProps> = ({
         name: name,
         description: resolvedDescription,
         category: scenarioData ? 'system' : 'custom',
-        sceneType: isPolicyErosion
-          ? 'policy_cascade_experiment'
-          : isLegacyPolicyCascade ? 'policy_cascade_scene' : isNewArchitecture ? 'experiment' : 'generic',
+        sceneType: isPolicyErosion || isLegacyPolicyCascade
+          ? 'policy_cascade_scene'
+          : isNewArchitecture ? 'experiment' : 'generic',
         agents: customAgents,
         defaultTimeConfig: {
           baseTime: new Date().toISOString(),
