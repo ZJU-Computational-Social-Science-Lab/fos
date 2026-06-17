@@ -108,3 +108,22 @@ def test_configure_from_config_tier_order():
     config = _make_config(parameters={"tier_order": ["high", "mid", "low"]})
     scene = PolicyCascadeExperimentScene(config)
     assert scene.tier_order == ["high", "mid", "low"]
+
+
+def test_extract_tier_accepts_frontend_localized_properties():
+    config = _make_config(parameters={"tier_order": ["top", "mid", "low"]})
+    scene = PolicyCascadeExperimentScene(config)
+
+    localized_agent = ExperimentAgent(
+        name="Localized",
+        properties={"层级": "top"},
+        llm_config=LLMConfig(dialect="mock"),
+    )
+    tier_level_agent = ExperimentAgent(
+        name="TierLevel",
+        properties={"tier_level": "low"},
+        llm_config=LLMConfig(dialect="mock"),
+    )
+
+    assert scene._extract_tier(localized_agent) == "top"
+    assert scene._extract_tier(tier_level_agent) == "low"
