@@ -34,9 +34,7 @@ def create_openai_client(api_key: str, base_url: str | None = None) -> OpenAI:
 
 
 def normalize_messages_for_openai(
-    messages: list,
-    allow_vision: bool,
-    safe_urls_func: callable
+    messages: list, allow_vision: bool, safe_urls_func: callable
 ) -> list:
     """
     Normalize messages to OpenAI chat format.
@@ -49,6 +47,7 @@ def normalize_messages_for_openai(
     Returns:
         List of OpenAI-formatted message dicts
     """
+
     def _merge_with_placeholders(text, images, audio, video, include_image_placeholder):
         parts = []
         if text:
@@ -71,7 +70,9 @@ def normalize_messages_for_openai(
             if validation == "valid":
                 safe.append(url)
             else:
-                print(f"[OpenAI] Skipping unsafe media URL ({validation}): {url[:50]}...")
+                print(
+                    f"[OpenAI] Skipping unsafe media URL ({validation}): {url[:50]}..."
+                )
         return safe
 
     norm = []
@@ -85,7 +86,9 @@ def normalize_messages_for_openai(
         video = _safe_media_urls(m.get("video"))
 
         if allow_vision and images:
-            merged_text = _merge_with_placeholders(text, [], audio, video, include_image_placeholder=False)
+            merged_text = _merge_with_placeholders(
+                text, [], audio, video, include_image_placeholder=False
+            )
             parts = []
             if merged_text:
                 parts.append({"type": "text", "text": merged_text})
@@ -95,7 +98,9 @@ def normalize_messages_for_openai(
                 parts.append({"type": "image_url", "image_url": {"url": url}})
             norm.append({"role": role, "content": parts})
         else:
-            content = _merge_with_placeholders(text, images, audio, video, include_image_placeholder=True)
+            content = _merge_with_placeholders(
+                text, images, audio, video, include_image_placeholder=True
+            )
             norm.append({"role": role, "content": content})
     return norm
 
@@ -132,7 +137,9 @@ def openai_chat(
     Returns:
         Generated text response
     """
-    normalized_messages = normalize_messages_for_openai(messages, allow_vision, safe_urls_func)
+    normalized_messages = normalize_messages_for_openai(
+        messages, allow_vision, safe_urls_func
+    )
 
     kwargs = {
         "model": model,
@@ -147,16 +154,32 @@ def openai_chat(
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
 
-    resp = client.chat.completions.create(**kwargs)
-    content = (resp.choices[0].message.content or "").strip()
+    # Layer 1: unconditionally disable thinking/reasoning mode.
+    # Non-thinking models silently ignore this parameter.
+    kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
 
-    if content:
-        return content
+    try:
+        resp = client.chat.completions.create(**kwargs)
+        msg = resp.choices[0].message
+        content = (msg.content or getattr(msg, "reasoning_content", None) or "").strip()
+        if content:
+            return content
+    except Exception as exc:
+        # lms / llama.cpp servers reject "json_object" type and require
+        # "json_schema" or "text". Their error messages mention either
+        # "json_schema" or "json_object" — catch both variants.
+        msg = str(exc)
+        if not json_mode or not ("json_object" in msg or "json_schema" in msg):
+            raise
+        content = ""
 
-    # Fallback for providers (e.g., Ollama OpenAI-compatible) that return empty
-    # content when response_format is set. Retry once without response_format and
-    # prepend an explicit JSON-only instruction to the last user message.
-    if json_mode:
+    used_fallback = False
+
+    # Fallback for providers (e.g., Ollama OpenAI-compatible, lms) that
+    # return empty content or reject json_object when response_format is set.
+    # Retry once without response_format and prepend an explicit JSON-only
+    # instruction to the last user message.
+    if json_mode and not content:
         fallback_messages = list(normalized_messages)
 
         for i in range(len(fallback_messages) - 1, -1, -1):
@@ -177,13 +200,27 @@ def openai_chat(
                 }
                 break
 
+        used_fallback = True
+
         fallback_kwargs = {k: v for k, v in kwargs.items() if k != "response_format"}
         fallback_kwargs["messages"] = fallback_messages
+        # Bump max_tokens for the fallback — the added "IMPORTANT" prefix
+        # consumes some token budget, and models like Gemma need more room.
+        if fallback_kwargs.get("max_tokens", 0) < 1024:
+            fallback_kwargs["max_tokens"] = 1024
 
-        resp = client.chat.completions.create(**fallback_kwargs)
-        content = (resp.choices[0].message.content or "").strip()
+        try:
+            resp = client.chat.completions.create(**fallback_kwargs)
+            msg = resp.choices[0].message
+            content = (
+                msg.content or getattr(msg, "reasoning_content", None) or ""
+            ).strip()
+        except Exception:
+            content = ""
 
     if not content:
+        if used_fallback:
+            return ""
         raise ValueError(T("OpenAI-compatible provider returned empty response"))
 
     return content
@@ -195,7 +232,7 @@ def openai_completion(
     prompt: str,
     temperature: float,
     max_tokens: int,
-    timeout: float
+    timeout: float,
 ) -> str:
     """
     Perform OpenAI text completion.
@@ -221,12 +258,7 @@ def openai_completion(
     return resp.choices[0].text.strip()
 
 
-def openai_embedding(
-    client: OpenAI,
-    model: str,
-    text: str,
-    timeout: float
-) -> list:
+def openai_embedding(client: OpenAI, model: str, text: str, timeout: float) -> list:
     """
     Generate text embedding using OpenAI.
 
