@@ -69,15 +69,6 @@ class TestSupportedFilter:
         assert result is not None
         assert result["id"] == "werewolf"
 
-    def test_policy_cascade_experiment_hidden_but_gettable_by_id(self) -> None:
-        """The policy cascade runtime is internal, not a separate preset card."""
-        ids = [s["id"] for s in get_all_scenarios()]
-        assert "policy_cascade_experiment" not in ids
-
-        result = get_scenario("policy_cascade_experiment")
-        assert result is not None
-        assert result["id"] == "policy_cascade_experiment"
-
     def test_werewolf_actions_returned(self) -> None:
         actions = get_scenario_actions("werewolf")
         assert len(actions) > 0

@@ -11,7 +11,6 @@ import * as matchers from '@testing-library/jest-dom/matchers';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Step4Agents } from '../Step4Agents';
 import { useExperimentBuilder } from '../../../store/experiment-builder';
-import { generateAgentsWithDemographics } from '../../../store/helpers';
 
 expect.extend(matchers);
 
@@ -21,10 +20,7 @@ vi.mock('../../../store/experiment-builder', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string; count?: number }) => {
-      if (key === 'wizard.defaults.tierLabel') return '层级';
-      return options?.defaultValue || key;
-    },
+    t: (key: string, options?: { defaultValue?: string; count?: number }) => options?.defaultValue || key,
   }),
 }));
 
@@ -36,9 +32,7 @@ vi.mock('@tanstack/react-virtual', () => ({
 }));
 
 vi.mock('../../wizard/Step2DemographicsEditor', () => ({
-  Step2DemographicsEditor: ({ onGenerateAgents }: { onGenerateAgents: () => void }) => (
-    <button type="button" onClick={onGenerateAgents}>Generate demographic agents</button>
-  ),
+  Step2DemographicsEditor: () => <div />,
 }));
 
 vi.mock('../../../store/helpers', () => ({
@@ -175,115 +169,5 @@ describe('Step4Agents GAWorld defaults', () => {
 
     const [, agentIds] = loadDefaultAgentsForScenario.mock.calls[0];
     expect(String(agentIds).split(',')).toHaveLength(50);
-  });
-
-  it('test_policy_erosion_generation_maps_localized_tier_property_to_runtime_tier', async () => {
-    const addAgentType = vi.fn();
-    vi.mocked(generateAgentsWithDemographics).mockResolvedValue([
-      {
-        id: 'policy-agent-1',
-        name: '政策代理 1',
-        profile: '层级: top',
-        properties: { '层级': 'top' },
-        provider_id: null,
-      },
-    ] as any);
-
-    vi.mocked(useExperimentBuilder).mockReturnValue({
-      agentMode: 'demographic',
-      setAgentMode: vi.fn(),
-      agentTypes: [],
-      addAgentType,
-      removeAgentType: vi.fn(),
-      updateAgentType: vi.fn(),
-      llmProviders: [],
-      selectedProviderId: null,
-      setSelectedProviderId: vi.fn(),
-      scenarioParams: { tier_order: ['top', 'mid', 'low'] },
-      setScenarioParams: vi.fn(),
-      loadProviders: vi.fn(),
-      getSelectedProviderId: vi.fn(() => null),
-      selectedScenarioId: 'policy_erosion',
-      selectedScenarioData: {
-        id: 'policy_erosion',
-        name: 'Policy Meaning Erosion',
-        category: 'sociology',
-        description: 'A hierarchy transmits a policy.',
-        parameters: [],
-        actions: [],
-      },
-      loadDefaultAgentsForScenario: vi.fn(),
-    } as ReturnType<typeof useExperimentBuilder>);
-
-    render(<Step4Agents />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Generate demographic agents' }));
-
-    await waitFor(() => {
-      expect(addAgentType).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'policy-agent-1',
-          properties: expect.objectContaining({
-            '层级': 'top',
-            tier: 'top',
-          }),
-        }),
-      );
-    });
-  });
-
-  it('prefers localized policy tier over stale generated tier', async () => {
-    const addAgentType = vi.fn();
-    vi.mocked(generateAgentsWithDemographics).mockResolvedValue([
-      {
-        id: 'policy-agent-conflict',
-        name: '政策代理冲突',
-        profile: '层级: mid',
-        properties: { tier: 'top', '层级': 'mid' },
-        provider_id: null,
-      },
-    ] as any);
-
-    vi.mocked(useExperimentBuilder).mockReturnValue({
-      agentMode: 'demographic',
-      setAgentMode: vi.fn(),
-      agentTypes: [],
-      addAgentType,
-      removeAgentType: vi.fn(),
-      updateAgentType: vi.fn(),
-      llmProviders: [],
-      selectedProviderId: null,
-      setSelectedProviderId: vi.fn(),
-      scenarioParams: { tier_order: ['top', 'mid', 'low'] },
-      setScenarioParams: vi.fn(),
-      loadProviders: vi.fn(),
-      getSelectedProviderId: vi.fn(() => null),
-      selectedScenarioId: 'policy_erosion',
-      selectedScenarioData: {
-        id: 'policy_erosion',
-        name: 'Policy Meaning Erosion',
-        category: 'sociology',
-        description: 'A hierarchy transmits a policy.',
-        parameters: [],
-        actions: [],
-      },
-      loadDefaultAgentsForScenario: vi.fn(),
-    } as ReturnType<typeof useExperimentBuilder>);
-
-    render(<Step4Agents />);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Generate demographic agents' }));
-
-    await waitFor(() => {
-      expect(addAgentType).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: 'policy-agent-conflict',
-          properties: expect.objectContaining({
-            '层级': 'mid',
-            tier: 'mid',
-          }),
-        }),
-      );
-    });
   });
 });

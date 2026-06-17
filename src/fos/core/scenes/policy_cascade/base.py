@@ -383,14 +383,13 @@ class PolicyCascadeBaseMixin:
         return ""
 
     def _extract_tier(self, agent: Agent) -> str:
-        if hasattr(agent, "properties"):
-            for key in ("政治职位层级", "层级", "Tier", "tier_level", "tierLevel"):
-                profile_tier = self._normalize_allowed_tier(str(agent.properties.get(key, "")))
-                if profile_tier:
-                    return profile_tier
-            tier = self._normalize_allowed_tier(str(agent.properties.get("tier", "")))
-            if tier:
-                return tier
+        tier = self._normalize_allowed_tier(str(agent.properties.get("tier", ""))) if hasattr(agent, "properties") else ""
+        if tier:
+            return tier
+
+        profile_tier = self._normalize_allowed_tier(str(agent.properties.get("政治职位层级", ""))) if hasattr(agent, "properties") else ""
+        if profile_tier:
+            return profile_tier
 
         text = " ".join([
             str(getattr(agent, "role_prompt", "")),
