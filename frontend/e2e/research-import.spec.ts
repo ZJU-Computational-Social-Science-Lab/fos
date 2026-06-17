@@ -38,7 +38,7 @@ async function selectDeterministicRecognition(
   page: import('@playwright/test').Page,
   locale: string,
 ) {
-  const label = locale === 'zh' ? '硬识别模式' : 'Deterministic recognition';
+  const label = locale === 'zh' ? '本地识别模式' : 'Deterministic recognition';
   await page.getByRole('button', { name: new RegExp(label, 'i') }).click();
 }
 
