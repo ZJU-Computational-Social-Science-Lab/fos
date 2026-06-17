@@ -136,14 +136,14 @@ describe('Simulation Slice - Connected Experiment Payload', () => {
     ]);
   });
 
-  it('routes policy_erosion payload to policy_cascade_experiment', async () => {
+  it('routes policy_erosion payload to policy_cascade_scene', async () => {
     const { createSimulation } = await import('../services/simulations');
     const template: SimulationTemplate = {
       id: 'policy-erosion-template',
       name: 'Policy Meaning Erosion',
       description: 'A hierarchy transmits a policy.',
       category: 'system',
-      sceneType: 'policy_cascade_experiment',
+      sceneType: 'policy_cascade_scene',
       agents: [
         {
           id: 'director',
@@ -191,7 +191,7 @@ describe('Simulation Slice - Connected Experiment Payload', () => {
       expect(createSimulation).toHaveBeenCalledTimes(1);
     });
     const payload = vi.mocked(createSimulation).mock.calls[0][1];
-    expect(payload.scene_type).toBe('policy_cascade_experiment');
+    expect(payload.scene_type).toBe('policy_cascade_scene');
     expect(payload.scene_config.initial_event).toBe('Keep the office open late this week.');
     expect(payload.scene_config.parameters).toEqual({
       policy_text: 'Keep the office open late this week.',

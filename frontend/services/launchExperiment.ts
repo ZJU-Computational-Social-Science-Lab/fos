@@ -101,9 +101,7 @@ function buildTemplate(t: TFunction): { name: string; template: SimulationTempla
       name,
       description: String(description),
       category: scenario ? "system" : "custom",
-      sceneType: isPolicyErosion
-        ? "policy_cascade_experiment"
-        : isLegacyPolicyCascade
+      sceneType: isPolicyErosion || isLegacyPolicyCascade
         ? "policy_cascade_scene"
         : experimentCategories.has(scenario?.category || "") ? "experiment" : "generic",
       agents: state.agentTypes.flatMap(buildAgents),
