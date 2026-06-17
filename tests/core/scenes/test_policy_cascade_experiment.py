@@ -12,6 +12,8 @@ from unittest.mock import MagicMock
 from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.config import ExperimentConfig
 from fos.core.experiment.scene import ExperimentScene
+from fos.core.simtree import SimTree
+from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
 from fos.core.llm_config import LLMConfig
 from fos.core.scenes.policy_cascade_experiment import (
     PolicyCascadeExperimentScene,
@@ -108,6 +110,22 @@ def test_configure_from_config_tier_order():
     config = _make_config(parameters={"tier_order": ["high", "mid", "low"]})
     scene = PolicyCascadeExperimentScene(config)
     assert scene.tier_order == ["high", "mid", "low"]
+
+
+def test_simtree_clone_preserves_policy_cascade_experiment_scene():
+    config = _make_config(
+        scenario_id="policy_cascade",
+        parameters={"tier_order": ["high", "low"], "policy_text": "Policy A"},
+    )
+    scene = PolicyCascadeExperimentScene(config)
+    adapter = ExperimentRunnerAdapter(scene, {"chat": _mock_llm_client()})
+
+    tree = SimTree.new(adapter, adapter.clients)
+
+    root_sim = tree.nodes[tree.root]["sim"]
+    assert isinstance(root_sim.scene, PolicyCascadeExperimentScene)
+    assert root_sim.scene.config.scenario_id == "policy_cascade"
+    assert root_sim.scene.state["tier_order"] == ["high", "low"]
 
 
 def test_extract_tier_accepts_frontend_localized_properties():
