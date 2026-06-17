@@ -33,6 +33,7 @@ COPY scripts ./scripts
 # Install the application code (--no-deps is safe here because we installed requirements above)
 RUN pip install --no-cache-dir --no-deps .
 
+RUN rm -rf ./frontend/dist
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 COPY docker/backend-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
