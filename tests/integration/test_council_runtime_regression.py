@@ -16,7 +16,6 @@ from fos.core.experiment.scenes.council_experiment import (
     CouncilCyclePhase,
     CouncilExperimentScene,
 )
-from fos.core.scenes.policy_cascade import PolicyCascadeScene
 
 
 def _make_sim_record(scenario_id: str) -> SimpleNamespace:
@@ -201,52 +200,6 @@ def test_open_discussion_runtime_builds_the_normal_scene() -> None:
 
     assert isinstance(scene, ExperimentScene)
     assert not isinstance(scene, CouncilExperimentScene)
-
-
-def test_policy_erosion_runtime_restores_the_legacy_policy_scene() -> None:
-    """Policy erosion should build the legacy policy cascade scene."""
-    record = SimpleNamespace(
-        id="policy-erosion-sim",
-        scene_type="policy_cascade_experiment",
-        name="Policy Meaning Erosion",
-        description="Transmit a policy down the hierarchy.",
-        notes="",
-        latest_state=None,
-        scene_config={
-            "scenario_id": "policy_erosion",
-            "parameters": {
-                "policy_text": "All teams must file weekly compliance summaries.",
-                "tier_order": "top, mid, low",
-            },
-            "social_network": {"edges": []},
-            "locale": "zh",
-        },
-        agent_config={
-            "agents": [
-                {
-                    "name": "Director",
-                    "role_prompt": "You are the director.",
-                    "properties": {"tier": "top"},
-                },
-                {
-                    "name": "Manager",
-                    "role_prompt": "You are the manager.",
-                    "properties": {"tier": "mid"},
-                },
-                {
-                    "name": "Staff",
-                    "role_prompt": "You are the staff member.",
-                    "properties": {"tier": "low"},
-                },
-            ]
-        },
-    )
-
-    tree = simtree_runtime._build_tree_for_sim(record, clients={})
-    scene = tree.nodes[tree.root]["sim"].scene
-
-    assert isinstance(scene, PolicyCascadeScene)
-    assert scene.TYPE == "policy_cascade_scene"
 
 
 def test_council_prior_round_context_hides_non_neighbour_speech() -> None:

@@ -1,8 +1,9 @@
 /**
  * Checks that each scenario routes to the correct scene type.
  *
- * Policy Meaning Erosion should use the same legacy policy cascade path as the
- * previously working implementation.
+ * The key fix: "Policy Meaning Erosion" used to go to the legacy
+ * policy_cascade_scene (Pipeline B) but should now go to experiment
+ * (Pipeline A). Only explicit policy_diffusion IDs still use the legacy path.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -13,9 +14,6 @@ function resolveSceneType(
   name: string | undefined,
   category: string | undefined,
 ): string {
-  const isPolicyErosion =
-    id === 'policy_erosion' ||
-    id === 'policyErosion';
   const isPolicyCascade =
     id === 'policy_diffusion' ||
     id === 'policyDiffusion';
@@ -29,13 +27,13 @@ function resolveSceneType(
     category === 'generative_city' ||
     category === 'custom';
 
-  return isPolicyErosion || isPolicyCascade ? 'policy_cascade_scene' : isNewArchitecture ? 'experiment' : 'generic';
+  return isPolicyCascade ? 'policy_cascade_scene' : isNewArchitecture ? 'experiment' : 'generic';
 }
 
 describe('scene type routing', () => {
-  it('routes policy_erosion to policy_cascade_scene', () => {
+  it('routes policy_erosion to experiment (not policy_cascade_scene)', () => {
     const result = resolveSceneType('policy_erosion', 'Policy Meaning Erosion', 'sociology');
-    expect(result).toBe('policy_cascade_scene');
+    expect(result).toBe('experiment');
   });
 
   it('routes policy_diffusion to policy_cascade_scene (still legacy)', () => {

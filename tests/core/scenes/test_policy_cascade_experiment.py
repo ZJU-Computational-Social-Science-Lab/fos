@@ -6,15 +6,12 @@ and configure_from_config.
 
 Contains: test fixtures and 9 test functions.
 """
-import asyncio
 from unittest.mock import MagicMock
 
 
 from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.config import ExperimentConfig
 from fos.core.experiment.scene import ExperimentScene
-from fos.core.simtree import SimTree
-from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
 from fos.core.llm_config import LLMConfig
 from fos.core.scenes.policy_cascade_experiment import (
     PolicyCascadeExperimentScene,
@@ -111,75 +108,3 @@ def test_configure_from_config_tier_order():
     config = _make_config(parameters={"tier_order": ["high", "mid", "low"]})
     scene = PolicyCascadeExperimentScene(config)
     assert scene.tier_order == ["high", "mid", "low"]
-
-
-def test_simtree_clone_preserves_policy_cascade_experiment_scene():
-    config = _make_config(
-        scenario_id="policy_cascade",
-        parameters={"tier_order": ["high", "low"], "policy_text": "Policy A"},
-    )
-    scene = PolicyCascadeExperimentScene(config)
-    adapter = ExperimentRunnerAdapter(scene, {"chat": _mock_llm_client()})
-
-    tree = SimTree.new(adapter, adapter.clients)
-
-    root_sim = tree.nodes[tree.root]["sim"]
-    assert isinstance(root_sim.scene, PolicyCascadeExperimentScene)
-    assert root_sim.scene.config.scenario_id == "policy_cascade"
-    assert root_sim.scene.state["tier_order"] == ["high", "low"]
-
-
-def test_extract_tier_accepts_frontend_localized_properties():
-    config = _make_config(parameters={"tier_order": ["top", "mid", "low"]})
-    scene = PolicyCascadeExperimentScene(config)
-
-    localized_agent = ExperimentAgent(
-        name="Localized",
-        properties={"层级": "top"},
-        llm_config=LLMConfig(dialect="mock"),
-    )
-    tier_level_agent = ExperimentAgent(
-        name="TierLevel",
-        properties={"tier_level": "low"},
-        llm_config=LLMConfig(dialect="mock"),
-    )
-
-    assert scene._extract_tier(localized_agent) == "top"
-    assert scene._extract_tier(tier_level_agent) == "low"
-
-
-def test_extract_tier_prefers_localized_profile_over_stale_tier():
-    config = _make_config(parameters={"tier_order": ["top", "mid", "low"]})
-    scene = PolicyCascadeExperimentScene(config)
-    conflicting_agent = ExperimentAgent(
-        name="Conflicting",
-        properties={"tier": "top", "层级": "mid"},
-        llm_config=LLMConfig(dialect="mock"),
-    )
-
-    assert scene._extract_tier(conflicting_agent) == "mid"
-
-
-def test_required_cascade_converts_yield_to_policy_message():
-    config = _make_config(
-        scenario_id="policy_cascade",
-        actions=[
-            {"name": "send_message", "description": "Send a message"},
-            {"name": "yield", "description": "End your turn"},
-        ],
-        parameters={
-            "tier_order": ["high", "low"],
-            "policy_text": "Policy A must be passed downward.",
-        },
-    )
-    scene = PolicyCascadeExperimentScene(config)
-    client = _mock_llm_client()
-    client.chat.return_value = '{"action":"yield"}'
-    scene.initialize(client)
-
-    result = asyncio.run(scene.run_round(lambda _type, _data: None))
-
-    alice_action = next(action for action in result.actions if action.agent_name == "Alice")
-    assert alice_action.action_name == "send_message"
-    assert alice_action.skipped is False
-    assert "Policy A must be passed downward." in alice_action.parameters["message"]

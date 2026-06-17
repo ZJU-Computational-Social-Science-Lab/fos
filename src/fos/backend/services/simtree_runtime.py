@@ -70,36 +70,6 @@ def _resolve_initial_event(cfg: dict, fallback: str = "") -> str:
     return val or fallback
 
 
-def _extract_scene_scenario_id(scene_config: dict | None) -> str:
-    cfg = scene_config or {}
-    for candidate in (
-        cfg.get("scenario_id"),
-        (cfg.get("generic_config") or {}).get("scenario_id")
-        if isinstance(cfg.get("generic_config"), dict)
-        else None,
-        (cfg.get("config") or {}).get("scenario_id")
-        if isinstance(cfg.get("config"), dict)
-        else None,
-    ):
-        scenario_id = str(candidate or "").strip()
-        if scenario_id:
-            return scenario_id
-    return ""
-
-
-def _is_policy_erosion_scenario(scenario_id: str | None) -> bool:
-    return str(scenario_id or "").strip() in {"policy_erosion", "policyErosion"}
-
-
-def _should_restore_legacy_policy_scene(
-    scene_type: str | None, scene_config: dict | None
-) -> bool:
-    return (
-        str(scene_type or "").strip() == "policy_cascade_experiment"
-        and _is_policy_erosion_scenario(_extract_scene_scenario_id(scene_config))
-    )
-
-
 def _is_english_language(lang: str) -> bool:
     lower = lang.lower()
     return lower.startswith("en") or "english" in lower
@@ -331,12 +301,6 @@ class ExperimentRunnerAdapter:
             from fos.core.experiment.scenes.gaworld import GAWorldScene
 
             scene = GAWorldScene.deserialize_config(scene_data)
-        elif scene_type == "policy_cascade_experiment" or scenario_id == "policy_cascade":
-            from fos.core.scenes.policy_cascade_experiment import (
-                PolicyCascadeExperimentScene,
-            )
-
-            scene = PolicyCascadeExperimentScene.deserialize_config(scene_data)
         else:
             scene = ExperimentScene.deserialize_config(scene_data)
 
@@ -563,22 +527,15 @@ def _apply_agent_config(simulator, agent_config: dict | None):
 
 def _build_tree_for_sim(sim_record, clients: dict | None = None) -> SimTree:
     scene_type = sim_record.scene_type
-    cfg = getattr(sim_record, "scene_config", {}) or {}
-
     # Normalize scene_type to registry keys (allow aliases like 'experiment' -> 'experiment_scene')
     scene_key = scene_type if scene_type in SCENE_MAP else f"{scene_type}_scene"
-    if _should_restore_legacy_policy_scene(scene_type, cfg):
-        logger.info(
-            "Restoring policy_erosion simulation %s to legacy policy_cascade_scene",
-            getattr(sim_record, "id", "<unknown>"),
-        )
-        scene_key = "policy_cascade_scene"
     scene_cls = get_scene_class(scene_key)
     if scene_cls is None:
         raise ValueError(
             T("api.errors.simtree.unsupported_scene_type", scene_type=scene_type)
         )
 
+    cfg = getattr(sim_record, "scene_config", {}) or {}
     name = getattr(sim_record, "name", scene_type)
     fallback_initial = str(
         getattr(sim_record, "description", "")
@@ -1163,30 +1120,11 @@ class SimTreeRegistry:
         self, sim_record, clients: dict | None = None
     ) -> SimTreeRecord:
         key = sim_record.id.upper()
-        restore_legacy_policy = _should_restore_legacy_policy_scene(
-            getattr(sim_record, "scene_type", ""),
-            getattr(sim_record, "scene_config", {}) or {},
-        )
         record = self._records.get(key)
         if record is not None:
             record.touch()
-            if restore_legacy_policy and not record.running:
-                loop = asyncio.get_running_loop()
-                tree = await asyncio.to_thread(_build_tree_for_sim, sim_record, clients)
-                tree.attach_event_loop(loop)
-
-                def _fanout(event: dict) -> None:
-                    if int(event.get("node", -1)) not in record.running:
-                        return
-                    for q in list(record.subs):
-                        loop.call_soon_threadsafe(q.put_nowait, event)
-
-                tree.set_tree_broadcast(_fanout)
-                record.replace_tree(tree)
-                return record
             if (
                 not record.running
-                and not restore_legacy_policy
                 and getattr(sim_record, "latest_state", None)
                 and record.tree.serialize() != sim_record.latest_state
             ):
@@ -1209,25 +1147,8 @@ class SimTreeRegistry:
             record = self._records.get(key)
             if record is not None:
                 record.touch()
-                if restore_legacy_policy and not record.running:
-                    loop = asyncio.get_running_loop()
-                    tree = await asyncio.to_thread(
-                        _build_tree_for_sim, sim_record, clients
-                    )
-                    tree.attach_event_loop(loop)
-
-                    def _fanout(event: dict) -> None:
-                        if int(event.get("node", -1)) not in record.running:
-                            return
-                        for q in list(record.subs):
-                            loop.call_soon_threadsafe(q.put_nowait, event)
-
-                    tree.set_tree_broadcast(_fanout)
-                    record.replace_tree(tree)
-                    return record
                 if (
                     not record.running
-                    and not restore_legacy_policy
                     and getattr(sim_record, "latest_state", None)
                     and record.tree.serialize() != sim_record.latest_state
                 ):
@@ -1247,9 +1168,7 @@ class SimTreeRegistry:
                     record.replace_tree(tree)
                 return record
             # 优先使用最新持久化的 latest_state 进行恢复；否则重新构建
-            if restore_legacy_policy:
-                tree = await asyncio.to_thread(_build_tree_for_sim, sim_record, clients)
-            elif getattr(sim_record, "latest_state", None):
+            if getattr(sim_record, "latest_state", None):
                 try:
                     tree = SimTree.deserialize(
                         sim_record.latest_state, clients or make_clients_from_env()
