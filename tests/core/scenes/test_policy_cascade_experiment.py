@@ -6,6 +6,7 @@ and configure_from_config.
 
 Contains: test fixtures and 9 test functions.
 """
+import asyncio
 from unittest.mock import MagicMock
 
 
@@ -157,3 +158,28 @@ def test_extract_tier_prefers_localized_profile_over_stale_tier():
     )
 
     assert scene._extract_tier(conflicting_agent) == "mid"
+
+
+def test_required_cascade_converts_yield_to_policy_message():
+    config = _make_config(
+        scenario_id="policy_cascade",
+        actions=[
+            {"name": "send_message", "description": "Send a message"},
+            {"name": "yield", "description": "End your turn"},
+        ],
+        parameters={
+            "tier_order": ["high", "low"],
+            "policy_text": "Policy A must be passed downward.",
+        },
+    )
+    scene = PolicyCascadeExperimentScene(config)
+    client = _mock_llm_client()
+    client.chat.return_value = '{"action":"yield"}'
+    scene.initialize(client)
+
+    result = asyncio.run(scene.run_round(lambda _type, _data: None))
+
+    alice_action = next(action for action in result.actions if action.agent_name == "Alice")
+    assert alice_action.action_name == "send_message"
+    assert alice_action.skipped is False
+    assert "Policy A must be passed downward." in alice_action.parameters["message"]
