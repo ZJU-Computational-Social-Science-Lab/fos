@@ -31,7 +31,7 @@ type TierValue = string;
 
 const generateId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-const TIER_PROPERTY_KEYS = ['tier', '政治职位层级', '层级', 'Tier', 'tier_level', 'tierLevel'];
+const TIER_PROPERTY_KEYS = ['政治职位层级', '层级', 'Tier', 'tier_level', 'tierLevel', 'tier'];
 
 const getTierPropertyValue = (properties: Record<string, unknown> | undefined): string => {
   if (!properties) return '';
@@ -85,15 +85,15 @@ const parseTierOrder = (rawValue: unknown): string[] => {
 };
 
 const inferOrderedTier = (agent: Partial<ManualAgentType>, tierOrder: string[]): string => {
-  const explicit = String(agent.properties?.tier || '').trim();
-  if (explicit) {
-    const matched = tierOrder.find((tier) => tier.toLowerCase() === explicit.toLowerCase());
-    if (matched) return matched;
-  }
-
   const profileTier = getTierPropertyValue(agent.properties);
   if (profileTier) {
     const matched = tierOrder.find((tier) => tier.toLowerCase() === profileTier.toLowerCase());
+    if (matched) return matched;
+  }
+
+  const explicit = String(agent.properties?.tier || '').trim();
+  if (explicit) {
+    const matched = tierOrder.find((tier) => tier.toLowerCase() === explicit.toLowerCase());
     if (matched) return matched;
   }
 

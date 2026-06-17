@@ -145,3 +145,15 @@ def test_extract_tier_accepts_frontend_localized_properties():
 
     assert scene._extract_tier(localized_agent) == "top"
     assert scene._extract_tier(tier_level_agent) == "low"
+
+
+def test_extract_tier_prefers_localized_profile_over_stale_tier():
+    config = _make_config(parameters={"tier_order": ["top", "mid", "low"]})
+    scene = PolicyCascadeExperimentScene(config)
+    conflicting_agent = ExperimentAgent(
+        name="Conflicting",
+        properties={"tier": "top", "层级": "mid"},
+        llm_config=LLMConfig(dialect="mock"),
+    )
+
+    assert scene._extract_tier(conflicting_agent) == "mid"
