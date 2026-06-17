@@ -389,6 +389,11 @@ POLICY_CASCADE_EXPERIMENT: Dict[str, Any] = {
     "payoff_type": "none",
     "interaction_mode": "sequential",
     "display_type": "params",
+    "supported": False,
+    "unsupported_reason": (
+        "Internal runtime target for policy_erosion. "
+        "Do not expose as a separate preset scenario."
+    ),
     "parameters": [
         {
             "id": "tier_order",
