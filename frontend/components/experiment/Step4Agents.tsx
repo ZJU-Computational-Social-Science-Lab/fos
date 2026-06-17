@@ -31,8 +31,16 @@ type TierValue = string;
 
 const generateId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-// Tier property key constant - use this instead of hardcoded strings
-const TIER_PROPERTY_KEY = 'tier_level';
+const TIER_PROPERTY_KEYS = ['tier', '政治职位层级', '层级', 'Tier', 'tier_level', 'tierLevel'];
+
+const getTierPropertyValue = (properties: Record<string, unknown> | undefined): string => {
+  if (!properties) return '';
+  for (const key of TIER_PROPERTY_KEYS) {
+    const value = String(properties[key] || '').trim();
+    if (value) return value;
+  }
+  return '';
+};
 
 const normalizeTierValue = (value: string): TierValue => {
   const normalized = value.toLowerCase().replace(/[\s_-]/g, '');
@@ -48,7 +56,7 @@ const normalizeTierValue = (value: string): TierValue => {
 };
 
 const inferTierFromAgent = (agent: Partial<ManualAgentType>): TierValue => {
-  const explicitTier = normalizeTierValue(String(agent.properties?.tier || ''));
+  const explicitTier = normalizeTierValue(getTierPropertyValue(agent.properties));
   if (explicitTier) return explicitTier;
   return normalizeTierValue([
     agent.label || '',
@@ -83,8 +91,7 @@ const inferOrderedTier = (agent: Partial<ManualAgentType>, tierOrder: string[]):
     if (matched) return matched;
   }
 
-  // Check for tier using language-agnostic property key
-  const profileTier = String(agent.properties?.[TIER_PROPERTY_KEY] || agent.properties?.tier || '').trim();
+  const profileTier = getTierPropertyValue(agent.properties);
   if (profileTier) {
     const matched = tierOrder.find((tier) => tier.toLowerCase() === profileTier.toLowerCase());
     if (matched) return matched;
@@ -764,10 +771,7 @@ export const Step4Agents: React.FC = () => {
       // Convert generated agents to ManualAgentType format and add to store
       distributedAgents.forEach((agent) => {
         const inferredTier = inferOrderedTier({
-          properties: {
-            tier: agent.properties?.tier,
-            [TIER_PROPERTY_KEY]: agent.properties?.[TIER_PROPERTY_KEY],
-          },
+          properties: agent.properties,
           rolePrompt: agent.profile,
           userProfile: agent.profile,
           label: agent.name,
@@ -779,7 +783,7 @@ export const Step4Agents: React.FC = () => {
           demographic_attributes: JSON.stringify(agent.properties || {}),
         };
         if (showTierControls) {
-          nextProperties.tier = inferredTier || String(agent.properties?.tier || agent.properties?.[TIER_PROPERTY_KEY] || '');
+          nextProperties.tier = inferredTier || getTierPropertyValue(agent.properties);
         } else {
           delete nextProperties.tier;
         }
