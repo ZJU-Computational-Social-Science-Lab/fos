@@ -533,7 +533,7 @@ export const createSimulationSlice: StateCreator<
           };
 
           // Provide opening notice text to backend scenes
-          if (backendSceneType === 'policy_cascade_scene') {
+          if (backendSceneType === 'policy_cascade_scene' || backendSceneType === 'policy_cascade_experiment') {
             const openingNotice = String((template.genericConfig as any)?.parameters?.policy_text || '').trim();
             if (openingNotice) {
               sceneConfig.initial_event = openingNotice;

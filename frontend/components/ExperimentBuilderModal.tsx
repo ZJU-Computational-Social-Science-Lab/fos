@@ -129,9 +129,12 @@ export function launchExperimentFromBuilderState({
     round_visibility: state.roundVisibility || 'simultaneous',
   };
 
-  const isPolicyCascade =
+  const isLegacyPolicyCascade =
     scenarioData?.id === 'policy_diffusion' ||
     scenarioData?.id === 'policyDiffusion';
+  const isPolicyErosion =
+    scenarioData?.id === 'policy_erosion' ||
+    scenarioData?.id === 'policyErosion';
 
   const isNewArchitecture = scenarioData?.category === 'game_theory' ||
     scenarioData?.category === 'discussion' ||
@@ -149,7 +152,9 @@ export function launchExperimentFromBuilderState({
       name,
       description: resolvedDescription,
       category: (scenarioData?.category || 'custom') as string,
-      sceneType: isPolicyCascade ? 'policy_cascade_scene' : isNewArchitecture ? 'experiment' : 'generic',
+      sceneType: isPolicyErosion
+        ? 'policy_cascade_experiment'
+        : isLegacyPolicyCascade ? 'policy_cascade_scene' : isNewArchitecture ? 'experiment' : 'generic',
       agents: customAgents,
       defaultTimeConfig: {
         baseTime: new Date().toISOString(),
@@ -316,9 +321,12 @@ export const ExperimentBuilderModal: React.FC<ExperimentBuilderModalProps> = ({
     };
 
     // Determine scene type: policy cascade uses dedicated scene, otherwise experiment/generic
-    const isPolicyCascade =
+    const isLegacyPolicyCascade =
       scenarioData?.id === 'policy_diffusion' ||
       scenarioData?.id === 'policyDiffusion';
+    const isPolicyErosion =
+      scenarioData?.id === 'policy_erosion' ||
+      scenarioData?.id === 'policyErosion';
 
     // Determine if this uses the new Three-Layer Architecture
     // (strategic_decisions or any scenario with structured actions)
@@ -338,7 +346,9 @@ export const ExperimentBuilderModal: React.FC<ExperimentBuilderModalProps> = ({
         name: name,
         description: resolvedDescription,
         category: scenarioData ? 'system' : 'custom',
-        sceneType: isPolicyCascade ? 'policy_cascade_scene' : isNewArchitecture ? 'experiment' : 'generic',
+        sceneType: isPolicyErosion
+          ? 'policy_cascade_experiment'
+          : isLegacyPolicyCascade ? 'policy_cascade_scene' : isNewArchitecture ? 'experiment' : 'generic',
         agents: customAgents,
         defaultTimeConfig: {
           baseTime: new Date().toISOString(),

@@ -99,7 +99,9 @@ export const HostPanel: React.FC = () => {
       : undefined;
 
     if (currentSimulation?.id) {
-      const isPolicyScene = currentSimulation?.scene_type === "policy_cascade_scene";
+      const isPolicyScene =
+        currentSimulation?.scene_type === "policy_cascade_scene" ||
+        currentSimulation?.scene_type === "policy_cascade_experiment";
       const payload: EnvironmentSuggestion & { receivers?: string[]; node_id?: string | number | null } = {
         event_type: eventType,
         description,
@@ -299,7 +301,8 @@ export const HostPanel: React.FC = () => {
           <label className="text-xs font-bold flex items-center gap-1" style={{ color: "var(--ss-workspace-heading)" }}>
             <CloudLightning size={14} /> {t("components.hostPanel.injectEvent")}
           </label>
-          {currentSimulation?.scene_type === "policy_cascade_scene" && (
+          {(currentSimulation?.scene_type === "policy_cascade_scene" ||
+            currentSimulation?.scene_type === "policy_cascade_experiment") && (
             <div className="text-[11px] italic" style={{ color: "var(--ss-workspace-muted)" }}>
               {t("components.hostPanel.injectNoticeOnly", "Environment event injection is notice-only here and does not trigger a full system broadcast.")}
             </div>

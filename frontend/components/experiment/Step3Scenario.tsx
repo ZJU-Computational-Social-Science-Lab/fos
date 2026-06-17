@@ -34,6 +34,7 @@ const isPolicyCascadeScenarioData = (scenario: {
 
   return (
     scenario.sceneType === 'policy_cascade_scene' ||
+    scenario.sceneType === 'policy_cascade_experiment' ||
     scenarioId === 'policy_diffusion' ||
     scenarioId === 'policydiffusion' ||
     scenarioId === 'policy_erosion' ||

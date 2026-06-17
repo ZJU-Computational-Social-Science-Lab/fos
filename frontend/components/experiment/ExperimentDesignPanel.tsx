@@ -242,7 +242,9 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
       } | null
     )?.scene_config?.sceneType ||
     "";
-  const isPolicyCascadeTemplate = currentSceneType === "policy_cascade_scene";
+  const isPolicyCascadeTemplate =
+    currentSceneType === "policy_cascade_scene" ||
+    currentSceneType === "policy_cascade_experiment";
   const latestNodeSocketsRef = useRef<Record<string, WebSocket | null>>({});
 
   const [experimentName, setExperimentName] = useState("");
