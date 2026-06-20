@@ -11,6 +11,8 @@ The runner manages the main experiment loop:
 import asyncio
 import logging
 import os
+import threading
+import time
 from datetime import datetime
 from typing import List, Dict, Any, Literal, Optional, TYPE_CHECKING
 from dataclasses import dataclass
@@ -33,6 +35,16 @@ from fos.core.experiment.debug_log import write_debug
 from fos.core.llm.client import LLMClient
 
 logger = logging.getLogger(__name__)
+
+# Maps FOS model names (LM Studio style) to router model names (GGUF filename without .gguf)
+# Used when communicating with llama.cpp router server /models/load and /models/unload
+LLAMACPP_ROUTER_MODEL_MAP: dict[str, str] = {
+    "openai/gpt-oss-20b": "gpt-oss-20b",
+    "google/gemma-4-26b-a4b": "gemma-4-26b-a4b",
+    "qwen/qwen3.6-35b-a3b": "qwen3.6-35b-a3b",
+    "gemma4-26b-a4b-uncensored-hauhaucs-balanced": "gemma4-26b-a4b-uncensored",
+    "qwen3.6-35b-a3b-uncensored-hauhaucs-aggressive": "qwen3.6-35b-a3b-uncensored",
+}
 
 
 @dataclass
@@ -94,6 +106,7 @@ class ExperimentRunner:
         self.scene = scene  # Store scene reference for action filtering
         self.scene_state: Dict[str, Any] = {}  # shared mutable ref; update via set_scene_state()
         self._debug_lock = asyncio.Lock()  # Lock for atomic debug file writes
+        self._model_switch_lock = threading.Lock()  # Lock to serialize model-switch operations
 
         self.context_manager = RoundContextManager(
             information_model=information_model,
@@ -110,6 +123,25 @@ class ExperimentRunner:
         self.turn_order: List[str] | None = None  # Store shuffled order for random/paired mode
         self.scores: Dict[str, int] = {}  # Track cumulative scores per agent (for paired mode)
         self.pending_host_messages: list[str] = []  # Injected by host before each round
+        self._last_model: str | None = None  # Track last used model for LM Studio switching
+
+        # Compute model-block boundaries for predictive preloading
+        self._model_blocks: list[tuple[int, int, str]] = []
+        current_model = None
+        block_start = 0
+        for idx, a in enumerate(self.agents):
+            client = self.get_agent_llm_client(a)
+            m = getattr(getattr(client, "provider", None), "model", "")
+            if not isinstance(m, str):
+                m = ""
+            if m != current_model:
+                if current_model is not None:
+                    self._model_blocks.append((block_start, idx - 1, current_model))
+                current_model = m
+                block_start = idx
+        if current_model is not None:
+            self._model_blocks.append((block_start, len(self.agents) - 1, current_model))
+        self._preloaded_blocks: set[int] = set()  # block start indices already preloaded
 
     def get_agent_llm_client(self, agent: ExperimentAgent) -> LLMClient:
         """Get the LLM client for a specific agent.
@@ -128,6 +160,519 @@ class ExperimentRunner:
             return self.agent_llm_clients[agent.name]
         logger.debug(f"Using default LLM client for {agent.name}")
         return self.llm_client
+
+    @staticmethod
+    def _get_model_manager_url() -> str | None:
+        """Return the model manager URL if configured, or None.
+
+        Checks the FOS_MODEL_MANAGER_URL environment variable first.
+        If not set and port 8080 is detected, returns the router URL.
+        """
+        return os.environ.get("FOS_MODEL_MANAGER_URL") or None
+
+    @staticmethod
+    def _get_router_base_url(client_base_url: str) -> str:
+        """Extract the router base URL from the provider's base_url.
+
+        Strips trailing /v1 or /v1/... to get the raw server root.
+        Defaults to http://127.0.0.1:8080.
+        """
+        url = client_base_url.rstrip("/")
+        if url.endswith("/v1"):
+            url = url[:-3]
+        elif "/v1/" in url:
+            idx = url.index("/v1/")
+            url = url[:idx]
+        if not url:
+            url = "http://127.0.0.1:8080"
+        return url
+
+    def _is_llama_cpp_port(self, base_url: str) -> bool:
+        """Check if base_url points to a llama.cpp server on port 8080."""
+        return "8080" in base_url
+
+    def _is_model_manager_active(self, base_url: str) -> bool:
+        """Check whether the model manager should be used for this provider.
+
+        Priority:
+        1. FOS_MODEL_MANAGER_URL env var is set → use model manager
+        2. base_url contains "8080" → assume llama.cpp router mode
+        3. Otherwise → False (use LM Studio or other provider path)
+        """
+        if self._get_model_manager_url():
+            return True
+        return self._is_llama_cpp_port(base_url)
+
+    def _preload_model(self, model_name: str, client: "LLMClient") -> bool:
+        """Preload a model before the first chat request.
+
+        Two modes:
+        - **Model router mode** (port 8080 or FOS_MODEL_MANAGER_URL set):
+          1. POST /models/unload to unload current model
+          2. POST /models/load to start loading the target model
+          3. Poll GET /models every 2s until status.value == "loaded"
+             (timeout 300s, same as current HEALTH_TIMEOUT)
+          4. Send warmup chat request to prime the inference engine
+        - **LM Studio mode** (port 1234): Legacy path — polls GET /api/v0/models
+          until the target model is loaded, then unloads stale models.
+        - **Other providers**: No-op returning True.
+
+        Returns True when the model is ready; False if load/poll fails.
+        """
+        import time as _time
+
+        base_url = getattr(getattr(client, "provider", None), "base_url", None) or ""
+        if not isinstance(base_url, str):
+            logger.debug("Skipping preload — no base_url on provider")
+            return True
+
+        # ── Model router path (port 8080 or env var) ──────────────
+        if self._is_model_manager_active(base_url):
+            router_base = self._get_router_base_url(base_url)
+            router_model = self._get_router_model_name(model_name)
+            logger.info(
+                "Preloading model '%s' (router name: %s) via router (%s) ...",
+                model_name, router_model, router_base,
+            )
+
+            # Step 1-2: Unload current model and trigger load
+            if not self._trigger_model_load(model_name, client):
+                logger.error(
+                    "Failed to load model '%s' via router", model_name
+                )
+                return False
+
+            # Step 3: Poll GET /models until loaded
+            logger.info(
+                "Model '%s' load triggered. Polling status...", model_name
+            )
+            models_url = f"{router_base}/models"
+            poll_interval = 2.0
+            timeout = 300.0
+            deadline = _time.time() + timeout
+
+            while _time.time() < deadline:
+                try:
+                    import requests as _requests
+                    resp = _requests.get(models_url, timeout=10)
+                    if resp.status_code == 200:
+                        models_list = resp.json().get("data", [])
+                        for m in models_list:
+                            m_name = m.get("id", "") if isinstance(m, dict) else ""
+                            m_status = m.get("status", {}) if isinstance(m, dict) else {}
+                            if isinstance(m_status, dict):
+                                status_val = m_status.get("value", "") or m_status.get("status", "")
+                            else:
+                                status_val = str(m_status)
+
+                            # Accept both dict-with-value and direct-string status representations
+                            if m_name == router_model:
+                                if status_val == "loaded":
+                                    logger.info(
+                                        "Model '%s' is loaded (%.1fs)",
+                                        router_model, _time.time() - (deadline - timeout),
+                                    )
+                                    break
+                                elif status_val == "error":
+                                    logger.error(
+                                        "Model '%s' failed to load (status=error)",
+                                        router_model,
+                                    )
+                                    return False
+                        else:
+                            # Target model not yet in list — still loading or queued
+                            _time.sleep(poll_interval)
+                            continue
+                        # Model found and loaded
+                        break
+                    else:
+                        logger.debug(
+                            "GET /models returned %s — retrying in %ds",
+                            resp.status_code, poll_interval,
+                        )
+                        _time.sleep(poll_interval)
+                        continue
+                except Exception as exc:
+                    logger.debug(
+                        "Poll GET /models failed: %s — retrying in %ds",
+                        exc, poll_interval,
+                    )
+                    _time.sleep(poll_interval)
+                    continue
+            else:
+                logger.error(
+                    "Timed out (%.1fs) waiting for model '%s' to load",
+                    timeout, router_model,
+                )
+                return False
+
+            # Step 4: warmup chat
+            if not self._warmup_model(model_name, client):
+                logger.warning(
+                    "Model '%s' warmup failed — continuing anyway",
+                    model_name,
+                )
+            return True
+
+        # ── LM Studio path (port 1234) ────────────────────────────
+        if "1234" not in base_url:
+            logger.debug(
+                "Skipping preload — not an LM Studio or model manager provider (%s)",
+                base_url,
+            )
+            return True
+
+        admin_url = base_url.rstrip("/")
+        if admin_url.endswith("/v1"):
+            admin_url = admin_url[:-3]
+
+        logger.info(
+            "Preloading model '%s' via LM Studio (%s) ...", model_name, admin_url
+        )
+
+        # ── Step 1: synchronous load via /api/v1/models/load ────
+        if not self._trigger_model_load(model_name, client):
+            logger.error(
+                "Failed to load model '%s' via LM Studio", model_name
+            )
+            return False
+
+        logger.info("Model '%s' loaded. Sending warmup request...", model_name)
+
+        # ── warmup chat (json_mode=True, retry up to 5×) ──────
+        if not self._warmup_model(model_name, client):
+            logger.warning(
+                "Model '%s' warmup failed — continuing anyway",
+                model_name,
+            )
+
+        # ── Unload all other models (only if warmup succeeded) ──
+        self._unload_stale_lm_studio_models(model_name, admin_url)
+
+        return True
+
+    def _warmup_model(self, model_name: str, client: "LLMClient") -> bool:
+        """Send a warmup chat request to prime the inference engine.
+
+        Retries up to 5 times with a 3-second delay between attempts.
+        Returns True if the model produces a non-empty response.
+        """
+        import time as _time
+
+        warmup_message = [
+            {
+                "role": "user",
+                "content": (
+                    'Return a JSON object with a single key "status" set to "ok"'
+                ),
+            }
+        ]
+        for attempt in range(1, 6):
+            try:
+                resp = client.chat(warmup_message, json_mode=True)
+                if resp and resp.strip():
+                    logger.info(
+                        "Model '%s' warmup successful (attempt %d)", model_name, attempt
+                    )
+                    return True
+                else:
+                    logger.debug(
+                        "Model '%s' warmup attempt %d returned empty — retrying...",
+                        model_name, attempt,
+                    )
+            except Exception as exc:
+                logger.debug(
+                    "Model '%s' warmup attempt %d raised %s — retrying...",
+                    model_name, attempt, exc,
+                )
+            _time.sleep(3.0)
+        logger.warning(
+            "Model '%s' did not produce a non-empty response after 5 warmup attempts",
+            model_name,
+        )
+        return False
+
+    def _unload_stale_lm_studio_models(self, model_name: str, admin_url: str) -> None:
+        """Unload all LM Studio models except the current one.
+
+        Fetches the model list from GET /api/v1/models and unloads every
+        loaded instance whose key does not match *model_name*.
+        Failures are logged but not fatal.
+        """
+        try:
+            import requests as _requests
+            models_url = f"{admin_url}/api/v1/models"
+            unload_url = f"{admin_url}/api/v1/models/unload"
+
+            resp = _requests.get(models_url, timeout=10)
+            if resp.status_code == 200:
+                for m in resp.json().get("models", []):
+                    other_key = m.get("key", "")
+                    instances = m.get("loaded_instances", [])
+                    if other_key and other_key != model_name and instances:
+                        for inst in instances:
+                            inst_id = inst if isinstance(inst, str) else inst.get("instance_id", "")
+                            if inst_id:
+                                logger.info(
+                                    "Unloading stale model '%s' (instance %s) ...",
+                                    other_key, inst_id,
+                                )
+                                try:
+                                    unload_resp = _requests.post(
+                                        unload_url,
+                                        json={"instance_id": inst_id},
+                                        timeout=30,
+                                    )
+                                    if unload_resp.status_code == 200:
+                                        logger.info(
+                                            "Stale model '%s' unloaded successfully",
+                                            other_key,
+                                        )
+                                    else:
+                                        logger.warning(
+                                            "Unload of stale '%s' returned %s: %s",
+                                            other_key,
+                                            unload_resp.status_code,
+                                            unload_resp.text[:200],
+                                        )
+                                except Exception as exc:
+                                    logger.warning(
+                                        "Failed to unload stale model '%s': %s",
+                                        other_key, exc,
+                                    )
+        except Exception as exc:
+            logger.warning(
+                "Model enumeration for unload failed: %s — continuing",
+                exc,
+            )
+
+    def _get_router_model_name(self, model_name: str) -> str:
+        """Map a FOS model name to a router model name.
+
+        Falls back to the original name if not found in the map.
+        """
+        return LLAMACPP_ROUTER_MODEL_MAP.get(model_name, model_name)
+
+    def _trigger_model_load(self, model_name: str, client: "LLMClient") -> bool:
+        """Trigger a model switch/load via the active provider.
+
+        Two modes:
+        - **Model router** (port 8080 or FOS_MODEL_MANAGER_URL):
+          1. POST ``/models/unload`` (required with ``--models-max 1``)
+          2. Wait 3 seconds for the child process to fully exit
+          3. POST ``/models/load`` with ``{"model": MODEL_ROUTER_NAME}``
+          The load is async; polling happens in _preload_model().
+        - **LM Studio** (port 1234): Calls ``POST /api/v1/models/load`` on
+          the LM Studio admin endpoint.  First checks if the model is
+          already loaded to avoid hangs.
+        - **Other providers**: No-op returning True.
+
+        Returns True on success, False on failure.
+        """
+        import time as _time
+        import requests as _requests
+
+        base_url = getattr(getattr(client, "provider", None), "base_url", None) or ""
+        if not isinstance(base_url, str):
+            return True
+
+        # ── Model router path (llama.cpp router on port 8080) ──────
+        if self._is_model_manager_active(base_url):
+            router_base = self._get_router_base_url(base_url)
+            router_model = self._get_router_model_name(model_name)
+
+            # Step 1: Find and unload the currently-loaded model
+            # We must unload the CURRENT model, not the TARGET model.
+            # Query GET /models to find what's loaded, then unload by name.
+            unload_url = f"{router_base}/models/unload"
+            logger.info("Finding current model to unload...")
+            print(f"[FOS-PRELOAD] Finding current model to unload...", flush=True)
+            current_model = None
+            try:
+                models_resp = _requests.get(
+                    f"{router_base}/models",
+                    timeout=10,
+                )
+                if models_resp.status_code == 200:
+                    for m in models_resp.json().get("data", []):
+                        m_name = m.get("id", "") if isinstance(m, dict) else ""
+                        m_status = m.get("status", {}) if isinstance(m, dict) else {}
+                        status_val = m_status.get("value", "") if isinstance(m_status, dict) else ""
+                        if status_val == "loaded" and m_name:
+                            current_model = m_name
+                            break
+            except Exception as exc:
+                logger.debug("Failed to query model list: %s", exc)
+
+            if current_model and current_model != router_model:
+                logger.info("Unloading current model '%s' via %s ...", current_model, unload_url)
+                print(f"[FOS-PRELOAD] Unloading model '{current_model}'...", flush=True)
+                try:
+                    resp = _requests.post(
+                        unload_url,
+                        json={"model": current_model},
+                        timeout=30,
+                    )
+                    if resp.status_code == 200:
+                        logger.info("Unload request accepted by router")
+                    else:
+                        logger.warning(
+                            "Unload request returned %s: %s",
+                            resp.status_code, resp.text[:200],
+                        )
+                except Exception as exc:
+                    logger.warning("Unload request failed: %s", exc)
+            elif current_model == router_model:
+                logger.info(
+                    "Model '%s' is already loaded — no unload/load needed",
+                    router_model,
+                )
+                return True
+            else:
+                logger.info("No model currently running — nothing to unload")
+
+            # Step 2: Wait 3 seconds for the child process to fully exit
+            # before loading a new model. This prevents port conflicts and
+            # stale GPU memory.
+            logger.info("Waiting 3 seconds for child process to exit...")
+            print(f"[FOS-PRELOAD] Waiting 3s for child process to exit...", flush=True)
+            _time.sleep(3.0)
+
+            # Step 3: Load target model
+            load_url = f"{router_base}/models/load"
+            logger.info("Loading model '%s' via %s ...", router_model, load_url)
+            print(f"[FOS-PRELOAD] Requesting load of model '{router_model}'...", flush=True)
+            try:
+                resp = _requests.post(
+                    load_url,
+                    json={"model": router_model},
+                    timeout=30,  # load request returns immediately; model loads async
+                )
+                if resp.status_code == 200:
+                    logger.info(
+                        "Load request for '%s' accepted by router", router_model,
+                    )
+                    return True
+                elif resp.status_code == 400 and "already running" in resp.text:
+                    logger.info(
+                        "Model '%s' is already running — no load needed", router_model,
+                    )
+                    return True
+                else:
+                    logger.warning(
+                        "Load request for '%s' returned %s: %s",
+                        router_model, resp.status_code, resp.text[:200],
+                    )
+                    return False
+            except Exception as exc:
+                logger.warning("Load request for '%s' failed: %s", router_model, exc)
+                return False
+
+        # ── LM Studio path (port 1234) ────────────────────────────
+        if "1234" not in base_url:
+            return True  # Not LM Studio — nothing to do
+
+        admin_url = base_url.rstrip("/")
+        if admin_url.endswith("/v1"):
+            admin_url = admin_url[:-3]
+        models_url = f"{admin_url}/api/v1/models"
+        load_url = f"{admin_url}/api/v1/models/load"
+
+        # ── Check if already loaded ──────────────────────────
+        try:
+            resp = _requests.get(models_url, timeout=10)
+            if resp.status_code == 200:
+                for m in resp.json().get("models", []):
+                    if m.get("key") == model_name and m.get("loaded_instances"):
+                        logger.info(
+                            "Model '%s' is already loaded — skipping load request",
+                            model_name,
+                        )
+                        return True
+        except Exception:
+            pass  # proceed to load attempt
+
+        # ── Explicitly load the model ────────────────────────
+        print(f"[FOS-PRELOAD] Requesting load of {model_name}...", flush=True)
+        try:
+            resp = _requests.post(
+                load_url,
+                json={"model": model_name},
+                timeout=300,  # large models can take minutes
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                logger.info(
+                    "Model '%s' loaded in %.1fs (status=%s)",
+                    model_name,
+                    data.get("load_time_seconds", -1),
+                    data.get("status", "?"),
+                )
+                return True
+            else:
+                logger.warning(
+                    "Load request for '%s' returned %s: %s",
+                    model_name, resp.status_code, resp.text[:200],
+                )
+                return False
+        except Exception as exc:
+            logger.warning("Load of '%s' failed: %s", model_name, exc)
+            return False
+
+
+    def _trigger_model_load_bg(self, model_name: str, client: "LLMClient") -> None:
+        """Fire-and-forget background load trigger for predictive preloading.
+
+        LM Studio path: Sends a minimal chat request (max_tokens=1) to the
+        target model.  LM Studio sees the unknown model and starts loading
+        it without unloading the current model.  The request times out —
+        that is expected.
+
+        Model manager path: No-op for now — the model manager does not
+        support predictive background preloading yet.
+
+        The actual synchronous load + warmup happens later in
+        _preload_model when the model switch is detected.
+        """
+        import requests as _requests
+        import threading
+
+        base_url = getattr(getattr(client, "provider", None), "base_url", None) or ""
+        if not isinstance(base_url, str):
+            return
+
+        # Model manager: no background preloading yet
+        if self._is_model_manager_active(base_url):
+            # TODO: implement predictive background loading via model manager
+            return
+
+        if "1234" not in base_url:
+            return
+
+        chat_url = base_url.rstrip("/")
+        if not chat_url.endswith("/chat/completions"):
+            if chat_url.endswith("/v1"):
+                chat_url += "/chat/completions"
+            else:
+                chat_url += "/v1/chat/completions"
+
+        def _trigger():
+            try:
+                _requests.post(
+                    chat_url,
+                    json={
+                        "model": model_name,
+                        "messages": [{"role": "user", "content": "."}],
+                        "max_tokens": 1,
+                    },
+                    timeout=5,
+                )
+            except Exception:
+                pass  # Expected — request triggers load but times out
+
+        t = threading.Thread(target=_trigger, daemon=True)
+        t.start()
+        logger.debug("Predictive load triggered for %s", model_name)
 
     def _build_custom_action_followup_schema(self, action_name: str, locale: str) -> dict[str, dict[str, str] | str]:
         """Collect a short visible response and rationale for custom experiments.
@@ -1060,36 +1605,204 @@ class ExperimentRunner:
             # Get per-agent LLM client (LLM distribution)
             agent_llm_client = self.get_agent_llm_client(agent)
 
-            # Single LLM call. LLMClient._with_timeout_and_retry handles retries
-            # (3 attempts with exponential backoff, configurable via LLM_MAX_RETRIES).
-            # Do NOT add another retry loop here — that causes 9 total attempts per
-            # failure, each waiting 30s timeout × 3 retries = 4.7min per agent.
-            messages = [{"role": "user", "content": prompt}]
-            raw_response = await asyncio.to_thread(
-                agent_llm_client.chat, messages, json_mode=True
-            )
+            # Preload model if switching, then hold lock through entire chat
+            # lifecycle (preload + chat + controller) so no other agent can
+            # unload the model while we are using it.
+            model_name = getattr(getattr(agent_llm_client, "provider", None), "model", "")
+            # Guard: model_name must be a non-empty string (Mock objects in tests
+            # return Mock attributes, not real strings)
+            if isinstance(model_name, str) and model_name:
+                self._model_switch_lock.acquire()
+                try:
+                    if model_name != self._last_model:
+                        logger.info(
+                            "Model switch: %s -> %s", self._last_model, model_name
+                        )
+                        if not self._preload_model(model_name, agent_llm_client):
+                            logger.error(
+                                "Preload FAILED for model '%s' — cannot prompt agent %s",
+                                model_name, agent.name,
+                            )
+                            # Write debug buffer before returning
+                            await self._write_debug_atomically(debug_buffer)
+                            agent.clear_feedback_buffer()
+                            return ActionResult(
+                                agent_name=agent.name,
+                                action_name="skip",
+                                parameters={"error": f"Model '{model_name}' failed to load"},
+                                summary=f"Skipped - model load failed",
+                                success=False,
+                                skipped=True,
+                                round_num=round_num,
+                                error=f"Model load timeout: {model_name}",
+                            )
+                        self._last_model = model_name
 
-            # Handle empty response gracefully (e.g., Qwen3 via Ollama returns 0 chars)
-            if not raw_response or not raw_response.strip():
-                logger.error(f"Empty response from LLM for {agent.name}")
-                debug_buffer.append(f"\n{'!'*80}\n")
-                debug_buffer.append("EMPTY RESPONSE\n")
-                debug_buffer.append(f"{'!'*80}\n")
-                debug_buffer.append(f"Agent {agent.name} received empty response from LLM\n\n")
-                # Write debug output atomically
-                await self._write_debug_atomically(debug_buffer)
-                agent.clear_feedback_buffer()
-                return ActionResult(
-                    agent_name=agent.name,
-                    action_name="skip",
-                    parameters={"error": "LLM returned empty response"},
-                    summary="Skipped - LLM returned empty response",
-                    success=False,
-                    skipped=True,
-                    round_num=round_num,
-                    error="Empty LLM response"
+                    # Chat request: model is locked, no other agent can unload it
+                    messages = [{"role": "user", "content": prompt}]
+                    raw_response = await asyncio.to_thread(
+                        agent_llm_client.chat, messages, json_mode=True
+                    )
+
+                    # Handle empty response gracefully (e.g., Qwen3 via Ollama returns 0 chars)
+                    if not raw_response or not raw_response.strip():
+                        logger.error(f"Empty response from LLM for {agent.name}")
+                        debug_buffer.append(f"\n{'!'*80}\n")
+                        debug_buffer.append("EMPTY RESPONSE\n")
+                        debug_buffer.append(f"{'!'*80}\n")
+                        debug_buffer.append(f"Agent {agent.name} received empty response from LLM\n\n")
+                        # Write debug output atomically
+                        await self._write_debug_atomically(debug_buffer)
+                        agent.clear_feedback_buffer()
+                        return ActionResult(
+                            agent_name=agent.name,
+                            action_name="skip",
+                            parameters={"error": "LLM returned empty response"},
+                            summary="Skipped - LLM returned empty response",
+                            success=False,
+                            skipped=True,
+                            round_num=round_num,
+                            error="Empty LLM response"
+                        )
+
+                    # Process response through controller (Layer 3) — still inside lock
+                    # so follow-up prompts are also protected from model switches.
+                    action_schemas = self.kernel.get_action_schemas() if self.kernel else {}
+                    if self.scene and getattr(getattr(self.scene, "config", None), "scenario_id", None) == "custom":
+                        action_schemas.pop("speak", None)
+                    action_schemas.update(self.game_config.action_schemas)
+
+                    logger.debug(f"[RUNNER] game_config.action_followup_modes={self.game_config.action_followup_modes}")
+
+                    if self.game_config.action_followup_modes:
+                        for action_name, mode in self.game_config.action_followup_modes.items():
+                            existing_schema = action_schemas.get(action_name, {})
+                            if "schema" in existing_schema:
+                                merged_schema = dict(existing_schema)
+                                merged_schema["mode"] = mode
+                                action_schemas[action_name] = merged_schema
+                            else:
+                                action_schemas[action_name] = {
+                                    "schema": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": T("Content for {action_name}", action_name=action_name),
+                                        }
+                                    },
+                                    "mode": mode,
+                                }
+                            logger.debug(f"[RUNNER] Added action_schema for '{action_name}': mode={mode}")
+
+                    if self.scene and getattr(getattr(self.scene, "config", None), "scenario_id", None) == "custom":
+                        custom_actions = allowed_actions or self.game_config.actions
+                        for action_name in custom_actions:
+                            custom_action_name = str(action_name)
+                            if custom_action_name in action_schemas:
+                                continue
+                            action_schemas[custom_action_name] = self._build_custom_action_followup_schema(
+                                custom_action_name,
+                                _locale,
+                            )
+                            logger.debug(
+                                f"[RUNNER] Added custom followup schema for '{action_name}' with response/reason logging"
+                            )
+
+                    logger.debug(f"[RUNNER] Final action_schemas keys: {list(action_schemas.keys())}")
+                    result = await self.controller.process_response_with_followup(
+                        raw_response, agent, self.game_config,
+                        agent_llm_client, round_num,
+                        action_schemas=action_schemas,
+                        context_summary=context,
+                        information_model=self.information_model,
+                        kb_context=kb_context,
+                        neighbor_context=neighbor_context,
+                        allowed_actions=allowed_actions,
+                        speak_instruction=speak_instruction,
+                        locale=_locale,
+                    )
+                finally:
+                    self._model_switch_lock.release()
+            else:
+                # No model name (mock/test client) — proceed without lock
+                messages = [{"role": "user", "content": prompt}]
+                raw_response = await asyncio.to_thread(
+                    agent_llm_client.chat, messages, json_mode=True
                 )
 
+                if not raw_response or not raw_response.strip():
+                    logger.error(f"Empty response from LLM for {agent.name}")
+                    debug_buffer.append(f"\n{'!'*80}\n")
+                    debug_buffer.append("EMPTY RESPONSE\n")
+                    debug_buffer.append(f"{'!'*80}\n")
+                    debug_buffer.append(f"Agent {agent.name} received empty response from LLM\n\n")
+                    await self._write_debug_atomically(debug_buffer)
+                    agent.clear_feedback_buffer()
+                    return ActionResult(
+                        agent_name=agent.name,
+                        action_name="skip",
+                        parameters={"error": "LLM returned empty response"},
+                        summary="Skipped - LLM returned empty response",
+                        success=False,
+                        skipped=True,
+                        round_num=round_num,
+                        error="Empty LLM response"
+                    )
+
+                action_schemas = self.kernel.get_action_schemas() if self.kernel else {}
+                if self.scene and getattr(getattr(self.scene, "config", None), "scenario_id", None) == "custom":
+                    action_schemas.pop("speak", None)
+                action_schemas.update(self.game_config.action_schemas)
+
+                logger.debug(f"[RUNNER] game_config.action_followup_modes={self.game_config.action_followup_modes}")
+
+                if self.game_config.action_followup_modes:
+                    for action_name, mode in self.game_config.action_followup_modes.items():
+                        existing_schema = action_schemas.get(action_name, {})
+                        if "schema" in existing_schema:
+                            merged_schema = dict(existing_schema)
+                            merged_schema["mode"] = mode
+                            action_schemas[action_name] = merged_schema
+                        else:
+                            action_schemas[action_name] = {
+                                "schema": {
+                                    "message": {
+                                        "type": "string",
+                                        "description": T("Content for {action_name}", action_name=action_name),
+                                    }
+                                },
+                                "mode": mode,
+                            }
+                        logger.debug(f"[RUNNER] Added action_schema for '{action_name}': mode={mode}")
+
+                if self.scene and getattr(getattr(self.scene, "config", None), "scenario_id", None) == "custom":
+                    custom_actions = allowed_actions or self.game_config.actions
+                    for action_name in custom_actions:
+                        custom_action_name = str(action_name)
+                        if custom_action_name in action_schemas:
+                            continue
+                        action_schemas[custom_action_name] = self._build_custom_action_followup_schema(
+                            custom_action_name,
+                            _locale,
+                        )
+                        logger.debug(
+                            f"[RUNNER] Added custom followup schema for '{action_name}' with response/reason logging"
+                        )
+
+                logger.debug(f"[RUNNER] Final action_schemas keys: {list(action_schemas.keys())}")
+                result = await self.controller.process_response_with_followup(
+                    raw_response, agent, self.game_config,
+                    agent_llm_client, round_num,
+                    action_schemas=action_schemas,
+                    context_summary=context,
+                    information_model=self.information_model,
+                    kb_context=kb_context,
+                    neighbor_context=neighbor_context,
+                    allowed_actions=allowed_actions,
+                    speak_instruction=speak_instruction,
+                    locale=_locale,
+                )
+
+            # Common post-processing (outside lock):
             # Add response to debug buffer
             debug_buffer.append(f"\n{'='*80}\n")
             debug_buffer.append("LLM RAW RESPONSE\n")
@@ -1103,71 +1816,7 @@ class ExperimentRunner:
 
             logger.debug(f"Raw response from {agent.name}: {raw_response[:200]}...")
 
-            # Process response through controller (Layer 3).
-            # Use process_response_with_followup so actions that need extra
-            # parameters (e.g., Speak → what do you want to say?) trigger a
-            # second prompt automatically. Falls back gracefully for simple
-            # game-theory actions that have no follow-up schema.
-            # Build action_schemas from:
-            # 1. Kernel action types (e.g., "speak", "vote")
-            # 2. Game config's action_followup_modes mapping (e.g., "Speak" -> "plain_text")
-            action_schemas = self.kernel.get_action_schemas() if self.kernel else {}
-            if self.scene and getattr(getattr(self.scene, "config", None), "scenario_id", None) == "custom":
-                action_schemas.pop("speak", None)
-            # Merge in schemas from game config (from scenario action parameters)
-            action_schemas.update(self.game_config.action_schemas)
-
-            logger.debug(f"[RUNNER] game_config.action_followup_modes={self.game_config.action_followup_modes}")
-
-            # Add schemas for game config actions that specify followup modes
-            if self.game_config.action_followup_modes:
-                for action_name, mode in self.game_config.action_followup_modes.items():
-                    existing_schema = action_schemas.get(action_name, {})
-                    if "schema" in existing_schema:
-                        merged_schema = dict(existing_schema)
-                        merged_schema["mode"] = mode
-                        action_schemas[action_name] = merged_schema
-                    else:
-                        action_schemas[action_name] = {
-                            "schema": {
-                                "message": {
-                                    "type": "string",
-                                    "description": T("Content for {action_name}", action_name=action_name),
-                                }
-                            },
-                            "mode": mode,
-                        }
-                    logger.debug(f"[RUNNER] Added action_schema for '{action_name}': mode={mode}")
-
-            if self.scene and getattr(getattr(self.scene, "config", None), "scenario_id", None) == "custom":
-                custom_actions = allowed_actions or self.game_config.actions
-                for action_name in custom_actions:
-                    custom_action_name = str(action_name)
-                    if custom_action_name in action_schemas:
-                        continue
-                    action_schemas[custom_action_name] = self._build_custom_action_followup_schema(
-                        custom_action_name,
-                        _locale,
-                    )
-                    logger.debug(
-                        f"[RUNNER] Added custom followup schema for '{action_name}' with response/reason logging"
-                    )
-
-            logger.debug(f"[RUNNER] Final action_schemas keys: {list(action_schemas.keys())}")
-            result = await self.controller.process_response_with_followup(
-                raw_response, agent, self.game_config,
-                agent_llm_client, round_num,  # Use per-agent LLM client
-                action_schemas=action_schemas,
-                context_summary=context,
-                information_model=self.information_model,
-                kb_context=kb_context,
-                neighbor_context=neighbor_context,
-                allowed_actions=allowed_actions,
-                speak_instruction=speak_instruction,
-                locale=_locale,
-            )
-
-            # Append controller's debug log to our buffer
+            # Append controller's debug log to buffer
             if result.debug_log:
                 debug_buffer.extend(result.debug_log)
 
