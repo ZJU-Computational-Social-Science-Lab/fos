@@ -588,7 +588,20 @@ async def simulation_tree_events(
         if node is None:
             raise HTTPException(status_code=404, detail=T("api.errors.tree_node_not_found"))
 
-        return node.get("logs", [])
+        # Collect logs from this node and all descendants
+        all_logs = list(node.get("logs", []))
+
+        def _collect_descendant_logs(nid: int) -> list:
+            logs: list = []
+            for child_id in record.tree.children.get(nid, []):
+                child_node = record.tree.nodes.get(child_id)
+                if child_node is not None:
+                    logs.extend(child_node.get("logs", []))
+                    logs.extend(_collect_descendant_logs(child_id))
+            return logs
+
+        all_logs.extend(_collect_descendant_logs(int(node_id)))
+        return all_logs
 
 
 @get("/{simulation_id:str}/tree/sim/{node_id:int}/state")
