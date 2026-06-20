@@ -1171,10 +1171,6 @@ class ExperimentRunner:
             if result.debug_log:
                 debug_buffer.extend(result.debug_log)
 
-            if result.skipped and result.error == "Action not in allowed set":
-                result.parameters = {"invalid_action": result.action_name}
-                result.action_name = "skip"
-                result.summary = f"{agent.name} skipped"
 
             # Write all debug output atomically (prompt + response + controller + followup)
             await self._write_debug_atomically(debug_buffer)

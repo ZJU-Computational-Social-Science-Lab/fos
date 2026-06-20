@@ -362,7 +362,8 @@ class SceneLifecycleMixin:
                 event_data["effect_applied"] = False
             elif action.success and exec_result.get("effect_applied", False):
                 event_data["effect_applied"] = True
-            if not action.success and action.error:
+            # Always include error when present (regardless of success flag)
+            if action.error:
                 event_data["error"] = action.error
             event_emitter("experiment_action", event_data)
             if self.config.scenario_id == "custom" and action.success:
