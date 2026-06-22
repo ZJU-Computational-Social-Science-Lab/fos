@@ -16,23 +16,17 @@ import { DocsSidebar } from "../components/DocsSidebar";
 import { useTranslation } from "react-i18next";
 
 // Import markdown files
-import tutorialZh from "../docs/tutorial-zh.md?raw";
-import tutorialEn from "../docs/tutorial-en.md?raw";
+import docsEn from "../docs/docs-en.md?raw";
+import docsZh from "../docs/docs-zh.md?raw";
 
 export function DocsPage() {
   const { t, i18n } = useTranslation();
-  const [currentDoc, setCurrentDoc] = useState<string>("tutorial");
+  const [currentDoc, setCurrentDoc] = useState<string>("getting-started");
 
-  // Get markdown content based on current language and selected document
+  // Get markdown content based on current language
   const markdownContent = useMemo(() => {
-    const lang = i18n.language;
-    const docKey = currentDoc;
-
-    if (docKey === "tutorial") {
-      return lang === "zh" || lang.startsWith("zh") ? tutorialZh : tutorialEn;
-    }
-    return "";
-  }, [currentDoc, i18n.language]);
+    return i18n.language.startsWith("zh") ? docsZh : docsEn;
+  }, [i18n.language]);
 
   const containerStyles: React.CSSProperties = {
     display: "flex",

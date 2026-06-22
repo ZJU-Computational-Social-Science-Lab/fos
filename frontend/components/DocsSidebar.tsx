@@ -60,6 +60,15 @@ const getItemStyles = (isActive: boolean): React.CSSProperties => ({
   fontWeight: isActive ? "500" : "400",
 });
 
+const headingMap: Record<string, { en: string; zh: string }> = {
+  "getting-started": { en: "Getting Started with FOS", zh: "FOS 快速入门" },
+  "llm-config": { en: "Setting Up LLMs in FOS", zh: "在 FOS 中配置大模型" },
+  "creating-simulation": { en: "Creating a FOS Simulation", zh: "创建 FOS 仿真" },
+  "agents": { en: "Configuring FOS Agents", zh: "配置 FOS 智能体" },
+  "running-analysis": { en: "Running & Analyzing in FOS", zh: "在 FOS 中运行与分析" },
+  "advanced-features": { en: "Advanced FOS Features", zh: "FOS 进阶功能" },
+};
+
 /**
  * DocsSidebar component for documentation navigation
  */
@@ -67,7 +76,12 @@ export function DocsSidebar({ currentDoc, onDocChange, className = "" }: DocsSid
   const { t } = useTranslation();
 
   const docItems: DocItem[] = [
-    { id: "tutorial", translationKey: "pages.docsPage.tutorial" },
+    { id: "getting-started", translationKey: "pages.docsPage.gettingStarted" },
+    { id: "llm-config", translationKey: "pages.docsPage.llmConfig" },
+    { id: "creating-simulation", translationKey: "pages.docsPage.creatingSimulation" },
+    { id: "agents", translationKey: "pages.docsPage.agents" },
+    { id: "running-analysis", translationKey: "pages.docsPage.runningAnalysis" },
+    { id: "advanced-features", translationKey: "pages.docsPage.advancedFeatures" },
   ];
 
   return (
@@ -79,7 +93,18 @@ export function DocsSidebar({ currentDoc, onDocChange, className = "" }: DocsSid
           return (
             <li
               key={item.id}
-              onClick={() => onDocChange(item.id)}
+              onClick={() => {
+                onDocChange(item.id);
+                const target = headingMap[item.id];
+                if (!target) return;
+                const h2s = document.querySelectorAll('.markdown-renderer h2');
+                for (const h2 of h2s) {
+                  if (h2.textContent?.trim() === target.en || h2.textContent?.trim() === target.zh) {
+                    h2.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    break;
+                  }
+                }
+              }}
               style={getItemStyles(isActive)}
               onMouseEnter={(e) => {
                 if (!isActive) {
