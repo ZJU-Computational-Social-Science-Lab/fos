@@ -117,31 +117,66 @@ def default_proposals() -> list[ProposalSpec]:
     return [
         ProposalSpec(
             key="proposal_a",
-            label="Proposal A - Solar geoengineering",
+            label="Proposal A — Solar Radiation Management Authorization",
             text=(
-                "Should the international community authorise the large-scale "
-                "deployment of solar geoengineering (stratospheric aerosol "
-                "injection) to reduce global temperatures, accepting the "
-                "associated scientific uncertainties and governance risks?"
+                "An international authority, acting under the United Nations "
+                "Environment Programme, should be empowered to authorize and "
+                "oversee a time-limited stratospheric aerosol injection program "
+                "of up to 1 MtSO₂ per year for ten years, conditional on "
+                "continuous monitoring and an emergency-halt authority."
             ),
         ),
         ProposalSpec(
             key="proposal_b",
-            label="Proposal B - Global wealth tax",
+            label="Proposal B — Global Wealth Tax and Sovereign Debt Relief",
             text=(
-                "Should a coordinated global wealth tax be levied on the "
-                "world's largest fortunes, with the revenue redistributed to "
-                "lower-income populations and climate adaptation programmes?"
+                "Signatory states should implement a coordinated 2% annual "
+                "wealth tax on individual net assets above USD 50 million, "
+                "with proceeds pooled into an International Sovereign Debt "
+                "Relief Facility administered by the IMF, contingent on "
+                "majority ratification by Global South debtor states."
             ),
         ),
         ProposalSpec(
             key="proposal_c",
-            label="Proposal C - Lethal autonomous weapons (LAWS)",
+            label="Proposal C — Lethal Autonomous Weapons Moratorium",
             text=(
-                "Should the development and deployment of lethal autonomous "
-                "weapons systems - weapons that can select and engage targets "
-                "without direct human control - be permitted under "
-                "international law?"
+                "A binding five-year international moratorium should be enacted "
+                "on the development, deployment, and transfer of fully autonomous "
+                "lethal weapons systems — defined as systems capable of selecting "
+                "and engaging targets without human authorization — with a "
+                "verification regime administered by a new UN body."
+            ),
+        ),
+        ProposalSpec(
+            key="proposal_d",
+            label="Proposal D — UN Security Council Veto Abolition",
+            text=(
+                "The permanent veto power held by the five permanent members "
+                "of the UN Security Council should be abolished and replaced by "
+                "a binding 60% supermajority voting rule applicable to all "
+                "member states represented on the Council."
+            ),
+        ),
+        ProposalSpec(
+            key="proposal_e",
+            label="Proposal E — WHO Budget Reallocation: Pandemic vs. NCD Funding",
+            text=(
+                "The World Health Organization's pandemic preparedness budget "
+                "should be doubled by reallocating 40% of existing member-state "
+                "contributions currently designated for non-communicable disease "
+                "programs, effective from the next WHO budget cycle."
+            ),
+        ),
+        ProposalSpec(
+            key="proposal_f",
+            label="Proposal F — International AI Pre-Deployment Approval Body",
+            text=(
+                "All artificial intelligence systems exceeding a defined "
+                "capability threshold should require pre-deployment approval "
+                "from a new international regulatory body modeled on the "
+                "International Atomic Energy Agency, with authority to mandate "
+                "suspension of deployment pending review."
             ),
         ),
     ]
@@ -695,6 +730,7 @@ def run_headless_council(
     seed: int = 7,
     temperature: float = 0.7,
     proposals: list[ProposalSpec] | None = None,
+    network_name: str = "small_world",
 ) -> dict[str, Any]:
     """Run the full council pilot with the specified backend."""
     print(f"\n{'=' * 60}")
@@ -751,6 +787,9 @@ def run_headless_council(
     # 3. Build networks
     print("3. Building network variants...")
     networks = build_network_variants(agent_names, seed)
+    networks = [n for n in networks if n.label == network_name]
+    if not networks:
+        raise ValueError(f"Network '{network_name}' not found")
 
     # DeepSeek API client for profile generation only.
     # Decision-making models are the 5 local models from agent_llm_clients,
@@ -903,9 +942,15 @@ def main() -> None:
     )
     parser.add_argument(
         "--proposals",
-        choices=["all", "geoengineering", "wealth-tax", "laws"],
+        choices=["all", "srma", "wealth-tax", "laws", "un-veto", "who-budget", "ai-approval"],
         default="all",
         help="Which proposals to run (default: all)",
+    )
+    parser.add_argument(
+        "--network",
+        choices=["small_world", "holme_kim", "sbm"],
+        default="small_world",
+        help="Network topology (default: small_world)",
     )
     parser.add_argument(
         "--concurrency",
@@ -932,9 +977,12 @@ def main() -> None:
     # Select proposals
     all_props = default_proposals()
     proposal_map = {
-        "geoengineering": [all_props[0]],
+        "srma": [all_props[0]],
         "wealth-tax": [all_props[1]],
         "laws": [all_props[2]],
+        "un-veto": [all_props[3]],
+        "who-budget": [all_props[4]],
+        "ai-approval": [all_props[5]],
     }
     proposals = proposal_map.get(args.proposals, all_props)
 
@@ -947,6 +995,7 @@ def main() -> None:
         seed=args.seed,
         temperature=args.temperature,
         proposals=proposals,
+        network_name=args.network,
     )
 
 
