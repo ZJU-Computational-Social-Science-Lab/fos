@@ -175,13 +175,11 @@ def generate_archetype_template(
         cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned)
         cleaned = re.sub(r'\s*```$', '', cleaned)
 
-    json_match = re.search(r'\{[\s\S]*\}', cleaned)
-    if not json_match:
-        warnings.warn(f"No JSON found in LLM response for archetype '{attrs_str}'", UserWarning)
-        raise RuntimeError(f"No JSON found in LLM response for archetype '{archetype_label}'")
-
+    # Use raw_decode to extract the first complete JSON object,
+    # ignoring any trailing text that the model may append.
+    decoder = json.JSONDecoder()
     try:
-        parsed = json.loads(json_match.group())
+        parsed, _ = decoder.raw_decode(cleaned)
     except json.JSONDecodeError as e:
         warnings.warn(f"Invalid JSON for archetype '{attrs_str}': {e}", UserWarning)
         raise RuntimeError(f"Invalid JSON from LLM for archetype '{archetype_label}': {e}") from e
