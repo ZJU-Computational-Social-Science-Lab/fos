@@ -161,6 +161,25 @@ class ExperimentRunner:
         logger.debug(f"Using default LLM client for {agent.name}")
         return self.llm_client
 
+    def _get_agent_model(self, agent: ExperimentAgent) -> str | None:
+        """Get the model name for an agent, or None if unavailable (mock/test)."""
+        client = self.get_agent_llm_client(agent)
+        model = getattr(getattr(client, "provider", None), "model", "")
+        if isinstance(model, str) and model:
+            return model
+        return None
+
+    def _group_agents_by_model(self, agents_list: list) -> list:
+        """Partition agents by model name. Returns list of (model_name, agent_list) tuples."""
+        from collections import OrderedDict
+        groups = OrderedDict()
+        for agent in agents_list:
+            model = self._get_agent_model(agent)
+            if model not in groups:
+                groups[model] = []
+            groups[model].append(agent)
+        return list(groups.items())
+
     @staticmethod
     def _get_model_manager_url() -> str | None:
         """Return the model manager URL if configured, or None.
@@ -174,9 +193,14 @@ class ExperimentRunner:
     def _get_router_base_url(client_base_url: str) -> str:
         """Extract the router base URL from the provider's base_url.
 
-        Strips trailing /v1 or /v1/... to get the raw server root.
+        When FOS_MODEL_MANAGER_URL env var is set, returns that URL,
+        routing all model management calls through the model_manager proxy.
+        Otherwise strips trailing /v1 to get the raw server root.
         Defaults to http://127.0.0.1:8080.
         """
+        mm_url = os.environ.get("FOS_MODEL_MANAGER_URL")
+        if mm_url:
+            return mm_url.rstrip("/")
         url = client_base_url.rstrip("/")
         if url.endswith("/v1"):
             url = url[:-3]
@@ -228,7 +252,8 @@ class ExperimentRunner:
 
         # ── Model router path (port 8080 or env var) ──────────────
         if self._is_model_manager_active(base_url):
-            router_base = self._get_router_base_url(base_url)
+            mm_url = self._get_model_manager_url()
+            router_base = mm_url if mm_url else self._get_router_base_url(base_url)
             router_model = self._get_router_model_name(model_name)
             logger.info(
                 "Preloading model '%s' (router name: %s) via router (%s) ...",
@@ -236,17 +261,25 @@ class ExperimentRunner:
             )
 
             # Step 1-2: Unload current model and trigger load
+            was_already_loaded = (model_name == self._last_model)
             if not self._trigger_model_load(model_name, client):
                 logger.error(
                     "Failed to load model '%s' via router", model_name
                 )
                 return False
 
+            # If the model was already loaded (no actual load happened),
+            # skip the poll loop and warmup — they're unnecessary.
+            if was_already_loaded:
+                logger.info(
+                    "Model '%s' was already loaded — skipping poll and warmup",
+                    model_name,
+                )
+                return True
+
             # Step 3: Poll GET /models until loaded
-            logger.info(
-                "Model '%s' load triggered. Polling status...", model_name
-            )
             models_url = f"{router_base}/models"
+            print(f"[FOS-PRELOAD] Entering poll loop, models_url={models_url}", flush=True)
             poll_interval = 2.0
             timeout = 300.0
             deadline = _time.time() + timeout
@@ -268,16 +301,12 @@ class ExperimentRunner:
                             # Accept both dict-with-value and direct-string status representations
                             if m_name == router_model:
                                 if status_val == "loaded":
-                                    logger.info(
-                                        "Model '%s' is loaded (%.1fs)",
-                                        router_model, _time.time() - (deadline - timeout),
-                                    )
+                                    print(f"[FOS-PRELOAD] Model '{router_model}' is loaded "
+                                          f"({_time.time() - (deadline - timeout):.1f}s)", flush=True)
                                     break
                                 elif status_val == "error":
-                                    logger.error(
-                                        "Model '%s' failed to load (status=error)",
-                                        router_model,
-                                    )
+                                    print(f"[FOS-PRELOAD] Model '{router_model}' failed to load "
+                                          f"(status=error)", flush=True)
                                     return False
                         else:
                             # Target model not yet in list — still loading or queued
@@ -286,10 +315,8 @@ class ExperimentRunner:
                         # Model found and loaded
                         break
                     else:
-                        logger.debug(
-                            "GET /models returned %s — retrying in %ds",
-                            resp.status_code, poll_interval,
-                        )
+                        print(f"[FOS-PRELOAD] GET /models returned {resp.status_code} "
+                              f"— retrying in {poll_interval}s", flush=True)
                         _time.sleep(poll_interval)
                         continue
                 except Exception as exc:
@@ -305,6 +332,13 @@ class ExperimentRunner:
                     timeout, router_model,
                 )
                 return False
+
+            # ── Give inference engine time to initialize ──────
+            # llama.cpp reports "loaded" when the model file is memory-mapped,
+            # but CUDA graph compilation and KV cache allocation may still be
+            # in progress. A short sleep here avoids "model is not loaded"
+            # errors on the first chat request.
+            _time.sleep(5.0)
 
             # Step 4: warmup chat
             if not self._warmup_model(model_name, client):
@@ -354,7 +388,8 @@ class ExperimentRunner:
     def _warmup_model(self, model_name: str, client: "LLMClient") -> bool:
         """Send a warmup chat request to prime the inference engine.
 
-        Retries up to 5 times with a 3-second delay between attempts.
+        Retries up to 5 times with a 3-second delay, then an extended
+        phase with 3 more attempts and 5-second delays.
         Returns True if the model produces a non-empty response.
         """
         import time as _time
@@ -362,14 +397,12 @@ class ExperimentRunner:
         warmup_message = [
             {
                 "role": "user",
-                "content": (
-                    'Return a JSON object with a single key "status" set to "ok"'
-                ),
+                "content": "Hi",
             }
         ]
         for attempt in range(1, 6):
             try:
-                resp = client.chat(warmup_message, json_mode=True)
+                resp = client.chat(warmup_message)
                 if resp and resp.strip():
                     logger.info(
                         "Model '%s' warmup successful (attempt %d)", model_name, attempt
@@ -386,8 +419,35 @@ class ExperimentRunner:
                     model_name, attempt, exc,
                 )
             _time.sleep(3.0)
+        
+        # Extended retry phase: inference engine may still be initializing
         logger.warning(
-            "Model '%s' did not produce a non-empty response after 5 warmup attempts",
+            "Model '%s' warmup: initial 5 attempts failed — waiting 10s then retrying...",
+            model_name,
+        )
+        _time.sleep(10.0)
+        for attempt in range(6, 9):
+            try:
+                resp = client.chat(warmup_message)
+                if resp and resp.strip():
+                    logger.info(
+                        "Model '%s' warmup successful (extended attempt %d)", model_name, attempt
+                    )
+                    return True
+                else:
+                    logger.debug(
+                        "Model '%s' warmup extended attempt %d returned empty — retrying...",
+                        model_name, attempt,
+                    )
+            except Exception as exc:
+                logger.debug(
+                    "Model '%s' warmup extended attempt %d raised %s — retrying...",
+                    model_name, attempt, exc,
+                )
+            _time.sleep(5.0)
+        
+        logger.warning(
+            "Model '%s' did not produce a non-empty response after 8 warmup attempts",
             model_name,
         )
         return False
@@ -478,8 +538,11 @@ class ExperimentRunner:
 
         # ── Model router path (llama.cpp router on port 8080) ──────
         if self._is_model_manager_active(base_url):
-            router_base = self._get_router_base_url(base_url)
+            mm_url = self._get_model_manager_url()
+            router_base = mm_url if mm_url else self._get_router_base_url(base_url)
             router_model = self._get_router_model_name(model_name)
+            print(f"[FOS-DEBUG] router_base={router_base}", flush=True)
+            print(f"[FOS-DEBUG] about to GET {router_base}/models", flush=True)
 
             # Step 1: Find and unload the currently-loaded model
             # We must unload the CURRENT model, not the TARGET model.
@@ -489,10 +552,12 @@ class ExperimentRunner:
             print(f"[FOS-PRELOAD] Finding current model to unload...", flush=True)
             current_model = None
             try:
+                print(f"[FOS-DEBUG] calling GET...", flush=True)
                 models_resp = _requests.get(
                     f"{router_base}/models",
                     timeout=10,
                 )
+                print(f"[FOS-DEBUG] GET returned status={models_resp.status_code}", flush=True)
                 if models_resp.status_code == 200:
                     for m in models_resp.json().get("data", []):
                         m_name = m.get("id", "") if isinstance(m, dict) else ""
@@ -502,8 +567,10 @@ class ExperimentRunner:
                             current_model = m_name
                             break
             except Exception as exc:
+                print(f"[FOS-DEBUG] GET failed: {exc}", flush=True)
                 logger.debug("Failed to query model list: %s", exc)
 
+            print(f"[FOS-DEBUG] after GET: current_model={repr(current_model)}, router_model={repr(router_model)}", flush=True)
             if current_model and current_model != router_model:
                 logger.info("Unloading current model '%s' via %s ...", current_model, unload_url)
                 print(f"[FOS-PRELOAD] Unloading model '{current_model}'...", flush=True)
@@ -523,6 +590,7 @@ class ExperimentRunner:
                 except Exception as exc:
                     logger.warning("Unload request failed: %s", exc)
             elif current_model == router_model:
+                print(f"[FOS-DEBUG] model already loaded, returning True", flush=True)
                 logger.info(
                     "Model '%s' is already loaded — no unload/load needed",
                     router_model,
@@ -1061,12 +1129,12 @@ class ExperimentRunner:
         circuit_threshold = int(os.environ.get("FOS_CIRCUIT_BREAKER", "5"))
         consecutive_failures = 0
 
+        # Group agents by model for batched execution
+        model_groups = self._group_agents_by_model(agents_to_prompt)
+
         async def _prompt_with_limit(agent):
             nonlocal consecutive_failures
 
-            # Check circuit breaker BEFORE acquiring semaphore.
-            # If provider is down, skip immediately — don't queue behind
-            # other agents that are also about to fail.
             if consecutive_failures >= circuit_threshold:
                 logger.warning(
                     f"Circuit breaker tripped ({consecutive_failures} consecutive "
@@ -1086,25 +1154,64 @@ class ExperimentRunner:
             async with semaphore:
                 result = await self._prompt_agent(agent, round_num)
 
-            # Update circuit breaker state
             if isinstance(result, Exception) or getattr(result, 'skipped', False) or not getattr(result, 'success', True):
                 consecutive_failures += 1
             else:
-                consecutive_failures = 0  # Reset on success
+                consecutive_failures = 0
 
             return result
 
-        # Run all agents concurrently up to max_concurrent.
-        tasks = [_prompt_with_limit(agent) for agent in agents_to_prompt]
-        action_results = await asyncio.gather(*tasks, return_exceptions=True)
+        for model_name, group_agents in model_groups:
+            # Preload this model once for the entire group (if it has a real model)
+            if model_name is not None:
+                self._model_switch_lock.acquire()
+                try:
+                    first_agent_client = self.get_agent_llm_client(group_agents[0])
+                    if model_name != self._last_model:
+                        logger.info("Model batch switch: %s -> %s", self._last_model, model_name)
+                        print(f"[FOS-DEBUG] _last_model={self._last_model}, switching to {model_name}", flush=True)
+                        if not self._preload_model(model_name, first_agent_client):
+                            logger.error("Preload FAILED for model '%s' — skipping group", model_name)
+                            for agent in group_agents:
+                                actions.append(ActionResult(
+                                    agent_name=agent.name,
+                                    action_name="skip",
+                                    parameters={"error": f"Model '{model_name}' failed to load"},
+                                    summary=f"Skipped - model load failed",
+                                    success=False,
+                                    skipped=True,
+                                    round_num=round_num,
+                                    error=f"Model load timeout: {model_name}",
+                                ))
+                                self._record_action_to_agent(ActionResult(
+                                    agent_name=agent.name,
+                                    action_name="skip",
+                                    parameters={"error": f"Model '{model_name}' failed to load"},
+                                    summary=f"Skipped - model load failed",
+                                    success=False,
+                                    skipped=True,
+                                    round_num=round_num,
+                                    error=f"Model load timeout: {model_name}",
+                                ))
+                            continue
+                        self._last_model = model_name
+                finally:
+                    self._model_switch_lock.release()
 
-        for result in action_results:
-            if isinstance(result, Exception):
-                logger.error(f"Agent failed: {result}")
-                continue
-            actions.append(result)
-            # Record action to agent's history
-            self._record_action_to_agent(result)
+            # Run all agents in this group concurrently (same model, no race)
+            tasks = [_prompt_with_limit(agent) for agent in group_agents]
+            self._skip_model_lock = True
+            try:
+                group_results = await asyncio.gather(*tasks, return_exceptions=True)
+            finally:
+                self._skip_model_lock = False
+
+            for result in group_results:
+                if isinstance(result, Exception):
+                    logger.error(f"Agent failed: {result}")
+                    continue
+                actions.append(result)
+                self._record_action_to_agent(result)
 
         # Calculate scores - use InformationModel's pairing_fn if available so
         # n-agent games calculate per-pair payoffs correctly.
@@ -1612,9 +1719,11 @@ class ExperimentRunner:
             # Guard: model_name must be a non-empty string (Mock objects in tests
             # return Mock attributes, not real strings)
             if isinstance(model_name, str) and model_name:
-                self._model_switch_lock.acquire()
+                _skip_model_lock = getattr(self, '_skip_model_lock', False)
+                if not _skip_model_lock:
+                    self._model_switch_lock.acquire()
                 try:
-                    if model_name != self._last_model:
+                    if not _skip_model_lock and model_name != self._last_model:
                         logger.info(
                             "Model switch: %s -> %s", self._last_model, model_name
                         )
@@ -1721,7 +1830,8 @@ class ExperimentRunner:
                         locale=_locale,
                     )
                 finally:
-                    self._model_switch_lock.release()
+                    if not _skip_model_lock:
+                        self._model_switch_lock.release()
             else:
                 # No model name (mock/test client) — proceed without lock
                 messages = [{"role": "user", "content": prompt}]

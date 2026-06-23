@@ -34,6 +34,7 @@ import json
 import os
 import random
 import sys
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -209,14 +210,20 @@ def _warmup_models(
             router_base = router_base[:-3]
 
         router_model = _LLAMACPP_ROUTER_MAP.get(first, first)
-        print(
-            f"   Warming {first} (router name: {router_model}) via "
-            f"{router_base}/models/load ... ",
-            end="", flush=True,
-        )
+
+        # Route model management through model_manager if configured
+        _mm_url = os.environ.get("FOS_MODEL_MANAGER_URL")
+        if _mm_url:
+            _mm_base = _mm_url.rstrip("/")
+            load_url = f"{_mm_base}/models/load"
+            models_url = f"{_mm_base}/models"
+            print(f"   Warming {first} (router: {router_model}) via model_manager {_mm_base}/models/load ... ", end="", flush=True)
+        else:
+            load_url = f"{router_base}/models/load"
+            models_url = f"{router_base}/models"
+            print(f"   Warming {first} (router: {router_model}) via {router_base}/models/load ... ", end="", flush=True)
 
         # Step 1: POST /models/load
-        load_url = f"{router_base}/models/load"
         try:
             resp = _requests.post(
                 load_url,
@@ -236,7 +243,6 @@ def _warmup_models(
             print(f"load failed: {exc}", end=" ... ", flush=True)
 
         # Step 2: Poll GET /models every 2s until loaded (timeout 300s)
-        models_url = f"{router_base}/models"
         poll_interval = 2.0
         timeout = 300.0
         deadline = _time.time() + timeout
@@ -333,11 +339,13 @@ def _verify_llamacpp_models(base_url: str, model_names: list[str]) -> None:
             available.add(str(m.get("id", "")))
     missing = [n for n in model_names if _LLAMACPP_ROUTER_MAP.get(n, n) not in available]
     if missing:
-        raise RuntimeError(
-            f"Missing models on llama.cpp router: {', '.join(missing)}\n"
-            f"Available: {', '.join(sorted(available))}"
-        )
-    print(f"  ✓ All {len(model_names)} models present on llama.cpp router")
+        # With model switching, not all models are pre-loaded — emit a warning
+        # instead of a hard error. The runner loads models on demand via _preload_model.
+        print(f"  ⚠ {len(missing)} of {len(model_names)} models not currently loaded "
+              f"(runner will load on demand): {', '.join(missing)}")
+        print(f"     Currently loaded: {', '.join(sorted(available))}")
+    else:
+        print(f"  ✓ All {len(model_names)} models present on llama.cpp router")
 
 
 def _verify_ollama_models(base_url: str, model_names: list[str]) -> None:
@@ -383,33 +391,34 @@ def _verify_openai_models(base_url: str, model_names: list[str]) -> None:
 def make_client(
     backend: str, model_name: str, base_url: str, temperature: float
 ) -> LLMClient:
-    """Create one LLM client for the specified backend."""
+    """Create an LLMClient for the given backend and model."""
+    from fos.core.llm_config import LLMConfig
     # Translate FOS model identifiers to GGUF filenames for llama.cpp router
     if backend == "llamacpp":
         model_name = _LLAMACPP_ROUTER_MAP.get(model_name, model_name)
-    if backend == "ollama":
-        return LLMClient(
-            LLMConfig(
-                dialect="ollama",
-                model=model_name,
-                base_url=base_url,
-                temperature=temperature,
-                max_tokens=1024,
-            )
-        )
-    elif backend in ("openai", "lmstudio", "llamacpp"):
-        return LLMClient(
-            LLMConfig(
-                dialect="openai",
-                model=model_name,
-                base_url=base_url,
-                api_key=os.getenv("OPENAI_API_KEY", "lm-studio"),  # dummy for local
-                temperature=temperature,
-                max_tokens=1024,
-            )
-        )
-    else:
-        raise ValueError(f"Unknown backend: {backend}")
+    
+    config = LLMConfig(
+        dialect="ollama" if backend == "ollama" else "openai",
+        model=model_name,
+        base_url=base_url,
+        api_key=os.getenv("OPENAI_API_KEY", "not-needed"),
+        temperature=temperature,
+    )
+    return LLMClient(config)
+
+
+def make_deepseek_client() -> LLMClient:
+    """Create a DeepSeek API client for profile generation only."""
+    from fos.core.llm_config import LLMConfig
+
+    config = LLMConfig(
+        dialect="openai",
+        model="deepseek-v4-flash",
+        base_url="https://api.deepseek.com",
+        api_key="sk-af4e3d9dfbf44263804a2eed2a0b79b3",
+        temperature=0.7,
+    )
+    return LLMClient(config)
 
 
 # ── Agent building ─────────────────────────────────────────────────────────────
@@ -432,7 +441,9 @@ def build_agents(
     seed: int,
 ) -> list[dict[str, Any]]:
     """Generate demographic agents and distribute models across them."""
-    generator_client = make_client(backend, model_names[0], base_url, temperature)
+    # Use DeepSeek API for profile generation, NOT a local decision-making model
+    generator_client = make_deepseek_client()
+    print(f"   Profile generator: DeepSeek API (deepseek-v4-flash)")
 
     random_state = random.getstate()
     random.seed(seed)
@@ -624,11 +635,17 @@ def _build_council_scene(
 
 
 def _node_logs_to_export_events(
-    node_id: int, node_logs: list[dict[str, Any]]
+    node_id: int, node_logs: list[dict[str, Any]],
+    agent_meta: dict[str, dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     events: list[dict[str, Any]] = []
     for seq, log in enumerate(node_logs):
         log_data = dict(log.get("data") or {})
+        # Enrich with per-agent metadata (model, archetype, Big Five, degree)
+        if agent_meta is not None:
+            agent_name = log_data.get("agent", "")
+            if agent_name and agent_name in agent_meta:
+                log_data.update(agent_meta[agent_name])
         events.append(
             {
                 "sequence": seq,
@@ -714,13 +731,34 @@ def run_headless_council(
     agent_names = [str(a["name"]) for a in agents]
     print(f"   ✓ Generated {len(agents)} agents")
 
+    # 2b. Build per-agent metadata lookup for CSV export enrichment
+    agent_meta_base: dict[str, dict[str, Any]] = {}
+    for agent_config in agents:
+        name = agent_config["name"]
+        props = agent_config.get("properties") or {}
+        model_name = (agent_config.get("llm_config") or {}).get("model", "unknown")
+        agent_meta_base[name] = {
+            "model": model_name,
+            "archetype_id": props.get("archetype_id", ""),
+            "archetype_label": props.get("archetype_label", ""),
+            "Openness": int(round(props.get("Openness", 0))),
+            "Conscientiousness": int(round(props.get("Conscientiousness", 0))),
+            "Extraversion": int(round(props.get("Extraversion", 0))),
+            "Agreeableness": int(round(props.get("Agreeableness", 0))),
+            "Neuroticism": int(round(props.get("Neuroticism", 0))),
+        }
+
     # 3. Build networks
     print("3. Building network variants...")
     networks = build_network_variants(agent_names, seed)
 
-    # Make the generator client (first model used for agent generation above,
-    # also used as the default chat client for the simtree adapter)
-    generator_client = make_client(backend, model_names[0], base_url, temperature)
+    # DeepSeek API client for profile generation only.
+    # Decision-making models are the 5 local models from agent_llm_clients,
+    # built via _make_agent_llm_config() which uses _LLAMACPP_ROUTER_MAP.
+    # DeepSeek is NOT in MODEL_NAMES or _LLAMACPP_ROUTER_MAP — it is
+    # only used for _generate_agents profile creation, never for voting.
+    generator_client = make_deepseek_client()
+    print(f"   Profile generator: DeepSeek API (deepseek-v4-flash)")
 
     selected_proposals = proposals or default_proposals()
 
@@ -733,6 +771,9 @@ def run_headless_council(
         "agent_count": total_agents,
         "models": model_names,
         "runs": [],
+    }
+    summary["networks"] = {
+        nw.label: nw.network.get("edges", []) for nw in networks
     }
 
     total_branches = len(selected_proposals) * len(networks)
@@ -771,8 +812,19 @@ def run_headless_council(
                 "deliberation_rounds": 3,
                 "voting_threshold": 0.5,
             }
+            # Compute per-agent degree from network edges
+            edges = network.network.get("edges", [])
+            edge_flat: list[str] = [n for pair in edges for n in pair]
+            degree_counter = Counter(edge_flat)
+            branch_meta: dict[str, dict[str, Any]] = {}
+            for agent_name, base in agent_meta_base.items():
+                entry = dict(base)
+                entry["degree"] = degree_counter.get(agent_name, 0)
+                entry["network_label"] = network.label
+                branch_meta[agent_name] = entry
+
             csv_text = export_events(
-                _node_logs_to_export_events(finished_id, node_logs),
+                _node_logs_to_export_events(finished_id, node_logs, agent_meta=branch_meta),
                 scenario_params,
                 "csv",
             )
@@ -790,6 +842,7 @@ def run_headless_council(
                     "network_label": network.label,
                     "node_id": finished_id,
                     "log_count": len(node_logs),
+                    "edges": network.network.get("edges", []),
                 }
             )
             print(f"done ({len(node_logs)} events)")
