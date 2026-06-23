@@ -118,6 +118,16 @@ def transform_event_for_export(event: dict, scenario_params: dict) -> dict:
     params = event.get("_node_scenario_params") or scenario_params
     result.update(params)
 
+    # Pass through agent metadata fields from payload (added by headless_council.py)
+    _agent_meta_fields = (
+        "model", "archetype_id", "archetype_label",
+        "Openness", "Conscientiousness", "Extraversion", "Agreeableness", "Neuroticism",
+        "degree", "network_label",
+    )
+    for field in _agent_meta_fields:
+        if field in payload:
+            result[field] = payload[field]
+
     return result
 
 

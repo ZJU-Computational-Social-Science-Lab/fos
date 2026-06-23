@@ -314,6 +314,7 @@ def build_mixed_model_agents(
             "model": model_name,
             "base_url": base_url,
             "temperature": temperature,
+            "max_tokens": 500,
         }
         assigned_agents.append(config_agent)
     return assigned_agents
