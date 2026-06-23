@@ -366,10 +366,11 @@ class ExperimentRunner:
 
         # ── Step 1: synchronous load via /api/v1/models/load ────
         if not self._trigger_model_load(model_name, client):
-            logger.error(
-                "Failed to load model '%s' via LM Studio", model_name
+            logger.warning(
+                "Model '%s' preload check failed — continuing anyway (model may already be loaded in LM Studio GUI)",
+                model_name,
             )
-            return False
+            # Fall through to warmup — chat may still work
 
         logger.info("Model '%s' loaded. Sending warmup request...", model_name)
 
