@@ -1,5 +1,16 @@
 # FOS 使用文档
 
+> 📺 **视频教程** — 观看完整的使用教程，快速上手 FOS
+
+<iframe
+  src="https://player.bilibili.com/player.html?bvid=BV1CAj26yEuD"
+  scrolling="no"
+  frameborder="0"
+  allowfullscreen="true"
+  title="FOS 使用教程"
+  style="width: 100%; max-width: 896px; aspect-ratio: 16 / 9; display: block; margin: 0 auto 1.5rem; border: 1px solid var(--ss-border); border-radius: 16px; background: #000; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"
+></iframe>
+
 <h2 id="getting-started">FOS 快速入门</h2>
 
 FOS（Future of Society）是一个在线社会仿真平台，无需下载，在浏览器中直接运行。创建 AI 驱动的智能体，在树状实验结构中互动，分析仿真结果。
