@@ -10,6 +10,7 @@
 
 import React from "react";
 import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 import { resolveStaticAssetPath } from "../utils/assets";
 
 export interface MarkdownRendererProps {
@@ -109,6 +110,7 @@ export function MarkdownRenderer({ content, className = "" }: MarkdownRendererPr
   return (
     <div className={`markdown-renderer ${className}`} style={markdownStyles}>
       <ReactMarkdown
+        rehypePlugins={[rehypeRaw]}
         components={{
           h1: ({ children }) => (
             <h1 style={{ ...headingStyles, fontSize: "var(--ss-type-section-title)" }}>{children}</h1>

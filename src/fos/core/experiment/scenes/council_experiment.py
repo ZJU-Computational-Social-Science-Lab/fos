@@ -344,7 +344,7 @@ class CouncilExperimentScene(ExperimentScene):
             None otherwise.
         """
         if self.cycle_phase in (CouncilCyclePhase.DELIBERATION, CouncilCyclePhase.POST_VOTE_DISCUSSION):
-            return "You must respond with only 1-2 sentences."
+            return "Keep your response to 2-3 sentences (max 500 tokens). Speak directly and naturally as you would in a council debate."
         return None
 
     def _advance_round(self) -> None:
