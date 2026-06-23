@@ -10,6 +10,8 @@ Tests the runner's ability to:
 """
 
 import asyncio
+import os
+
 import pytest
 from unittest.mock import Mock, patch
 
@@ -618,3 +620,375 @@ async def test_paired_mode_odd_agent_is_not_prompted_or_recorded():
 
     round_events = runner.context_manager.get_round_events(1)
     assert [event.agent_name for event in round_events] == ["Alice", "Bob"]
+
+
+# ── Model-batching optimisation tests (RED phase — implementation TBD) ──────────
+
+
+def _make_mock_client(
+    model_name: str,
+    response: str = '{"action": "cooperate", "reasoning": "test"}',
+):
+    """Create a mock LLM client with a specific model name."""
+    client = Mock()
+    client.provider = Mock()
+    client.provider.model = model_name
+    client.chat = Mock(return_value=response)
+    return client
+
+
+def test_runner_get_agent_model_returns_model_name():
+    """Test 1: _get_agent_model returns the model name from the agent's LLM client.
+
+    Tests three cases:
+    - Mock client that has a provider with a string model name -> returns the string
+    - Mock client where provider.model is a Mock (not a string) -> returns None
+    - Mock client without a provider -> returns None
+    """
+    agents = [
+        ExperimentAgent(
+            name="Alice", properties={}, llm_config=LLMConfig(dialect="mock")
+        ),
+        ExperimentAgent(
+            name="Bob", properties={}, llm_config=LLMConfig(dialect="mock")
+        ),
+        ExperimentAgent(
+            name="Charlie", properties={}, llm_config=LLMConfig(dialect="mock")
+        ),
+    ]
+
+    # Client with real string model name
+    client_with_string = Mock()
+    client_with_string.provider = Mock()
+    client_with_string.provider.model = "gpt-4"
+
+    # Client where provider.model is a Mock (not a string)
+    client_with_mock_model = Mock()
+    client_with_mock_model.provider = Mock()
+    client_with_mock_model.provider.model = Mock()
+
+    # Client without a provider
+    client_no_provider = Mock()
+
+    runner = ExperimentRunner(
+        agents=agents,
+        game_config=PRISONERS_DILEMMA,
+        llm_client=Mock(),
+        agent_llm_clients={
+            "Alice": client_with_string,
+            "Bob": client_with_mock_model,
+            "Charlie": client_no_provider,
+        },
+    )
+
+    # These will FAIL because _get_agent_model does not exist yet (RED phase)
+    assert runner._get_agent_model(agents[0]) == "gpt-4"
+    assert runner._get_agent_model(agents[1]) is None
+    assert runner._get_agent_model(agents[2]) is None
+
+
+def test_runner_group_agents_by_model_returns_tuples():
+    """Test 2: _group_agents_by_model groups agents by their assigned model.
+
+    Tests three scenarios:
+    - 6 agents with 3 models (2 agents each): returns 3 groups of 2
+    - Agents with no model (None) grouped together under None key
+    - Single model -> single group
+    """
+    models = ["model_a", "model_a", "model_b", "model_b", "model_c", "model_c"]
+    agents = [
+        ExperimentAgent(
+            name=f"Agent{i}", properties={}, llm_config=LLMConfig(dialect="mock")
+        )
+        for i in range(6)
+    ]
+    agent_llm_clients = {
+        f"Agent{i}": _make_mock_client(m) for i, m in enumerate(models)
+    }
+
+    runner = ExperimentRunner(
+        agents=agents,
+        game_config=PRISONERS_DILEMMA,
+        llm_client=Mock(),
+        agent_llm_clients=agent_llm_clients,
+    )
+
+    # This will FAIL because _group_agents_by_model does not exist yet (RED phase)
+    groups = runner._group_agents_by_model(agents)
+    assert len(groups) == 3
+    for model_name, group_agents in groups:
+        assert len(group_agents) == 2
+        for agent in group_agents:
+            client = runner.get_agent_llm_client(agent)
+            m = getattr(getattr(client, "provider", None), "model", None)
+            assert m == model_name
+
+
+def test_runner_group_agents_by_model_none_group():
+    """Test 2b: Agents without a model are grouped under None."""
+    agents = [
+        ExperimentAgent(
+            name="Alice", properties={}, llm_config=LLMConfig(dialect="mock")
+        ),
+        ExperimentAgent(
+            name="Bob", properties={}, llm_config=LLMConfig(dialect="mock")
+        ),
+    ]
+    runner = ExperimentRunner(
+        agents=agents,
+        game_config=PRISONERS_DILEMMA,
+        llm_client=Mock(),
+    )
+    # This will FAIL because _group_agents_by_model does not exist yet (RED phase)
+    groups = runner._group_agents_by_model(agents)
+    assert len(groups) == 1
+    assert groups[0][0] is None
+    assert len(groups[0][1]) == 2
+
+
+def test_runner_group_agents_by_model_single_group():
+    """Test 2c: Single model produces a single group."""
+    agents = [
+        ExperimentAgent(
+            name=f"Agent{i}", properties={}, llm_config=LLMConfig(dialect="mock")
+        )
+        for i in range(3)
+    ]
+    agent_llm_clients = {
+        f"Agent{i}": _make_mock_client("model_x") for i in range(3)
+    }
+    runner = ExperimentRunner(
+        agents=agents,
+        game_config=PRISONERS_DILEMMA,
+        llm_client=Mock(),
+        agent_llm_clients=agent_llm_clients,
+    )
+    # This will FAIL because _group_agents_by_model does not exist yet (RED phase)
+    groups = runner._group_agents_by_model(agents)
+    assert len(groups) == 1
+    assert groups[0][0] == "model_x"
+    assert len(groups[0][1]) == 3
+
+
+@pytest.mark.asyncio
+async def test_model_batching_reduces_preload_calls():
+    """Test 3: _run_simultaneous_round calls _preload_model once per unique model.
+
+    Creates 6 agents with 3 distinct models arranged in interleaved order
+    (A, B, C, A, B, C) so the current per-agent preload logic calls
+    _preload_model 6 times (once per agent) instead of 3 times (once per
+    unique model).
+
+    Uses FOS_LLM_CONCURRENCY=1 to avoid a deadlock caused by threading.Lock
+    usage in the current `_prompt_agent`: when one agent holds the lock while
+    awaiting `asyncio.to_thread`, another agent's blocking lock acquire()
+    stalls the event loop.
+
+    This test FAILS (RED) because the current implementation does not batch
+    agents by model before preloading. With concurrency=1, agents run
+    sequentially and each interleaved model switch triggers a fresh preload.
+    """
+    models = ["model_a", "model_b", "model_c", "model_a", "model_b", "model_c"]
+    agents = [
+        ExperimentAgent(
+            name=f"Agent{i}", properties={}, llm_config=LLMConfig(dialect="mock")
+        )
+        for i in range(6)
+    ]
+    agent_llm_clients = {
+        f"Agent{i}": _make_mock_client(m) for i, m in enumerate(models)
+    }
+
+    runner = ExperimentRunner(
+        agents=agents,
+        game_config=PRISONERS_DILEMMA,
+        llm_client=Mock(),
+        agent_llm_clients=agent_llm_clients,
+        round_visibility="simultaneous",
+    )
+
+    # Use concurrency=1 to prevent threading.Lock deadlock
+    with (
+        patch.object(runner, "_preload_model", return_value=True) as mock_preload,
+        patch.dict(os.environ, {"FOS_LLM_CONCURRENCY": "1"}),
+    ):
+        result = await runner._run_simultaneous_round(1)
+
+    # Current code calls _preload_model per agent (6 times for interleaved models).
+    # The batched version would call it 3 times (once per unique model).
+    # This assertion FAILS with the current code (RED phase).
+    assert mock_preload.call_count == 3, (
+        f"Expected _preload_model to be called 3 times (once per unique model), "
+        f"but it was called {mock_preload.call_count} times"
+    )
+
+    # Verify all 6 agents produced results
+    assert len(result.actions) == 6
+    assert result.completed is True
+
+
+@pytest.mark.asyncio
+async def test_model_batching_concurrent_within_group():
+    """Test 4: Agents in the same model group run concurrently.
+
+    Two agents sharing the same model should run their LLM calls in
+    parallel, not sequentially. The test uses a timing-based check:
+    each agent's chat call sleeps for 0.25s. If they run concurrently
+    total time is ~0.25s; if serialized by the model switch lock it is ~0.5s.
+
+    Uses FOS_LLM_CONCURRENCY=2 to allow both agents to run concurrently
+    but the threading.Lock still serializes the chat calls in the current code.
+    """
+    import time
+
+    agents = [
+        ExperimentAgent(
+            name="Alice", properties={}, llm_config=LLMConfig(dialect="mock")
+        ),
+        ExperimentAgent(
+            name="Bob", properties={}, llm_config=LLMConfig(dialect="mock")
+        ),
+    ]
+
+    slow_response = '{"action": "cooperate", "reasoning": "done"}'
+
+    def _slow_chat(messages, json_mode=False):
+        time.sleep(0.25)
+        return slow_response
+
+    client = Mock()
+    client.provider = Mock()
+    client.provider.model = "model_a"
+    client.chat = Mock(side_effect=_slow_chat)
+
+    runner = ExperimentRunner(
+        agents=agents,
+        game_config=PRISONERS_DILEMMA,
+        llm_client=client,
+        round_visibility="simultaneous",
+    )
+
+    with (
+        patch.object(runner, "_preload_model", return_value=True),
+        patch.dict(os.environ, {"FOS_LLM_CONCURRENCY": "2"}),
+    ):
+        t0 = time.monotonic()
+        result = await runner._run_simultaneous_round(1)
+        elapsed = time.monotonic() - t0
+
+    # If agents run concurrently within the same model group, elapsed ~0.25s.
+    # If serialized by the model switch lock, elapsed ~0.5s.
+    # Uses FOS_LLM_CONCURRENCY=1 to avoid threading.Lock deadlock between
+    # agents (the lock blocks the event loop when held across await).
+    # With serial execution, total time is ~0.5s.  This assertion FAILS with
+    # the current code (RED phase) because the lock serialises even same-model
+    # agents.
+    assert elapsed < 0.35, (
+        f"Expected concurrent execution (~0.25s) but took {elapsed:.3f}s "
+        f"— agents may be serialized by model switch lock"
+    )
+
+    assert len(result.actions) == 2
+    assert result.completed is True
+
+
+@pytest.mark.asyncio
+async def test_model_batching_serial_between_groups():
+    """Test 5: Agent groups with different models do NOT run concurrently.
+
+    The second model group must wait for the first to complete.
+    Uses a tracking list to verify that all agents in Group 1 finish
+    their chat calls before any agent in Group 2 starts.
+
+    Uses FOS_LLM_CONCURRENCY=1 so agents run one-at-a-time through the
+    semaphore. The current code serialises ALL agents sequentially, so
+    group A finishes before group B trivially.  The batched version would
+    run group A concurrently (faster) then group B concurrently.
+    This test checks that execution ORDER respects model-group boundaries,
+    which the current code may not guarantee under concurrent scheduling.
+    """
+    import time
+    import threading
+
+    agents = [
+        ExperimentAgent(
+            name="A1", properties={}, llm_config=LLMConfig(dialect="mock")
+        ),
+        ExperimentAgent(
+            name="A2", properties={}, llm_config=LLMConfig(dialect="mock")
+        ),
+        ExperimentAgent(
+            name="B1", properties={}, llm_config=LLMConfig(dialect="mock")
+        ),
+        ExperimentAgent(
+            name="B2", properties={}, llm_config=LLMConfig(dialect="mock")
+        ),
+    ]
+
+    # Track when each agent starts and finishes its chat call
+    execution_log = []
+    exec_lock = threading.Lock()
+
+    def _make_chat(agent_tag, delay):
+        def _chat(messages, json_mode=False):
+            with exec_lock:
+                execution_log.append((agent_tag, "start", time.monotonic()))
+            time.sleep(delay)
+            with exec_lock:
+                execution_log.append((agent_tag, "end", time.monotonic()))
+            return '{"action": "cooperate", "reasoning": "done"}'
+        return _chat
+
+    client_a = Mock()
+    client_a.provider = Mock()
+    client_a.provider.model = "model_a"
+    client_a.chat = Mock(side_effect=_make_chat("group_a", 0.1))
+
+    client_b = Mock()
+    client_b.provider = Mock()
+    client_b.provider.model = "model_b"
+    client_b.chat = Mock(side_effect=_make_chat("group_b", 0.1))
+
+    runner = ExperimentRunner(
+        agents=agents,
+        game_config=PRISONERS_DILEMMA,
+        llm_client=Mock(),
+        agent_llm_clients={
+            "A1": client_a,
+            "A2": client_a,
+            "B1": client_b,
+            "B2": client_b,
+        },
+        round_visibility="simultaneous",
+    )
+
+    with (
+        patch.object(runner, "_preload_model", return_value=True),
+        patch.dict(os.environ, {"FOS_LLM_CONCURRENCY": "1"}),
+    ):
+        result = await runner._run_simultaneous_round(1)
+
+    # Parse execution log: agents from group A should all finish before
+    # any agent from group B starts.
+    group_a_ends = [
+        t for tag, phase, t in execution_log
+        if tag == "group_a" and phase == "end"
+    ]
+    group_b_starts = [
+        t for tag, phase, t in execution_log
+        if tag == "group_b" and phase == "start"
+    ]
+
+    if group_a_ends and group_b_starts:
+        last_a_end = max(group_a_ends)
+        first_b_start = min(group_b_starts)
+        # With concurrency=1 this trivially passes since agents run one-at-a-time
+        # in agent-list order.  However, in the true batched implementation,
+        # groups are explicitly serialised — the assertion remains valid.
+        assert last_a_end < first_b_start, (
+            f"Group B started before Group A finished: last A end={last_a_end:.3f}, "
+            f"first B start={first_b_start:.3f}. Groups should be serialized."
+        )
+
+    assert len(result.actions) == 4
+    assert result.completed is True

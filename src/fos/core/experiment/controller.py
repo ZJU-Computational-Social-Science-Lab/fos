@@ -20,6 +20,7 @@ from fos.core.experiment.game_configs import GameConfig
 from fos.core.experiment.kernel import ExperimentKernel
 from fos.core.experiment.round_context import RoundContextManager
 from fos.core.experiment.prompt_builder import build_reprompt
+from fos.core.agent.parsing import strip_thinking_tokens, strip_reasoning_prose, detect_reasoning_leak
 from fos.core.experiment.validation import (
     validate_and_clamp,
     extract_json,
@@ -259,6 +260,20 @@ class ExperimentController:
             if key != game_config.output_field
         }
 
+        # Belt-and-suspenders: strip thinking tokens from message field
+        # that survived the initial chat-level stripping in LLMClient.chat()
+        if "message" in parameters and isinstance(parameters["message"], str):
+            raw_message = parameters["message"]
+            # Strip both tag-style and prose-style reasoning
+            cleaned = strip_thinking_tokens(raw_message)
+            cleaned = strip_reasoning_prose(cleaned)
+            parameters["message"] = cleaned
+            # Detect residual leaks
+            leak_detected = detect_reasoning_leak(cleaned)
+            debug_log.append(f"  raw_message_length: {len(raw_message)}\n")
+            debug_log.append(f"  clean_message_length: {len(cleaned)}\n")
+            debug_log.append(f"  leak_detected: {leak_detected}\n")
+
         visible_parameters = _summary_parameters(parameters)
         summary = f"{agent.name} chose {action_value}"
         if visible_parameters:
@@ -430,6 +445,20 @@ class ExperimentController:
                     parsed_followup = json.loads(cleaned)
                     parameters = {k: _coerce_param(parsed_followup.get(k)) for k in param_schema.keys() if k in parsed_followup}
                     parameter_source = "followup_json"
+
+                # Belt-and-suspenders: strip thinking tokens from message
+                # field that survived the initial chat-level stripping
+                if "message" in parameters and isinstance(parameters["message"], str):
+                    raw_message = parameters["message"]
+                    # Strip both tag-style and prose-style reasoning
+                    cleaned = strip_thinking_tokens(raw_message)
+                    cleaned = strip_reasoning_prose(cleaned)
+                    parameters["message"] = cleaned
+                    # Detect residual leaks
+                    leak_detected = detect_reasoning_leak(cleaned)
+                    debug_log.append(f"  raw_message_length: {len(raw_message)}\n")
+                    debug_log.append(f"  clean_message_length: {len(cleaned)}\n")
+                    debug_log.append(f"  leak_detected: {leak_detected}\n")
 
                 debug_log.append(f"  final_parameter_source: {parameter_source}\n")
                 debug_log.append(f"  final_parameters: {parameters}\n")
