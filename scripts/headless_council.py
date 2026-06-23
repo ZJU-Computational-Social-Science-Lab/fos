@@ -415,7 +415,7 @@ def make_deepseek_client() -> LLMClient:
         dialect="openai",
         model="deepseek-v4-flash",
         base_url="https://api.deepseek.com",
-        api_key="sk-af4e3d9dfbf44263804a2eed2a0b79b3",
+        api_key=os.getenv("DEEPSEEK_API_KEY", ""),
         temperature=0.7,
     )
     return LLMClient(config)
