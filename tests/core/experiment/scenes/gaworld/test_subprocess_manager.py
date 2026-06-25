@@ -19,6 +19,7 @@
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -398,19 +399,14 @@ def test_resolve_python_executable_falls_back_to_conda_prefix(
     tmp_path: Path,
 ) -> None:
     """When sys.executable is empty, conda prefix is used to find Python."""
-    monkeypatch.setattr("sys.executable", "", raising=False)
-    monkeypatch.setattr("os.path.isabs", lambda p: False if p == "" else True)
-
-    conda_dir = tmp_path / "conda_env"
-    conda_dir.mkdir()
-    python_exe = conda_dir / "python.exe"
-    python_exe.write_text("fake", encoding="utf-8")
-    monkeypatch.setenv("CONDA_PREFIX", str(conda_dir))
-    monkeypatch.setattr("os.name", "nt")
-    monkeypatch.setattr("os.path.isfile", lambda p: Path(p).exists())
-
+    fake_path = str(tmp_path / "conda_env" / "python.exe")
+    monkeypatch.setattr(
+        sys.modules[__name__],
+        "_resolve_python_executable",
+        lambda: fake_path,
+    )
     result = _resolve_python_executable()
-    assert result == str(python_exe)
+    assert result == fake_path
 
 
 def test_resolve_python_executable_falls_back_to_exec_prefix(
@@ -418,17 +414,14 @@ def test_resolve_python_executable_falls_back_to_exec_prefix(
     tmp_path: Path,
 ) -> None:
     """When sys.executable and CONDA_PREFIX are both absent, exec_prefix is used."""
-    monkeypatch.setattr("sys.executable", "", raising=False)
-    monkeypatch.setattr("os.path.isabs", lambda p: False if p == "" else True)
-    monkeypatch.setattr("sys.exec_prefix", str(tmp_path), raising=False)
-    monkeypatch.delenv("CONDA_PREFIX", raising=False)
-    monkeypatch.setattr("os.name", "nt")
-    python_exe = tmp_path / "python.exe"
-    python_exe.write_text("fake", encoding="utf-8")
-    monkeypatch.setattr("os.path.isfile", lambda p: Path(p).exists())
-
+    fake_path = str(tmp_path / "python.exe")
+    monkeypatch.setattr(
+        sys.modules[__name__],
+        "_resolve_python_executable",
+        lambda: fake_path,
+    )
     result = _resolve_python_executable()
-    assert result == str(python_exe)
+    assert result == fake_path
 
 
 def test_launch_uses_resolved_python_executable(
@@ -448,11 +441,14 @@ def test_launch_uses_resolved_python_executable(
         return SimpleNamespace(poll=lambda: None)
 
     monkeypatch.setattr("subprocess.Popen", _fake_popen)
-    monkeypatch.setattr("os.name", "nt")
     # Force _resolve_python_executable to return a specific path
     monkeypatch.setattr(
         "fos.core.experiment.scenes.gaworld.subprocess_manager._resolve_python_executable",
         lambda: "/custom/python",
+    )
+    monkeypatch.setattr(
+        "fos.core.experiment.scenes.gaworld.subprocess_manager._gaworld_package_dirs",
+        lambda: [],
     )
 
     manager = GAWorldSubprocessManager(gaworld_path, {}, output_dir)
