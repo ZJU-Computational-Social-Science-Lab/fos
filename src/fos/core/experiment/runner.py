@@ -123,6 +123,7 @@ class ExperimentRunner:
         self.turn_order: List[str] | None = None  # Store shuffled order for random/paired mode
         self.scores: Dict[str, int] = {}  # Track cumulative scores per agent (for paired mode)
         self.pending_host_messages: list[str] = []  # Injected by host before each round
+        self._last_model: str | None = None  # Track last model for sequential prompt path
         self._last_model_per_port: dict[int, str | None] = {}  # Track last model per port for dual-server
 
         # Compute model-block boundaries for predictive preloading

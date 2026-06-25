@@ -30,10 +30,10 @@ describe("vite config", () => {
       manifest: {
         start_url: "/css/fos/",
         scope: "/css/fos/",
-        icons: [{ src: "/css/fos/favicon.svg" }],
+        icons: [{ src: "/css/fos/assets/favicon.png" }],
       },
     });
-    expect(pwaOptions.workbox?.globPatterns).not.toContain("**/*.png");
+    expect(pwaOptions.workbox?.globPatterns).not.toContain("**/*.svg");
     expect(pwaOptions.workbox?.runtimeCaching).toEqual(
       expect.not.arrayContaining([
         expect.objectContaining({ cacheName: "api-cache" }),
