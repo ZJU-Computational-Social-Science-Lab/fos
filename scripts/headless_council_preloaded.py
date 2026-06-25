@@ -1,28 +1,9 @@
 #!/usr/bin/env python3
 """
-Headless council pilot runner — supports Ollama, OpenAI-compatible (LM Studio), and llama.cpp backends.
+Headless council pilot runner — preloaded profiles variant.
 
-Usage:
-    # LM Studio (default)
-    python scripts/headless_council.py \
-        --backend lmstudio \
-        --base-url http://127.0.0.1:1234/v1 \
-        --models "openai/gpt-oss-20b,qwen/qwen3.6-35b-a3b,google/gemma-4-26b-a4b" \
-        --agents 15 --seed 7
-
-    # Ollama
-    python scripts/headless_council.py \
-        --backend ollama \
-        --base-url http://127.0.0.1:11434 \
-        --models "ministral-3:3b,granite4:3b" \
-        --agents 12 --seed 7
-
-    # llama.cpp (local llama-server with GPU offload)
-    python scripts/headless_council.py \
-        --backend llamacpp \
-        --base-url http://127.0.0.1:8080/v1 \
-        --models "openai/gpt-oss-20b,google/gemma-4-26b-a4b" \
-        --agents 9 --seed 42
+Same as headless_council.py but loads pre-generated agent profiles
+from a JSON file instead of generating them via DeepSeek API.
 """
 
 from __future__ import annotations
@@ -60,7 +41,6 @@ from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
 from fos.core.experiment.config import ExperimentConfig
 from fos.core.experiment.scenes.council_experiment import CouncilExperimentScene
 from fos.core.llm.client import LLMClient
-from fos.core.llm.generation import generate_agents_with_archetypes
 from fos.core.llm_config import LLMConfig
 from fos.core.simtree import SimTree
 
@@ -436,8 +416,7 @@ def make_client(
         temperature=temperature,
     )
     return LLMClient(config)
-
-
+# ── Agent building ─────────────────────────────────────────────────────────────
 def make_deepseek_client() -> LLMClient:
     """Create a DeepSeek API client for profile generation only."""
     from fos.core.llm_config import LLMConfig
@@ -453,61 +432,6 @@ def make_deepseek_client() -> LLMClient:
 
 
 # ── Agent building ─────────────────────────────────────────────────────────────
-
-
-def _generated_agent_to_config(agent: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "name": str(agent["name"]),
-        "role_prompt": str(agent.get("profile") or ""),
-        "properties": dict(agent.get("properties") or {}),
-    }
-
-
-def build_agents(
-    backend: str,
-    base_url: str,
-    model_names: list[str],
-    temperature: float,
-    total_agents: int,
-    seed: int,
-) -> list[dict[str, Any]]:
-    """Generate demographic agents and distribute models across them."""
-    # Use DeepSeek API for profile generation, NOT a local decision-making model
-    generator_client = make_deepseek_client()
-    print(f"   Profile generator: DeepSeek API (deepseek-v4-flash)")
-
-    random_state = random.getstate()
-    random.seed(seed)
-    try:
-        generated = generate_agents_with_archetypes(
-            total_agents=total_agents,
-            demographics=DEFAULT_DEMOGRAPHICS,
-            archetype_probabilities={},
-            traits=DEFAULT_TRAITS,
-            llm_client=generator_client,
-            language="en",
-            timeout=120,
-        )
-    finally:
-        random.setstate(random_state)
-
-    agents: list[dict[str, Any]] = []
-    agents_per_model = total_agents // len(model_names)
-    for idx, agent in enumerate(generated):
-        config_agent = _generated_agent_to_config(agent)
-        # Block assignment: consecutive agents share the same model,
-        # so LM Studio only switches models every N agents, not every agent.
-        model_idx = idx // agents_per_model
-        if model_idx >= len(model_names):
-            model_idx = len(model_names) - 1
-        model_name = model_names[model_idx]
-        config_agent["provider_id"] = f"provider_{model_idx}"
-        config_agent["llm_config"] = _make_agent_llm_config(
-            backend, model_name, base_url, temperature
-        )
-        agents.append(config_agent)
-    return agents
-
 
 def _make_agent_llm_config(
     backend: str, model_name: str, base_url: str, temperature: float
@@ -804,6 +728,7 @@ def run_headless_council(
     temperature: float = 0.7,
     proposals: list[ProposalSpec] | None = None,
     network_name: str = "small_world",
+    profiles_path_arg: str = "artifacts/council_100agents_run5/profiles.json",
 ) -> dict[str, Any]:
     """Run the full council pilot with the specified backend."""
     print(f"\n{'=' * 60}")
@@ -827,18 +752,36 @@ def run_headless_council(
         print("1.5. Pre-warming first model (runner handles switches)...")
         _warmup_models(backend, base_url, model_names, temperature)
 
-    # 2. Generate agents
-    print("2. Generating agent profiles...")
-    agents = build_agents(
-        backend=backend,
-        base_url=base_url,
-        model_names=model_names,
-        temperature=temperature,
-        total_agents=total_agents,
-        seed=seed,
-    )
+    # 2. Load pre-generated agent profiles
+    print("2. Loading pre-generated agent profiles...")
+    import json
+    profiles_path = Path(profiles_path_arg)
+    if not profiles_path.exists():
+        raise FileNotFoundError(f"Profiles file not found: {profiles_path}")
+    with open(profiles_path) as f:
+        generated = json.load(f)
+    # Use only the first total_agents profiles
+    generated = generated[:total_agents]
+    # Build proper agent configs with llm_config and provider_id
+    agents = []
+    agents_per_model = total_agents // len(model_names)
+    for idx, agent in enumerate(generated):
+        config_agent = {
+            "name": str(agent["name"]),
+            "role_prompt": str(agent.get("role_prompt", "")),
+            "properties": dict(agent.get("properties", {})),
+        }
+        model_idx = idx // agents_per_model
+        if model_idx >= len(model_names):
+            model_idx = len(model_names) - 1
+        model_name = model_names[model_idx]
+        config_agent["provider_id"] = f"provider_{model_idx}"
+        config_agent["llm_config"] = _make_agent_llm_config(
+            backend, model_name, base_url, temperature
+        )
+        agents.append(config_agent)
     agent_names = [str(a["name"]) for a in agents]
-    print(f"   ✓ Generated {len(agents)} agents")
+    print(f"   ✓ Loaded {len(agents)} agents from {profiles_path}")
 
     # 2b. Build per-agent metadata lookup for CSV export enrichment
     agent_meta_base: dict[str, dict[str, Any]] = {}
@@ -863,14 +806,6 @@ def run_headless_council(
     networks = [n for n in networks if n.label == network_name]
     if not networks:
         raise ValueError(f"Network '{network_name}' not found")
-
-    # DeepSeek API client for profile generation only.
-    # Decision-making models are the 5 local models from agent_llm_clients,
-    # built via _make_agent_llm_config() which uses _LLAMACPP_ROUTER_MAP.
-    # DeepSeek is NOT in MODEL_NAMES or _LLAMACPP_ROUTER_MAP — it is
-    # only used for _generate_agents profile creation, never for voting.
-    generator_client = make_deepseek_client()
-    print(f"   Profile generator: DeepSeek API (deepseek-v4-flash)")
 
     selected_proposals = proposals or default_proposals()
 
@@ -897,6 +832,8 @@ def run_headless_council(
         "started_at": datetime.now(timezone.utc).isoformat(),
     })
 
+    generator_client = make_deepseek_client()
+    print(f"   Profile generator: DeepSeek API (deepseek-v4-flash)")
     for proposal in selected_proposals:
         print(f"\n4. Running: {proposal.label}")
         scene = _build_council_scene(agents, proposal, {"edges": []})
@@ -1060,6 +997,13 @@ def main() -> None:
         default="small_world",
         help="Network topology (default: small_world)",
     )
+
+    parser.add_argument(
+        "--profiles-path",
+        type=str,
+        default="artifacts/council_100agents_run5/profiles.json",
+        help="Path to pre-generated profiles JSON",
+    )
     parser.add_argument(
         "--concurrency",
         type=int,
@@ -1109,6 +1053,7 @@ def main() -> None:
         temperature=args.temperature,
         proposals=proposals,
         network_name=args.network,
+        profiles_path_arg=args.profiles_path,
     )
 
 

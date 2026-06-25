@@ -16,6 +16,7 @@ import { t } from './locale-helper';
 /** Maps scenario IDs to their UI category */
 const SCENARIO_CATEGORY: Record<string, string> = {
   custom: 'custom',
+  gaworld: 'generative_city',
   prisoners_dilemma: 'game_theory',
   battle_of_the_sexes: 'game_theory',
   stag_hunt: 'game_theory',

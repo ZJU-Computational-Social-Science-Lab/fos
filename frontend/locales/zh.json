@@ -449,6 +449,12 @@
         "description": "一个社会推理游戏，村民试图识别隐藏在他们中间的狼人，而狼人则在夜间试图消灭村民。"
       }
     },
+    "generative_city": {
+      "gaworld": {
+        "name": "GAWorld 城市模拟",
+        "description": "基于生成式智能体的杭州城市模拟，含50名杭州市民。"
+      }
+    },
     "custom": {
       "custom": {
         "name": "自定义场景",

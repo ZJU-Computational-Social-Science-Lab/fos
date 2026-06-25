@@ -178,7 +178,7 @@ export async function runScenario(
     result.uiErrors.push(...await workspace.collectErrorMessages());
 
     // Run the simulation rounds
-    const advanceErrors = await workspace.advanceRounds(scenario.rounds);
+    const advanceErrors = await workspace.advanceRounds(scenario.rounds, scenario.advanceTimeoutMs);
     result.warnings.push(...advanceErrors);
 
     // Collect errors again after running
