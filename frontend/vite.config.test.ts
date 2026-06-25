@@ -30,7 +30,7 @@ describe("vite config", () => {
       manifest: {
         start_url: "/css/fos/",
         scope: "/css/fos/",
-        icons: [{ src: "/css/fos/favicon.svg" }],
+        icons: [{ src: "/css/fos/assets/favicon.svg" }],
       },
     });
     expect(pwaOptions.workbox?.globPatterns).not.toContain("**/*.png");
