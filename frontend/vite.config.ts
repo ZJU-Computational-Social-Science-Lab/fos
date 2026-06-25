@@ -48,7 +48,7 @@ export function createPwaOptions(baseValue: string): Partial<VitePWAOptions> {
     scope: base,
     registerType: "autoUpdate",
     workbox: {
-      globPatterns: ["**/*.{js,css,html,svg,ico,woff,woff2,json}"],
+      globPatterns: ["**/*.{js,css,html,ico,woff,woff2,json,png}"],
       navigateFallback: `${base}index.html`,
       runtimeCaching: [
         {
@@ -78,7 +78,7 @@ export function createPwaOptions(baseValue: string): Partial<VitePWAOptions> {
       display: "standalone",
       start_url: base,
       scope: base,
-      icons: [{ src: `${base}assets/favicon.svg`, sizes: "any", type: "image/svg+xml" }],
+      icons: [{ src: `${base}assets/favicon.png`, sizes: "64x64", type: "image/png" }],
     },
   };
 }
