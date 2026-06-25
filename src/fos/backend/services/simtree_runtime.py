@@ -93,8 +93,20 @@ def _looks_like_generated_placeholder_agent(agent: dict) -> bool:
 
 
 def _should_use_gaworld_profile_agents(agents: list[dict]) -> bool:
-    """Return True when GAWorld should replace missing or placeholder agents."""
+    """Return True when GAWorld should replace missing or placeholder agents.
+
+    Replaces when:
+    - The agent list is empty.
+    - Every agent lacks an ``id`` field (builder-created agents without
+      real Hangzhou profile IDs).
+    - Every agent matches the generated-placeholder pattern.
+    """
     if not agents:
+        return True
+    # If all agents lack an 'id' field, they came from the builder without
+    # real GAWorld profile IDs. Replace them with bundled profiles so the
+    # GAWorld subprocess can match agents by their profile IDs.
+    if all(not agent.get("id") for agent in agents):
         return True
     return all(_looks_like_generated_placeholder_agent(agent) for agent in agents)
 
@@ -102,6 +114,14 @@ def _should_use_gaworld_profile_agents(agents: list[dict]) -> bool:
 def _resolve_gaworld_agents(agent_config: dict) -> list[dict]:
     """Return GAWorld profile agents when request agents are not meaningful."""
     agents = list(agent_config.get("agents") or [])
+    if not agents:
+        from fos.core.experiment.scenes.gaworld import profiles as profiles_module
+
+        profile_agents = profiles_module.profiles_to_fos_agents(
+            profiles_module.load_profiles()
+        )
+        return profile_agents
+
     if not _should_use_gaworld_profile_agents(agents):
         return agents
 
@@ -110,7 +130,16 @@ def _resolve_gaworld_agents(agent_config: dict) -> list[dict]:
     profile_agents = profiles_module.profiles_to_fos_agents(
         profiles_module.load_profiles()
     )
-    return profile_agents or agents
+    if not profile_agents:
+        return agents
+
+    # Match the number of profile agents to the original UI agent count
+    # so GAWorld doesn't simulate all 50 profiles when only 2 agents were requested.
+    requested_count = len(agents)
+    if requested_count < len(profile_agents):
+        profile_agents = profile_agents[:requested_count]
+
+    return profile_agents
 
 
 def _resolve_gaworld_agent_ids(params: dict, agents: list[dict]) -> list[str]:
