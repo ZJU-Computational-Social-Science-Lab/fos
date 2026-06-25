@@ -78,7 +78,7 @@ export function createPwaOptions(baseValue: string): Partial<VitePWAOptions> {
       display: "standalone",
       start_url: base,
       scope: base,
-      icons: [{ src: `${base}favicon.svg`, sizes: "any", type: "image/svg+xml" }],
+      icons: [{ src: `${base}assets/favicon.svg`, sizes: "any", type: "image/svg+xml" }],
     },
   };
 }
