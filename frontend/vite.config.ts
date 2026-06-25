@@ -10,7 +10,7 @@
 import path from "path";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv, type Plugin } from "vite";
-import { VitePWA, type VitePWAOptions } from "vite-plugin-pwa";
+import type { VitePWAOptions } from "vite-plugin-pwa";
 
 function virtualDocsPlugin(): Plugin {
   return {
@@ -126,7 +126,6 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       virtualDocsPlugin(),
-      VitePWA(createPwaOptions(base)),
     ],
     resolve: {
       alias: {

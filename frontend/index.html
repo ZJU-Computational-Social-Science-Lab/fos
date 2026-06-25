@@ -24,6 +24,35 @@
     <!-- dns-prefetch for the API origin (same domain, but harmless and catches future CDN moves) -->
     <link rel="dns-prefetch" href="//mo.zju.edu.cn" />
 
+    <script>
+      (function () {
+        const basePath = "%BASE_URL%";
+        if (!("serviceWorker" in navigator)) return;
+
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.getRegistrations().then((registrations) => {
+            registrations.forEach((registration) => {
+              try {
+                const scopePath = new URL(registration.scope).pathname;
+                if (scopePath.startsWith(basePath)) registration.unregister();
+              } catch {
+                registration.unregister();
+              }
+            });
+          });
+
+          if (!("caches" in window)) return;
+          caches.keys().then((keys) => {
+            keys
+              .filter((key) => key.startsWith("workbox-") || key.includes("precache"))
+              .forEach((key) => {
+                caches.delete(key);
+              });
+          });
+        });
+      })();
+    </script>
+
     <style>
       /*
         Inline skeleton — visible immediately before JS loads.
