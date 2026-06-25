@@ -63,6 +63,7 @@ uploads/*/*
 .planning/
 docs/plans/
 MIGRATION.md
+*.progress
 
 # Large media files
 *.mp4

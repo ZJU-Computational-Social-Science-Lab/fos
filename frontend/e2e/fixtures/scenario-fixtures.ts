@@ -21,6 +21,8 @@ export interface ScenarioConfig {
   rounds: number;
   /** Optional parameter overrides for Step 2 (keyed by param.key from registry). */
   parameters?: Record<string, string | number>;
+  /** Per-scenario overrides for the auto-advance timeout. Defaults to 180_000ms. */
+  advanceTimeoutMs?: number;
 }
 
 export const SCENARIOS: Record<string, ScenarioConfig> = {
@@ -332,6 +334,29 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
     parameters: {
       tier_order: 'high,mid,low',
       cascade_mode: 'standard',
+    },
+  },
+
+  // ── GAWorld ──────────────────────────────────────────────────
+
+  gaworld: {
+    id: 'gaworld',
+    name: 'GAWorld City',
+    category: 'generative_city',
+    agentNames: ['徐桂兰', '蔡德荣'],
+    agentRolePrompts: [
+      'You are 徐桂兰, a 68-year-old retired factory worker living in 萧山·社区.',
+      'You are 蔡德荣, a 72-year-old retired teacher living in 临平·老小区.',
+    ],
+    zhAgentRolePrompts: [
+      '你是徐桂兰，68岁的退休工人，住在萧山社区。',
+      '你是蔡德荣，72岁的退休教师，住在临平老小区。',
+    ],
+    rounds: 1,
+    advanceTimeoutMs: 500_000,
+    parameters: {
+      execution_profile: 'fast',
+      seed: 42,
     },
   },
 

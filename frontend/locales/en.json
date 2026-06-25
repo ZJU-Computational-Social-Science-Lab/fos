@@ -449,6 +449,12 @@
         "description": "A social deduction game where villagers try to identify werewolves among them while werewolves try to eliminate villagers at night."
       }
     },
+    "generative_city": {
+      "gaworld": {
+        "name": "GAWorld City Simulation",
+        "description": "Multi-agent generative city simulation with 50 Hangzhou residents."
+      }
+    },
     "custom": {
       "custom": {
         "name": "Custom Scenario",

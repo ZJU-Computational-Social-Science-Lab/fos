@@ -123,7 +123,7 @@ class ExperimentRunner:
         self.turn_order: List[str] | None = None  # Store shuffled order for random/paired mode
         self.scores: Dict[str, int] = {}  # Track cumulative scores per agent (for paired mode)
         self.pending_host_messages: list[str] = []  # Injected by host before each round
-        self._last_model: str | None = None  # Track last used model for LM Studio switching
+        self._last_model_per_port: dict[int, str | None] = {}  # Track last model per port for dual-server
 
         # Compute model-block boundaries for predictive preloading
         self._model_blocks: list[tuple[int, int, str]] = []
@@ -261,10 +261,14 @@ class ExperimentRunner:
             )
 
             # Step 1-2: Unload current model and trigger load
-            was_already_loaded = (model_name == self._last_model)
+            port = self._get_port_from_client(client)
+            was_already_loaded = (
+                port in self._last_model_per_port
+                and self._last_model_per_port[port] == model_name
+            )
             if not self._trigger_model_load(model_name, client):
                 logger.error(
-                    "Failed to load model '%s' via router", model_name
+                    "Failed to load model '%s' via router (port %s)", model_name, port
                 )
                 return False
 
@@ -272,8 +276,8 @@ class ExperimentRunner:
             # skip the poll loop and warmup — they're unnecessary.
             if was_already_loaded:
                 logger.info(
-                    "Model '%s' was already loaded — skipping poll and warmup",
-                    model_name,
+                    "Model '%s' was already loaded on port %s — skipping poll and warmup",
+                    model_name, port,
                 )
                 return True
 
@@ -300,6 +304,7 @@ class ExperimentRunner:
 
                             # Accept both dict-with-value and direct-string status representations
                             if m_name == router_model:
+                                self._last_model_per_port[port] = model_name
                                 if status_val == "loaded":
                                     print(f"[FOS-PRELOAD] Model '{router_model}' is loaded "
                                           f"({_time.time() - (deadline - timeout):.1f}s)", flush=True)
@@ -514,7 +519,21 @@ class ExperimentRunner:
         """
         return LLAMACPP_ROUTER_MODEL_MAP.get(model_name, model_name)
 
+    @staticmethod
+    def _get_port_from_client(client):
+        """Extract the llama-server port from an LLMClient's base_url.
+
+        Returns the port number (e.g., 8080 or 8082), defaulting to 8080.
+        """
+        from urllib.parse import urlparse
+        base_url = getattr(getattr(client, 'provider', None), 'base_url', '')
+        if not base_url:
+            return 8080
+        parsed = urlparse(base_url)
+        return parsed.port or 8080
+
     def _trigger_model_load(self, model_name: str, client: "LLMClient") -> bool:
+        port = self._get_port_from_client(client)
         """Trigger a model switch/load via the active provider.
 
         Two modes:
@@ -578,7 +597,7 @@ class ExperimentRunner:
                 try:
                     resp = _requests.post(
                         unload_url,
-                        json={"model": current_model},
+                        json={"model": current_model, "port": port},
                         timeout=30,
                     )
                     if resp.status_code == 200:
@@ -614,8 +633,8 @@ class ExperimentRunner:
             try:
                 resp = _requests.post(
                     load_url,
-                    json={"model": router_model},
-                    timeout=30,  # load request returns immediately; model loads async
+                    json={"model": router_model, "port": port},
+                    timeout=300,  # model loads sync via model_manager; 35B GGUF takes 60-180s
                 )
                 if resp.status_code == 200:
                     logger.info(
@@ -1168,9 +1187,10 @@ class ExperimentRunner:
                 self._model_switch_lock.acquire()
                 try:
                     first_agent_client = self.get_agent_llm_client(group_agents[0])
-                    if model_name != self._last_model:
-                        logger.info("Model batch switch: %s -> %s", self._last_model, model_name)
-                        print(f"[FOS-DEBUG] _last_model={self._last_model}, switching to {model_name}", flush=True)
+                    port = self._get_port_from_client(first_agent_client)
+                    if model_name != self._last_model_per_port.get(port):
+                        logger.info("Model batch switch: %s -> %s", self._last_model_per_port.get(port), model_name)
+                        print(f"[FOS-DEBUG] port={port} _last={self._last_model_per_port.get(port)}, switching to {model_name}", flush=True)
                         if not self._preload_model(model_name, first_agent_client):
                             logger.error("Preload FAILED for model '%s' — skipping group", model_name)
                             for agent in group_agents:
@@ -1195,7 +1215,7 @@ class ExperimentRunner:
                                     error=f"Model load timeout: {model_name}",
                                 ))
                             continue
-                        self._last_model = model_name
+                        self._last_model_per_port[port] = model_name
                 finally:
                     self._model_switch_lock.release()
 

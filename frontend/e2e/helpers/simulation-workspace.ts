@@ -34,11 +34,11 @@ export class SimulationWorkspace {
    * Run N rounds using auto-advance, with fallback to manual advance.
    * Never throws — returns error messages instead.
    */
-  async advanceRounds(rounds: number = 3): Promise<string[]> {
+  async advanceRounds(rounds: number = 3, timeoutMs: number = 180_000): Promise<string[]> {
     const errors: string[] = [];
 
     try {
-      await this.runWithAutoAdvance(rounds);
+      await this.runWithAutoAdvance(rounds, timeoutMs);
     } catch (autoAdvanceError) {
       errors.push(`Auto-advance failed: ${String(autoAdvanceError)}`);
       try {
@@ -80,7 +80,7 @@ export class SimulationWorkspace {
   // --- Private methods ---
 
   /** Use auto-advance to run N rounds */
-  private async runWithAutoAdvance(rounds: number) {
+  private async runWithAutoAdvance(rounds: number, timeoutMs: number = 180_000) {
     const stepsTitle = t('simPage.enterSteps', this.locale);
 
     // Set the step count
@@ -107,7 +107,7 @@ export class SimulationWorkspace {
 
     // Wait for auto-advance to complete (Stop button disappears)
     const stopText = t('simPage.stop', this.locale);
-    const maxWaitMs = 180_000;
+    const maxWaitMs = timeoutMs;
     const pollInterval = 2_000;
     let elapsed = 0;
 
