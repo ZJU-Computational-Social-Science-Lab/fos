@@ -126,6 +126,31 @@ async def test_run_sequential_round(agents, mock_llm_client):
 
 
 @pytest.mark.asyncio
+async def test_run_sequential_round_with_model_switch_tracking(agents, mock_llm_client):
+    """Sequential rounds should initialize model tracking before prompting agents."""
+    mock_llm_client.provider = Mock(
+        model="phi4-mini:latest",
+        base_url="http://fos-ollama:11434",
+        dialect="ollama",
+    )
+
+    runner = ExperimentRunner(
+        agents=agents,
+        game_config=PRISONERS_DILEMMA,
+        llm_client=mock_llm_client,
+        round_visibility="sequential"
+    )
+    runner._preload_model = Mock(return_value=True)
+
+    result = await runner._run_sequential_round(round_num=1)
+
+    assert len(result.actions) == 2
+    assert all(action.success for action in result.actions)
+    assert runner._last_model == "phi4-mini:latest"
+    assert runner._preload_model.call_count == 1
+
+
+@pytest.mark.asyncio
 async def test_run_multiple_rounds(agents, mock_llm_client):
     """Run multiple rounds and verify tracking."""
     runner = ExperimentRunner(
