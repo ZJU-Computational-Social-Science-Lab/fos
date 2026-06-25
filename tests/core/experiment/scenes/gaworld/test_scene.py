@@ -705,11 +705,11 @@ def test_launch_subprocess_uses_fos_ollama_provider_config(tmp_path: Path, monke
     scene._launch_subprocess(1)
 
     llm = captured["config_overrides"]["llm"]
-    assert llm["providers"]["fos_ollama"]["type"] == "ollama"
-    assert llm["providers"]["fos_ollama"]["url"] == "http://localhost:11434/api/generate"
-    assert llm["providers"]["fos_ollama"]["model"] == "qwen3:4b-instruct-2507-q4_K_M"
-    assert llm["routing"]["default"] == "fos_ollama"
-    assert llm["routing"]["tasks"]["schedule"] == "fos_ollama"
+    assert llm["providers"]["fos_provider"]["type"] == "ollama"
+    assert llm["providers"]["fos_provider"]["url"] == "http://localhost:11434/api/generate"
+    assert llm["providers"]["fos_provider"]["model"] == "qwen3:4b-instruct-2507-q4_K_M"
+    assert llm["routing"]["default"] == "fos_provider"
+    assert llm["routing"]["tasks"]["schedule"] == "fos_provider"
 
 
 def test_launch_subprocess_uses_ollama_environment_config(tmp_path: Path, monkeypatch) -> None:
@@ -738,8 +738,8 @@ def test_launch_subprocess_uses_ollama_environment_config(tmp_path: Path, monkey
     scene._launch_subprocess(1)
 
     llm = captured["config_overrides"]["llm"]
-    assert llm["providers"]["fos_ollama"]["url"] == "http://127.0.0.1:11434/api/generate"
-    assert llm["providers"]["fos_ollama"]["model"] == "gemma3:12b"
+    assert llm["providers"]["fos_provider"]["url"] == "http://127.0.0.1:11434/api/generate"
+    assert llm["providers"]["fos_provider"]["model"] == "gemma3:12b"
 
 
 def test_launch_subprocess_does_not_inject_provider_api_key(tmp_path: Path, monkeypatch) -> None:
@@ -811,9 +811,9 @@ def test_launch_subprocess_ignores_gaworld_api_key_and_uses_default_fos_ollama(
     scene._launch_subprocess(1)
 
     llm = captured["config_overrides"]["llm"]
-    assert llm["providers"]["fos_ollama"]["type"] == "ollama"
-    assert llm["providers"]["fos_ollama"]["url"] == "http://127.0.0.1:11434/api/generate"
-    assert llm["providers"]["fos_ollama"]["model"] == "qwen3:4b-instruct-2507-q4_K_M"
+    assert llm["providers"]["fos_provider"]["type"] == "ollama"
+    assert llm["providers"]["fos_provider"]["url"] == "http://127.0.0.1:11434/api/generate"
+    assert llm["providers"]["fos_provider"]["model"] == "qwen3:4b-instruct-2507-q4_K_M"
     assert captured["env_overrides"] == {}
     assert set(captured["env_removals"]) >= {
         "GAWORLD_LLM_API_KEY",
@@ -853,7 +853,7 @@ def test_launch_subprocess_defaults_to_fos_ollama_without_warning(tmp_path: Path
     scene._launch_subprocess(1)
 
     llm = captured["config_overrides"]["llm"]
-    assert llm["routing"]["default"] == "fos_ollama"
+    assert llm["routing"]["default"] == "fos_provider"
     assert "gaworld.warning.no_llm_key" not in caplog.messages
 
 
