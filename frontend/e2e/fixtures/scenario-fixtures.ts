@@ -352,11 +352,11 @@ export const SCENARIOS: Record<string, ScenarioConfig> = {
       '你是徐桂兰，68岁的退休工人，住在萧山社区。',
       '你是蔡德荣，72岁的退休教师，住在临平老小区。',
     ],
-    rounds: 1,
-    advanceTimeoutMs: 500_000,
+    rounds: 0,
     parameters: {
       execution_profile: 'fast',
       seed: 42,
+      agent_ids: '34, 35',
     },
   },
 

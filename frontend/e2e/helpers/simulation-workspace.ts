@@ -35,6 +35,8 @@ export class SimulationWorkspace {
    * Never throws — returns error messages instead.
    */
   async advanceRounds(rounds: number = 3, timeoutMs: number = 180_000): Promise<string[]> {
+    if (rounds <= 0) return [];
+
     const errors: string[] = [];
 
     try {
