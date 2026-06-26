@@ -246,8 +246,19 @@ export const ComparisonView: React.FC = () => {
                         <p className="text-xs text-[var(--ss-workspace-muted)]">{compareData.summary}</p>
                      </div>
                   ) : (
-                     <button onClick={() => setFetchTrigger(prev => prev + 1)} className="text-xs text-[var(--ss-workspace-link)] hover:underline">
-                        {t('components.comparisonView.generateAnalysisReport')}
+                     <button
+                        onClick={() => setFetchTrigger(prev => prev + 1)}
+                        disabled={isLoadingComparison}
+                        className="text-xs text-[var(--ss-workspace-link)] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                     >
+                        {isLoadingComparison ? (
+                           <span className="inline-flex items-center gap-1.5">
+                              <Loader2 size={12} className="animate-spin" />
+                              {t('components.comparisonView.analyzingDifferences')}
+                           </span>
+                        ) : (
+                           t('components.comparisonView.generateAnalysisReport')
+                        )}
                      </button>
                   )}
                </div>
