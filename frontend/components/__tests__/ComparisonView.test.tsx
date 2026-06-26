@@ -379,4 +379,35 @@ describe('ComparisonView', () => {
       expect(screen.getByText('components.comparisonView.keyDivergenceHint')).toBeInTheDocument();
     });
   });
+
+  // ── 12. Loading state on Generate Analysis Report button ──────────
+
+  it('shows a spinner on the Generate Analysis Report button when isLoadingComparison is true', () => {
+    vi.useFakeTimers();
+
+    // Mock API to return undefined so compareData stays null
+    mockCompareNodes.mockResolvedValue(undefined);
+
+    useSimulationStore.setState({
+      selectedNodeId: '1',
+      compareTargetNodeId: '2',
+      nodes: [baselineNode, compareNode],
+      currentSimulation: { id: 'sim-1' },
+    } as never);
+
+    render(<ComparisonView />);
+
+    // useEffect fires → setIsLoadingComparison(true) → re-render with spinner
+    // Fake timers freeze the 250ms debounce, so the API call never fires
+    expect(screen.getByText('components.comparisonView.analyzingDifferences')).toBeInTheDocument();
+
+    // Spinner should be present in the Smart Summary section
+    const spinnerContainer = screen.getByText('components.comparisonView.analyzingDifferences').closest('div');
+    expect(spinnerContainer?.querySelector('.animate-spin')).toBeTruthy();
+
+    // The Generate Analysis Report button text should NOT be shown during loading
+    expect(screen.queryByText('components.comparisonView.generateAnalysisReport')).not.toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
 });
