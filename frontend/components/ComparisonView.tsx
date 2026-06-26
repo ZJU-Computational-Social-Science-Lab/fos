@@ -53,7 +53,6 @@ export const ComparisonView: React.FC = () => {
    const compareTargetNodeId = useSimulationStore(state => state.compareTargetNodeId);
    const nodes = useSimulationStore(state => state.nodes);
    const isGenerating = useSimulationStore(state => state.isGenerating);
-   const generateComparisonAnalysis = useSimulationStore(state => state.generateComparisonAnalysis);
    const comparisonUseLLM = useSimulationStore(state => state.comparisonUseLLM);
    const setComparisonUseLLM = useSimulationStore(state => state.setComparisonUseLLM);
    const currentSimulation = useSimulationStore(state => state.currentSimulation);
@@ -63,6 +62,7 @@ export const ComparisonView: React.FC = () => {
 
    const [compareData, setCompareData] = useState<any | null>(null);
    const [isLoadingComparison, setIsLoadingComparison] = useState(false);
+   const [fetchTrigger, setFetchTrigger] = useState(0);
 
    const translateEventType = (event: any) => {
       const type = eventType(event);
@@ -132,7 +132,7 @@ export const ComparisonView: React.FC = () => {
          mounted = false;
          clearTimeout(timer);
       };
-   }, [selectedNodeId, compareTargetNodeId, comparisonUseLLM, currentSimulation, isZh, t]);
+   }, [selectedNodeId, compareTargetNodeId, comparisonUseLLM, fetchTrigger, currentSimulation, isZh, t]);
 
    const leftEvents = compareData?.only_in_a || [];
    const rightEvents = compareData?.only_in_b || [];
@@ -246,7 +246,7 @@ export const ComparisonView: React.FC = () => {
                         <p className="text-xs text-[var(--ss-workspace-muted)]">{compareData.summary}</p>
                      </div>
                   ) : (
-                     <button onClick={() => generateComparisonAnalysis()} className="text-xs text-[var(--ss-workspace-link)] hover:underline">
+                     <button onClick={() => setFetchTrigger(prev => prev + 1)} className="text-xs text-[var(--ss-workspace-link)] hover:underline">
                         {t('components.comparisonView.generateAnalysisReport')}
                      </button>
                   )}

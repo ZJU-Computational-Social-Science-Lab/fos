@@ -20,7 +20,6 @@ export interface ExperimentsSlice {
   // Comparison state
   compareTargetNodeId: string | null;
   isCompareMode: boolean;
-  comparisonSummary: string | null;
   comparisonUseLLM: boolean;
 
   // Cross-slice state (included here for unified updates)
@@ -52,8 +51,6 @@ export interface ExperimentsSlice {
   setComparisonUseLLM: (v: boolean) => void;
   setCompareTarget: (id: string | null) => void;
   toggleCompareMode: (isOpen: boolean) => void;
-  generateComparisonAnalysis: () => Promise<void>;
-
   // Auto-advance
   isAutoAdvancing: boolean;
   autoAdvanceTotal: number;
@@ -105,7 +102,6 @@ export const createExperimentsSlice: StateCreator<
   // Initial state
   compareTargetNodeId: null,
   isCompareMode: false,
-  comparisonSummary: null,
   comparisonUseLLM: false,
   analysisConfig: {
     maxEvents: 800,
@@ -230,35 +226,7 @@ export const createExperimentsSlice: StateCreator<
 
   setComparisonUseLLM: (v) => set({ comparisonUseLLM: v }),
   setCompareTarget: (id) => set({ compareTargetNodeId: id }),
-  toggleCompareMode: (isOpen) => set({ isCompareMode: isOpen, comparisonSummary: null }),
-
-  generateComparisonAnalysis: async () => {
-    const state = get() as any;
-    if (!state.currentSimulation || !state.selectedNodeId || !state.compareTargetNodeId) return;
-
-    try {
-      set({ isGenerating: true } as any);
-      const simId = state.currentSimulation.id;
-      const nodeA = Number(state.selectedNodeId);
-      const nodeB = Number(state.compareTargetNodeId);
-      if (!Number.isFinite(nodeA) || !Number.isFinite(nodeB)) {
-        state.addNotification?.('error', i18n.t('store.selectedNodeNotBackend') || 'Selected node is not a backend node');
-        set({ isGenerating: false } as any);
-        return;
-      }
-
-      const useLLM = Boolean(state.comparisonUseLLM);
-      const res = await experimentsApi.compareNodes(simId, nodeA, nodeB, useLLM);
-      const summary = res?.summary || (res?.message || '') || i18n.t('store.failedToGenerateSummary') || 'Failed to generate summary';
-      set({ comparisonSummary: summary, isGenerating: false } as any);
-    } catch (e) {
-      console.error(e);
-      set({ isGenerating: false } as any);
-      const detail = getBackendErrorDetail(e);
-      const base = i18n.t('store.comparisonAnalysisFailed') || 'Comparison analysis failed';
-      state.addNotification?.('error', detail !== null ? `${base}: ${detail}` : base);
-    }
-  },
+  toggleCompareMode: (isOpen) => set({ isCompareMode: isOpen }),
 
   advanceSimulation: async () => {
     const state = get() as any;
