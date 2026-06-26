@@ -29,24 +29,6 @@ export const InterventionTab: React.FC = () => {
       >
         <button
           type="button"
-          onClick={() => setActiveView("host-control")}
-          className="flex items-center gap-2 px-4 py-2 text-sm border-b-2"
-          style={{
-            borderColor:
-              activeView === "host-control"
-                ? "var(--ss-brand-primary)"
-                : "transparent",
-            color:
-              activeView === "host-control"
-                ? "var(--ss-brand-primary)"
-                : "var(--ss-workspace-text)",
-          }}
-        >
-          <Zap size={16} />
-          {t("components.interventionTab.hostControl")}
-        </button>
-        <button
-          type="button"
           onClick={() => setActiveView("design-experiment")}
           className="flex items-center gap-2 px-4 py-2 text-sm border-b-2"
           style={{
@@ -62,6 +44,24 @@ export const InterventionTab: React.FC = () => {
         >
           <Beaker size={16} />
           {t("simPage.designExperiment")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveView("host-control")}
+          className="flex items-center gap-2 px-4 py-2 text-sm border-b-2"
+          style={{
+            borderColor:
+              activeView === "host-control"
+                ? "var(--ss-brand-primary)"
+                : "transparent",
+            color:
+              activeView === "host-control"
+                ? "var(--ss-brand-primary)"
+                : "var(--ss-workspace-text)",
+          }}
+        >
+          <Zap size={16} />
+          {t("components.interventionTab.hostControl")}
         </button>
       </div>
 
