@@ -42,6 +42,7 @@ frontend/dist/
 frontend/test-results/
 frontend/test-logs/
 frontend/.vite/
+node_modules/.vite/
 
 # Playwright
 frontend/e2e/collected-results/

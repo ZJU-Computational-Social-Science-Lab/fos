@@ -38,12 +38,12 @@ describe("InterventionTab", () => {
     } as never);
   });
 
-  it("shows host control first", () => {
+  it("shows design experiment first", () => {
     render(<InterventionTab />);
 
     expect(screen.getByText("Host control")).toBeInTheDocument();
     expect(screen.getByText("Design experiment")).toBeInTheDocument();
-    expect(screen.getByText("Host Control Panel")).toBeInTheDocument();
+    expect(screen.getByText("Experiment Designer Panel")).toBeInTheDocument();
   });
 
   it("switches to design experiment", () => {
