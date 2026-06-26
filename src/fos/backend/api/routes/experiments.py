@@ -197,6 +197,7 @@ async def compare_nodes(request: Request, simulation_id: str, data: dict) -> dic
     node_a_raw = data.get("node_a")
     node_b_raw = data.get("node_b")
     use_llm = bool(data.get("use_llm", False))
+    locale = data.get("locale", "en")
 
     if node_a_raw is None or node_b_raw is None:
         raise HTTPException(status_code=400, detail=T('api.errors.missing_nodes'))
@@ -293,11 +294,18 @@ async def compare_nodes(request: Request, simulation_id: str, data: dict) -> dic
                         agent_diff_lines.append(f"{name}.{k}: A={v.get('a')} B={v.get('b')}")
                 agent_diff_text = "\n".join(agent_diff_lines[:200])
 
+                if locale.startswith("zh"):
+                    lang_instr_system = "in Chinese"
+                    lang_instr_user = "Please respond in Chinese, <= 3 sentences."
+                else:
+                    lang_instr_system = "in English"
+                    lang_instr_user = "Please respond in English, <= 3 sentences."
+
                 system_msg = {
                     "role": "system",
                     "content": (
                         "You are a concise and conservative summarizer for simulation diffs. "
-                        "Given only the provided diff examples and agent property differences, produce a short (<=3 sentences) summary in Chinese describing the most likely notable differences and avoid hallucinating any facts not present in the input. "
+                        f"Given only the provided diff examples and agent property differences, produce a short (<=3 sentences) summary {lang_instr_system} describing the most likely notable differences and avoid hallucinating any facts not present in the input. "
                         "If uncertain, say so briefly."
                     ),
                 }
@@ -307,7 +315,7 @@ async def compare_nodes(request: Request, simulation_id: str, data: dict) -> dic
                         f"Node A id={node_a}, unique events count={len(only_a)}. Examples:\n{examples_a}\n\n"
                         f"Node B id={node_b}, unique events count={len(only_b)}. Examples:\n{examples_b}\n\n"
                         f"Agent property differences (sample):\n{agent_diff_text}\n\n"
-                        "Please respond in Chinese, <= 3 sentences. Use only the above information."
+                        f"{lang_instr_user} Use only the above information."
                     ),
                 }
 
