@@ -16,7 +16,7 @@ type InterventionView = "host-control" | "design-experiment";
 
 export const InterventionTab: React.FC = () => {
   const { t } = useTranslation();
-  const [activeView, setActiveView] = useState<InterventionView>("host-control");
+  const [activeView, setActiveView] = useState<InterventionView>("design-experiment");
 
   return (
     <div
