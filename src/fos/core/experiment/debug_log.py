@@ -12,6 +12,7 @@ Contains: get_debug_file, write_debug, reset_debug_file, write_scenario_header
 from pathlib import Path
 from datetime import datetime
 from typing import List
+import os
 import threading
 
 from fos.core.runtime_paths import get_runtime_debug_dir
@@ -21,6 +22,9 @@ _debug_dir = get_runtime_debug_dir()
 
 # Use a lock for thread-safe writes
 _write_lock = threading.Lock()
+
+# Gate debug logging behind FOS_DEBUG env var
+_DEBUG_ENABLED = os.getenv("FOS_DEBUG", "").lower() in ("true", "1", "yes")
 
 # Global debug file for this session
 _session_debug_file: Path | None = None
@@ -54,6 +58,8 @@ def write_debug(content: str) -> None:
     Args:
         content: Text to write to the debug file
     """
+    if not _DEBUG_ENABLED:
+        return
     debug_file = get_debug_file()
     with _write_lock:
         with open(debug_file, 'a', encoding='utf-8') as f:
@@ -75,6 +81,8 @@ def write_scenario_header(
         agent_names: List of agent names in this scenario
         params: Optional scenario parameters for context
     """
+    if not _DEBUG_ENABLED:
+        return
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     sep = "=" * 80
     lines = [
@@ -95,6 +103,8 @@ def write_scenario_footer(scenario_id: str) -> None:
     Args:
         scenario_id: The scenario identifier that just finished
     """
+    if not _DEBUG_ENABLED:
+        return
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     sep = "=" * 80
     write_debug(f"\n{sep}\n# SCENARIO END: {scenario_id}  [{now}]\n{sep}\n\n")

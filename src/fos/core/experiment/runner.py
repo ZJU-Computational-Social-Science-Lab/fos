@@ -284,7 +284,7 @@ class ExperimentRunner:
 
             # Step 3: Poll GET /models until loaded
             models_url = f"{router_base}/models"
-            print(f"[FOS-PRELOAD] Entering poll loop, models_url={models_url}", flush=True)
+            logger.info("Entering poll loop, models_url=%s", models_url)
             poll_interval = 2.0
             timeout = 300.0
             deadline = _time.time() + timeout
@@ -307,12 +307,10 @@ class ExperimentRunner:
                             if m_name == router_model:
                                 self._last_model_per_port[port] = model_name
                                 if status_val == "loaded":
-                                    print(f"[FOS-PRELOAD] Model '{router_model}' is loaded "
-                                          f"({_time.time() - (deadline - timeout):.1f}s)", flush=True)
+                                    logger.info("Model '%s' is loaded (%.1fs)", router_model, _time.time() - (deadline - timeout))
                                     break
                                 elif status_val == "error":
-                                    print(f"[FOS-PRELOAD] Model '{router_model}' failed to load "
-                                          f"(status=error)", flush=True)
+                                    logger.info("Model '%s' failed to load (status=error)", router_model)
                                     return False
                         else:
                             # Target model not yet in list — still loading or queued
@@ -321,8 +319,7 @@ class ExperimentRunner:
                         # Model found and loaded
                         break
                     else:
-                        print(f"[FOS-PRELOAD] GET /models returned {resp.status_code} "
-                              f"— retrying in {poll_interval}s", flush=True)
+                        logger.info("GET /models returned %s — retrying in %ss", resp.status_code, poll_interval)
                         _time.sleep(poll_interval)
                         continue
                 except Exception as exc:
@@ -562,23 +559,22 @@ class ExperimentRunner:
             mm_url = self._get_model_manager_url()
             router_base = mm_url if mm_url else self._get_router_base_url(base_url)
             router_model = self._get_router_model_name(model_name)
-            print(f"[FOS-DEBUG] router_base={router_base}", flush=True)
-            print(f"[FOS-DEBUG] about to GET {router_base}/models", flush=True)
+            logger.debug("router_base=%s", router_base)
+            logger.debug("about to GET %s/models", router_base)
 
             # Step 1: Find and unload the currently-loaded model
             # We must unload the CURRENT model, not the TARGET model.
             # Query GET /models to find what's loaded, then unload by name.
             unload_url = f"{router_base}/models/unload"
             logger.info("Finding current model to unload...")
-            print(f"[FOS-PRELOAD] Finding current model to unload...", flush=True)
             current_model = None
             try:
-                print(f"[FOS-DEBUG] calling GET...", flush=True)
+                logger.debug("calling GET...")
                 models_resp = _requests.get(
                     f"{router_base}/models",
                     timeout=10,
                 )
-                print(f"[FOS-DEBUG] GET returned status={models_resp.status_code}", flush=True)
+                logger.debug("GET returned status=%s", models_resp.status_code)
                 if models_resp.status_code == 200:
                     for m in models_resp.json().get("data", []):
                         m_name = m.get("id", "") if isinstance(m, dict) else ""
@@ -588,13 +584,11 @@ class ExperimentRunner:
                             current_model = m_name
                             break
             except Exception as exc:
-                print(f"[FOS-DEBUG] GET failed: {exc}", flush=True)
                 logger.debug("Failed to query model list: %s", exc)
 
-            print(f"[FOS-DEBUG] after GET: current_model={repr(current_model)}, router_model={repr(router_model)}", flush=True)
+            logger.debug("after GET: current_model=%r, router_model=%r", current_model, router_model)
             if current_model and current_model != router_model:
                 logger.info("Unloading current model '%s' via %s ...", current_model, unload_url)
-                print(f"[FOS-PRELOAD] Unloading model '{current_model}'...", flush=True)
                 try:
                     resp = _requests.post(
                         unload_url,
@@ -611,7 +605,7 @@ class ExperimentRunner:
                 except Exception as exc:
                     logger.warning("Unload request failed: %s", exc)
             elif current_model == router_model:
-                print(f"[FOS-DEBUG] model already loaded, returning True", flush=True)
+                logger.debug("model already loaded, returning True")
                 logger.info(
                     "Model '%s' is already loaded — no unload/load needed",
                     router_model,
@@ -624,13 +618,11 @@ class ExperimentRunner:
             # before loading a new model. This prevents port conflicts and
             # stale GPU memory.
             logger.info("Waiting 3 seconds for child process to exit...")
-            print(f"[FOS-PRELOAD] Waiting 3s for child process to exit...", flush=True)
             _time.sleep(3.0)
 
             # Step 3: Load target model
             load_url = f"{router_base}/models/load"
             logger.info("Loading model '%s' via %s ...", router_model, load_url)
-            print(f"[FOS-PRELOAD] Requesting load of model '{router_model}'...", flush=True)
             try:
                 resp = _requests.post(
                     load_url,
@@ -682,7 +674,7 @@ class ExperimentRunner:
             pass  # proceed to load attempt
 
         # ── Explicitly load the model ────────────────────────
-        print(f"[FOS-PRELOAD] Requesting load of {model_name}...", flush=True)
+        logger.info("Requesting load of %s...", model_name)
         try:
             resp = _requests.post(
                 load_url,
@@ -1191,7 +1183,7 @@ class ExperimentRunner:
                     port = self._get_port_from_client(first_agent_client)
                     if model_name != self._last_model_per_port.get(port):
                         logger.info("Model batch switch: %s -> %s", self._last_model_per_port.get(port), model_name)
-                        print(f"[FOS-DEBUG] port={port} _last={self._last_model_per_port.get(port)}, switching to {model_name}", flush=True)
+                        logger.debug("port=%s _last=%s, switching to %s", port, self._last_model_per_port.get(port), model_name)
                         if not self._preload_model(model_name, first_agent_client):
                             logger.error("Preload FAILED for model '%s' — skipping group", model_name)
                             for agent in group_agents:
