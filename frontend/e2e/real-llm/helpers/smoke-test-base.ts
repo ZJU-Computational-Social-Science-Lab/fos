@@ -6,10 +6,10 @@
  */
 
 import { Page, expect } from '@playwright/test';
-import { ExperimentBuilder } from '../helpers/experiment-builder';
-import { SimulationWorkspace } from '../helpers/simulation-workspace';
-import { resolveAnyActiveProviderIds } from '../helpers/providers';
-import type { ScenarioConfig } from '../fixtures/scenario-fixtures';
+import { ExperimentBuilder } from '../../helpers/experiment-builder';
+import { SimulationWorkspace } from '../../helpers/simulation-workspace';
+import { resolveAnyActiveProviderIds } from '../../helpers/providers';
+import type { ScenarioConfig } from '../../fixtures/scenario-fixtures';
 
 export interface ScenarioTestConfig {
   scenario: ScenarioConfig;
@@ -23,17 +23,36 @@ export interface ScenarioTestConfig {
 }
 
 /**
- * Fetch active provider IDs (any dialect) for N agents.
- * Throws if no active providers are configured.
+ * Fetch active provider IDs, with retry for auto-discovery delay.
+ *
+ * The LM Studio auto-discovery runs asynchronously on login, so we
+ * retry a few times with back-off to give it time to create the provider.
+ *
+ * Throws if no active providers are found after retries.
  */
 export async function getActiveProviderIds(page: Page, agentCount: number): Promise<number[]> {
-  const ids = await resolveAnyActiveProviderIds(page, agentCount);
-  if (!ids || ids.length === 0) {
-    throw new Error(
-      'No active LLM provider found. Configure one in Settings > Providers (Ollama or LM Studio).',
-    );
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    if (attempt > 0) {
+      await page.waitForTimeout(2000 * attempt); // 2s, 4s, 6s, 8s, 10s
+    }
+
+    try {
+      const ids = await resolveAnyActiveProviderIds(page, agentCount);
+      if (ids && ids.length > 0) {
+        return ids;
+      }
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      // Continue retrying — provider might still be initializing
+    }
   }
-  return ids;
+
+  throw lastError || new Error(
+    'No active LLM provider found after 6 retries. ' +
+    'Make sure Ollama or LM Studio is running and has at least one model loaded.',
+  );
 }
 
 /**
@@ -66,7 +85,7 @@ export async function expectActionsVisible(
 }
 
 /**
- * Full-flow helper: build experiment (stop before Step 3 for action verification),
+ * Full-flow helper: build experiment (stops before Step 3 for action verification),
  * then select all actions, add agents, create, run rounds, and verify no errors.
  *
  * Caller MUST call expectActionsVisible() between configureDefaults() and
