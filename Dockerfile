@@ -1,4 +1,4 @@
-FROM node:20-alpine AS frontend-build
+FROM node:22-alpine AS frontend-build
 WORKDIR /app/frontend
 
 ARG FRONTEND_BASE_URL=/
@@ -19,11 +19,12 @@ WORKDIR /app
 
 COPY pyproject.toml README.md ./
 COPY requirements.txt ./
+COPY requirements-ci.txt ./
 
 COPY requirements-gaworld.txt ./
 
 # Only install packages not already present in the base image
-RUN pip install --no-cache-dir --default-timeout=1000 -r requirements.txt || true \
+RUN pip install --no-cache-dir --default-timeout=1000 -c requirements-ci.txt -r requirements.txt || true \
     && pip install --no-cache-dir lxml-html-clean || true \
     && pip install --no-cache-dir --default-timeout=1000 -r requirements-gaworld.txt || true
 
