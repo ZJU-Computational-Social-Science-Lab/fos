@@ -116,7 +116,7 @@ class SceneConfigurationMixin:
             if matched:
                 normalized_actions.append(
                     {
-                        "name": matched.get("id", raw_name),
+                        "name": matched.get("name") or matched.get("id", raw_name),
                         "description": action.get("description")
                         or matched.get("description")
                         or raw_name,
@@ -137,7 +137,7 @@ class SceneConfigurationMixin:
         if not normalized_actions and scenario_actions:
             normalized_actions = [
                 {
-                    "name": action.get("id"),
+                    "name": action.get("name") or action.get("id"),
                     "description": action.get("description")
                     or action.get("name")
                     or action.get("id"),
