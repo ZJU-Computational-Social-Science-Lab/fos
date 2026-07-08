@@ -97,6 +97,28 @@ async def login(data: LoginRequest) -> TokenPair:
         user.last_login_at = datetime.now(timezone.utc)
         await session.commit()
 
+        # Fire-and-forget auto-discovery for local LLM providers
+        import asyncio
+        from fos.backend.services.default_providers import (
+            ensure_default_ollama_providers,
+            ensure_default_lmstudio_providers,
+        )
+
+        async def _run_provider_auto_discovery(session_factory, user_id: int, user):
+            """Discover Ollama and LM Studio providers after login. Never throws."""
+            from sqlalchemy.ext.asyncio import AsyncSession
+
+            for discover_fn in [ensure_default_ollama_providers, ensure_default_lmstudio_providers]:
+                try:
+                    async with session_factory() as discovery_session:
+                        await discover_fn(discovery_session, user_id, user)
+                except Exception:
+                    pass  # Silently fail — user can add providers manually
+
+        asyncio.create_task(
+            _run_provider_auto_discovery(get_session, user.id, user)
+        )
+
         return TokenPair(
             access_token=access_token,
             refresh_token=refresh_token,
