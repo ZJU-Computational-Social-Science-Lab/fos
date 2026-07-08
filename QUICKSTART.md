@@ -1,45 +1,105 @@
 # FOS Platform — Quick Start
 
+This guide is the shared baseline for all developers.
+
+## Required Versions
+
+| Tool | Version |
+|------|---------|
+| Python | 3.12 |
+| Node.js | 22 |
+| npm | 10 |
+
+Version marker files are included at the repository root:
+
+- `.python-version`
+- `.node-version`
+- `.nvmrc`
+
+The beta development baseline is the `beta` branch. Start new beta work from that branch after syncing with the team.
+
 ## Backend Setup
 
-### Step 1: Navigate to project directory
-```cmd
-cd C:\Users\Justin\Documents\ZJU_Work\fos
+### Step 1: Navigate to the repository
+
+```bash
+cd /path/to/fos
 ```
 
-### Step 2: Activate conda environment
-```cmd
-conda activate fos
-```
-*(If fos doesn't exist, create it first: `conda create -n fos python=3.12 -y`)*
+### Step 2: Create and activate Python 3.12 environment
 
-### Step 3: Set PYTHONPATH
-```cmd
-set PYTHONPATH=%cd%\src
+macOS / Linux:
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
 ```
 
-### Step 4: Start backend server
-```cmd
+Windows PowerShell:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+```
+
+### Step 3: Install backend dependencies
+
+```bash
+pip install -r requirements-test.txt
+pip install -e .
+```
+
+### Step 4: Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+Fill in required secrets in `.env`, especially:
+
+- `FOS_JWT_SIGNING_KEY`
+- `ADMIN_EMAIL`
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
+
+Optional landing page video:
+
+```bash
+VITE_BILIBILI_VIDEO_BVID=BVxxxxxxxxx
+```
+
+Leave `VITE_BILIBILI_VIDEO_BVID` empty to hide the preview video.
+
+### Step 5: Start backend server
+
+macOS / Linux:
+
+```bash
+export PYTHONPATH=src
 uvicorn fos.backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
----
+Windows PowerShell:
+
+```powershell
+$env:PYTHONPATH = "src"
+uvicorn fos.backend.main:app --host 0.0.0.0 --port 8000 --reload
+```
 
 ## Frontend Setup
 
-### Open a NEW terminal/cmd window, then:
+Open a new terminal.
 
-### Step 1: Navigate to frontend directory
-```cmd
-cd C:\Users\Justin\Documents\ZJU_Work\fos\frontend
-```
-
-### Step 2: Start frontend dev server
-```cmd
+```bash
+cd /path/to/fos/frontend
+nvm use
+npm ci
 npm run dev
 ```
 
----
+If you do not use `nvm`, install Node.js 22 with your preferred version manager before running `npm ci`.
 
 ## Access The Platform
 
@@ -47,75 +107,93 @@ Once both servers are running:
 
 | Service | URL |
 |---------|-----|
-| **Frontend** | http://localhost:5173 |
-| **Backend API** | http://localhost:8000/api |
-| **API Docs** | http://localhost:8000/schema/swagger |
-
----
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:8000/api |
+| API Docs | http://localhost:8000/schema/swagger |
 
 ## Adding Ollama Model
 
 ### Step 1: Make sure Ollama is running
-```cmd
+
+```bash
 ollama serve
 ```
 
 ### Step 2: Go to the frontend
-Open http://localhost:5173 in your browser
 
-### Step 3: Navigate to Settings → LLM Providers
+Open http://localhost:5173 in your browser.
+
+### Step 3: Navigate to Settings -> LLM Providers
+
 Click "Add Provider" and fill in:
 
 | Field | Value |
 |-------|-------|
-| **Label** | `Ollama` |
-| **Provider** | `OpenAI-compatible` |
-| **Model** | `qwen3:4b` |
-| **Base URL** | `http://localhost:11434/v1` |
-| **API Key** | `dummy` (Ollama doesn't need API key — any value works) |
+| Label | `Ollama` |
+| Provider | `OpenAI-compatible` |
+| Model | `qwen3:4b` |
+| Base URL | `http://localhost:11434/v1` |
+| API Key | `dummy` |
 
 ### Step 4: Save
-Click "Save" to add the provider
 
-### Available Ollama Models
-To list your installed models:
-```cmd
-ollama list
+Click "Save" to add the provider.
+
+## Standard Test Commands
+
+Run the CI-equivalent deterministic suite:
+
+```bash
+PYTHONPATH=src python -m pytest tests/ -q --no-header \
+  --ignore=tests/llm_prompt_testing \
+  --ignore=tests/smoke_tests \
+  --ignore=tests/integration/test_real_llm_phase1.py \
+  --ignore=tests/integration/test_llm_action_selection.py \
+  --ignore=tests/load
+
+cd frontend
+npm run test:run
+npm run build
+npm run test:e2e:smoke
+cd ..
+
+node --test tests/load/lib/loadUsers.test.mjs
 ```
 
-### Common Ollama Models
-- `qwen2.5:7b` — Good general purpose
-- `llama3:8b` — Meta's Llama 3
-- `mistral:7b` — Fast and efficient
-- `codellama:7b` — Code generation
-- `phi3` — Microsoft's 3.8B parameter model
+For the full local suite, including long browser checks:
 
----
+```bash
+python scripts/run_full_tests.py
+```
 
 ## Troubleshooting
 
-### Backend won't start?
-```cmd
-# Install dependencies if missing
-pip install -r requirements-test.txt
+### Backend fails with syntax or typing errors
 
-# Or update pip
-python -m pip install --upgrade pip
+Confirm the active Python is 3.12:
+
+```bash
+python --version
 ```
 
-### Frontend won't start?
-```cmd
-# Install dependencies
-npm install
+### Frontend dependency install fails
+
+Confirm the active Node.js version is 22:
+
+```bash
+node --version
+npm --version
 ```
 
-### PYTHONPATH issues?
-The `set PYTHONPATH=%cd%\src` command tells Python where to find the `fos` package. It must be run from the `fos` directory.
+Then reinstall from the lockfile:
 
----
+```bash
+cd frontend
+npm ci
+```
 
 ## Stopping The Servers
 
-**Backend:** Press `Ctrl+C` in the backend terminal
+Backend: press `Ctrl+C` in the backend terminal.
 
-**Frontend:** Press `Ctrl+C` in the frontend terminal
+Frontend: press `Ctrl+C` in the frontend terminal.

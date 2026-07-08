@@ -33,17 +33,27 @@ fos/
 #### 1. Environment Setup
 
 ```bash
-# Create virtual environment (Python 3.12 recommended)
-python -m venv venv
+# Required local versions: Python 3.12 and Node.js 22.
+# The beta development baseline is the `beta` branch.
+
+# Create virtual environment
+python3.12 -m venv .venv
 
 # Activate (Windows PowerShell)
-.\venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
+
+# Activate (Linux / macOS)
+source .venv/bin/activate
+
+# Upgrade packaging tools
+python -m pip install --upgrade pip
 
 # Install backend dependencies
 pip install -r requirements-test.txt
+pip install -e .
 
 # Install frontend dependencies
-cd frontend && npm install && cd ..
+cd frontend && npm ci && cd ..
 ```
 
 Run every automated suite with `python scripts/run_full_tests.py`. The complete
@@ -70,15 +80,15 @@ Key configuration options:
 
 ```bash
 # Activate venv and set Python path
-.\venv\Scripts\Activate.ps1       # Windows PowerShell
-$env:PYTHONPATH = "."
+.\.venv\Scripts\Activate.ps1       # Windows PowerShell
+$env:PYTHONPATH = "src"
 uvicorn fos.backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **Linux / macOS:**
 ```bash
-source venv/bin/activate
-export PYTHONPATH="."
+source .venv/bin/activate
+export PYTHONPATH="src"
 uvicorn fos.backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
@@ -104,7 +114,7 @@ npm run dev
 ### Tech Stack
 
 - **Backend**: Python 3.12, Litestar, SQLAlchemy, Pydantic
-- **Frontend**: React 19, TypeScript, Vite, Zustand, TailwindCSS
+- **Frontend**: Node.js 22, React 19, TypeScript, Vite, Zustand, TailwindCSS
 - **Database**: SQLite (development) / PostgreSQL (production)
 
 ### Development
@@ -144,17 +154,27 @@ fos/
 #### 1. 环境准备
 
 ```bash
-# 创建虚拟环境（推荐 Python 3.12）
-python -m venv venv
+# 本地统一版本：Python 3.12 和 Node.js 22。
+# Beta 开发统一基线为 `beta` 分支。
+
+# 创建虚拟环境
+python3.12 -m venv .venv
 
 # 激活（Windows PowerShell）
-.\venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
+
+# 激活（Linux / macOS）
+source .venv/bin/activate
+
+# 升级打包工具
+python -m pip install --upgrade pip
 
 # 安装后端依赖
 pip install -r requirements-test.txt
+pip install -e .
 
 # 安装前端依赖
-cd frontend && npm install && cd ..
+cd frontend && npm ci && cd ..
 ```
 
 #### 2. 配置环境变量
@@ -176,15 +196,15 @@ cp .env.example .env
 
 ```bash
 # 激活虚拟环境并设置 Python 路径
-.\venv\Scripts\Activate.ps1       # Windows PowerShell
-$env:PYTHONPATH = "."
+.\.venv\Scripts\Activate.ps1       # Windows PowerShell
+$env:PYTHONPATH = "src"
 uvicorn fos.backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **Linux / macOS：**
 ```bash
-source venv/bin/activate
-export PYTHONPATH="."
+source .venv/bin/activate
+export PYTHONPATH="src"
 uvicorn fos.backend.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
@@ -210,7 +230,7 @@ npm run dev
 ### 技术栈
 
 - **后端**: Python 3.12, Litestar, SQLAlchemy, Pydantic
-- **前端**: React 19, TypeScript, Vite, Zustand, TailwindCSS
+- **前端**: Node.js 22, React 19, TypeScript, Vite, Zustand, TailwindCSS
 - **数据库**: SQLite (开发) / PostgreSQL (生产)
 
 ### 开发说明
