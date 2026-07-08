@@ -119,8 +119,12 @@ async def get_tree_record(
     if dialect not in {"openai", "gemini", "mock", "ollama"}:
         raise HTTPException(status_code=400, detail=T("api.errors.provider_invalid"))
 
+    # Skip API key check for local OpenAI-compatible providers (LM Studio, llama.cpp, etc.)
     if dialect in {"openai", "gemini"} and not provider.api_key:
-        raise HTTPException(status_code=400, detail=T("api.errors.provider_api_key_required"))
+        if base_url and ("localhost" in base_url or "127.0.0.1" in base_url):
+            pass  # Local server, no API key needed
+        else:
+            raise HTTPException(status_code=400, detail=T("api.errors.provider_api_key_required"))
 
     if not provider.model:
         raise HTTPException(status_code=400, detail=T("api.errors.provider_model_required"))
@@ -164,8 +168,12 @@ async def get_tree_record(
         p_dialect = normalize_provider_dialect(p.provider)
         if p_dialect not in {"openai", "gemini", "mock", "ollama"}:
             continue
+        # Skip API key check for local OpenAI-compatible providers
         if p_dialect in {"openai", "gemini"} and not p.api_key:
-            continue
+            if p.base_url and ("localhost" in p.base_url or "127.0.0.1" in p.base_url):
+                pass  # Local server, no API key needed
+            else:
+                continue
         if not p.model:
             continue
         try:

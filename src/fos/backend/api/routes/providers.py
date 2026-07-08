@@ -48,28 +48,42 @@ def _normalize_dialect(raw: str, base_url: str | None) -> tuple[str, str | None]
     """
     Normalize provider dialect and base_url.
 
-    For OpenAI + localhost, converts to Ollama dialect and strips /v1 suffix
-    from base_url (since native Ollama API doesn't use /v1 prefix).
+    For OpenAI-compatible APIs on localhost:
+    - If the provider is explicitly a local OpenAI-compatible server (lmstudio,
+      llamacpp, vllm, etc.), keep the "openai" dialect and preserve /v1 path.
+    - Otherwise (e.g., user typed "openai" pointing at localhost), fall back
+      to Ollama dialect for backward compatibility.
 
     Args:
-        raw: Provider type string (e.g., "openai", "ollama", "gemini")
+        raw: Provider type string (e.g., "openai", "ollama", "lmstudio", "gemini")
         base_url: Optional base URL for the provider
 
     Returns:
         Tuple of (normalized_dialect, normalized_base_url)
     """
+    raw_lower = (raw or "").strip().lower().replace("_", "-")
     val = normalize_provider_dialect(raw)
+
     if val == "ollama":
         # Strip /v1 suffix if present (native Ollama API doesn't use it)
         if base_url and "/v1" in base_url:
             base_url = base_url.replace("/v1", "").rstrip("/")
         return "ollama", base_url
+
+    # Don't apply the localhost heuristic for explicitly configured
+    # local OpenAI-compatible providers like LM Studio, llama.cpp, vLLM.
+    # These serve the standard OpenAI API at /v1/chat/completions.
+    if raw_lower in {"lmstudio", "llamacpp", "vllm"}:
+        return "openai", base_url
+
     # Heuristic: openai + localhost base_url ⇒ treat as ollama-compatible API
+    # This catches the case where a user manually entered "openai" as provider
+    # type with a localhost URL (old behavior before explicit LM Studio support).
     if val == "openai" and base_url and ("localhost" in base_url or ":11434" in base_url):
-        # Convert to Ollama dialect and strip /v1 suffix
         if "/v1" in base_url:
             base_url = base_url.replace("/v1", "").rstrip("/")
         return "ollama", base_url
+
     return val, base_url
 
 
