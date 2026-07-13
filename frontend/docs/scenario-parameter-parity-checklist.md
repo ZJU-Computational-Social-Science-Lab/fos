@@ -143,9 +143,9 @@ Columns: server key, current Step2 visibility, default consistency, copy consist
 
 | Param Key | Server Default | UI Shows? | Default Match? | Copy Match? |
 |---|---:|---|---|---|
-| resource_name | "tokens" | yes (ParameterField) | no (ResourceConfig fallback="Tokens") | yes (label via backend param.label fallback; description via backend param.description fallback) |
+| resource_name | "tokens" | yes (ParameterField) | yes | yes (label via backend param.label fallback; description via backend param.description fallback) |
 | tokens_per_round | 10 | yes (ParameterField) | yes | yes (label via backend param.label fallback; description via backend param.description fallback) |
-| multiplier | 1.3 | yes (ParameterField) | no (ResourceConfig fallback=1.5) | yes (label via backend param.label fallback; description via backend param.description fallback) |
+| multiplier | 1.3 | yes (ParameterField) | yes | yes (label via backend param.label fallback; description via backend param.description fallback) |
 | deduction_budget_per_phase | 0 | yes (ParameterField) | yes | yes (label via backend param.label fallback; description via backend param.description fallback) |
 | deduction_cost_ratio | 3 | yes (ParameterField) | yes | yes (label via backend param.label fallback; description via backend param.description fallback) |
 | deduction_anonymous | false | yes (ParameterField) | yes | yes (label via backend param.label fallback; description via backend param.description fallback) |
@@ -175,12 +175,16 @@ Columns: server key, current Step2 visibility, default consistency, copy consist
 
 ## Summary
 
-- Rows needing review: 8
+- Rows needing review: 6
 - prisoners_dilemma.action_1: show=no; default=yes; copy=yes (label via backend param.label fallback)
 - prisoners_dilemma.action_2: show=no; default=yes; copy=yes (label via backend param.label fallback)
 - battle_of_the_sexes.preferred_mispreferred: show=no; default=yes; copy=yes (label via backend param.label fallback)
 - battle_of_the_sexes.mispreferred_payoff: show=no; default=yes; copy=yes (label via backend param.label fallback)
 - stag_hunt.stag_reward: show=no; default=yes; copy=yes (label via backend param.label fallback)
 - stag_hunt.hare_reward: show=no; default=yes; copy=yes (label via backend param.label fallback)
-- public_goods.resource_name: show=yes (ParameterField); default=no (ResourceConfig fallback="Tokens"); copy=yes (label via backend param.label fallback; description via backend param.description fallback)
-- public_goods.multiplier: show=yes (ParameterField); default=no (ResourceConfig fallback=1.5); copy=yes (label via backend param.label fallback; description via backend param.description fallback)
+
+## Guardrail
+
+- The builder store initializes standard scenario params from `ScenarioData.parameters[].default`.
+- GAWorld remains on its existing Step 2 profile initializer because its defaults are profile-derived.
+- Public goods fallback values now match the backend defaults (`resource_name="tokens"`, `multiplier=1.3`) and are covered by `frontend/store/experiment-builder.test.ts`.

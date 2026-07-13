@@ -5,9 +5,6 @@
  * Provides actions for updating configuration and validation.
  */
 
-// MODULE LOAD CHECK
-console.log('[experiment-builder.ts] STORE MODULE LOADED');
-
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import type { SocialNetwork } from '../types';
@@ -73,7 +70,7 @@ export interface ExperimentBuilderState {
   interRoundUpdate?: { type: string };
   metrics?: string[];
   networkType?: string;
-  mechanicConfigs?: Record<string, any>;
+  mechanicConfigs?: Record<string, unknown>;
 
   // Step 3: Actions
   availableActions: ActionDef[];
@@ -187,6 +184,17 @@ const normalizeDefaultAgent = (agent: DefaultScenarioAgent): ManualAgentType => 
   };
 };
 
+const buildScenarioDefaultParams = (scenario: ScenarioData | null): Record<string, unknown> => {
+  if (!scenario || scenario.id === 'gaworld') {
+    return {};
+  }
+
+  return (scenario.parameters || []).reduce<Record<string, unknown>>((params, param) => {
+    params[param.key] = param.default;
+    return params;
+  }, {});
+};
+
 export const STEPS = [
   { id: 1, title: 'Choose Scenario', description: 'Pick a preset or start blank' },
     { id: 2, title: 'Configure Scenario', description: 'Set description and parameters' },
@@ -241,7 +249,7 @@ export const useExperimentBuilder = create<ExperimentBuilderState & ExperimentBu
         : 'simultaneous',
     turnOrder: data?.interaction_mode === 'sequential' ? state.turnOrder : 'fixed',
     scenarioDescription: '',
-    scenarioParams: {},
+    scenarioParams: buildScenarioDefaultParams(data),
   })),
 
   // Step 2: Scenario configuration
