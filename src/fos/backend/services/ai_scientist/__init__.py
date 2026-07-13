@@ -5,7 +5,6 @@ New code should prefer the smaller modules in this package.
 """
 
 from .core import (
-    TemplateSuggestion,
     build_llm_analysis_scaffold,
     build_semantic_schema,
     build_source_outline,
@@ -14,10 +13,10 @@ from .core import (
     localize_analysis_output,
     merge_analysis,
     normalize_llm_analysis_output,
-    parse_llm_json,
-    repair_llm_json,
     suggest_templates,
 )
+from .json_repair import parse_llm_json, repair_llm_json
+from .types import TemplateSuggestion
 
 __all__ = [
     "TemplateSuggestion",
