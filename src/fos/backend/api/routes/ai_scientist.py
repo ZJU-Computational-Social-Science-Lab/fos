@@ -28,15 +28,23 @@ from fos.core.scenarios import get_all_scenarios
 from ...core.database import get_session
 from ...dependencies import extract_bearer_token, resolve_current_user
 from ...models.user import ProviderConfig
-from ...services.ai_scientist import (
-    TemplateSuggestion,
-    build_llm_analysis_scaffold,
+from ...services.ai_scientist.draft_analysis import (
     collect_analysis_quality_issues,
     heuristic_analysis,
-    localize_analysis_output,
     normalize_llm_analysis_output,
+)
+from ...services.ai_scientist.json_repair import (
     parse_llm_json,
     repair_llm_json,
+)
+from ...services.ai_scientist.localization import (
+    localize_analysis_output,
+)
+from ...services.ai_scientist.semantic_schema import (
+    build_llm_analysis_scaffold,
+)
+from ...services.ai_scientist.template_matching import (
+    TemplateSuggestion,
 )
 from ...services.default_providers import get_default_ollama_base_url
 from ...services.provider_dialect import normalize_provider_dialect
