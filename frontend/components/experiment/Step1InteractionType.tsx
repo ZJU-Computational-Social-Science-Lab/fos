@@ -7,6 +7,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { BookOpen, ExternalLink } from 'lucide-react';
 import { useExperimentBuilder } from '../../store/experiment-builder';
 import { getAllScenarios, ScenarioData } from '../../services/scenarios';
 
@@ -95,6 +96,8 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({
 
 export const Step1InteractionType: React.FC = () => {
   const { t } = useTranslation();
+  const docsBase = String(import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const scenarioGuideHref = `${docsBase}docs?doc=scenario-guide`;
   const {
     selectedScenarioId,
     setSelectedScenarioId,
@@ -171,13 +174,30 @@ export const Step1InteractionType: React.FC = () => {
 
   return (
     <div>
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold" style={{ color: 'var(--ss-heading)' }}>
-          {t('experimentBuilder.step1.chooseScenario')}
-        </h2>
-        <p className="text-sm mt-1" style={{ color: 'var(--ss-text)' }}>
-          {t('experimentBuilder.step1.selectTemplate')}
-        </p>
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold" style={{ color: 'var(--ss-heading)' }}>
+            {t('experimentBuilder.step1.chooseScenario')}
+          </h2>
+          <p className="text-sm mt-1" style={{ color: 'var(--ss-text)' }}>
+            {t('experimentBuilder.step1.selectTemplate')}
+          </p>
+        </div>
+        <a
+          href={scenarioGuideHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium"
+          style={{
+            borderColor: 'var(--ss-border)',
+            color: 'var(--ss-link)',
+            background: 'var(--ss-page-surface)',
+          }}
+        >
+          <BookOpen size={16} />
+          <span>{t('experimentBuilder.step1.scenarioGuideLink')}</span>
+          <ExternalLink size={14} />
+        </a>
       </div>
 
       {loading && (
