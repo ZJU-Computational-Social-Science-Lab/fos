@@ -44,7 +44,12 @@ export function resolveStaticAssetPath(path: string) {
     return `${bundledTutorialAssetUrl}${suffix}`;
   }
 
-  if (cleanPath.startsWith("/tutorial/") || cleanPath.startsWith("tutorial/")) {
+  if (
+    cleanPath.startsWith("/tutorial/") ||
+    cleanPath.startsWith("tutorial/") ||
+    cleanPath.startsWith("/docs/") ||
+    cleanPath.startsWith("docs/")
+  ) {
     const relativePath = cleanPath.replace(/^\/+/, "");
     return `${normalizedBaseUrl}${relativePath}`;
   }
