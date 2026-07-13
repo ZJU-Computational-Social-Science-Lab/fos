@@ -68,6 +68,44 @@ describe('Experiment Builder Store', () => {
     expect(useExperimentBuilder.getState().roundVisibility).toBe('sequential');
   });
 
+  it('initializes standard scenario params from backend scenario defaults', () => {
+    useExperimentBuilder.getState().setSelectedScenarioData({
+      id: 'public_goods',
+      name: 'Public Goods Game',
+      category: 'game_theory',
+      description: 'Agents allocate private resources to a shared pool.',
+      interaction_mode: 'simultaneous',
+      parameters: [
+        { key: 'resource_name', label: 'Resource Name', type: 'string', default: 'tokens' },
+        { key: 'tokens_per_round', label: 'Tokens Per Round', type: 'integer', default: 10 },
+        { key: 'multiplier', label: 'Multiplier', type: 'number', default: 1.3 },
+      ],
+      actions: [],
+    });
+
+    expect(useExperimentBuilder.getState().scenarioParams).toEqual({
+      resource_name: 'tokens',
+      tokens_per_round: 10,
+      multiplier: 1.3,
+    });
+  });
+
+  it('leaves GAWorld params to the existing Step 2 profile initializer', () => {
+    useExperimentBuilder.getState().setSelectedScenarioData({
+      id: 'gaworld',
+      name: 'GA World',
+      category: 'spatial',
+      description: 'A location-aware GAWorld scenario.',
+      interaction_mode: 'simultaneous',
+      parameters: [
+        { key: 'execution_profile', label: 'Execution Profile', type: 'string', default: 'fast' },
+      ],
+      actions: [],
+    });
+
+    expect(useExperimentBuilder.getState().scenarioParams).toEqual({});
+  });
+
   it('test_gaworld_selection_loads_profile_agents', async () => {
     await useExperimentBuilder.getState().loadDefaultAgentsForScenario('gaworld', '34');
 
