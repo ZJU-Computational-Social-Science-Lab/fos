@@ -2,7 +2,7 @@
 """
 install.py — drop the i18n tests into the Social-Sim repo.
 
-Usage (from Social-Sim-server/ root):
+Usage (from FOS root):
     python install.py [--dry-run]
 
 What it does:
@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).parent
-REPO = Path(".")   # run from Social-Sim-server root
+REPO = Path(".")   # run from FOS root
 
 
 def install(dry: bool = False):

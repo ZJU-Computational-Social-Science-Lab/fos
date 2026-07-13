@@ -1,5 +1,5 @@
 # FOS (Future of Society) Dependencies
-# Python 3.11+
+# Python 3.12
 
 # Web Framework & Server
 uvicorn[standard]>=0.30.0
