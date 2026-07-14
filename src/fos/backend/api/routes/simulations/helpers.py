@@ -26,13 +26,13 @@ from fos.core.llm_config import LLMConfig, guess_supports_vision
 from fos.core.search_config import SearchConfig
 from fos.core.llm import create_llm_client
 from fos.core.tools.web.search import create_search_client
-from fos.backend.core.timing import log_event
 from fos.backend.dependencies import settings
 
 from fos.backend.models.simulation import Simulation
 from fos.backend.models.user import ProviderConfig, SearchProviderConfig, User
 from fos.backend.services.default_providers import get_default_ollama_base_url
 from fos.backend.services.provider_dialect import normalize_provider_dialect
+from fos.backend.services.simtree_broadcast import broadcast_tree_event
 from fos.backend.services.simtree_runtime import SIM_TREE_REGISTRY, SimTreeRecord
 from fos.i18n import T
 
@@ -310,25 +310,3 @@ async def resolve_user_from_token(
 
     return user
 
-
-def broadcast_tree_event(
-    record: SimTreeRecord,
-    event: dict,
-) -> None:
-    """
-    Broadcast an event to all tree-level subscribers.
-
-    Used for HTTP-triggered events like run_start, run_finish,
-    and attached notifications.
-
-    Args:
-        record: SimTreeRecord with subscribers
-        event: Event dictionary to broadcast
-    """
-    event_type = event.get("type", "unknown")
-    for queue in list(record.subs):
-        try:
-            queue.put_nowait(event)
-        except Exception:
-            logger.exception("failed to enqueue tree-level broadcast event")
-    log_event("WS", event="broadcast", type=event_type, clients=len(record.subs))

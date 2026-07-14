@@ -10,6 +10,8 @@ import asyncio
 import logging
 from typing import Any
 
+from fos.backend.services.readable_errors import make_readable_error
+
 
 logger = logging.getLogger(__name__)
 
@@ -49,10 +51,14 @@ def record_advance_runtime_failure(
     error: RuntimeError | FileNotFoundError,
 ) -> str:
     """Store a user-visible runtime failure on a tree node and its logs."""
-    message = str(error)
+    raw_message = str(error)
+    readable = make_readable_error(raw_message)
+    message = readable["message"]
     meta = node.setdefault("meta", {})
     meta["runtime_status"] = "failed"
-    meta["runtime_error"] = message
+    meta["runtime_error"] = raw_message
+    meta["runtime_error_readable"] = message
+    meta["runtime_error_category"] = readable["category"]
     has_error_log = any(
         log.get("type") in {"error", "run_failed"} for log in node.get("logs", [])
     )
@@ -61,6 +67,8 @@ def record_advance_runtime_failure(
             "run_failed",
             {
                 "message": message,
+                "error": raw_message,
+                "category": readable["category"],
                 "error_type": type(error).__name__,
             },
         )
