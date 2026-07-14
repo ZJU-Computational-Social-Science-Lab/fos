@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { useExperimentBuilder } from '../../store/experiment-builder';
 import { Circle, X } from 'lucide-react';
 import { ActionDef } from '../../services/scenarios';
+import { isPolicyCascadeScenario } from '../../utils/policyCascade';
 
 const POLICY_SCENE_ACTION_IDS = [
   'send_message',
@@ -29,16 +30,7 @@ const isPolicyCascadeScenarioData = (scenario: {
   sceneType?: string;
   parameters?: Array<{ key: string }>;
 } | null | undefined): boolean => {
-  if (!scenario) return false;
-  const scenarioId = String(scenario.id || '').toLowerCase();
-
-  return (
-    scenario.sceneType === 'policy_cascade_scene' ||
-    scenarioId === 'policy_diffusion' ||
-    scenarioId === 'policydiffusion' ||
-    scenarioId === 'policy_erosion' ||
-    scenarioId === 'policyerosion'
-  );
+  return isPolicyCascadeScenario(scenario);
 };
 
 interface ActionToggleCardProps {

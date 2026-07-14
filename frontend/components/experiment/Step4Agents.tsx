@@ -22,6 +22,7 @@ import { Button } from '../ui/button';
 import { ChevronDown } from 'lucide-react';
 import GAWorldPopulationChooser from './GAWorldPopulationChooser';
 import { getGAWorldStarterCohortIds, RECOMMENDED_STARTER_POPULATION } from './gaworldStarterCohorts';
+import { isPolicyCascadeScenario } from '../../utils/policyCascade';
 
 type TierValue = string;
 
@@ -112,19 +113,11 @@ const resizeTierOrder = (current: string[], count: number): string[] => {
   return next;
 };
 
-const isPolicyCascadeScenario = (scenario: {
+const isPolicyCascadeScenarioData = (scenario: {
   id?: string;
   sceneType?: string;
 } | null | undefined): boolean => {
-  if (!scenario) return false;
-  const scenarioId = String(scenario.id || '').toLowerCase();
-  return (
-    scenario.sceneType === 'policy_cascade_scene' ||
-    scenarioId === 'policy_diffusion' ||
-    scenarioId === 'policydiffusion' ||
-    scenarioId === 'policy_erosion' ||
-    scenarioId === 'policyerosion'
-  );
+  return isPolicyCascadeScenario(scenario);
 };
 
 // Generate archetypes from demographics (cross-product)
@@ -224,7 +217,7 @@ export const Step4Agents: React.FC = () => {
   const agentListRef = useRef<HTMLDivElement>(null);
 
   const scenarioId = selectedScenarioData?.id || selectedScenarioId || '';
-  const showTierControls = isPolicyCascadeScenario(selectedScenarioData || { id: scenarioId });
+  const showTierControls = isPolicyCascadeScenarioData(selectedScenarioData || { id: scenarioId });
   const tierOrder = useMemo(() => parseTierOrder(scenarioParams?.tier_order), [scenarioParams]);
   const cascadeMode = String(scenarioParams?.cascade_mode || 'strict_cascade');
   const tierOrderDraftValid =
