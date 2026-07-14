@@ -28,3 +28,40 @@ async def run_simulator_for_advance(
     if isinstance(runtime_error, RuntimeError):
         return runtime_error
     return None
+
+
+def get_advance_turn_count(simulator: Any, requested_turns: int) -> int:
+    """Return runtime turns for legacy simulators and experiment adapters."""
+    try:
+        from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
+
+        if isinstance(simulator, ExperimentRunnerAdapter):
+            return max(1, int(requested_turns))
+    except Exception:
+        logger.exception("failed to inspect simulator type for turn count")
+    agents = getattr(simulator, "agents", {}) or {}
+    return max(1, int(requested_turns)) * max(1, len(agents))
+
+
+def record_advance_runtime_failure(
+    node: dict,
+    simulator: Any,
+    error: RuntimeError | FileNotFoundError,
+) -> str:
+    """Store a user-visible runtime failure on a tree node and its logs."""
+    message = str(error)
+    meta = node.setdefault("meta", {})
+    meta["runtime_status"] = "failed"
+    meta["runtime_error"] = message
+    has_error_log = any(
+        log.get("type") in {"error", "run_failed"} for log in node.get("logs", [])
+    )
+    if not has_error_log and callable(getattr(simulator, "log_event", None)):
+        simulator.log_event(
+            "run_failed",
+            {
+                "message": message,
+                "error_type": type(error).__name__,
+            },
+        )
+    return message

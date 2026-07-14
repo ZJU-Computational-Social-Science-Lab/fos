@@ -4,9 +4,7 @@ import asyncio
 import logging
 import logging as _logging
 import os as _os
-import re
 import sys
-import time
 from typing import Dict
 
 from fos.core.agent import Agent
@@ -26,6 +24,19 @@ from fos.core.experiment.config import ExperimentConfig
 from fos.core.experiment.scene import ExperimentScene
 from fos.core.experiment.game_configs import create_council_config
 from fos.core.experiment.scenes.council_experiment import CouncilExperimentScene
+from fos.backend.services.simtree_adapter_serialization import (
+    deserialize_experiment_scene,
+    serialize_experiment_adapter,
+)
+from fos.backend.services.simtree_gaworld import (
+    resolve_gaworld_agent_ids,
+    resolve_gaworld_agents,
+    resolve_gaworld_path,
+)
+from fos.backend.services.simtree_registry_lifecycle import (
+    SimTreeRecord,
+    wire_tree_broadcast,
+)
 from fos.i18n import T, get_request_locale
 
 
@@ -46,7 +57,7 @@ def _resolve_gaworld_path() -> str | None:
     This handles cases where GAWORLD_PATH is set via dotenv or other means
     after the module was first imported (e.g., when load_dotenv() runs in main.py).
     """
-    return _GAWORLD_PATH or _os.environ.get("GAWORLD_PATH")
+    return resolve_gaworld_path(_GAWORLD_PATH)
 
 
 def _normalize_language(value: str | None) -> str:
@@ -75,133 +86,12 @@ def _is_english_language(lang: str) -> bool:
     return lower.startswith("en") or "english" in lower
 
 
-def _looks_like_generated_placeholder_agent(agent: dict) -> bool:
-    """Return True when an agent looks like a generic builder placeholder."""
-    raw_name = str(agent.get("name") or "").strip()
-    if not raw_name:
-        return True
-    if agent.get("id"):
-        return False
-    numbered_name = re.fullmatch(
-        r"(Agent|代理|智能体|角色)\s*#?\s*\d+", raw_name, re.IGNORECASE
-    )
-    generic_profile = str(
-        agent.get("profile") or agent.get("role") or agent.get("role_prompt") or ""
-    ).strip()
-    empty_properties = not bool(agent.get("properties") or {})
-    return bool(numbered_name and empty_properties and not generic_profile)
-
-
-def _should_use_gaworld_profile_agents(agents: list[dict]) -> bool:
-    """Return True when GAWorld should replace missing or placeholder agents.
-
-    Replaces when:
-    - The agent list is empty.
-    - Every agent lacks an ``id`` field (builder-created agents without
-      real Hangzhou profile IDs).
-    - Every agent matches the generated-placeholder pattern.
-    """
-    if not agents:
-        return True
-    # If all agents lack an 'id' field, they came from the builder without
-    # real GAWorld profile IDs. Replace them with bundled profiles so the
-    # GAWorld subprocess can match agents by their profile IDs.
-    if all(not agent.get("id") for agent in agents):
-        return True
-    return all(_looks_like_generated_placeholder_agent(agent) for agent in agents)
-
-
 def _resolve_gaworld_agents(agent_config: dict) -> list[dict]:
-    """Return GAWorld profile agents when request agents are not meaningful."""
-    agents = list(agent_config.get("agents") or [])
-    if not agents:
-        from fos.core.experiment.scenes.gaworld import profiles as profiles_module
-
-        profile_agents = profiles_module.profiles_to_fos_agents(
-            profiles_module.load_profiles()
-        )
-        return profile_agents
-
-    if not _should_use_gaworld_profile_agents(agents):
-        return agents
-
-    from fos.core.experiment.scenes.gaworld import profiles as profiles_module
-
-    profile_agents = profiles_module.profiles_to_fos_agents(
-        profiles_module.load_profiles()
-    )
-    if not profile_agents:
-        return agents
-
-    # Match the number of profile agents to the original UI agent count
-    # so GAWorld doesn't simulate all 50 profiles when only 2 agents were requested.
-    requested_count = len(agents)
-    if requested_count < len(profile_agents):
-        profile_agents = profile_agents[:requested_count]
-
-    return profile_agents
+    return resolve_gaworld_agents(agent_config)
 
 
 def _resolve_gaworld_agent_ids(params: dict, agents: list[dict]) -> list[str]:
-    """Build the GAWorld agent ID list from params first, then explicit agents."""
-    raw_agent_ids = params.get("agent_ids", [])
-    if isinstance(raw_agent_ids, str):
-        ids = [part.strip() for part in raw_agent_ids.split(",") if part.strip()]
-        if ids:
-            return ids
-    elif isinstance(raw_agent_ids, list):
-        ids = [
-            str(agent_id).strip() for agent_id in raw_agent_ids if str(agent_id).strip()
-        ]
-        if ids:
-            return ids
-
-    resolved_ids: list[str] = []
-    for agent in agents:
-        raw_agent_id = agent.get("id")
-        if raw_agent_id is None:
-            continue
-        agent_id = str(raw_agent_id).strip()
-        if agent_id:
-            resolved_ids.append(agent_id)
-    return resolved_ids
-
-
-class SimTreeRecord:
-    def __init__(self, tree: SimTree):
-        self.tree = tree
-        now = time.monotonic()
-        self.created_at = now
-        self.last_accessed_at = now
-        # 用于"一棵树所有节点事件"的广播订阅（DevUI 左侧总线）
-        self.subs: list[asyncio.Queue] = []
-        # 正在运行的节点 ID 集合（用于只转发 running 节点的事件）
-        self.running: set[int] = set()
-        # Track which suggestion intervals have been viewed (to avoid re-showing)
-        self._suggestions_viewed_intervals: set[int] = set()
-        # Prevents two concurrent advance_chain operations on the same simulation
-        self._advance_lock: asyncio.Lock = asyncio.Lock()
-
-    def replace_tree(self, tree: SimTree) -> None:
-        self.cleanup_runtime_resources()
-        self.tree = tree
-        self.touch()
-
-    def touch(self) -> None:
-        self.last_accessed_at = time.monotonic()
-
-    def is_idle(self, idle_ttl_seconds: float, now: float | None = None) -> bool:
-        current_time = now if now is not None else time.monotonic()
-        return (
-            not self.running
-            and not self.subs
-            and current_time - self.last_accessed_at >= idle_ttl_seconds
-        )
-
-    def cleanup_runtime_resources(self) -> None:
-        cleanup = getattr(self.tree, "cleanup_runtime_resources", None)
-        if cleanup is not None:
-            cleanup()
+    return resolve_gaworld_agent_ids(params, agents)
 
 
 def _quiet_logger(event_type: str, data: dict) -> None:
@@ -297,42 +187,12 @@ class ExperimentRunnerAdapter:
 
     def serialize(self) -> dict:
         """Serialize for SimTree compatibility."""
-        return {
-            "agents": {},  # No legacy agents
-            "scene": {
-                "type": "experiment_template",
-                "config": self.scene.serialize_config(),
-            },
-            "max_steps_per_turn": 5,
-            "ordering": "sequential",
-            "ordering_state": {},
-            "event_queue": [],
-            "turns": self.scene.current_round,
-            "environment_config": None,
-            "_suggestions_viewed_turn": None,
-        }
+        return serialize_experiment_adapter(self.scene)
 
     @classmethod
     def deserialize(cls, data: dict, clients: dict, log_handler=None):
         """Deserialize for SimTree compatibility."""
-        scene_data = data["scene"]["config"]
-        scenario_id = scene_data.get("config", {}).get("scenario_id", "")
-        scene_type = scene_data.get("type", "")
-
-        # GAP-CLOSURE-01: Deserialize to correct scene type based on scenario_id
-        if scenario_id in ("council", "council_chamber"):
-            from fos.core.experiment.scenes.council_experiment import (
-                CouncilExperimentScene,
-            )
-
-            scene = CouncilExperimentScene.deserialize_config(scene_data)
-        elif scene_type == "gaworld_scene" or scenario_id == "gaworld":
-            from fos.core.experiment.scenes.gaworld import GAWorldScene
-
-            scene = GAWorldScene.deserialize_config(scene_data)
-        else:
-            scene = ExperimentScene.deserialize_config(scene_data)
-
+        scene = deserialize_experiment_scene(data)
         adapter = cls(scene, clients)
         adapter.scene.current_round = data.get("turns", 0)
         return adapter
@@ -1127,21 +987,7 @@ class SimTreeRegistry:
                 return record
             tree = await asyncio.to_thread(_build_tree_for_scene, scene_type, clients)
             record = SimTreeRecord(tree)
-            # Wire event loop for thread-safe fanout
-            loop = asyncio.get_running_loop()
-            tree.attach_event_loop(loop)
-
-            def _fanout(event: dict) -> None:
-                # 只转发当前 running 的节点事件
-                if int(event.get("node", -1)) not in record.running:
-                    return
-                for q in list(record.subs):
-                    try:
-                        loop.call_soon_threadsafe(q.put_nowait, event)
-                    except Exception:  # 极端情况保护，避免某个坏订阅拖垮其他订阅
-                        logger.exception("failed to fanout event to tree subscriber")
-
-            tree.set_tree_broadcast(_fanout)
+            wire_tree_broadcast(record, tree, asyncio.get_running_loop(), logger)
             self._records[key] = record
             return record
 
@@ -1161,15 +1007,7 @@ class SimTreeRegistry:
                 tree = SimTree.deserialize(
                     sim_record.latest_state, clients or make_clients_from_env()
                 )
-                tree.attach_event_loop(loop)
-
-                def _fanout(event: dict) -> None:
-                    if int(event.get("node", -1)) not in record.running:
-                        return
-                    for q in list(record.subs):
-                        loop.call_soon_threadsafe(q.put_nowait, event)
-
-                tree.set_tree_broadcast(_fanout)
+                wire_tree_broadcast(record, tree, loop, logger)
                 record.replace_tree(tree)
             return record
         async with self._lock:
@@ -1185,15 +1023,7 @@ class SimTreeRegistry:
                     tree = SimTree.deserialize(
                         sim_record.latest_state, clients or make_clients_from_env()
                     )
-                    tree.attach_event_loop(loop)
-
-                    def _fanout(event: dict) -> None:
-                        if int(event.get("node", -1)) not in record.running:
-                            return
-                        for q in list(record.subs):
-                            loop.call_soon_threadsafe(q.put_nowait, event)
-
-                    tree.set_tree_broadcast(_fanout)
+                    wire_tree_broadcast(record, tree, loop, logger)
                     record.replace_tree(tree)
                 return record
             # 优先使用最新持久化的 latest_state 进行恢复；否则重新构建
@@ -1212,19 +1042,7 @@ class SimTreeRegistry:
             else:
                 tree = await asyncio.to_thread(_build_tree_for_sim, sim_record, clients)
             record = SimTreeRecord(tree)
-            loop = asyncio.get_running_loop()
-            tree.attach_event_loop(loop)
-
-            def _fanout(event: dict) -> None:
-                if int(event.get("node", -1)) not in record.running:
-                    return
-                for q in list(record.subs):
-                    try:
-                        loop.call_soon_threadsafe(q.put_nowait, event)
-                    except Exception:
-                        logger.exception("failed to fanout event to tree subscriber")
-
-            tree.set_tree_broadcast(_fanout)
+            wire_tree_broadcast(record, tree, asyncio.get_running_loop(), logger)
             self._records[key] = record
             return record
 
