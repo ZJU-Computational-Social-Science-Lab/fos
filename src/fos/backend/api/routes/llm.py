@@ -17,6 +17,7 @@ from ...dependencies import extract_bearer_token, resolve_current_user
 from ...models.user import ProviderConfig
 from ...services.default_providers import get_default_ollama_base_url
 from ...services.provider_dialect import normalize_provider_dialect
+from ...services.runtime_tasks import RUNTIME_TASKS
 from ....i18n import T, get_request_locale
 
 # 👇 关键：这里需要上升 3 层到 fos，然后再进入 core
@@ -256,30 +257,50 @@ async def generate_agents(
 @post("/refine_report")
 async def refine_report(request: Request, data: RefineReportRequest) -> dict:
     token = extract_bearer_token(request)
+    runtime_task = RUNTIME_TASKS.start(
+        "ai_report_refine",
+        "AI report refinement",
+        metadata={"provider_id": data.provider_id},
+    )
 
-    async with get_session() as session:
-        current_user = await resolve_current_user(session, token)
-        provider = await _select_provider(session, current_user.id, data.provider_id)
-        cfg = LLMConfig(
-            dialect=normalize_provider_dialect(provider.provider),
-            api_key=provider.api_key or "",
-            model=provider.model,
-            base_url=provider.base_url,
-            temperature=0.4,
-            top_p=1.0,
-            frequency_penalty=0.0,
-            presence_penalty=0.0,
-            max_tokens=512,
-        )
-        llm = create_llm_client(cfg)
+    try:
+        async with get_session() as session:
+            current_user = await resolve_current_user(session, token)
+            provider = await _select_provider(session, current_user.id, data.provider_id)
+            cfg = LLMConfig(
+                dialect=normalize_provider_dialect(provider.provider),
+                api_key=provider.api_key or "",
+                model=provider.model,
+                base_url=provider.base_url,
+                temperature=0.4,
+                top_p=1.0,
+                frequency_penalty=0.0,
+                presence_penalty=0.0,
+                max_tokens=512,
+            )
+            llm = create_llm_client(cfg)
 
-        locale = get_request_locale()
-        messages: list[dict[str, str]] = [
-            {"role": "system", "content": T("prompts.llm.refine_report.system", locale=locale)},
-            {"role": "user", "content": data.prompt},
-        ]
-        text = llm.chat(messages)
-        return {"text": text}
+            locale = get_request_locale()
+            messages: list[dict[str, str]] = [
+                {
+                    "role": "system",
+                    "content": T("prompts.llm.refine_report.system", locale=locale),
+                },
+                {"role": "user", "content": data.prompt},
+            ]
+            text = llm.chat(messages)
+            RUNTIME_TASKS.finish(
+                runtime_task.id,
+                metadata={
+                    "provider_id": provider.id,
+                    "provider": provider.provider,
+                    "model": provider.model,
+                },
+            )
+            return {"text": text}
+    except Exception as exc:
+        RUNTIME_TASKS.fail(runtime_task.id, exc)
+        raise
 
 
 @post("/generate_agents_demographics")

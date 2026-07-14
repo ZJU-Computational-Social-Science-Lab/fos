@@ -63,6 +63,15 @@ def _running_experiment_task_count() -> int:
     return sum(1 for task in _RUN_TASKS.values() if not task.done())
 
 
+def _runtime_task_metrics() -> dict[str, Any]:
+    """Return recent long-task state for operator-visible debugging."""
+    try:
+        from fos.backend.services.runtime_tasks import RUNTIME_TASKS
+    except ImportError:
+        return {"active": 0, "recent": []}
+    return RUNTIME_TASKS.snapshot(limit=20)
+
+
 async def _check_database() -> dict[str, Any]:
     """Check whether the database accepts a simple query."""
     try:
@@ -92,11 +101,13 @@ async def health_check() -> dict[str, Any]:
     from fos.backend.services.simtree_runtime import SIM_TREE_REGISTRY
 
     registry_metrics = SIM_TREE_REGISTRY.metrics()
+    runtime_tasks = _runtime_task_metrics()
     return {
         "status": "ok",
         "uptime_seconds": int(time.monotonic() - _app_start_time) if _app_start_time else 0,
         **registry_metrics,
         "running_experiment_tasks": _running_experiment_task_count(),
+        "runtime_tasks": runtime_tasks,
         "gaworld_subprocesses": registry_metrics["gaworld_subprocesses"],
         "db_pool": _db_pool_metrics(),
         "memory": _memory_metrics(),
@@ -117,6 +128,7 @@ async def readiness_check() -> dict[str, Any]:
         "ollama": await _check_ollama(),
     }
     registry_metrics = SIM_TREE_REGISTRY.metrics()
+    runtime_tasks = _runtime_task_metrics()
     unhealthy = [
         name for name, check in checks.items()
         if check.get("status") == "unhealthy"
@@ -126,6 +138,7 @@ async def readiness_check() -> dict[str, Any]:
         "checks": checks,
         **registry_metrics,
         "running_experiment_tasks": _running_experiment_task_count(),
+        "runtime_tasks": runtime_tasks,
         "memory": _memory_metrics(),
     }
 

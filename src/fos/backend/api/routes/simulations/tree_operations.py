@@ -49,7 +49,11 @@ from fos.backend.services.simtree_runtime import (
     get_runtime_agent_map,
     get_runtime_agent_profile,
 )
-from fos.backend.services.simtree_advance import run_simulator_for_advance
+from fos.backend.services.simtree_advance import (
+    get_advance_turn_count,
+    record_advance_runtime_failure,
+    run_simulator_for_advance,
+)
 from fos.backend.services.documents import composite_rag_retrieval, format_rag_context
 from fos.backend.dependencies import extract_bearer_token, resolve_current_user
 from fos.i18n import T
@@ -220,21 +224,34 @@ async def simulation_tree_advance_frontier(
 
         await asyncio.sleep(0)
 
-        async def _run(parent_id: int) -> tuple[int, int, bool]:
+        async def _run(
+            parent_id: int,
+        ) -> tuple[int, int, RuntimeError | FileNotFoundError | None]:
             child_id = allocations[parent_id]
             simulator = tree.nodes[child_id]["sim"]
-            from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
-            turn_multiplier = 1 if isinstance(simulator, ExperimentRunnerAdapter) else max(1, len(simulator.agents))
-            total_turns = max(1, turns) * turn_multiplier
+            total_turns = get_advance_turn_count(simulator, turns)
             with log_time("SIM", sim_id=simulation_id, node=child_id, turns=total_turns, op="advance_frontier"):
-                await asyncio.to_thread(simulator.run, max_turns=total_turns)
-            return parent_id, child_id, False
+                run_error = await run_simulator_for_advance(simulator, max_turns=total_turns)
+            return parent_id, child_id, run_error
 
         results = await asyncio.gather(*[_run(pid) for pid in parents])
         produced: list[int] = []
 
-        for *_pid, cid, _err in results:
+        for *_pid, cid, run_error in results:
             produced.append(cid)
+            if run_error is not None:
+                message = record_advance_runtime_failure(
+                    tree.nodes[cid],
+                    tree.nodes[cid]["sim"],
+                    run_error,
+                )
+                broadcast_tree_event(
+                    record,
+                    {
+                        "type": "run_failed",
+                        "data": {"node": int(cid), "error": message},
+                    },
+                )
             if cid in record.running:
                 record.running.remove(cid)
             broadcast_tree_event(record, {"type": "run_finish", "data": {"node": int(cid)}})
@@ -320,20 +337,33 @@ async def simulation_tree_advance_multi(
 
         await asyncio.sleep(0)
 
-        async def _run(child_id: int) -> tuple[int, bool]:
+        async def _run(
+            child_id: int,
+        ) -> tuple[int, RuntimeError | FileNotFoundError | None]:
             simulator = tree.nodes[child_id]["sim"]
-            from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
-            turn_multiplier = 1 if isinstance(simulator, ExperimentRunnerAdapter) else max(1, len(simulator.agents))
-            total_turns = max(1, turns) * turn_multiplier
+            total_turns = get_advance_turn_count(simulator, turns)
             with log_time("SIM", sim_id=simulation_id, node=child_id, turns=total_turns, op="advance_multi"):
-                await asyncio.to_thread(simulator.run, max_turns=total_turns)
-            return child_id, False
+                run_error = await run_simulator_for_advance(simulator, max_turns=total_turns)
+            return child_id, run_error
 
         finished = await asyncio.gather(*[_run(cid) for cid in children])
         result_children: list[int] = []
 
-        for cid, _err in finished:
+        for cid, run_error in finished:
             result_children.append(cid)
+            if run_error is not None:
+                message = record_advance_runtime_failure(
+                    tree.nodes[cid],
+                    tree.nodes[cid]["sim"],
+                    run_error,
+                )
+                broadcast_tree_event(
+                    record,
+                    {
+                        "type": "run_failed",
+                        "data": {"node": int(cid), "error": message},
+                    },
+                )
             if cid in record.running:
                 record.running.remove(cid)
             broadcast_tree_event(record, {"type": "run_finish", "data": {"node": int(cid)}})
@@ -414,18 +444,20 @@ async def simulation_tree_advance_chain(
                 await asyncio.sleep(0)
 
                 simulator = tree.nodes[cid]["sim"]
-                from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
-                turn_multiplier = 1 if isinstance(simulator, ExperimentRunnerAdapter) else max(1, len(simulator.agents))
-                total_turns = 1 * turn_multiplier
+                total_turns = get_advance_turn_count(simulator, 1)
                 logger.info(f"[ADVANCE_CHAIN] Running simulator for node {cid}, max_turns={total_turns}")
                 try:
                     with log_time("SIM", sim_id=simulation_id, node=cid, turns=total_turns, step=_, op="advance_chain"):
                         run_error = await run_simulator_for_advance(simulator, max_turns=total_turns)
                     if run_error is not None:
-                        node.setdefault("meta", {})["runtime_error"] = str(run_error)
-                        has_error_log = any(log.get("type") == "error" for log in node.get("logs", []))
-                        if not has_error_log and callable(getattr(simulator, "log_event", None)):
-                            simulator.log_event("error", {"message": str(run_error)})
+                        message = record_advance_runtime_failure(node, simulator, run_error)
+                        broadcast_tree_event(
+                            record,
+                            {
+                                "type": "run_failed",
+                                "data": {"node": int(cid), "error": message},
+                            },
+                        )
                         logger.warning(
                             "[ADVANCE_CHAIN] Simulator runtime failed for node %s; returning child for log hydration",
                             cid,
