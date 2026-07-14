@@ -82,3 +82,4 @@ src/fos.egg-info/SOURCES.txt
 run_fos.sh
 /.pi
 /artifacts
+scripts/generate_paper_figures.py

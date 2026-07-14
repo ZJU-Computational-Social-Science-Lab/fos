@@ -17,10 +17,14 @@ interface ProviderInfo {
 
 /**
  * Fetch all providers from the API using the page's auth session.
+ * Uses the Bearer token from localStorage (fos.access).
  */
 async function fetchAllProviders(page: Page): Promise<ProviderInfo[]> {
   return page.evaluate(async () => {
-    const resp = await fetch('/api/providers');
+    const token = localStorage.getItem('fos.access');
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const resp = await fetch('/api/providers', { headers });
     if (!resp.ok) return [];
     return resp.json();
   });
