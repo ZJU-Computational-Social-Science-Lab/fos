@@ -1,15 +1,6 @@
 # FOS 使用文档
 
-> 📺 **视频教程** — 观看完整的使用教程，快速上手 FOS
-
-<iframe
-  src="https://player.bilibili.com/player.html?bvid=BV1CAj26yEuD"
-  scrolling="no"
-  frameborder="0"
-  allowfullscreen="true"
-  title="FOS 使用教程"
-  style="width: 100%; max-width: 896px; aspect-ratio: 16 / 9; display: block; margin: 0 auto 1.5rem; border: 1px solid var(--ss-border); border-radius: 16px; background: #000; box-shadow: 0 4px 12px rgba(0,0,0,0.08);"
-></iframe>
+> 📺 **视频教程** — 如需在首页展示视频教程，请在环境变量中配置 `VITE_BILIBILI_VIDEO_BVID`。
 
 <h2 id="getting-started">FOS 快速入门</h2>
 

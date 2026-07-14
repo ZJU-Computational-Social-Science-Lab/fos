@@ -250,6 +250,7 @@ export const mapBackendEventsToLogs = (
       actionStart: pickText('Started action', '开始执行动作'),
       actionEnd: pickText('performed action', '执行了动作'),
       systemEvent: pickText('System event', '系统事件'),
+      runtimeFailed: pickText('Runtime failed', '运行失败'),
       agentResponse: pickText('Agent response', 'Agent responded'),
       choseAction: (agent: string, action: string) => pickText(`${agent} chose ${action}`, `${agent} 选择了 ${action}`)
     };
@@ -369,6 +370,17 @@ export const mapBackendEventsToLogs = (
       const baseLabel = isZh() ? `智能体「${agentLabel}」${kindLabel}` : `Agent "${agentLabel}" ${kindLabel}`;
       const label = baseLabel + (errText ? pickText(`: ${errText}`, `：${errText}`) : '');
       return { ...base, type: 'SYSTEM', content: label };
+    }
+
+    if (evType === 'run_failed' || evType === 'error') {
+      const errText = String(data.message || data.error || data.detail || '').trim();
+      const sceneType = String(data.scene_type || data.sceneType || '').trim();
+      const prefix = sceneType ? `${labels.runtimeFailed} (${sceneType})` : labels.runtimeFailed;
+      return {
+        ...base,
+        type: 'SYSTEM',
+        content: errText ? `${prefix}: ${errText}` : prefix,
+      };
     }
 
     if (evType === 'cascade_distortion') {

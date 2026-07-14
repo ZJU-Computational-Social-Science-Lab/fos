@@ -14,6 +14,7 @@ from types import SimpleNamespace
 import pytest
 
 from fos.backend.api.routes import health
+from fos.backend.services.runtime_tasks import RUNTIME_TASKS
 
 
 @pytest.mark.asyncio
@@ -37,6 +38,8 @@ async def test_readiness_check_reports_database_failure(monkeypatch: pytest.Monk
 
 @pytest.mark.asyncio
 async def test_health_check_includes_runtime_metrics(monkeypatch: pytest.MonkeyPatch) -> None:
+    RUNTIME_TASKS.clear()
+    RUNTIME_TASKS.start("ai_analysis", "AI analysis", task_id="ai:test")
     fake_pool = SimpleNamespace(
         size=lambda: 5,
         checkedout=lambda: 1,
@@ -49,5 +52,8 @@ async def test_health_check_includes_runtime_metrics(monkeypatch: pytest.MonkeyP
 
     assert "memory" in result
     assert "running_experiment_tasks" in result
+    assert result["runtime_tasks"]["active"] == 1
+    assert result["runtime_tasks"]["recent"][0]["id"] == "ai:test"
     assert "gaworld_subprocesses" in result
     assert "tree_nodes" in result
+    RUNTIME_TASKS.clear()

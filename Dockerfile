@@ -1,4 +1,4 @@
-FROM node:20-alpine AS frontend-build
+FROM node:22-alpine AS frontend-build
 WORKDIR /app/frontend
 
 ARG FRONTEND_BASE_URL=/
@@ -11,21 +11,33 @@ COPY frontend ./
 ENV FRONTEND_BASE_URL=${FRONTEND_BASE_URL}
 RUN FRONTEND_BASE_URL=${FRONTEND_BASE_URL} VITE_API_BASE_URL=${VITE_API_BASE_URL} VITE_BILIBILI_VIDEO_BVID=${VITE_BILIBILI_VIDEO_BVID} npm run build
 
-# Use the existing socialsim-new-app image as base to reuse installed packages.
-# Tag it first: docker tag socialsim-new-app fos-build-base
-FROM fos-build-base AS backend
+FROM python:3.12-slim AS backend
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        git \
+        libpq-dev \
+        tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY pyproject.toml README.md ./
 COPY requirements.txt ./
+COPY requirements-ci.txt ./
 
 COPY requirements-gaworld.txt ./
 
-# Only install packages not already present in the base image
-RUN pip install --no-cache-dir --default-timeout=1000 -r requirements.txt || true \
-    && pip install --no-cache-dir lxml-html-clean || true \
-    && pip install --no-cache-dir --default-timeout=1000 -r requirements-gaworld.txt || true
+RUN python -m pip install --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir --default-timeout=1000 -c requirements-ci.txt -r requirements.txt \
+    && pip install --no-cache-dir lxml-html-clean \
+    && pip install --no-cache-dir --default-timeout=1000 -r requirements-gaworld.txt
 
 COPY src ./src
 COPY scripts ./scripts

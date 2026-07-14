@@ -60,15 +60,6 @@ const getItemStyles = (isActive: boolean): React.CSSProperties => ({
   fontWeight: isActive ? "500" : "400",
 });
 
-const headingMap: Record<string, { en: string; zh: string }> = {
-  "getting-started": { en: "Getting Started with FOS", zh: "FOS 快速入门" },
-  "llm-config": { en: "Setting Up LLMs in FOS", zh: "在 FOS 中配置大模型" },
-  "creating-simulation": { en: "Creating a FOS Simulation", zh: "创建 FOS 仿真" },
-  "agents": { en: "Configuring FOS Agents", zh: "配置 FOS 智能体" },
-  "running-analysis": { en: "Running & Analyzing in FOS", zh: "在 FOS 中运行与分析" },
-  "advanced-features": { en: "Advanced FOS Features", zh: "FOS 进阶功能" },
-};
-
 /**
  * DocsSidebar component for documentation navigation
  */
@@ -79,6 +70,7 @@ export function DocsSidebar({ currentDoc, onDocChange, className = "" }: DocsSid
     { id: "getting-started", translationKey: "pages.docsPage.gettingStarted" },
     { id: "llm-config", translationKey: "pages.docsPage.llmConfig" },
     { id: "creating-simulation", translationKey: "pages.docsPage.creatingSimulation" },
+    { id: "scenario-guide", translationKey: "pages.docsPage.scenarioGuide" },
     { id: "agents", translationKey: "pages.docsPage.agents" },
     { id: "running-analysis", translationKey: "pages.docsPage.runningAnalysis" },
     { id: "advanced-features", translationKey: "pages.docsPage.advancedFeatures" },
@@ -91,33 +83,29 @@ export function DocsSidebar({ currentDoc, onDocChange, className = "" }: DocsSid
         {docItems.map((item) => {
           const isActive = currentDoc === item.id;
           return (
-            <li
-              key={item.id}
-              onClick={() => {
-                onDocChange(item.id);
-                const target = headingMap[item.id];
-                if (!target) return;
-                const h2s = document.querySelectorAll('.markdown-renderer h2');
-                for (const h2 of h2s) {
-                  if (h2.textContent?.trim() === target.en || h2.textContent?.trim() === target.zh) {
-                    h2.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    break;
+            <li key={item.id}>
+              <button
+                type="button"
+                onClick={() => onDocChange(item.id)}
+                style={{
+                  ...getItemStyles(isActive),
+                  width: "100%",
+                  border: "none",
+                  textAlign: "left",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = "var(--ss-border)";
                   }
-                }
-              }}
-              style={getItemStyles(isActive)}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = "var(--ss-border)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.backgroundColor = "transparent";
-                }
-              }}
-            >
-              {t(item.translationKey)}
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }
+                }}
+              >
+                {t(item.translationKey)}
+              </button>
             </li>
           );
         })}

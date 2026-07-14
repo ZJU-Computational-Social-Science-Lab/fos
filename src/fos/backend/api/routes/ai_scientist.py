@@ -28,18 +28,27 @@ from fos.core.scenarios import get_all_scenarios
 from ...core.database import get_session
 from ...dependencies import extract_bearer_token, resolve_current_user
 from ...models.user import ProviderConfig
-from ...services.ai_scientist import (
-    TemplateSuggestion,
-    build_llm_analysis_scaffold,
+from ...services.ai_scientist.draft_analysis import (
     collect_analysis_quality_issues,
     heuristic_analysis,
-    localize_analysis_output,
     normalize_llm_analysis_output,
+)
+from ...services.ai_scientist.json_repair import (
     parse_llm_json,
     repair_llm_json,
 )
+from ...services.ai_scientist.localization import (
+    localize_analysis_output,
+)
+from ...services.ai_scientist.semantic_schema import (
+    build_llm_analysis_scaffold,
+)
+from ...services.ai_scientist.template_matching import (
+    TemplateSuggestion,
+)
 from ...services.default_providers import get_default_ollama_base_url
 from ...services.provider_dialect import normalize_provider_dialect
+from ...services.runtime_tasks import RUNTIME_TASKS
 
 logger = logging.getLogger(__name__)
 
@@ -408,6 +417,16 @@ async def analyze_research_text(request: Request, data: AnalyzeRequest) -> Analy
     token = extract_bearer_token(request)
     warnings: list[str] = []
     language = data.language or request.headers.get("X-Language") or "en"
+    runtime_task = RUNTIME_TASKS.start(
+        "ai_scientist_analysis",
+        "AI Scientist analysis",
+        metadata={
+            "recognition_mode": data.recognition_mode,
+            "provider_id": data.provider_id,
+            "language": language,
+            "source_file_name": data.source_file_name,
+        },
+    )
 
     scenarios = get_all_scenarios()
     scaffold = build_llm_analysis_scaffold(
@@ -435,9 +454,11 @@ async def analyze_research_text(request: Request, data: AnalyzeRequest) -> Analy
             current_user = await resolve_current_user(session, token)
             provider = await _select_provider_optional(session, current_user.id, data.provider_id)
             if provider is None:
+                error = T("api.errors.ai_scientist_no_active_provider")
+                RUNTIME_TASKS.fail(runtime_task.id, error)
                 raise HTTPException(
                     status_code=400,
-                    detail=T("api.errors.ai_scientist_no_active_provider"),
+                    detail=error,
                 )
 
             try:
@@ -507,6 +528,7 @@ async def analyze_research_text(request: Request, data: AnalyzeRequest) -> Analy
                 raise
             except Exception as exc:  # noqa: BLE001
                 logger.warning("AI scientist LLM extraction failed: %s", exc)
+                RUNTIME_TASKS.fail(runtime_task.id, exc)
                 raise HTTPException(
                     status_code=502,
                     detail=T("api.errors.ai_scientist_llm_recognition_failed", error=str(exc)),
@@ -528,7 +550,7 @@ async def analyze_research_text(request: Request, data: AnalyzeRequest) -> Analy
         for item in template_suggestions
     ]
 
-    return AnalyzeResponse(
+    response = AnalyzeResponse(
         scenario_description=merged["scenario_description"],
         settings=[SettingItem(**item) for item in merged["settings"]],
         actions=[ActionItem(**item) for item in merged["actions"]],
@@ -550,6 +572,15 @@ async def analyze_research_text(request: Request, data: AnalyzeRequest) -> Analy
         semantic_schema=semantic_schema,
         model_used=model_used,
     )
+    RUNTIME_TASKS.finish(
+        runtime_task.id,
+        metadata={
+            "used_llm": used_llm,
+            "model_used": model_used,
+            "recommended_scenario_id": response.recommended_scenario_id,
+        },
+    )
+    return response
 
 @post("/reextract-field", tags=["ai_scientist"])
 async def reextract_research_field(request: Request, data: ReextractFieldRequest) -> ReextractFieldResponse:
