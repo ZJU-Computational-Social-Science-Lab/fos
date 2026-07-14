@@ -373,7 +373,7 @@ export const mapBackendEventsToLogs = (
     }
 
     if (evType === 'run_failed' || evType === 'error') {
-      const errText = String(data.error || data.message || data.detail || '').trim();
+      const errText = String(data.message || data.error || data.detail || '').trim();
       const sceneType = String(data.scene_type || data.sceneType || '').trim();
       const prefix = sceneType ? `${labels.runtimeFailed} (${sceneType})` : labels.runtimeFailed;
       return {

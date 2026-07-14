@@ -33,6 +33,10 @@ from fos.backend.services.simtree_gaworld import (
     resolve_gaworld_agents,
     resolve_gaworld_path,
 )
+from fos.backend.services.simtree_knowledge import (
+    update_agent_knowledge as update_tree_agent_knowledge,
+    update_global_knowledge as update_tree_global_knowledge,
+)
 from fos.backend.services.simtree_registry_lifecycle import (
     SimTreeRecord,
     wire_tree_broadcast,
@@ -1108,48 +1112,7 @@ class SimTreeRegistry:
         record = self._records.get(key)
         if record is None:
             return False
-
-        # Build a mapping of agent name -> knowledge base and documents from the new config
-        # Only include agents that have the respective keys defined
-        agents_config = agent_config.get("agents", [])
-        kb_by_name = {}
-        docs_by_name = {}
-        for agent_cfg in agents_config:
-            name = agent_cfg.get("name", "")
-            # Only update knowledge base if explicitly present in config
-            if "knowledgeBase" in agent_cfg:
-                kb_by_name[name] = agent_cfg["knowledgeBase"]
-            # Only update documents if explicitly present in config
-            if "documents" in agent_cfg:
-                docs_by_name[name] = agent_cfg["documents"]
-
-        # Update knowledge base and documents in all tree nodes
-        tree = record.tree
-        nodes_updated = 0
-        for node_id, node_data in tree.nodes.items():
-            sim = node_data.get("sim")
-            if sim is None:
-                continue
-            agent_map = getattr(sim, "agents", {}) or {}
-            if not agent_map and hasattr(sim, "_scene_agent_map"):
-                agent_map = sim._scene_agent_map()
-            for agent_name, agent in agent_map.items():
-                if agent_name in kb_by_name:
-                    agent.knowledge_base = list(kb_by_name[agent_name])
-                if agent_name in docs_by_name:
-                    agent.documents = dict(docs_by_name[agent_name])
-            scene = getattr(sim, "scene", None)
-            config_agents = getattr(getattr(scene, "config", None), "agents", None)
-            if isinstance(config_agents, list):
-                for agent_cfg in config_agents:
-                    agent_name = str(agent_cfg.get("name", "")).strip()
-                    if agent_name in kb_by_name:
-                        agent_cfg["knowledgeBase"] = list(kb_by_name[agent_name])
-                    if agent_name in docs_by_name:
-                        agent_cfg["documents"] = dict(docs_by_name[agent_name])
-            nodes_updated += 1
-
-        return True
+        return update_tree_agent_knowledge(record, agent_config)
 
     def metrics(self) -> dict:
         """
@@ -1201,23 +1164,7 @@ class SimTreeRegistry:
         record = self._records.get(key)
         if record is None:
             return False
-
-        # Update global knowledge in all tree nodes
-        tree = record.tree
-        for node_id, node_data in tree.nodes.items():
-            sim = node_data.get("sim")
-            if sim is None:
-                continue
-            scene = getattr(sim, "scene", None)
-            if scene is not None and hasattr(scene, "global_knowledge"):
-                scene.global_knowledge = dict(global_knowledge)
-                if hasattr(scene, "config"):
-                    scene.config.global_knowledge = dict(global_knowledge)
-            for agent_name, agent in (getattr(sim, "agents", {}) or {}).items():
-                if hasattr(agent, "set_global_knowledge"):
-                    agent.set_global_knowledge(global_knowledge)
-
-        return True
+        return update_tree_global_knowledge(record, global_knowledge)
 
 
 SIM_TREE_REGISTRY = SimTreeRegistry()

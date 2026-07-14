@@ -36,6 +36,7 @@ describe('mapBackendEventsToLogs - experiment_response', () => {
           data: {
             node: 2,
             error: 'gaworld.error.path_not_set',
+            message: 'GAWorld path is not configured. Set GAWORLD_PATH on the server.',
           },
         },
       ],
@@ -48,6 +49,6 @@ describe('mapBackendEventsToLogs - experiment_response', () => {
     expect(logs).toHaveLength(1);
     expect(logs[0].type).toBe('SYSTEM');
     expect(logs[0].content).toContain('Runtime failed');
-    expect(logs[0].content).toContain('gaworld.error.path_not_set');
+    expect(logs[0].content).toContain('GAWorld path is not configured');
   });
 });
