@@ -10,6 +10,8 @@ Contains: Scene
 # subclass) and delete this file. See:
 # docs/plans/policy-cascade-port-investigation.md
 
+from fos.core.event import MessageEvent
+
 
 class Scene:
     """Minimal base class for Pipeline B scenes."""
@@ -26,6 +28,31 @@ class Scene:
         return []
 
     def parse_and_handle_action(self, action_data, agent, simulator) -> tuple:
+        raw_action = action_data.get("action")
+        if isinstance(raw_action, dict):
+            action_name = raw_action.get("name") or raw_action.get("action")
+            merged = {k: v for k, v in raw_action.items() if k != "name"}
+            for key, value in action_data.items():
+                if key != "action":
+                    merged[key] = value
+            merged["action"] = action_name
+            action_data = merged
+        else:
+            action_name = raw_action
+
+        if action_name == "send_message":
+            message = str(action_data.get("message") or "").strip()
+            if not message:
+                error = "Missing message."
+                agent.add_env_feedback(error)
+                return False, {"error": error}, f"{agent.name} failed to post", {}, False
+            event = MessageEvent(agent.name, message)
+            self.deliver_message(event, agent, simulator)
+            return True, {"message": message}, f"{agent.name}: {message}", {}, False
+
+        if action_name == "yield":
+            return True, {}, f"{agent.name} yielded the floor", {}, True
+
         return False, {}, None, {}, False
 
     def deliver_message(self, event, sender, simulator) -> None:
