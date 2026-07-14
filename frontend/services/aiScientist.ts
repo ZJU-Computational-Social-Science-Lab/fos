@@ -99,6 +99,41 @@ export interface AnalyzeAiScientistResponse {
   semantic_schema: AiScientistSemanticSchema;
 }
 
+export interface AiScientistDraftSource {
+  textExcerpt: string;
+  fileName?: string | null;
+  sections: AiScientistSourceSection[];
+}
+
+export interface AiScientistDraftScenario {
+  description: string;
+  recommendedScenarioId: string;
+  recommendedReason: string;
+  confidence: number;
+  reviewRequired: boolean;
+}
+
+export interface AiScientistDraftV1 {
+  version: 1;
+  locale: string;
+  source: AiScientistDraftSource;
+  scenario: AiScientistDraftScenario;
+  settings: AiScientistSetting[];
+  actions: AiScientistAction[];
+  agents: AiScientistAgent[];
+  keyVariables: string[];
+  recommendedParams: Record<string, unknown>;
+  templateSuggestions: AiScientistTemplateSuggestion[];
+  evidence: AiScientistEvidence[];
+  evidenceByField: Record<string, string[]>;
+  semanticSchema: AiScientistSemanticSchema;
+  assumptions: string[];
+  missingInformation: string[];
+  warnings: string[];
+  usedLlm: boolean;
+  modelUsed?: string | null;
+}
+
 export type AiScientistRecognitionMode = 'deterministic' | 'provider';
 export type AiScientistReextractField = 'scenario' | 'settings' | 'actions' | 'agents' | 'variables';
 
@@ -149,4 +184,44 @@ export async function reextractAiScientistField(params: {
     source_sections: params.sourceSections ?? null,
   });
   return response.data;
+}
+
+export function normalizeAiScientistDraft(
+  response: AnalyzeAiScientistResponse,
+  options: {
+    locale?: string;
+    sourceText?: string;
+    sourceFileName?: string | null;
+  } = {},
+): AiScientistDraftV1 {
+  return {
+    version: 1,
+    locale: options.locale ?? getApiLanguage(),
+    source: {
+      textExcerpt: (options.sourceText || '').trim().slice(0, 5000),
+      fileName: options.sourceFileName ?? null,
+      sections: response.source_sections || [],
+    },
+    scenario: {
+      description: response.scenario_description || '',
+      recommendedScenarioId: response.recommended_scenario_id || 'custom',
+      recommendedReason: response.recommended_scenario_reason || '',
+      confidence: response.recommendation_confidence ?? 0,
+      reviewRequired: response.review_required ?? true,
+    },
+    settings: response.settings || [],
+    actions: response.actions || [],
+    agents: response.agents || [],
+    keyVariables: response.key_variables || [],
+    recommendedParams: response.recommended_params || {},
+    templateSuggestions: response.template_suggestions || [],
+    evidence: response.evidence || [],
+    evidenceByField: response.evidence_by_field || {},
+    semanticSchema: response.semantic_schema,
+    assumptions: response.assumptions || [],
+    missingInformation: response.missing_information || [],
+    warnings: response.warnings || [],
+    usedLlm: response.used_llm,
+    modelUsed: response.model_used ?? null,
+  };
 }

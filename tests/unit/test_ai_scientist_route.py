@@ -7,6 +7,7 @@ import pytest
 from litestar.exceptions import HTTPException
 
 from fos.backend.api.routes import ai_scientist as route_module
+from fos.backend.services.runtime_tasks import RUNTIME_TASKS
 
 
 class _FakeSessionContext:
@@ -31,6 +32,8 @@ class _FakeClient:
 
 @pytest.mark.asyncio
 async def test_ai_scientist_route_allows_deterministic_mode_without_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    RUNTIME_TASKS.clear()
+
     async def _fake_user(session, token):
         return SimpleNamespace(id=1)
 
@@ -53,10 +56,17 @@ async def test_ai_scientist_route_allows_deterministic_mode_without_provider(mon
     assert result.model_used is None
     assert result.recommended_scenario_id in {"public_goods", "custom"}
     assert any("deterministic" in item.lower() for item in result.warnings)
+    snapshot = RUNTIME_TASKS.snapshot()
+    assert snapshot["active"] == 0
+    assert snapshot["recent"][0]["kind"] == "ai_scientist_analysis"
+    assert snapshot["recent"][0]["status"] == "finished"
+    RUNTIME_TASKS.clear()
 
 
 @pytest.mark.asyncio
 async def test_ai_scientist_route_provider_mode_requires_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    RUNTIME_TASKS.clear()
+
     async def _fake_user(session, token):
         return SimpleNamespace(id=1)
 
@@ -79,6 +89,11 @@ async def test_ai_scientist_route_provider_mode_requires_provider(monkeypatch: p
 
     assert exc.value.status_code == 400
     assert "Configure an LLM provider" in str(exc.value.detail)
+    snapshot = RUNTIME_TASKS.snapshot()
+    assert snapshot["active"] == 0
+    assert snapshot["recent"][0]["kind"] == "ai_scientist_analysis"
+    assert snapshot["recent"][0]["status"] == "error"
+    RUNTIME_TASKS.clear()
 
 
 @pytest.mark.asyncio

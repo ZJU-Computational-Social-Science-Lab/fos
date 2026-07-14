@@ -18,6 +18,7 @@ from fos.backend.services.default_providers import get_default_ollama_base_url
 from fos.backend.services.provider_dialect import normalize_provider_dialect
 from fos.core.tools.web.search import create_search_client
 from fos.core.search_config import SearchConfig
+from fos.backend.services.runtime_tasks import RUNTIME_TASKS
 
 
 @celery_app.task(bind=True)
@@ -244,6 +245,27 @@ def run_experiment_task(self, simulation_id: str, exp_id: str, run_id: int, turn
                 await session2.commit()
             return {"finished": finished}
 
+    runtime_task_id = f"experiment_run:{int(run_id)}"
+    RUNTIME_TASKS.start(
+        "experiment_run",
+        f"Experiment run {run_id}",
+        task_id=runtime_task_id,
+        status="running",
+        metadata={
+            "simulation_id": simulation_id.upper(),
+            "experiment_id": exp_id,
+            "run_id": int(run_id),
+            "turns": int(turns),
+            "worker": "celery",
+        },
+    )
+
     # run the async worker synchronously in Celery process
     import asyncio as _asyncio
-    return _asyncio.run(_worker())
+    try:
+        result = _asyncio.run(_worker())
+    except Exception as exc:
+        RUNTIME_TASKS.fail(runtime_task_id, exc)
+        raise
+    RUNTIME_TASKS.finish(runtime_task_id, metadata=result)
+    return result

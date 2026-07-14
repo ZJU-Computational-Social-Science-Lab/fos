@@ -2,7 +2,7 @@
 """
 install.py — drop the i18n tests into the Social-Sim repo.
 
-Usage (from Social-Sim-server/ root):
+Usage (from FOS root):
     python install.py [--dry-run]
 
 What it does:
@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).parent
-REPO = Path(".")   # run from Social-Sim-server root
+REPO = Path(".")   # run from FOS root
 
 
 def install(dry: bool = False):
@@ -86,7 +86,7 @@ CI_YAML = """
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install Python deps
         run: pip install pytest
@@ -101,7 +101,7 @@ CI_YAML = """
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 

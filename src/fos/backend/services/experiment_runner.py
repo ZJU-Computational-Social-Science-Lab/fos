@@ -15,6 +15,7 @@ from fos.backend.core.database import get_session
 from fos.backend.models.experiment import Experiment, ExperimentVariant, ExperimentRun
 from fos.backend.services.simtree_runtime import SIM_TREE_REGISTRY, SimTreeRecord
 from fos.backend.services.simtree_runtime import get_runtime_agent_map
+from fos.backend.services.runtime_tasks import RUNTIME_TASKS
 from fos.backend.celery_app import celery_app
 
 # Import the Celery task here to avoid circular imports at module import time
@@ -233,6 +234,10 @@ _RUN_TASKS: dict[int, asyncio.Task] = {}
 _USE_CELERY_EXPERIMENTS = str(os.environ.get("FOS_USE_CELERY_EXPERIMENTS") or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _experiment_runtime_task_id(run_id: int) -> str:
+    return f"experiment_run:{int(run_id)}"
+
+
 async def start_experiment_run_background(simulation_id: str, exp_id: str, turns: int) -> int:
     """Create a run record and start the run in background, returning run_id."""
     async with get_session() as session:
@@ -269,6 +274,18 @@ async def start_experiment_run_background(simulation_id: str, exp_id: str, turns
             # still persist run but mark error
             run.status = "error"
             run.result_meta = {"error": "SimTree not loaded"}
+            RUNTIME_TASKS.start(
+                "experiment_run",
+                f"Experiment run {run_id}",
+                task_id=_experiment_runtime_task_id(run_id),
+                status="error",
+                metadata={
+                    "simulation_id": simulation_id.upper(),
+                    "experiment_id": exp_id,
+                    "run_id": run_id,
+                },
+            )
+            RUNTIME_TASKS.fail(_experiment_runtime_task_id(run_id), "SimTree not loaded")
             await session.commit()
             return run_id
         tree = rec.tree
@@ -296,6 +313,18 @@ async def start_experiment_run_background(simulation_id: str, exp_id: str, turns
         await session.commit()
 
     # Only use Celery when explicitly enabled; local/dev runs should execute in-process
+    RUNTIME_TASKS.start(
+        "experiment_run",
+        f"Experiment run {run_id}",
+        task_id=_experiment_runtime_task_id(run_id),
+        status="queued",
+        metadata={
+            "simulation_id": simulation_id.upper(),
+            "experiment_id": exp_id,
+            "run_id": run_id,
+            "turns": int(turns),
+        },
+    )
     if _USE_CELERY_EXPERIMENTS and run_experiment_task is not None:
         # enqueue Celery task
         async_result = run_experiment_task.delay(simulation_id, exp_id, run_id, int(turns), tree_state, variants)
@@ -307,6 +336,10 @@ async def start_experiment_run_background(simulation_id: str, exp_id: str, turns
                 run.task_id = task_id
                 run.status = "queued"
                 await session.commit()
+        RUNTIME_TASKS.update(
+            _experiment_runtime_task_id(run_id),
+            metadata={"celery_task_id": task_id},
+        )
         return run_id
     else:
         # fallback: schedule internal asyncio worker and keep in-memory tracking
@@ -318,7 +351,9 @@ async def start_experiment_run_background(simulation_id: str, exp_id: str, turns
 
 async def _run_experiment_worker(simulation_id: str, exp_id: str, run_id: int, turns: int) -> None:
     """Background worker that performs branching (if needed), runs variants, and updates DB run record."""
+    runtime_task_id = _experiment_runtime_task_id(run_id)
     try:
+        RUNTIME_TASKS.mark_running(runtime_task_id)
         async with get_session() as session:
             # Eager-load variants to avoid lazy-loading them later outside session
             stmt = select(Experiment).options(selectinload(Experiment.variants)).where(Experiment.id == exp_id)
@@ -424,6 +459,10 @@ async def _run_experiment_worker(simulation_id: str, exp_id: str, run_id: int, t
             sim_record = await session.get(Simulation, simulation_id.upper())
             sim_record.latest_state = tree.serialize()
             await session.commit()
+        RUNTIME_TASKS.finish(
+            runtime_task_id,
+            metadata={"finished_nodes": finished},
+        )
     except asyncio.CancelledError:
         # mark run as cancelled
         async with get_session() as session:
@@ -431,6 +470,7 @@ async def _run_experiment_worker(simulation_id: str, exp_id: str, run_id: int, t
             if run:
                 run.status = "cancelled"
                 await session.commit()
+        RUNTIME_TASKS.cancel(runtime_task_id)
         raise
     except Exception as e:
         async with get_session() as session:
@@ -439,6 +479,7 @@ async def _run_experiment_worker(simulation_id: str, exp_id: str, run_id: int, t
                 run.status = "error"
                 run.result_meta = {"error": str(e)}
                 await session.commit()
+        RUNTIME_TASKS.fail(runtime_task_id, e)
         raise
 
 
@@ -458,6 +499,7 @@ async def cancel_run(run_id: int) -> bool:
                 pass
             run.status = "cancelled"
             await session.commit()
+            RUNTIME_TASKS.cancel(_experiment_runtime_task_id(int(run_id)))
             return True
 
     # Fallback to in-memory asyncio task cancellation
@@ -470,6 +512,7 @@ async def cancel_run(run_id: int) -> bool:
     except asyncio.CancelledError:
         pass
     _RUN_TASKS.pop(int(run_id), None)
+    RUNTIME_TASKS.cancel(_experiment_runtime_task_id(int(run_id)))
     return True
 
 
