@@ -16,6 +16,7 @@ import {
   getLocalizedScenarioDescription,
   getLocalizedScenarioName,
 } from '../utils/scenarioLocalization';
+import { isPolicyCascadeScenario } from '../utils/policyCascade';
 import i18n from '../i18n';
 
 interface ExperimentBuilderModalProps {
@@ -129,9 +130,7 @@ export function launchExperimentFromBuilderState({
     round_visibility: state.roundVisibility || 'simultaneous',
   };
 
-  const isPolicyCascade =
-    scenarioData?.id === 'policy_diffusion' ||
-    scenarioData?.id === 'policyDiffusion';
+  const isPolicyCascade = isPolicyCascadeScenario(scenarioData);
 
   const isNewArchitecture = scenarioData?.category === 'game_theory' ||
     scenarioData?.category === 'discussion' ||
@@ -316,9 +315,7 @@ export const ExperimentBuilderModal: React.FC<ExperimentBuilderModalProps> = ({
     };
 
     // Determine scene type: policy cascade uses dedicated scene, otherwise experiment/generic
-    const isPolicyCascade =
-      scenarioData?.id === 'policy_diffusion' ||
-      scenarioData?.id === 'policyDiffusion';
+    const isPolicyCascade = isPolicyCascadeScenario(scenarioData);
 
     // Determine if this uses the new Three-Layer Architecture
     // (strategic_decisions or any scenario with structured actions)

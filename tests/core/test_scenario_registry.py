@@ -36,38 +36,36 @@ class TestScenarioRegistry:
             f"Scenario was mutated from str to {after_type}!"
 
 
-class TestPolicyCascadeExperimentRegistration:
-    """policy_cascade_experiment must be in ALL_SCENARIOS and SCENE_MAP."""
+class TestPolicyMeaningErosionRegistration:
+    """Policy Meaning Erosion is the visible template for cascade runtime."""
 
-    def test_scenario_exists_in_all_scenarios(self):
-        """policy_cascade_experiment should be listed in ALL_SCENARIOS."""
+    def test_policy_erosion_is_visible_once(self):
+        """Only policy_erosion should be shown to users for this workflow."""
         ids = [s["id"] for s in ALL_SCENARIOS]
-        assert "policy_cascade_experiment" in ids
+        assert ids.count("policy_erosion") == 1
+        assert "policy_cascade_experiment" not in ids
 
     def test_scenario_has_required_fields(self):
         """Scenario entry must have id, name, category, and description."""
-        scenario = next(
-            s for s in ALL_SCENARIOS if s["id"] == "policy_cascade_experiment"
-        )
+        scenario = next(s for s in ALL_SCENARIOS if s["id"] == "policy_erosion")
         assert scenario["name"]
         assert scenario["category"]
         assert scenario["description"]
 
     def test_scene_key_exists_in_scene_map(self):
-        """policy_cascade_experiment must have a matching SCENE_MAP entry."""
+        """The dedicated policy cascade runtime must remain registered."""
         from fos.core.registry import SCENE_MAP
 
-        assert "policy_cascade_experiment" in SCENE_MAP
+        assert "policy_cascade_scene" in SCENE_MAP
 
     def test_scenario_has_cascade_parameters(self):
-        """Scenario should include tier_order, cascade_mode, distortion_strength params."""
-        scenario = next(
-            s for s in ALL_SCENARIOS if s["id"] == "policy_cascade_experiment"
-        )
+        """Policy erosion should expose the cascade runtime parameters."""
+        scenario = next(s for s in ALL_SCENARIOS if s["id"] == "policy_erosion")
         param_keys = [p["key"] for p in scenario.get("parameters", [])]
-        assert "tier_order" in param_keys
         assert "cascade_mode" in param_keys
         assert "distortion_strength" in param_keys
+        assert "conflict_sensitivity" in param_keys
+        assert "block_probability" in param_keys
 
 
 class TestCoordinationGameScenario:

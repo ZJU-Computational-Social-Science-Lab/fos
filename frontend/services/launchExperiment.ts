@@ -15,6 +15,7 @@ import {
   getLocalizedScenarioDescription,
   getLocalizedScenarioName,
 } from "../utils/scenarioLocalization";
+import { isPolicyCascadeScenario } from "../utils/policyCascade";
 
 interface LaunchDependencies {
   t: TFunction;
@@ -86,7 +87,7 @@ function buildTemplate(t: TFunction): { name: string; template: SimulationTempla
     parameters,
     round_visibility: state.roundVisibility,
   } as unknown as GenericTemplateConfig;
-  const isPolicyCascade = scenario?.id === "policy_diffusion" || scenario?.id === "policyDiffusion";
+  const isPolicyCascade = isPolicyCascadeScenario(scenario);
   const experimentCategories = new Set([
     "game_theory", "discussion", "grid", "sociology", "social_deduction",
     "spatial", "generative_city", "custom",
