@@ -38,6 +38,7 @@ htmlcov/
 test_results/
 !test_results/BASELINE.md
 !test_results/BUG_LOG.md
+!test_results/TEST_INVENTORY.md
 
 # Frontend
 frontend/node_modules/
