@@ -32,7 +32,7 @@ from fos.backend.models.simulation import Simulation
 from fos.backend.models.user import ProviderConfig, SearchProviderConfig, User
 from fos.backend.services.default_providers import get_default_ollama_base_url
 from fos.backend.services.provider_dialect import normalize_provider_runtime
-from fos.backend.services.simtree_broadcast import broadcast_tree_event
+from fos.backend.services.simtree_broadcast import broadcast_tree_event  # noqa: F401
 from fos.backend.services.simtree_runtime import SIM_TREE_REGISTRY, SimTreeRecord
 from fos.i18n import T
 

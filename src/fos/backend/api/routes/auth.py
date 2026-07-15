@@ -106,7 +106,6 @@ async def login(data: LoginRequest) -> TokenPair:
 
         async def _run_provider_auto_discovery(session_factory, user_id: int, user):
             """Discover Ollama and LM Studio providers after login. Never throws."""
-            from sqlalchemy.ext.asyncio import AsyncSession
 
             for discover_fn in [ensure_default_ollama_providers, ensure_default_lmstudio_providers]:
                 try:

@@ -12,7 +12,6 @@ import asyncio
 import logging
 import os
 import threading
-import time
 from datetime import datetime
 from typing import List, Dict, Any, Literal, Optional, TYPE_CHECKING
 from dataclasses import dataclass
@@ -1191,7 +1190,7 @@ class ExperimentRunner:
                                     agent_name=agent.name,
                                     action_name="skip",
                                     parameters={"error": f"Model '{model_name}' failed to load"},
-                                    summary=f"Skipped - model load failed",
+                                    summary="Skipped - model load failed",
                                     success=False,
                                     skipped=True,
                                     round_num=round_num,
@@ -1201,7 +1200,7 @@ class ExperimentRunner:
                                     agent_name=agent.name,
                                     action_name="skip",
                                     parameters={"error": f"Model '{model_name}' failed to load"},
-                                    summary=f"Skipped - model load failed",
+                                    summary="Skipped - model load failed",
                                     success=False,
                                     skipped=True,
                                     round_num=round_num,
@@ -1753,7 +1752,7 @@ class ExperimentRunner:
                                 agent_name=agent.name,
                                 action_name="skip",
                                 parameters={"error": f"Model '{model_name}' failed to load"},
-                                summary=f"Skipped - model load failed",
+                                summary="Skipped - model load failed",
                                 success=False,
                                 skipped=True,
                                 round_num=round_num,

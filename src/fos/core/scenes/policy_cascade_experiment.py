@@ -18,7 +18,6 @@ from typing import Any, Callable, Dict, List, Optional
 
 from fos.core.experiment.scene import ExperimentScene
 from fos.core.experiment.config import ExperimentConfig
-from fos.core.experiment.runner import ActionResult
 from fos.core.scenes.policy_cascade.base import PolicyCascadeBaseMixin
 from fos.core.scenes.policy_cascade.constants import _parse_tier_order, DEFAULT_TIER_ORDER
 from fos.core.scenes.policy_cascade.distortion import PolicyCascadeDistortionMixin
