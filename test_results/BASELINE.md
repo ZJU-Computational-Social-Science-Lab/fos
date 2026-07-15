@@ -11,3 +11,4 @@
 | Date | SHA | Notes |
 |------|-----|-------|
 | 2026-07-15 | fc727d2 | Initial baseline — start of Sprint A testing |
+| 2026-07-15 | 9afca3d | Run 1 baseline — TEST_INVENTORY.md created |
