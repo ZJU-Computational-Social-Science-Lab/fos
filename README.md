@@ -34,7 +34,7 @@ fos/
 
 ```bash
 # Required local versions: Python 3.12 and Node.js 22.
-# The beta development baseline is the `beta` branch.
+# The development baseline is the `main` branch.
 
 # Create virtual environment
 python3.12 -m venv .venv
@@ -63,10 +63,10 @@ Ollama.
 
 #### 2. Configure Environment Variables
 
-Copy `.env.example` to `.env` and modify as needed:
+Copy `.env.example.local` to `.env` and modify as needed:
 
 ```bash
-cp .env.example .env
+cp .env.example.local .env
 ```
 
 Key configuration options:
@@ -155,7 +155,7 @@ fos/
 
 ```bash
 # 本地统一版本：Python 3.12 和 Node.js 22。
-# Beta 开发统一基线为 `beta` 分支。
+# 开发统一基线为 `main` 分支。
 
 # 创建虚拟环境
 python3.12 -m venv .venv
@@ -179,10 +179,10 @@ cd frontend && npm ci && cd ..
 
 #### 2. 配置环境变量
 
-复制 `.env.example` 为 `.env`，按需修改：
+复制 `.env.example.local` 为 `.env`，按需修改：
 
 ```bash
-cp .env.example .env
+cp .env.example.local .env
 ```
 
 主要配置项：

@@ -16,7 +16,7 @@ Version marker files are included at the repository root:
 - `.node-version`
 - `.nvmrc`
 
-The beta development baseline is the `beta` branch. Start new beta work from that branch after syncing with the team.
+The development baseline is the `main` branch. Start new work from that branch after syncing with the team.
 
 ## Backend Setup
 
@@ -54,8 +54,10 @@ pip install -e .
 ### Step 4: Configure environment variables
 
 ```bash
-cp .env.example .env
+cp .env.example.local .env
 ```
+
+This file uses SQLite and is suitable for local development.
 
 Fill in required secrets in `.env`, especially:
 
