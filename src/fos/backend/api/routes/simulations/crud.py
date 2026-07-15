@@ -27,7 +27,6 @@ from sqlalchemy.orm.attributes import flag_modified
 from fos.backend.core.database import get_session
 from fos.backend.dependencies import extract_bearer_token, resolve_current_user
 from fos.backend.models.simulation import Simulation
-from fos.backend.models.user import ProviderConfig
 from fos.backend.schemas.simulation import (
     SimulationBase,
     SimulationCreate,
@@ -35,7 +34,6 @@ from fos.backend.schemas.simulation import (
 )
 from fos.backend.schemas.simtree import UpdateAgentLLMConfigRequest
 from fos.backend.services.simulations import generate_simulation_id, generate_simulation_name
-from fos.backend.services.provider_dialect import normalize_provider_dialect
 from fos.backend.services.simtree_runtime import SIM_TREE_REGISTRY
 from fos.i18n import T
 
@@ -181,22 +179,6 @@ async def create_simulation(
     token = extract_bearer_token(request)
     async with get_session() as session:
         current_user = await resolve_current_user(session, token)
-
-        # Verify LLM provider is configured
-        result = await session.execute(
-            select(ProviderConfig).where(ProviderConfig.user_id == current_user.id)
-        )
-        provider = result.scalars().first()
-        if provider is None:
-            raise RuntimeError(T("api.errors.provider_not_configured"))
-
-        dialect = normalize_provider_dialect(provider.provider)
-        if dialect not in {"openai", "gemini", "mock", "ollama"}:
-            raise RuntimeError(T("api.errors.provider_invalid"))
-        if dialect in {"openai", "gemini"} and not provider.api_key:
-            raise RuntimeError(T("api.errors.provider_api_key_required"))
-        if not provider.model:
-            raise RuntimeError(T("api.errors.provider_model_required"))
 
         # Normalize agent config field names from camelCase to snake_case
         normalized_agent_config = _normalize_agent_config(data.agent_config or {})

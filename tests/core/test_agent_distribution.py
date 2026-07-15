@@ -173,6 +173,24 @@ class TestAgentGeneration:
         roles = {a["role"] for a in agents}
         assert roles.issubset(FALLBACK_ROLES), f"Expected fallback roles, got: {roles}"
 
+    def test_demographic_generation_without_llm_uses_editable_fallback_agents(self):
+        """Provider-free creation should still produce editable demographic agents."""
+        agents = generate_agents_with_archetypes(
+            total_agents=3,
+            demographics=[{"name": "Age", "categories": ["Young"]}],
+            archetype_probabilities=None,
+            traits=[{"name": "Trust", "mean": 50, "std": 10}],
+            llm_client=None,
+        )
+
+        assert len(agents) == 3
+        for agent in agents:
+            assert agent["name"]
+            assert agent["role"] in FALLBACK_ROLES
+            assert agent["profile"]
+            assert agent["properties"]["Age"] == "Young"
+            assert "Trust" in agent["properties"]
+
 
 class TestLLMDistribution:
     """Tests for LLM client distribution across agents."""
