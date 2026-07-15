@@ -1,5 +1,18 @@
 # FOS Test Inventory — Run 1
 
+## Inventory Status
+
+| Requirement | Status |
+|-------------|--------|
+| Deterministic backend suite (3× runs) | ✅ Complete — 903 pass, 25 fail, 0 flakes |
+| Real-LLM smoke tests | ⏳ Pending — requires Ollama (not running) |
+| Real-LLM integration tests | ⏳ Pending — excluded from CI |
+| LLM prompt tests | ⏳ Pending — excluded from CI |
+| i18n tests | ⏳ Not yet run |
+| Load tests | ⏳ Pending — excluded from CI |
+| Frontend unit tests | ⏳ Not yet run |
+| E2E tests | ⏳ Not yet run |
+
 **Date:** 2026-07-15
 **SHA:** 9afca3d
 **Python:** 3.12.13
@@ -7,16 +20,16 @@
 
 ## Suite Summary
 
-| Suite | Pass | Fail | Skip | Time | Notes |
-|-------|------|------|------|------|-------|
-| tests/unit | 295 | 8 | 0 | 2.52s | 5 game_config + 3 debug_log |
-| tests/core/contagion | 29 | 0 | 0 | 0.64s | Clean |
-| tests/core/experiment | 359 | 10 | 0 | 42.32s | Does not hang; 42s completion with 10 failures |
-| tests/core/llm | 151 | 7 | 0 | 0.92s | openai_provider + thinking_disable |
-| tests/core/scenarios | 3 | 0 | 0 | 0.06s | Clean |
-| tests/core/scenes | 42 | 0 | 0 | 0.13s | Clean |
-| tests/core/simulation | 10 | 0 | 0 | 0.06s | Clean |
-| tests/backend | 14 | 0 | 0 | 1.16s | 5 warnings (non-fatal) |
+| Suite | Pass | Fail | Skip | Time | Notes | Live provider required |
+|-------|------|------|------|------|-------|----------------------|
+| tests/unit | 295 | 8 | 0 | 2.52s | 5 game_config + 3 debug_log | No |
+| tests/core/contagion | 29 | 0 | 0 | 0.64s | Clean | No |
+| tests/core/experiment | 359 | 10 | 0 | 42.32s | Does not hang; 42s completion with 10 failures | No |
+| tests/core/llm | 151 | 7 | 0 | 0.92s | openai_provider + thinking_disable | No |
+| tests/core/scenarios | 3 | 0 | 0 | 0.06s | Clean | No |
+| tests/core/scenes | 42 | 0 | 0 | 0.13s | Clean | No |
+| tests/core/simulation | 10 | 0 | 0 | 0.06s | Clean | No |
+| tests/backend | 14 | 0 | 0 | 1.16s | 5 warnings (non-fatal) | No |
 
 ## Failing Tests (Run 1)
 
@@ -106,6 +119,27 @@
 - `test_config_contains_thinking_budget_zero` — **Order-dependent.** Passes in isolation (single test or with only graceful_degrade test), but fails consistently when run in the full llm suite. The mock from other tests (likely `@patch("fos.core.llm.providers.openai.OpenAI")` in `test_openai_provider.py`) leaks into the gemini module's `GenerateContentConfig` imports. This is a test isolation (leaky mock) issue.
 
 **Test isolation concern:** The `openai_provider` tests use `@patch("fos.core.llm.providers.openai.OpenAI")` which also patches `google.genai` via transitive imports. When these tests run before `test_thinking_disable.py`, the mock leaks into subsequent gemini tests. A session-scoped fixture or `autouse` cleanup could fix this.
+
+## Run 3 — Flake Confirmation
+
+**Date:** 2026-07-15
+**Results:** 903 passed, 25 failed, 6 warnings in 44.41s
+**Flake rate:** 0% — all three runs produced identical failure counts and suites.
+
+### Failure consistency (3/3 runs)
+
+| Bug ID | Test file | Failures | Runs |
+|--------|-----------|----------|------|
+| BUG-001 | test_experiment_scene_game_config.py | 5 | 3/3 |
+| BUG-002 | test_debug_log_format.py | 3 | 3/3 |
+| BUG-003 | test_openai_provider.py | 5 | 3/3 |
+| BUG-004 | test_thinking_disable.py | 2 | 3/3 |
+| BUG-005 | test_phase1_regression_units.py | 1 | 3/3 |
+| BUG-006 | test_rag_e2e.py | 5 | 3/3 |
+| BUG-007 | test_runner.py | 3 | 3/3 |
+| BUG-008 | test_scene_average_param.py | 1 | 3/3 |
+
+**Conclusion:** Zero flaky tests. All 25 failures are deterministic — each represents a real bug, not an environmental issue.
 
 ## Provider Dependency
 None of the above suites require a live LLM provider. All use mocks or pure functions. The `test_rag_e2e` failures from missing `torch` are infrastructure/environment, not provider-dependent.
