@@ -326,24 +326,31 @@ async def generate_agents_demographics(
         async with get_session() as session:
             current_user = await resolve_current_user(session, token)
 
-            provider = await _select_provider(
-                session, current_user.id, data.provider_id
-            )
-
-            dialect = normalize_provider_dialect(provider.provider)
-            cfg = LLMConfig(
-                dialect=dialect,
-                api_key=provider.api_key or "",
-                model=provider.model,
-                base_url=provider.base_url or (get_default_ollama_base_url() if dialect == "ollama" else None),
-                temperature=0.7,
-                top_p=1.0,
-                frequency_penalty=0.0,
-                presence_penalty=0.0,
-                max_tokens=1024,
-                supports_vision=guess_supports_vision(provider.model),
-            )
-            llm = create_llm_client(cfg)
+            provider = None
+            llm = None
+            try:
+                provider = await _select_provider(
+                    session, current_user.id, data.provider_id
+                )
+                dialect = normalize_provider_dialect(provider.provider)
+                cfg = LLMConfig(
+                    dialect=dialect,
+                    api_key=provider.api_key or "",
+                    model=provider.model,
+                    base_url=provider.base_url or (get_default_ollama_base_url() if dialect == "ollama" else None),
+                    temperature=0.7,
+                    top_p=1.0,
+                    frequency_penalty=0.0,
+                    presence_penalty=0.0,
+                    max_tokens=1024,
+                    supports_vision=guess_supports_vision(provider.model),
+                )
+                llm = create_llm_client(cfg)
+            except RuntimeError as provider_error:
+                logger.warning(
+                    "Demographic agent generation falling back to local templates: %s",
+                    provider_error,
+                )
 
             locale = data.language or get_request_locale()
 
@@ -406,6 +413,7 @@ async def generate_agents_demographics(
                     traits=traits_dicts,
                     llm_client=llm,
                     language=data.language,
+                    timeout=30,
                 )
             except ValueError as ve:
                 # Re-raise ValueError with more context
@@ -420,14 +428,14 @@ async def generate_agents_demographics(
             provider_assignment = {}
             assigned_provider = provider
 
-            if data.provider_id is not None and provider.id is not None:
+            if provider is not None and data.provider_id is not None and provider.id is not None:
                 provider_assignment = {
                     agent.get("name", "Agent"): provider.id
                     for agent in agents_data
                 }
                 provider_map = {provider.id: provider}
                 logger.info(f"🎯 SINGLE PROVIDER DISTRIBUTION: {len(agents_data)} agents -> provider {provider.id}")
-            else:
+            elif provider is not None:
                 all_providers_result = await session.execute(
                     select(ProviderConfig).where(ProviderConfig.user_id == current_user.id)
                 )
@@ -445,6 +453,8 @@ async def generate_agents_demographics(
                     )
                     provider_assignment = dict(assignment)
                     logger.info(f"🎯 ACTIVE PROVIDER DISTRIBUTION: {len(agents_data)} agents, providers={provider_ids}")
+            else:
+                provider_map = {}
 
             # Convert to GeneratedAgent response models with stratified provider assignment
             agents: List[GeneratedAgent] = []
@@ -465,8 +475,8 @@ async def generate_agents_demographics(
                         name=agent_name,
                         role=agent_dict.get("role"),
                         profile=agent_dict.get("profile", ""),
-                        provider=assigned_provider.provider or "backend" if assigned_provider else "backend",
-                        model=assigned_provider.model or "default" if assigned_provider else "default",
+                        provider=(assigned_provider.provider or "backend") if assigned_provider else "backend",
+                        model=(assigned_provider.model or "default") if assigned_provider else "default",
                         provider_id=assigned_provider_id,
                         properties=agent_dict.get("properties", {}),
                         history=agent_dict.get("history", {}),

@@ -117,6 +117,23 @@ def generate_archetype_template(
     attrs_str = ", ".join(f"{k}: {v}" for k, v in archetype["attributes"].items())
     archetype_label = archetype.get("label", attrs_str)
 
+    def fallback_template() -> Dict[str, Any]:
+        roles = T("prompts.archetype.fallback_roles", locale=language)
+        if not isinstance(roles, list) or not roles:
+            roles = ["Citizen", "Worker", "Professional", "Student", "Other"]
+        return {
+            "description": T(
+                "prompts.archetype.fallback_description",
+                locale=language,
+                archetype_label=archetype_label,
+            ),
+            "roles": [str(role) for role in roles if str(role).strip()],
+        }
+
+    if llm_client is None:
+        warnings.warn(f"LLM unavailable for archetype '{attrs_str}', using fallback", UserWarning)
+        return fallback_template()
+
     # Use T() for locale-aware prompts
     prompt = T('prompts.archetype.prompt', locale=language, attrs=attrs_str)
 
@@ -127,7 +144,7 @@ def generate_archetype_template(
 
     if timeout <= 0:
         warnings.warn(f"LLM timeout for archetype '{attrs_str}'", UserWarning)
-        raise RuntimeError(f"LLM timeout for archetype '{archetype_label}': timeout={timeout}s")
+        return fallback_template()
 
     import queue
     import threading
@@ -153,22 +170,22 @@ def generate_archetype_template(
 
     if llm_thread.is_alive():
         warnings.warn(f"LLM timeout for archetype '{attrs_str}'", UserWarning)
-        raise RuntimeError(f"LLM timeout for archetype '{archetype_label}': call exceeded {timeout}s")
+        return fallback_template()
 
     if not exception_queue.empty():
         e = exception_queue.get()
         warnings.warn(f"LLM error for archetype '{attrs_str}': {e}", UserWarning)
-        raise RuntimeError(f"LLM error for archetype '{archetype_label}': {e}") from e
+        return fallback_template()
 
     if result_queue.empty():
         warnings.warn(f"LLM error for archetype '{attrs_str}': no response", UserWarning)
-        raise RuntimeError(f"LLM empty response for archetype '{archetype_label}'")
+        return fallback_template()
 
     response = result_queue.get()
 
     if not response or not response.strip():
         warnings.warn(f"LLM returned an empty response for archetype '{attrs_str}'", UserWarning)
-        raise RuntimeError(f"LLM empty response for archetype '{archetype_label}'")
+        return fallback_template()
 
     cleaned = response.strip()
     if cleaned.startswith("```"):
@@ -181,18 +198,22 @@ def generate_archetype_template(
     try:
         parsed, _ = decoder.raw_decode(cleaned)
     except json.JSONDecodeError as e:
-        warnings.warn(f"Invalid JSON for archetype '{attrs_str}': {e}", UserWarning)
-        raise RuntimeError(f"Invalid JSON from LLM for archetype '{archetype_label}': {e}") from e
+        message = "No JSON found" if "Expecting value" in str(e) else "Invalid JSON"
+        warnings.warn(f"{message} for archetype '{attrs_str}': {e}", UserWarning)
+        return fallback_template()
 
     if "description" not in parsed or not isinstance(parsed["description"], str):
         warnings.warn(f"Missing .description for archetype '{attrs_str}'", UserWarning)
-        description = None
+        description = fallback_template()["description"]
     else:
         description = parsed["description"]
 
     if "roles" not in parsed or not isinstance(parsed["roles"], list) or len(parsed["roles"]) == 0:
         warnings.warn(f"Missing or invalid .roles for archetype '{attrs_str}'", UserWarning)
-        raise RuntimeError(f"Missing or invalid roles in LLM response for archetype '{archetype_label}'")
+        return {
+            "description": description,
+            "roles": fallback_template()["roles"],
+        }
 
     valid_roles = []
     for role in parsed["roles"]:
@@ -203,7 +224,10 @@ def generate_archetype_template(
 
     if not valid_roles:
         warnings.warn(f"Missing or invalid .roles for archetype '{attrs_str}'", UserWarning)
-        raise RuntimeError(f"Missing or invalid roles in LLM response for archetype '{archetype_label}'")
+        return {
+            "description": description,
+            "roles": fallback_template()["roles"],
+        }
 
     return {
         "description": description,
