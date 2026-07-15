@@ -47,7 +47,7 @@ from ...services.ai_scientist.template_matching import (
     TemplateSuggestion,
 )
 from ...services.default_providers import get_default_ollama_base_url
-from ...services.provider_dialect import normalize_provider_dialect
+from ...services.provider_dialect import normalize_provider_dialect, normalize_provider_runtime
 from ...services.runtime_tasks import RUNTIME_TASKS
 
 logger = logging.getLogger(__name__)
@@ -462,12 +462,12 @@ async def analyze_research_text(request: Request, data: AnalyzeRequest) -> Analy
                 )
 
             try:
-                dialect = normalize_provider_dialect(provider.provider)
+                dialect, base_url = normalize_provider_runtime(provider.provider, provider.base_url)
                 cfg = LLMConfig(
                     dialect=dialect,
                     api_key=provider.api_key or "",
                     model=provider.model,
-                    base_url=provider.base_url or (get_default_ollama_base_url() if dialect == "ollama" else None),
+                    base_url=base_url or (get_default_ollama_base_url() if dialect == "ollama" else None),
                     temperature=0.15,
                     top_p=1.0,
                     frequency_penalty=0.0,

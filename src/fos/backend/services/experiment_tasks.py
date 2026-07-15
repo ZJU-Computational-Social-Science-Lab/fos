@@ -15,7 +15,7 @@ from fos.core.llm import create_llm_client
 from fos.core.llm_config import LLMConfig, guess_supports_vision
 from fos.backend.models.user import ProviderConfig, SearchProviderConfig
 from fos.backend.services.default_providers import get_default_ollama_base_url
-from fos.backend.services.provider_dialect import normalize_provider_dialect
+from fos.backend.services.provider_dialect import normalize_provider_runtime
 from fos.core.tools.web.search import create_search_client
 from fos.core.search_config import SearchConfig
 from fos.backend.services.runtime_tasks import RUNTIME_TASKS
@@ -59,12 +59,12 @@ def run_experiment_task(self, simulation_id: str, exp_id: str, run_id: int, turn
             active_provider = None  # Track active provider for quota management
 
             for provider in items:
-                dialect = normalize_provider_dialect(provider.provider)
+                dialect, base_url = normalize_provider_runtime(provider.provider, provider.base_url)
                 cfg = LLMConfig(
                     dialect=dialect,
                     api_key=provider.api_key or "",
                     model=provider.model,
-                    base_url=provider.base_url or (get_default_ollama_base_url() if dialect == "ollama" else None),
+                    base_url=base_url or (get_default_ollama_base_url() if dialect == "ollama" else None),
                     temperature=0.0,
                     top_p=1.0,
                     frequency_penalty=0.0,

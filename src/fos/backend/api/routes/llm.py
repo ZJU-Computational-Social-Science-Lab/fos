@@ -16,7 +16,7 @@ from ...core.database import get_session
 from ...dependencies import extract_bearer_token, resolve_current_user
 from ...models.user import ProviderConfig
 from ...services.default_providers import get_default_ollama_base_url
-from ...services.provider_dialect import normalize_provider_dialect
+from ...services.provider_dialect import normalize_provider_runtime
 from ...services.runtime_tasks import RUNTIME_TASKS
 from ....i18n import T, get_request_locale
 
@@ -108,7 +108,7 @@ async def _select_provider(
     if provider is None:
             raise RuntimeError(T("api.errors.provider_not_configured"))
 
-    dialect = normalize_provider_dialect(provider.provider)
+    dialect, _base_url = normalize_provider_runtime(provider.provider, provider.base_url)
     if dialect not in {"openai", "gemini", "mock", "ollama"}:
         raise RuntimeError(T("api.errors.provider_invalid"))
     if dialect in {"openai", "gemini"} and not provider.api_key:
@@ -135,13 +135,13 @@ async def generate_agents(
         provider = await _select_provider(
             session, current_user.id, data.provider_id
         )
-        dialect = normalize_provider_dialect(provider.provider)
+        dialect, base_url = normalize_provider_runtime(provider.provider, provider.base_url)
 
         cfg = LLMConfig(
             dialect=dialect,
             api_key=provider.api_key or "",
             model=provider.model,
-            base_url=provider.base_url or (get_default_ollama_base_url() if dialect == "ollama" else None),
+            base_url=base_url or (get_default_ollama_base_url() if dialect == "ollama" else None),
             temperature=0.7,
             top_p=1.0,
             frequency_penalty=0.0,
@@ -268,10 +268,10 @@ async def refine_report(request: Request, data: RefineReportRequest) -> dict:
             current_user = await resolve_current_user(session, token)
             provider = await _select_provider(session, current_user.id, data.provider_id)
             cfg = LLMConfig(
-                dialect=normalize_provider_dialect(provider.provider),
+                dialect=normalize_provider_runtime(provider.provider, provider.base_url)[0],
                 api_key=provider.api_key or "",
                 model=provider.model,
-                base_url=provider.base_url,
+                base_url=normalize_provider_runtime(provider.provider, provider.base_url)[1],
                 temperature=0.4,
                 top_p=1.0,
                 frequency_penalty=0.0,
@@ -332,12 +332,12 @@ async def generate_agents_demographics(
                 provider = await _select_provider(
                     session, current_user.id, data.provider_id
                 )
-                dialect = normalize_provider_dialect(provider.provider)
+                dialect, base_url = normalize_provider_runtime(provider.provider, provider.base_url)
                 cfg = LLMConfig(
                     dialect=dialect,
                     api_key=provider.api_key or "",
                     model=provider.model,
-                    base_url=provider.base_url or (get_default_ollama_base_url() if dialect == "ollama" else None),
+                    base_url=base_url or (get_default_ollama_base_url() if dialect == "ollama" else None),
                     temperature=0.7,
                     top_p=1.0,
                     frequency_penalty=0.0,
@@ -346,6 +346,8 @@ async def generate_agents_demographics(
                     supports_vision=guess_supports_vision(provider.model),
                 )
                 llm = create_llm_client(cfg)
+                llm.timeout_s = min(float(getattr(llm, "timeout_s", 30.0) or 30.0), 30.0)
+                llm.max_retries = 0
             except RuntimeError as provider_error:
                 logger.warning(
                     "Demographic agent generation falling back to local templates: %s",

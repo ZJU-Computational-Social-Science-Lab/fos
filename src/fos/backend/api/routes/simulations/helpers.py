@@ -31,7 +31,7 @@ from fos.backend.dependencies import settings
 from fos.backend.models.simulation import Simulation
 from fos.backend.models.user import ProviderConfig, SearchProviderConfig, User
 from fos.backend.services.default_providers import get_default_ollama_base_url
-from fos.backend.services.provider_dialect import normalize_provider_dialect
+from fos.backend.services.provider_dialect import normalize_provider_runtime
 from fos.backend.services.simtree_broadcast import broadcast_tree_event
 from fos.backend.services.simtree_runtime import SIM_TREE_REGISTRY, SimTreeRecord
 from fos.i18n import T
@@ -109,12 +109,8 @@ async def get_tree_record(
             status_code=400,
             detail=T("api.errors.provider_not_configured")
         )
-    dialect = normalize_provider_dialect(provider.provider)
-    base_url = provider.base_url or (get_default_ollama_base_url() if dialect == "ollama" else None)
-
-    # Heuristic: openai + local base_url without /v1 => append /v1 for OpenAI-compatible servers like Ollama
-    if dialect == "openai" and base_url and "/v1" not in base_url and ("localhost" in base_url or ":11434" in base_url):
-        base_url = base_url.rstrip("/") + "/v1"
+    dialect, normalized_base_url = normalize_provider_runtime(provider.provider, provider.base_url)
+    base_url = normalized_base_url or (get_default_ollama_base_url() if dialect == "ollama" else None)
 
     if dialect not in {"openai", "gemini", "mock", "ollama"}:
         raise HTTPException(status_code=400, detail=T("api.errors.provider_invalid"))
@@ -165,7 +161,7 @@ async def get_tree_record(
     # Build per-provider client map for LLM distribution across agents
     provider_clients: dict[int, object] = {}
     for p in items:
-        p_dialect = normalize_provider_dialect(p.provider)
+        p_dialect, p_normalized_base_url = normalize_provider_runtime(p.provider, p.base_url)
         if p_dialect not in {"openai", "gemini", "mock", "ollama"}:
             continue
         # Skip API key check for local OpenAI-compatible providers
@@ -177,9 +173,7 @@ async def get_tree_record(
         if not p.model:
             continue
         try:
-            p_base_url = p.base_url or (get_default_ollama_base_url() if p_dialect == "ollama" else None)
-            if p_dialect == "openai" and p_base_url and "/v1" not in p_base_url and ("localhost" in p_base_url or ":11434" in p_base_url):
-                p_base_url = p_base_url.rstrip("/") + "/v1"
+            p_base_url = p_normalized_base_url or (get_default_ollama_base_url() if p_dialect == "ollama" else None)
             p_cfg = LLMConfig(
                 dialect=p_dialect,
                 api_key=p.api_key or "",
@@ -317,4 +311,3 @@ async def resolve_user_from_token(
         return None
 
     return user
-
