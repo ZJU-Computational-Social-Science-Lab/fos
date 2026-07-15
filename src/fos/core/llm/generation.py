@@ -18,12 +18,33 @@ These functions enable large-scale agent generation by:
 
 import json
 import math
+import os
 import random
 import re
 import warnings
 from typing import List, Dict, Any, Optional
 
 from fos.i18n import T
+
+
+DEFAULT_ARCHETYPE_TIMEOUT_SECONDS = 20
+
+
+def _resolve_archetype_timeout(timeout: int | None) -> int:
+    if timeout is not None:
+        return timeout
+
+    raw_timeout = os.environ.get("FOS_AGENT_ARCHETYPE_TIMEOUT_SECONDS")
+    if raw_timeout:
+        try:
+            return max(0, int(raw_timeout))
+        except ValueError:
+            warnings.warn(
+                "Invalid FOS_AGENT_ARCHETYPE_TIMEOUT_SECONDS; using default",
+                UserWarning,
+            )
+
+    return DEFAULT_ARCHETYPE_TIMEOUT_SECONDS
 
 
 def generate_archetypes_from_demographics(demographics: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -97,7 +118,7 @@ def generate_archetype_template(
     archetype: Dict[str, Any],
     llm_client,
     language: str = "en",
-    timeout: int = 120
+    timeout: int | None = None
 ) -> Dict[str, Any]:
     """
     Make ONE LLM call to get description and roles for an archetype.
@@ -109,13 +130,19 @@ def generate_archetype_template(
         archetype: Archetype dict with attributes and label
         llm_client: LLM client for generation
         language: Language code ("en" or "zh")
-        timeout: Timeout in seconds for LLM call (default: 30)
+        timeout: Timeout in seconds for LLM call (default: env or 20)
 
     Returns:
         Dict with "description" (str) and "roles" (List[str])
     """
+    timeout = _resolve_archetype_timeout(timeout)
     attrs_str = ", ".join(f"{k}: {v}" for k, v in archetype["attributes"].items())
     archetype_label = archetype.get("label", attrs_str)
+
+    def fallback_template(description: str | None = None, roles: list[str] | None = None) -> Dict[str, Any]:
+        safe_description = description or f"A person matching this profile: {archetype_label}."
+        safe_roles = roles or ["Citizen", "Worker", "Student", "Professional", "Other"]
+        return {"description": safe_description, "roles": safe_roles}
 
     # Use T() for locale-aware prompts
     prompt = T('prompts.archetype.prompt', locale=language, attrs=attrs_str)
@@ -127,7 +154,7 @@ def generate_archetype_template(
 
     if timeout <= 0:
         warnings.warn(f"LLM timeout for archetype '{attrs_str}'", UserWarning)
-        raise RuntimeError(f"LLM timeout for archetype '{archetype_label}': timeout={timeout}s")
+        return fallback_template()
 
     import queue
     import threading
@@ -153,22 +180,22 @@ def generate_archetype_template(
 
     if llm_thread.is_alive():
         warnings.warn(f"LLM timeout for archetype '{attrs_str}'", UserWarning)
-        raise RuntimeError(f"LLM timeout for archetype '{archetype_label}': call exceeded {timeout}s")
+        return fallback_template()
 
     if not exception_queue.empty():
         e = exception_queue.get()
         warnings.warn(f"LLM error for archetype '{attrs_str}': {e}", UserWarning)
-        raise RuntimeError(f"LLM error for archetype '{archetype_label}': {e}") from e
+        return fallback_template()
 
     if result_queue.empty():
         warnings.warn(f"LLM error for archetype '{attrs_str}': no response", UserWarning)
-        raise RuntimeError(f"LLM empty response for archetype '{archetype_label}'")
+        return fallback_template()
 
     response = result_queue.get()
 
     if not response or not response.strip():
         warnings.warn(f"LLM returned an empty response for archetype '{attrs_str}'", UserWarning)
-        raise RuntimeError(f"LLM empty response for archetype '{archetype_label}'")
+        return fallback_template()
 
     cleaned = response.strip()
     if cleaned.startswith("```"):
@@ -182,7 +209,7 @@ def generate_archetype_template(
         parsed, _ = decoder.raw_decode(cleaned)
     except json.JSONDecodeError as e:
         warnings.warn(f"Invalid JSON for archetype '{attrs_str}': {e}", UserWarning)
-        raise RuntimeError(f"Invalid JSON from LLM for archetype '{archetype_label}': {e}") from e
+        return fallback_template()
 
     if "description" not in parsed or not isinstance(parsed["description"], str):
         warnings.warn(f"Missing .description for archetype '{attrs_str}'", UserWarning)
@@ -192,7 +219,7 @@ def generate_archetype_template(
 
     if "roles" not in parsed or not isinstance(parsed["roles"], list) or len(parsed["roles"]) == 0:
         warnings.warn(f"Missing or invalid .roles for archetype '{attrs_str}'", UserWarning)
-        raise RuntimeError(f"Missing or invalid roles in LLM response for archetype '{archetype_label}'")
+        return fallback_template(description=description)
 
     valid_roles = []
     for role in parsed["roles"]:
@@ -203,10 +230,10 @@ def generate_archetype_template(
 
     if not valid_roles:
         warnings.warn(f"Missing or invalid .roles for archetype '{attrs_str}'", UserWarning)
-        raise RuntimeError(f"Missing or invalid roles in LLM response for archetype '{archetype_label}'")
+        return fallback_template(description=description)
 
     return {
-        "description": description,
+        "description": description or fallback_template()["description"],
         "roles": valid_roles
     }
 
@@ -296,7 +323,7 @@ def generate_agents_with_archetypes(
     traits: List[Dict[str, Any]],
     llm_client,
     language: str = "en",
-    timeout: int = 120,
+    timeout: int | None = None,
 ) -> List[Dict[str, Any]]:
     """
     Generate agents based on demographics and archetype probabilities.
@@ -315,7 +342,7 @@ def generate_agents_with_archetypes(
         traits: List of trait dicts with "name", "mean", "std"
         llm_client: LLM client for archetype template generation
         language: Language code ("en" or "zh")
-        timeout: Timeout in seconds for each LLM call (default: 30)
+        timeout: Timeout in seconds for each LLM call (default: env or 20)
 
     Returns:
         List of agent dicts with id, name, role, profile, properties, etc.
@@ -332,6 +359,8 @@ def generate_agents_with_archetypes(
     for trait in traits:
         if "mean" not in trait or "std" not in trait:
             raise ValueError(T("Trait '{name}' must have 'mean' and 'std'", name=trait.get('name', 'unknown')))
+
+    timeout = _resolve_archetype_timeout(timeout)
 
     # Step 1: Generate archetypes
     archetypes = generate_archetypes_from_demographics(demographics)
@@ -374,8 +403,8 @@ def generate_agents_with_archetypes(
         if count == 0:
             continue
 
-        # ONE LLM call per archetype to get description and roles only
-        # With timeout handling — errors propagate to caller
+        # ONE LLM call per archetype to get description and roles only.
+        # If the LLM is slow or malformed, use a deterministic fallback template.
         template = generate_archetype_template(arch, llm_client, language, timeout)
 
         # Create agents with random role and Gaussian noise on traits
@@ -384,7 +413,7 @@ def generate_agents_with_archetypes(
             name = T("prompts.llm.generate_agents.agent_name", locale=language).format(index=agent_num)
 
             # Randomly assign a role from LLM-generated list
-            role = random.choice(template["roles"])
+            role = random.choice(template["roles"]) if template["roles"] else T("prompts.llm.generate_agents.fallback_role", locale=language)
 
             # Generate trait values with Gaussian noise using USER-SPECIFIED mean/std
             properties = {
