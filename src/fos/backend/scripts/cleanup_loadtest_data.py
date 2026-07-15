@@ -80,13 +80,13 @@ async def _count_all(session) -> dict:
 
 async def _delete_all(session, counts: dict, force: bool) -> None:
     if not force:
-        print(f"\nThis will permanently delete:")
+        print("\nThis will permanently delete:")
         print(f"  {counts['users']} load test user accounts")
         print(f"  {counts['simulations']} simulations")
         print(f"  {counts['tree_nodes']} tree nodes")
         print(f"  {counts['logs']} log entries")
         print(f"  {counts['orphaned_experiments']} orphaned experiments")
-        print(f"\nAll related data (tokens, provider configs, etc.) will also be removed.")
+        print("\nAll related data (tokens, provider configs, etc.) will also be removed.")
         answer = input("\nProceed? [y/N] ").strip().lower()
         if answer != "y":
             print("Cancelled.")

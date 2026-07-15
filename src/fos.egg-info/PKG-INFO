@@ -4,7 +4,7 @@ Version: 0.1.0
 Summary: Future of Society simulation platform
 Author: ZJU Work
 License: MIT
-Requires-Python: >=3.10
+Requires-Python: <3.13,>=3.12
 Provides-Extra: dev
 Requires-Dist: pytest>=7.0; extra == "dev"
 Requires-Dist: pytest-asyncio; extra == "dev"

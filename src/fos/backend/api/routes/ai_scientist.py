@@ -47,7 +47,7 @@ from ...services.ai_scientist.template_matching import (
     TemplateSuggestion,
 )
 from ...services.default_providers import get_default_ollama_base_url
-from ...services.provider_dialect import normalize_provider_dialect, normalize_provider_runtime
+from ...services.provider_dialect import normalize_provider_runtime
 from ...services.runtime_tasks import RUNTIME_TASKS
 
 logger = logging.getLogger(__name__)

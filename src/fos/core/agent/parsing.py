@@ -223,7 +223,7 @@ def strip_reasoning_prose(text: str) -> str:
 
         # Collect speech lines from after the reasoning block
         if speech_start < len(lines):
-            speech_lines = [l for i, l in enumerate(lines) if i >= speech_start and l.strip()]
+            speech_lines = [line for i, line in enumerate(lines) if i >= speech_start and line.strip()]
             return ' '.join(speech_lines).strip()
         else:
             return ''  # All content was reasoning
