@@ -17,6 +17,7 @@ build/
 .env
 .env.local
 .env.*.local
+!.env.example.local
 
 # IDE
 .vscode/
@@ -35,6 +36,7 @@ Thumbs.db
 .coverage
 htmlcov/
 test_results/
+!test_results/BASELINE.md
 
 # Frontend
 frontend/node_modules/
