@@ -11,11 +11,23 @@ COPY frontend ./
 ENV FRONTEND_BASE_URL=${FRONTEND_BASE_URL}
 RUN FRONTEND_BASE_URL=${FRONTEND_BASE_URL} VITE_API_BASE_URL=${VITE_API_BASE_URL} VITE_BILIBILI_VIDEO_BVID=${VITE_BILIBILI_VIDEO_BVID} npm run build
 
-# Use the existing socialsim-new-app image as base to reuse installed packages.
-# Tag it first: docker tag socialsim-new-app fos-build-base
-FROM fos-build-base AS backend
+# Keep the container runtime aligned with the project baseline.
+FROM python:3.12-slim AS backend
 
 WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        curl \
+        gcc \
+        g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml README.md ./
 COPY requirements.txt ./
