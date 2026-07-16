@@ -15,6 +15,7 @@ Contains:
 """
 from datetime import datetime, timezone
 
+import httpx
 from litestar import Router, delete, get, patch, post
 from litestar.exceptions import HTTPException
 from litestar.connection import Request
@@ -31,6 +32,7 @@ from ...dependencies import extract_bearer_token, resolve_current_user
 from ...models.user import ProviderConfig, User
 from ...schemas.common import Message
 from ...schemas.provider import ProviderBase, ProviderCreate, ProviderUpdate
+from ...services.default_providers import get_default_ollama_base_url
 from ...services.provider_dialect import normalize_provider_dialect
 
 
@@ -106,6 +108,37 @@ def _serialize_provider(provider: ProviderConfig) -> ProviderBase:
         last_error=provider.last_error,
         config=provider.config,
     )
+
+
+async def _test_ollama_connection(
+    provider: ProviderConfig,
+    normalized_base_url: str | None,
+) -> None:
+    base_url = (normalized_base_url or get_default_ollama_base_url()).rstrip("/")
+    if base_url.endswith("/v1"):
+        base_url = base_url[:-3].rstrip("/")
+
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        response = await client.get(f"{base_url}/api/tags")
+        response.raise_for_status()
+        payload = response.json()
+
+    model_name = (provider.model or "").strip()
+    if not model_name:
+        return
+
+    available_models = set()
+    for item in payload.get("models", []) or []:
+        if isinstance(item, dict):
+            name = str(item.get("name") or "").strip()
+            model = str(item.get("model") or "").strip()
+            if name:
+                available_models.add(name)
+            if model:
+                available_models.add(model)
+
+    if model_name not in available_models:
+        raise ValueError(f"Ollama model not found: {model_name}")
 
 
 @get("/")
@@ -238,6 +271,13 @@ async def test_provider(request: Request, provider_id: int) -> Message:
 
         provider.last_tested_at = datetime.now(timezone.utc)
         try:
+            if dialect == "ollama":
+                await _test_ollama_connection(provider, normalized_base_url)
+                provider.last_test_status = "success"
+                provider.last_error = None
+                await session.commit()
+                return Message(message=T('api.providers.connectivity_verified'))
+
             client = create_llm_client(cfg)
             client.chat([{"role": "user", "content": "ping"}])
             provider.last_test_status = "success"
