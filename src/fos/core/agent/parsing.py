@@ -1,12 +1,89 @@
-"""Minimal parsing utilities for legacy Agent output.
+"""Parsing utilities for legacy Agent output.
 
-Provides strip_thinking_tokens for cleaning LLM responses.
-See docs/plans/policy-cascade-port-investigation.md
-
-Contains: strip_thinking_tokens
+This keeps the policy-cascade Agent compatible with the newui JSON action
+contract while preserving the existing thinking-token cleanup.
 """
 
+import json
 import re
+
+
+class DuplicateActionError(ValueError):
+    pass
+
+
+def _merge_action_values(existing, new_value, *, strict_duplicate_actions: bool):
+    if type(existing) is not dict:
+        return new_value
+    if type(new_value) is not dict:
+        return existing
+
+    existing_name = str(existing.get("name") or existing.get("action") or "").strip()
+    new_name = str(new_value.get("name") or new_value.get("action") or "").strip()
+    existing_has_message = bool(str(existing.get("message", "") or "").strip())
+    new_has_message = bool(str(new_value.get("message", "") or "").strip())
+
+    if strict_duplicate_actions and existing_name and new_name and existing_name != new_name:
+        raise DuplicateActionError(
+            f"LLM response contains conflicting duplicate action fields: '{existing_name}' and '{new_name}'."
+        )
+
+    if existing_name == "send_message" and new_name == "yield":
+        merged = dict(existing)
+        for key, value in new_value.items():
+            if key not in merged:
+                merged[key] = value
+        return merged
+
+    if existing_name == "yield" and new_name == "send_message":
+        merged = dict(new_value)
+        for key, value in existing.items():
+            if key not in merged:
+                merged[key] = value
+        return merged
+
+    if existing_has_message and not new_has_message:
+        merged = dict(existing)
+        for key, value in new_value.items():
+            if key not in merged:
+                merged[key] = value
+        return merged
+
+    if new_has_message and not existing_has_message:
+        merged = dict(new_value)
+        for key, value in existing.items():
+            if key not in merged:
+                merged[key] = value
+        return merged
+
+    merged = dict(existing)
+    for key, value in new_value.items():
+        merged[key] = value
+    return merged
+
+
+def _merge_object_pairs(pairs, *, strict_duplicate_actions: bool):
+    merged = {}
+    for key, value in pairs:
+        if key == "action" and key in merged:
+            merged[key] = _merge_action_values(
+                merged[key],
+                value,
+                strict_duplicate_actions=strict_duplicate_actions,
+            )
+            continue
+        merged[key] = value
+    return merged
+
+
+def _load_json_object(text: str, *, strict_duplicate_actions: bool = False) -> dict:
+    return json.loads(
+        text,
+        object_pairs_hook=lambda pairs: _merge_object_pairs(
+            pairs,
+            strict_duplicate_actions=strict_duplicate_actions,
+        ),
+    )
 
 
 def strip_thinking_tokens(text: str) -> str:
@@ -159,6 +236,189 @@ def strip_thinking_tokens(text: str) -> str:
         text = prefix + body
 
     return text.strip()
+
+
+def _extract_json_objects(text: str, *, strict_duplicate_actions: bool = False) -> list[dict]:
+    results = []
+    depth = 0
+    start = None
+    in_string = False
+    escape_next = False
+
+    for index, char in enumerate(text):
+        if escape_next:
+            escape_next = False
+            continue
+        if char == "\\" and in_string:
+            escape_next = True
+            continue
+        if char == '"' and not escape_next:
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if char == "{":
+            if depth == 0:
+                start = index
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0 and start is not None:
+                candidate = text[start:index + 1]
+                try:
+                    results.append(
+                        _load_json_object(
+                            candidate,
+                            strict_duplicate_actions=strict_duplicate_actions,
+                        )
+                    )
+                except (json.JSONDecodeError, DuplicateActionError):
+                    pass
+                start = None
+    return results
+
+
+def _coerce_dirty_action_alias(data: dict) -> dict:
+    raw_action = data.get("action")
+    alias_names = {"action", "response", "confirm"}
+
+    def _extract_message(*values) -> str:
+        for value in values:
+            text = str(value or "").strip()
+            if text:
+                return text
+        return ""
+
+    if type(raw_action) is dict:
+        nested_action = raw_action.get("action") if type(raw_action.get("action")) is dict else None
+        action_name = str(
+            raw_action.get("name")
+            or (nested_action or {}).get("name")
+            or raw_action.get("action")
+            or ""
+        ).strip().lower()
+        message = _extract_message(
+            raw_action.get("message"),
+            raw_action.get("content"),
+            (nested_action or {}).get("message"),
+            (nested_action or {}).get("content"),
+            data.get("message"),
+            data.get("content"),
+            data.get("response"),
+        )
+        if action_name in alias_names and message:
+            normalized = dict(data)
+            action_payload = dict(raw_action)
+            action_payload["name"] = "send_message"
+            action_payload["message"] = message
+            action_payload.pop("action", None)
+            normalized["action"] = action_payload
+            normalized["message"] = message
+            return normalized
+        if nested_action is not None:
+            normalized = dict(data)
+            action_payload = dict(raw_action)
+            action_payload.pop("action", None)
+            if action_name:
+                action_payload["name"] = action_name
+            if message and action_name == "send_message":
+                action_payload["message"] = message
+                normalized["message"] = message
+            if action_name == "yield" and message:
+                action_payload["name"] = "send_message"
+                action_payload["message"] = message
+                normalized["message"] = message
+            for extra_key in ("context_update", "metadata"):
+                if extra_key not in normalized and extra_key in raw_action:
+                    normalized[extra_key] = raw_action[extra_key]
+            normalized["action"] = action_payload
+            return normalized
+        if action_name == "yield" and message:
+            normalized = dict(data)
+            action_payload = dict(raw_action)
+            action_payload["name"] = "send_message"
+            action_payload["message"] = message
+            normalized["action"] = action_payload
+            normalized["message"] = message
+            return normalized
+        return data
+
+    action_name = str(raw_action or "").strip().lower()
+    message = _extract_message(data.get("message"), data.get("content"), data.get("response"))
+    if action_name in alias_names and message:
+        normalized = dict(data)
+        normalized["action"] = {"name": "send_message", "message": message}
+        normalized["message"] = message
+        return normalized
+    if action_name == "send_message":
+        normalized = dict(data)
+        action_payload = {"name": "send_message"}
+        if message:
+            action_payload["message"] = message
+            normalized["message"] = message
+        normalized["action"] = action_payload
+        return normalized
+    if action_name == "yield" and message:
+        normalized = dict(data)
+        normalized["action"] = {"name": "send_message", "message": message}
+        normalized["message"] = message
+        return normalized
+    if action_name == "yield":
+        normalized = dict(data)
+        normalized["action"] = {"name": "yield"}
+        return normalized
+    return data
+
+
+def parse_agent_response(response_text: str, *, strict_duplicate_actions: bool = False) -> dict:
+    if not response_text:
+        return {}
+
+    cleaned_text = strip_thinking_tokens(response_text)
+    fence_pattern = r'```(?:json)?\s*\n?(.*?)\n?```'
+    matches = re.findall(fence_pattern, cleaned_text, re.DOTALL)
+    if matches:
+        for match in matches:
+            try:
+                return _load_json_object(
+                    match.strip(),
+                    strict_duplicate_actions=strict_duplicate_actions,
+                )
+            except (json.JSONDecodeError, DuplicateActionError):
+                continue
+
+    json_objects = _extract_json_objects(
+        cleaned_text,
+        strict_duplicate_actions=strict_duplicate_actions,
+    )
+    if json_objects:
+        return json_objects[0]
+
+    return {}
+
+
+def parse_actions(response_text: str, *, strict_duplicate_actions: bool = False) -> list:
+    data = parse_agent_response(
+        response_text,
+        strict_duplicate_actions=strict_duplicate_actions,
+    )
+    if not data:
+        raise ValueError("LLM response is missing the required JSON object with an action.")
+
+    data = _coerce_dirty_action_alias(data)
+    if "action" not in data:
+        raise ValueError("LLM response must include an 'action' field with a valid name.")
+
+    raw_action = data["action"]
+    if isinstance(raw_action, dict):
+        action_name = raw_action.get("name") or raw_action.get("action")
+    else:
+        action_name = raw_action
+
+    if not action_name or not isinstance(action_name, str):
+        raise ValueError("LLM response action is missing a valid 'name' from the Action Space.")
+
+    return [data]
 
 
 def strip_reasoning_prose(text: str) -> str:

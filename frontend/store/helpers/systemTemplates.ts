@@ -27,47 +27,6 @@ const generateNormDisruptionAgents = (defaultModel: LLMConfig): Agent[] => {
   });
 };
 
-const generatePolicyDiffusionAgents = (defaultModel: LLMConfig): Agent[] => {
-  return [
-    ...Array.from({ length: 3 }).map((_, index) => ({
-      id: `policy_top_${index + 1}`,
-      name: `政策官员${index + 1}`,
-      role: '政策制定者',
-      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=policy_top${index}`,
-      profile: '政府部门的高级官员，负责制定宏观政策。相信政策是科学合理的，但往往忽视基层现实。',
-      llmConfig: defaultModel,
-      properties: { 官级: 90, 意识形态强度: 80, 现实理解度: 30 },
-      history: {},
-      memory: [],
-      knowledgeBase: [],
-    })),
-    ...Array.from({ length: 7 }).map((_, index) => ({
-      id: `policy_mid_${index + 1}`,
-      name: `社区主管${index + 1}`,
-      role: '中层执行官',
-      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=policy_mid${index}`,
-      profile: '社区管理者，处于上下级之间的压力。既要向上级交代，也要应对基层的现实困难。',
-      llmConfig: defaultModel,
-      properties: { 官级: 50, 灵活性: 60 + Math.floor(Math.random() * 30), 个人利益驱动: 40 },
-      history: {},
-      memory: [],
-      knowledgeBase: [],
-    })),
-    ...Array.from({ length: 10 }).map((_, index) => ({
-      id: `policy_base_${index + 1}`,
-      name: `居民${index + 1}`,
-      role: '基层接收者',
-      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=policy_base${index}`,
-      profile: '普通居民，直接受政策影响。更关心实际利益而非理想主义。',
-      llmConfig: defaultModel,
-      properties: { 官级: 10, 实用性: 80, 对官僚的不信任度: 50 + Math.floor(Math.random() * 40) },
-      history: {},
-      memory: [],
-      knowledgeBase: [],
-    })),
-  ];
-};
-
 const generatePolarizationAgents = (defaultModel: LLMConfig): Agent[] => {
   return [
     ...Array.from({ length: 8 }).map((_, index) => ({
@@ -159,15 +118,6 @@ export const SYSTEM_TEMPLATES: SimulationTemplate[] = [
     category: 'system',
     sceneType: 'village',
     agents: generateNormDisruptionAgents({ provider: 'OpenAI', model: 'gpt-4o' }),
-    defaultTimeConfig: DEFAULT_TIME_CONFIG,
-  },
-  {
-    id: 'policy_diffusion',
-    name: '政策传播中的意义磨损',
-    description: '街头官僚制视角：模拟三层级组织(政府→社区→居民)中政策的重构与异化。验证底层逻辑如何消解宏观规划。',
-    category: 'system',
-    sceneType: 'policy_cascade_scene',
-    agents: generatePolicyDiffusionAgents({ provider: 'OpenAI', model: 'gpt-4o' }),
     defaultTimeConfig: DEFAULT_TIME_CONFIG,
   },
   {

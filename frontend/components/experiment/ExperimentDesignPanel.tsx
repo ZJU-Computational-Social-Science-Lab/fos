@@ -60,6 +60,39 @@ interface ScenarioDataWithSchema extends ScenarioData {
   };
 }
 
+const DISTORTION_ONLY_PARAM_KEYS = new Set([
+  "distortion_strength",
+  "conflict_sensitivity",
+  "block_probability",
+]);
+
+const resolveSceneConfig = (
+  simulation: {
+    scene_config?: Record<string, unknown>;
+  } | null | undefined
+): Record<string, unknown> => {
+  const sceneConfig = simulation?.scene_config || {};
+  const genericConfig =
+    (sceneConfig.generic_config as Record<string, unknown> | undefined) ||
+    (sceneConfig.genericConfig as Record<string, unknown> | undefined) ||
+    {};
+  return { ...sceneConfig, ...genericConfig };
+};
+
+const getScenarioParameters = (
+  sceneConfig: Record<string, unknown>
+): Record<string, unknown> => {
+  return (sceneConfig.parameters as Record<string, unknown> | undefined) || {};
+};
+
+const isVisiblePolicyParameter = (
+  key: string,
+  displayParams: Record<string, unknown>
+): boolean => {
+  if (!DISTORTION_ONLY_PARAM_KEYS.has(key)) return true;
+  return String(displayParams.cascade_mode ?? "strict_cascade") === "distortion_cascade";
+};
+
 const extractMarkdownImages = (text: string): string[] => {
   const matches = Array.from(text.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g));
   return matches.map((match) => match[1]).filter(Boolean);
@@ -222,6 +255,7 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
   const engineConfig = useSimulationStore((state) => state.engineConfig);
   const currentSimulation = useSimulationStore((state) => state.currentSimulation);
   const addNotification = useSimulationStore((state) => state.addNotification);
+  const currentSceneConfig = resolveSceneConfig(currentSimulation);
   const baseNode = nodes.find((node) => node.id === selectedNodeId);
   const expectedVariantParentId = baseNode
     ? baseNode.parentId == null
@@ -241,8 +275,18 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
         scene_config?: { scene_type?: string; sceneType?: string };
       } | null
     )?.scene_config?.sceneType ||
+    (currentSceneConfig.scene_type as string | undefined) ||
+    (currentSceneConfig.sceneType as string | undefined) ||
     "";
-  const isPolicyCascadeTemplate = currentSceneType === "policy_cascade_scene";
+  const currentScenarioId = String(
+    currentSceneConfig.scenario_id ||
+    currentSceneConfig.scenarioId ||
+    currentSceneConfig.id ||
+    ""
+  );
+  const isPolicyCascadeTemplate =
+    currentSceneType === "policy_cascade_scene" ||
+    currentScenarioId === "policy_erosion";
   const latestNodeSocketsRef = useRef<Record<string, WebSocket | null>>({});
 
   const [experimentName, setExperimentName] = useState("");
@@ -454,10 +498,7 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
   }, [isPolicyCascadeTemplate]);
 
   useEffect(() => {
-    const sceneConfig = (
-      currentSimulation as { scene_config?: { scenario_id?: string; scenarioId?: string } } | null
-    )?.scene_config;
-    const scenarioId = sceneConfig?.scenario_id || sceneConfig?.scenarioId;
+    const scenarioId = currentScenarioId;
     if (!scenarioId || scenarioDataCache[scenarioId]) return;
 
     getScenario(scenarioId)
@@ -467,7 +508,7 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
       .catch((error: unknown) => {
         console.error("Failed to fetch scenario data:", error);
       });
-  }, [currentSimulation, scenarioDataCache]);
+  }, [currentScenarioId, scenarioDataCache]);
 
   if (!baseNode) {
     if (mode === "modal") return null;
@@ -612,24 +653,15 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
   };
 
   const buildPreviewData = () => {
-    const baseParams =
-      (
-        currentSimulation as {
-          scene_config?: { parameters?: Record<string, unknown> };
-        } | null
-      )?.scene_config?.parameters || {};
-    const baseDescription =
-      (
-        currentSimulation as {
-          scene_config?: { description?: string };
-        } | null
-      )?.scene_config?.description || "";
-    const baseRoundVisibility =
-      (
-        currentSimulation as {
-          scene_config?: { round_visibility?: string };
-        } | null
-      )?.scene_config?.round_visibility || "simultaneous";
+    const baseParams = getScenarioParameters(currentSceneConfig);
+    const baseDescription = String(
+      currentSceneConfig.description || currentSceneConfig.initial_event || ""
+    );
+    const baseRoundVisibility = String(
+      currentSceneConfig.round_visibility ||
+      currentSceneConfig.roundVisibility ||
+      "simultaneous"
+    );
     const agentNames = agents.map((agent) => agent.name);
 
     return variants.map((variant) => {
@@ -820,12 +852,11 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
             intervention.scenarioDescription !== undefined &&
             intervention.scenarioDescription !== ""
           ) {
-            const baseDescription =
-              (
-                currentSimulation as {
-                  scene_config?: { description?: string };
-                } | null
-              )?.scene_config?.description || "";
+            const baseDescription = String(
+              currentSceneConfig.description ||
+              currentSceneConfig.initial_event ||
+              ""
+            );
             if (intervention.scenarioDescription !== baseDescription) {
               ops.push({
                 op: "config_description_patch",
@@ -835,12 +866,11 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
           }
 
           if (intervention.roundVisibility !== undefined) {
-            const baseRoundVisibility =
-              (
-                currentSimulation as {
-                  scene_config?: { round_visibility?: string };
-                } | null
-              )?.scene_config?.round_visibility || "simultaneous";
+            const baseRoundVisibility = String(
+              currentSceneConfig.round_visibility ||
+              currentSceneConfig.roundVisibility ||
+              "simultaneous"
+            );
             if (intervention.roundVisibility !== baseRoundVisibility) {
               ops.push({
                 op: "config_settings_patch",
@@ -1315,47 +1345,28 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
                             </div>
 
                             {(() => {
-                              const scenarioId =
-                                (
-                                  currentSimulation as {
-                                    scene_config?: {
-                                      scenario_id?: string;
-                                      scenarioId?: string;
-                                      parameters?: Record<string, unknown>;
-                                      description?: string;
-                                      round_visibility?: string;
-                                    };
-                                  } | null
-                                )?.scene_config?.scenario_id ||
-                                (
-                                  currentSimulation as {
-                                    scene_config?: {
-                                      scenario_id?: string;
-                                      scenarioId?: string;
-                                      parameters?: Record<string, unknown>;
-                                      description?: string;
-                                      round_visibility?: string;
-                                    };
-                                  } | null
-                                )?.scene_config?.scenarioId;
+                              const scenarioId = currentScenarioId;
                               const scenarioData = scenarioId
                                 ? scenarioDataCache[scenarioId]
                                 : null;
-                              const baseParams =
-                                (
-                                  currentSimulation as {
-                                    scene_config?: {
-                                      parameters?: Record<string, unknown>;
-                                    };
-                                  } | null
-                                )?.scene_config?.parameters || {};
+                              const baseParams = getScenarioParameters(currentSceneConfig);
+                              const displayParams = {
+                                ...baseParams,
+                                ...(intervention.parsedParams || {}),
+                              };
 
                               const schemaProperties =
                                 scenarioData?.parameter_schema?.properties || {};
                               if (Object.keys(schemaProperties).length > 0) {
+                                const visibleSchemaProperties = Object.entries(
+                                  schemaProperties
+                                ).filter(([key]) =>
+                                  !isPolicyCascadeTemplate ||
+                                  isVisiblePolicyParameter(key, displayParams)
+                                );
                                 return (
                                   <div className="space-y-3">
-                                    {Object.entries(schemaProperties).map(
+                                    {visibleSchemaProperties.map(
                                       ([key, definition]) => {
                                         const fieldLabel = humanizeBackendLabel(key);
                                         return (
@@ -1473,9 +1484,14 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
                               }
 
                               if (scenarioData?.parameters && scenarioData.parameters.length > 0) {
+                                const visibleParameters = scenarioData.parameters.filter(
+                                  (param) =>
+                                    !isPolicyCascadeTemplate ||
+                                    isVisiblePolicyParameter(param.key, displayParams)
+                                );
                                 return (
                                   <div className="space-y-3">
-                                    {scenarioData.parameters.map((param) => {
+                                    {visibleParameters.map((param) => {
                                       const fieldLabel = param.label || humanizeBackendLabel(param.key);
                                       return (
                                         <div key={param.key} className="space-y-1">
@@ -1562,17 +1578,7 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
                             })()}
 
                             {(() => {
-                              const scenarioId =
-                                (
-                                  currentSimulation as {
-                                    scene_config?: { scenario_id?: string; scenarioId?: string };
-                                  } | null
-                                )?.scene_config?.scenario_id ||
-                                (
-                                  currentSimulation as {
-                                    scene_config?: { scenario_id?: string; scenarioId?: string };
-                                  } | null
-                                )?.scene_config?.scenarioId;
+                              const scenarioId = currentScenarioId;
                               const scenarioData = scenarioId
                                 ? scenarioDataCache[scenarioId]
                                 : null;

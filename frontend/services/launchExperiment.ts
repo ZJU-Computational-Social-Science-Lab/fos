@@ -86,7 +86,13 @@ function buildTemplate(t: TFunction): { name: string; template: SimulationTempla
     parameters,
     round_visibility: state.roundVisibility,
   } as unknown as GenericTemplateConfig;
-  const isPolicyCascade = scenario?.id === "policy_diffusion" || scenario?.id === "policyDiffusion";
+  const isPolicyCascade =
+    scenario?.id === "policy_erosion" ||
+    scenario?.id === "policy_diffusion" ||
+    scenario?.id === "policyDiffusion" ||
+    String(scenario?.name || "").toLowerCase().includes("policy meaning erosion") ||
+    String(scenario?.name || "").includes("政策意义侵蚀") ||
+    String(scenario?.name || "").includes("政策传播中的意义磨损");
   const experimentCategories = new Set([
     "game_theory", "discussion", "grid", "sociology", "social_deduction",
     "spatial", "generative_city", "custom",

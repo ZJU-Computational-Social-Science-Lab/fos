@@ -1,6 +1,14 @@
 import random as _random
 from typing import List, Tuple
 
+from fos.core.actions.base_actions import SendMessageAction, SpeakAction, TalkToAction, YieldAction
+from fos.core.actions.policy_feedback_actions import (
+    AnnouncePolicyAdjustmentAction,
+    ConsultPeerAction,
+    EscalateComplaintAction,
+    NotifySubordinateAction,
+    ReportUpwardAction,
+)
 from fos.core.experiment.information_model import InformationModel
 from fos.core.experiment.scenes.council_experiment import CouncilExperimentScene
 from fos.core.experiment.scenes.gaworld.scene import GAWorldScene
@@ -9,7 +17,17 @@ from fos.core.contagion.scene import ContagionScene
 from fos.core.scenes.policy_cascade_experiment import PolicyCascadeExperimentScene
 from fos.core.scenes.policy_cascade import PolicyCascadeScene
 
-ACTION_SPACE_MAP: dict = {}
+ACTION_SPACE_MAP: dict = {
+    "speak": SpeakAction(),
+    "send_message": SendMessageAction(),
+    "talk_to": TalkToAction(),
+    "yield": YieldAction(),
+    "report_upward": ReportUpwardAction(),
+    "escalate_complaint": EscalateComplaintAction(),
+    "consult_peer": ConsultPeerAction(),
+    "notify_subordinate": NotifySubordinateAction(),
+    "announce_policy_adjustment": AnnouncePolicyAdjustmentAction(),
+}
 
 
 SCENE_MAP = {
@@ -59,6 +77,16 @@ SCENE_ACTIONS: dict[str, dict[str, list[str]]] = {
     "gaworld_scene": {
         "basic": ["work", "social_interact", "consume_media", "move", "rest"],
         "allowed": [],
+    },
+    "policy_cascade_scene": {
+        "basic": ["send_message", "yield"],
+        "allowed": [
+            "report_upward",
+            "escalate_complaint",
+            "consult_peer",
+            "notify_subordinate",
+            "announce_policy_adjustment",
+        ],
     },
 }
 

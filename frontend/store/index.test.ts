@@ -576,7 +576,6 @@ describe('Store - Helper Functions', () => {
       const templateIds = templates.map((t: any) => t.id);
 
       expect(templateIds).toContain('norm_disruption');
-      expect(templateIds).toContain('policy_diffusion');
       expect(templateIds).toContain('polarization');
       expect(templateIds).toContain('resource_scarcity');
       expect(templateIds).toContain('village');
@@ -633,4 +632,3 @@ describe('Store - Helper Functions', () => {
     });
   });
 });
-

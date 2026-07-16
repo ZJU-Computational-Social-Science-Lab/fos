@@ -34,6 +34,7 @@ from ...services.ai_scientist import (
     collect_analysis_quality_issues,
     heuristic_analysis,
     localize_analysis_output,
+    merge_analysis,
     normalize_llm_analysis_output,
     parse_llm_json,
     repair_llm_json,
@@ -457,18 +458,30 @@ async def analyze_research_text(request: Request, data: AnalyzeRequest) -> Analy
                 llm = create_llm_client(cfg)
                 model_used = provider.model
 
-                pass_a = _parse_model_payload(
-                    llm.chat(
-                        _build_pass_a_prompt(language, template_suggestions, scaffold),
-                        json_mode=True,
+                pass_a: dict[str, Any] = {}
+                try:
+                    pass_a = _parse_model_payload(
+                        llm.chat(
+                            _build_pass_a_prompt(language, template_suggestions, scaffold),
+                            json_mode=True,
+                        )
                     )
-                )
-                llm_result = _parse_model_payload(
-                    llm.chat(
-                        _build_pass_b_prompt(language, template_suggestions, scaffold, pass_a),
-                        json_mode=True,
+                except Exception as exc:  # noqa: BLE001
+                    warnings.append(f"Provider first pass needed local recovery: {exc}")
+
+                try:
+                    llm_result = _parse_model_payload(
+                        llm.chat(
+                            _build_pass_b_prompt(language, template_suggestions, scaffold, pass_a or scaffold["helper_hints"]),
+                            json_mode=True,
+                        )
                     )
-                )
+                except Exception as exc:  # noqa: BLE001
+                    if not pass_a:
+                        raise
+                    warnings.append(f"Provider final pass needed local recovery: {exc}")
+                    llm_result = pass_a
+
                 normalized = normalize_llm_analysis_output(
                     llm_result,
                     semantic_schema=semantic_schema,
@@ -478,18 +491,22 @@ async def analyze_research_text(request: Request, data: AnalyzeRequest) -> Analy
                 issues = collect_analysis_quality_issues(normalized, template_suggestions=template_suggestions)
                 if issues:
                     warnings.append(f"Triggered repair pass for: {', '.join(issues)}")
-                    repaired = _parse_model_payload(
-                        llm.chat(
-                            _build_repair_prompt(language, scaffold, normalized, issues),
-                            json_mode=True,
+                    try:
+                        repaired = _parse_model_payload(
+                            llm.chat(
+                                _build_repair_prompt(language, scaffold, normalized, issues),
+                                json_mode=True,
+                            )
                         )
-                    )
-                    normalized = normalize_llm_analysis_output(
-                        repaired,
-                        semantic_schema=semantic_schema,
-                        source_sections=scaffold["source_sections"],
-                        template_suggestions=template_suggestions,
-                    )
+                        normalized = normalize_llm_analysis_output(
+                            repaired,
+                            semantic_schema=semantic_schema,
+                            source_sections=scaffold["source_sections"],
+                            template_suggestions=template_suggestions,
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        warnings.append(f"Provider repair pass failed; kept recoverable provider draft: {exc}")
+                        normalized["review_required"] = True
                     issues = collect_analysis_quality_issues(normalized, template_suggestions=template_suggestions)
                     if issues:
                         warnings.append(f"Remaining review issues after repair: {', '.join(issues)}")
@@ -502,15 +519,19 @@ async def analyze_research_text(request: Request, data: AnalyzeRequest) -> Analy
                                 ]
                             )
                         )[:8]
+                normalized = merge_analysis(normalized, deterministic)
                 used_llm = True
             except HTTPException:
                 raise
             except Exception as exc:  # noqa: BLE001
                 logger.warning("AI scientist LLM extraction failed: %s", exc)
-                raise HTTPException(
-                    status_code=502,
-                    detail=T("api.errors.ai_scientist_llm_recognition_failed", error=str(exc)),
-                ) from exc
+                warnings.append(
+                    T("api.errors.ai_scientist_llm_recognition_failed", error=str(exc))
+                )
+                warnings.append("Provider recognition failed; fell back to deterministic recognition.")
+                normalized = deterministic
+                used_llm = False
+                model_used = provider.model
     else:
         warnings.append("Ran deterministic recognition mode without provider assistance.")
 

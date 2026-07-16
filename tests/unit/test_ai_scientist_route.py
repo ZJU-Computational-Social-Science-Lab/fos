@@ -18,7 +18,7 @@ class _FakeSessionContext:
 
 
 class _FakeClient:
-    def __init__(self, payloads: list[dict[str, object]]) -> None:
+    def __init__(self, payloads: list[dict[str, object] | Exception]) -> None:
         self._payloads = payloads
         self._index = 0
 
@@ -26,7 +26,14 @@ class _FakeClient:
         assert json_mode is True
         payload = self._payloads[self._index]
         self._index += 1
+        if isinstance(payload, Exception):
+            raise payload
         return json.dumps(payload)
+
+
+class _FailingClient:
+    def chat(self, messages: list[dict[str, str]], json_mode: bool = True) -> str:
+        raise RuntimeError("model returned invalid JSON")
 
 
 @pytest.mark.asyncio
@@ -79,6 +86,135 @@ async def test_ai_scientist_route_provider_mode_requires_provider(monkeypatch: p
 
     assert exc.value.status_code == 400
     assert "Configure an LLM provider" in str(exc.value.detail)
+
+
+@pytest.mark.asyncio
+async def test_ai_scientist_route_provider_failure_falls_back_to_deterministic(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _fake_user(session, token):
+        return SimpleNamespace(id=1)
+
+    async def _fake_provider(session, user_id, provider_id):
+        return SimpleNamespace(
+            provider="openai",
+            api_key="test-key",
+            model="small-local-model",
+            base_url="https://example.invalid",
+            config={"active": True},
+        )
+
+    monkeypatch.setattr(route_module, "extract_bearer_token", lambda request: "token")
+    monkeypatch.setattr(route_module, "resolve_current_user", _fake_user)
+    monkeypatch.setattr(route_module, "_select_provider_optional", _fake_provider)
+    monkeypatch.setattr(route_module, "get_session", lambda: _FakeSessionContext())
+    monkeypatch.setattr(route_module, "create_llm_client", lambda cfg: _FailingClient())
+
+    request = SimpleNamespace(headers={})
+    data = route_module.AnalyzeRequest(
+        text="Participants decide whether to contribute or keep resources in a shared pool.",
+        recognition_mode="provider",
+    )
+
+    result = await route_module.analyze_research_text.fn(request, data)
+
+    assert result.used_llm is False
+    assert result.model_used == "small-local-model"
+    assert any("fell back to deterministic" in item for item in result.warnings)
+    assert result.recommended_scenario_id in {"public_goods", "custom"}
+
+
+@pytest.mark.asyncio
+async def test_ai_scientist_route_keeps_provider_mode_when_small_model_has_partial_output(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _fake_user(session, token):
+        return SimpleNamespace(id=1)
+
+    async def _fake_provider(session, user_id, provider_id):
+        return SimpleNamespace(
+            provider="openai",
+            api_key="test-key",
+            model="small-local-model",
+            base_url="https://example.invalid",
+            config={"active": True},
+        )
+
+    monkeypatch.setattr(route_module, "extract_bearer_token", lambda request: "token")
+    monkeypatch.setattr(route_module, "resolve_current_user", _fake_user)
+    monkeypatch.setattr(route_module, "_select_provider_optional", _fake_provider)
+    monkeypatch.setattr(route_module, "get_session", lambda: _FakeSessionContext())
+    monkeypatch.setattr(
+        route_module,
+        "create_llm_client",
+        lambda cfg: _FakeClient(
+            [
+                {
+                    "scenario_summary": "A repeated contribution study with a shared pool.",
+                    "participants": [{"label": "participants", "description": "Group members", "count": 4}],
+                    "actions": [{"name": "contribute", "description": "Put tokens into the shared pool."}],
+                    "key_variables": ["contribution level"],
+                    "candidate_template_judgment": [{"id": "public_goods", "fit": 0.72, "reason": "shared pool"}],
+                },
+                RuntimeError("trailing non-json text from small model"),
+                RuntimeError("repair also returned non-json text"),
+            ]
+        ),
+    )
+
+    request = SimpleNamespace(headers={})
+    data = route_module.AnalyzeRequest(
+        text="Participants receive tokens and decide whether to contribute to a shared pool or keep them.",
+        recognition_mode="provider",
+    )
+
+    result = await route_module.analyze_research_text.fn(request, data)
+
+    assert result.used_llm is True
+    assert result.model_used == "small-local-model"
+    assert result.actions
+    assert any("Provider final pass needed local recovery" in item for item in result.warnings)
+
+
+@pytest.mark.asyncio
+async def test_ai_scientist_route_fills_small_model_missing_actions_and_agents(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _fake_user(session, token):
+        return SimpleNamespace(id=1)
+
+    async def _fake_provider(session, user_id, provider_id):
+        return SimpleNamespace(
+            provider="openai",
+            api_key="test-key",
+            model="small-local-model",
+            base_url="https://example.invalid",
+            config={"active": True},
+        )
+
+    monkeypatch.setattr(route_module, "extract_bearer_token", lambda request: "token")
+    monkeypatch.setattr(route_module, "resolve_current_user", _fake_user)
+    monkeypatch.setattr(route_module, "_select_provider_optional", _fake_provider)
+    monkeypatch.setattr(route_module, "get_session", lambda: _FakeSessionContext())
+    monkeypatch.setattr(
+        route_module,
+        "create_llm_client",
+        lambda cfg: _FakeClient(
+            [
+                {"scenario_summary": "A public-goods style shared pool study."},
+                {"scenario_description": "A sparse provider draft without role or action fields."},
+                RuntimeError("repair returned non-json text"),
+            ]
+        ),
+    )
+
+    request = SimpleNamespace(headers={})
+    data = route_module.AnalyzeRequest(
+        text="Participants decide whether to contribute to a shared pool or keep tokens in a private account.",
+        recognition_mode="provider",
+    )
+
+    result = await route_module.analyze_research_text.fn(request, data)
+
+    assert result.used_llm is True
+    assert result.model_used == "small-local-model"
+    assert result.actions
+    assert result.agents
+    assert result.actions[0].name in {"Contribute", "Keep"}
 
 
 @pytest.mark.asyncio

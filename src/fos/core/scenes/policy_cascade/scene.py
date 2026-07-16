@@ -36,9 +36,9 @@ class PolicyCascadeScene(
 
     @classmethod
     def deserialize(cls, data: dict) -> "PolicyCascadeScene":
-        scene = cls.__new__(cls)
-        scene.name = data.get("name", "")
-        scene.initial_event = data.get("initial_event", "")
+        config = data.get("config", {})
+        init_kwargs = cls.deserialize_config(config)
+        scene = cls(data.get("name", ""), data.get("initial_event", ""), **init_kwargs)
         scene.state = dict(data.get("state", {}))
         scene.tier_order = list(scene.state.get("tier_order", []))
         scene._tier_map = {}

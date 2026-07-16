@@ -197,6 +197,11 @@ class PolicyCascadeBaseMixin:
         else:
             self.state["current_tier_idx"] = 0
         self._normalize_active_tier()
+        if (
+            str(self.state.get("task_mode") or "") == "cascade"
+            and int(self.state.get("processed_policy_version") or -1) < int(self.state.get("policy_version") or 0)
+        ):
+            self._set_force_complete_current_cascade(True)
 
     def on_event(self, sim, event_type: str, data):
         if event_type in {"environment", "broadcast"}:

@@ -166,7 +166,7 @@ class PolicyCascadeMessageMixin:
 
     def _normalize_cascade_message(self, agent: Agent, tier: str, policy: str, message: str) -> str:
         normalized = self._sanitize_message(message)
-        if not normalized:
+        if not normalized or self._is_placeholder_cascade_draft(normalized):
             if self._cascade_mode() == "distortion_cascade":
                 normalized = self._distort_message(agent, tier, policy)
             else:
@@ -193,7 +193,7 @@ class PolicyCascadeMessageMixin:
 
     def _agent_led_distortion(self, agent: Agent, tier: str, policy: str, draft: str) -> str:
         normalized = self._sanitize_message(draft)
-        if not normalized:
+        if not normalized or self._is_placeholder_cascade_draft(normalized):
             return self._distort_message(agent, tier, policy)
 
         policy_norm = " ".join(str(policy or "").split())
@@ -219,6 +219,31 @@ class PolicyCascadeMessageMixin:
             normalized = f"{normalized}\n后续其余部分视资源与反馈情况分批推进。".strip()
 
         return self._sanitize_message(normalized)
+
+    def _is_placeholder_cascade_draft(self, message: str) -> bool:
+        """Reject prompt placeholders as policy transmission content."""
+        normalized = self._sanitize_message(message)
+        if not normalized:
+            return True
+        compact = re.sub(r"\s+", "", normalized)
+        placeholder_tokens = {
+            "<policytext>",
+            "<政策文本>",
+            "最新政策原文",
+            "态度：...",
+            "态度:...",
+            "补充：...",
+            "补充:...",
+            "态度：…",
+            "补充：…",
+        }
+        if any(token in compact for token in placeholder_tokens):
+            return True
+
+        stripped = re.sub(r"[。；;，,\s.…。]*", "", compact)
+        stripped = stripped.replace("态度：", "").replace("态度:", "")
+        stripped = stripped.replace("补充：", "").replace("补充:", "")
+        return stripped == ""
 
     def _clean_policy_text(self, text: str) -> str:
         cleaned = self._sanitize_message(text)

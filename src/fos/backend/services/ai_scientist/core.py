@@ -2,22 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
 import re
 from typing import Any
 
 from fos.i18n import T
 
-
-@dataclass
-class TemplateSuggestion:
-    id: str
-    name: str
-    category: str
-    description: str
-    score: float
-    reason: str
+from .types import TemplateSuggestion
 
 
 SCENARIO_KEYWORDS: dict[str, list[str]] = {
@@ -96,7 +87,12 @@ SCENARIO_KEYWORDS: dict[str, list[str]] = {
         "transmit the policy",
         "政策",
         "层级",
+        "逐级",
+        "传达",
         "传递政策",
+        "不可改写",
+        "原样保留",
+        "不得跳级",
         "扭曲",
         "阻断",
     ],
@@ -173,6 +169,23 @@ SCENARIO_KEYWORDS: dict[str, list[str]] = {
         "传播",
     ],
 }
+
+
+def _looks_like_policy_erosion_text(text: str) -> bool:
+    """Detect policy-transmission documents without relying on model output."""
+    cleaned = clean_text(text)
+    lowered = cleaned.lower()
+    signal_groups = [
+        ("policy", "directive", "notice", "mandate", "政策", "通知", "规定", "指令", "方案"),
+        ("hierarchy", "tier", "level", "manager", "层级", "逐级", "中层", "负责人", "岗位", "单位"),
+        ("transmit", "cascade", "communicate", "implementation", "传达", "落实", "执行", "说明", "对接"),
+        ("reinterpret", "distort", "rewrite", "preserve", "block", "不可改写", "原样保留", "误解", "非正式传播", "不得跳级"),
+    ]
+    hits = [
+        any(term in lowered if re.fullmatch(r"[a-z0-9_\- ]+", term) else term in cleaned for term in group)
+        for group in signal_groups
+    ]
+    return hits[0] and hits[1] and hits[2] and sum(1 for hit in hits if hit) >= 3
 
 
 DEFAULT_SCENARIO_ACTIONS: dict[str, list[dict[str, str]]] = {
@@ -783,58 +796,6 @@ def _localize_text(en_text: str, zh_text: str, language: str | None) -> str:
     return zh_text if _is_chinese_language(language) else en_text
 
 
-def extract_json_block(raw_output: str) -> str:
-    text = (raw_output or "").strip()
-    if not text:
-        raise ValueError(T("error.ai_scientist.model_empty_output"))
-
-    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-    if fenced:
-        return fenced.group(1).strip()
-
-    start = text.find("{")
-    end = text.rfind("}")
-    if start == -1 or end == -1 or end <= start:
-        raise ValueError(T("error.ai_scientist.model_output_no_json"))
-    return text[start:end + 1]
-
-
-def parse_llm_json(raw_output: str) -> dict[str, Any]:
-    parsed = json.loads(extract_json_block(raw_output))
-    if not isinstance(parsed, dict):
-        raise ValueError(T("error.ai_scientist.model_json_not_object"))
-    return parsed
-
-
-def repair_llm_json(raw_output: str) -> dict[str, Any]:
-    text = (raw_output or "").strip()
-    if not text:
-        raise ValueError(T("error.ai_scientist.model_empty_output"))
-
-    candidates: list[str] = []
-    if text:
-        candidates.append(text)
-
-    normalized = text.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
-    if normalized != text:
-        candidates.append(normalized)
-
-    start = normalized.find("{")
-    end = normalized.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        candidates.append(normalized[start:end + 1])
-
-    for candidate in candidates:
-        try:
-            parsed = json.loads(candidate)
-            if isinstance(parsed, dict):
-                return parsed
-        except Exception:
-            continue
-
-    raise ValueError(T("error.ai_scientist.model_json_repair_failed"))
-
-
 def _normalize_match_text(text: str) -> str:
     return re.sub(r"\s+", " ", clean_text(text)).strip().lower()
 
@@ -1109,6 +1070,9 @@ def score_template(
         score *= 0.4
     if scenario_id == "public_goods" and any(term in text.lower() for term in ("shared target", "collective loss", "delegate the decision")):
         score *= 0.78
+    if scenario_id == "policy_erosion" and _looks_like_policy_erosion_text(text):
+        score = max(score, 0.58)
+        reasons.append("policy cascade markers")
 
     reason = ", ".join(_dedupe_strings(reasons, limit=5)) if reasons else "light lexical overlap"
     return min(score, 0.99), reason
@@ -2056,6 +2020,12 @@ def _default_agents_for_scenario(scenario_id: str | None, language: str | None =
     if scenario_id == "contagion":
         return [
             {"label": "participants", "description": _localize_text("Participants embedded in a network who can expose or adopt behaviors.", "嵌入网络、会相互暴露并采纳行为的参与者。", language), "count": 10},
+        ]
+    if scenario_id == "policy_erosion":
+        return [
+            {"label": "top tier officials", "description": _localize_text("Senior actors who issue or authorize the original policy directive.", "发布或授权原始政策指令的高层角色。", language), "count": 1},
+            {"label": "middle managers", "description": _localize_text("Intermediate actors who interpret and transmit the policy to lower levels.", "负责解释并向下传达政策的中间层角色。", language), "count": 3},
+            {"label": "frontline staff", "description": _localize_text("Frontline actors who receive, react to, and implement the transmitted policy.", "接收、反馈并落实传达后政策的一线角色。", language), "count": 5},
         ]
     return []
 
@@ -3121,6 +3091,14 @@ def _extract_research_question(text: str) -> str:
 
 
 def _extract_policy_text(text: str) -> str | None:
+    policy_goal_match = re.search(
+        r"(政策目标\s*[:：].+?)(?=\n\s*(?:\d+[\.\u3001]\s*)?(?:调整范围|调整标准|不可改写条款|配套要求|报告要求|资源支持|责任分工)\s*[:：]|\Z)",
+        text,
+        re.S,
+    )
+    if policy_goal_match:
+        return clean_text(policy_goal_match.group(1))[:400]
+
     sentences = _split_sentence_candidates(text)
     for sentence in sentences:
         if re.search(r"\b(policy|directive|rule|mandate)\b", sentence, re.IGNORECASE) or re.search(r"(政策|指令|规则|规定)", sentence):
@@ -3719,6 +3697,8 @@ def heuristic_analysis(
     recommended_params = _infer_recommended_params(param_source_text, recommended_scenario_id, actions)
     for key, value in _infer_schema_driven_params(semantic_schema).items():
         recommended_params.setdefault(key, value)
+    if recommended_scenario_id == "policy_erosion":
+        recommended_params.pop("participant_roles", None)
 
     assumptions: list[str] = []
     if recommended_scenario_id != "custom" and review_required:
@@ -4152,6 +4132,10 @@ def _looks_like_noise_label(text: str) -> bool:
         return True
     if ";" in value or "|" in value:
         return True
+    if re.match(r"^(政策目标|调整范围|调整标准|不可改写条款|配套要求|报告要求|资源支持|责任分工)", value):
+        return True
+    if any(mark in value for mark in (".", "。", "!", "！", "?", "？")) and len(value) > 32:
+        return True
     if any(mark in value for mark in (".", "。", "!", "！", "?", "？")) and len(value.split()) > 4:
         return True
     if ":" in value and len(value.split()) > 5:
@@ -4202,6 +4186,7 @@ def merge_analysis(primary: dict[str, Any], fallback: dict[str, Any]) -> dict[st
     assumptions = primary.get("assumptions") or fallback.get("assumptions") or []
     missing_information = primary.get("missing_information") or fallback.get("missing_information") or []
     evidence = primary.get("evidence") or fallback.get("evidence") or []
+    evidence_by_field = primary.get("evidence_by_field") or fallback.get("evidence_by_field") or {}
     recommended_scenario_id = str(primary.get("recommended_scenario_id") or fallback.get("recommended_scenario_id") or "custom").strip() or "custom"
     recommended_scenario_reason = str(primary.get("recommended_scenario_reason") or fallback.get("recommended_scenario_reason") or "").strip()
     recommendation_confidence = float(primary.get("recommendation_confidence") or fallback.get("recommendation_confidence") or 0.0)
@@ -4223,6 +4208,8 @@ def merge_analysis(primary: dict[str, Any], fallback: dict[str, Any]) -> dict[st
         missing_information = fallback.get("missing_information", [])
     if not isinstance(evidence, list):
         evidence = fallback.get("evidence", [])
+    if not isinstance(evidence_by_field, dict):
+        evidence_by_field = fallback.get("evidence_by_field", {})
     if not isinstance(recommended_params, dict):
         recommended_params = fallback.get("recommended_params", {})
     if not isinstance(source_sections, list):
@@ -4318,6 +4305,7 @@ def merge_analysis(primary: dict[str, Any], fallback: dict[str, Any]) -> dict[st
         "assumptions": normalized_assumptions,
         "missing_information": normalized_missing,
         "evidence": normalized_evidence,
+        "evidence_by_field": evidence_by_field,
         "recommended_scenario_id": recommended_scenario_id,
         "recommended_scenario_reason": recommended_scenario_reason,
         "recommendation_confidence": recommendation_confidence,

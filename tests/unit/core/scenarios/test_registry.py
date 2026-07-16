@@ -4,7 +4,13 @@ Unit tests for scenario registry.
 Tests scenario metadata and parameter definitions.
 """
 
-from fos.core.scenarios.registry import BATTLE_OF_THE_SEXES, STAG_HUNT, PUBLIC_GOODS, CUSTOM
+from fos.core.scenarios.registry import (
+    ALL_SCENARIOS,
+    BATTLE_OF_THE_SEXES,
+    CUSTOM,
+    PUBLIC_GOODS,
+    STAG_HUNT,
+)
 
 
 class TestBattleOfTheSexesParameters:
@@ -114,3 +120,16 @@ class TestCustomScenario:
 
     def test_custom_uses_neighbor_grouping(self):
         assert CUSTOM["grouping_mode"] == "neighbor"
+
+
+class TestScenarioList:
+    """Tests for the user-visible scenario list."""
+
+    def test_policy_meaning_erosion_appears_once(self):
+        policy_like = [
+            scenario["id"]
+            for scenario in ALL_SCENARIOS
+            if scenario["id"] in {"policy_erosion", "policy_cascade_experiment"}
+        ]
+
+        assert policy_like == ["policy_erosion"]

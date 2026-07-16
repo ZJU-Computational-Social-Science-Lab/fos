@@ -64,6 +64,45 @@ def test_ai_scientist_template_matching_prefers_relevant_scenario() -> None:
     assert result[0].id == "public_goods"
 
 
+def test_ai_scientist_policy_notice_prefers_policy_erosion_without_noisy_agents() -> None:
+    scenarios = [
+        {
+            "id": "policy_erosion",
+            "name": "Policy Meaning Erosion",
+            "category": "sociology",
+            "description": "A hierarchy transmits a policy directive across levels.",
+            "actions": [{"name": "transmit_faithfully"}, {"name": "reinterpret_downward"}],
+        },
+        {
+            "id": "public_goods",
+            "name": "Public Goods Game",
+            "category": "game_theory",
+            "description": "People decide how much to contribute to a shared pool.",
+            "actions": [{"name": "contribute"}, {"name": "keep"}],
+        },
+    ]
+    text = (
+        "关于实施阶段性薪酬调整与稳岗安排的通知\n"
+        "政策目标：为应对当前经营压力，保障组织整体稳定运行，经研究决定，自下月起实施阶段性薪酬调整方案，"
+        "在未来 6 个月内 完成成本优化与岗位稳定双重目标。\n"
+        "调整标准：实施 10% 的阶段性下调。\n"
+        "不可改写条款：必须原样保留“6 个月内”“10% 的阶段性下调”“保障组织整体稳定运行”。\n"
+        "配套要求：各层级在传达过程中，应同步说明稳岗安排、心理支持与申诉反馈渠道，避免引发集中性误解和非正式传播。\n"
+        "责任分工：各层级需明确一名负责人对接，确保逐级传达、解释与落实，不得跳级通知。"
+    )
+
+    suggestions = suggest_templates(text, scenarios, top_k=2, language="zh")
+    result = heuristic_analysis(text, suggestions, language="zh")
+
+    assert suggestions[0].id == "policy_erosion"
+    assert result["recommended_scenario_id"] == "policy_erosion"
+    assert result["recommended_params"]["cascade_mode"] == "distortion_cascade"
+    assert "participant_roles" not in result["recommended_params"]
+    agent_labels = {item["label"] for item in result["agents"]}
+    assert "top tier officials" in agent_labels
+    assert all("政策目标" not in label for label in agent_labels)
+
+
 def test_ai_scientist_merge_uses_fallback_when_primary_missing() -> None:
     primary = {
         "scenario_description": "",

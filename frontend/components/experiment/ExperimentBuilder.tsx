@@ -23,9 +23,15 @@ import { Step3Scenario } from './Step3Scenario';
 import { Step4Agents } from './Step4Agents';
 import { Step5Network } from './Step5Network';
 import { Step6Structure } from './Step6Structure';
+import type { SocialNetwork } from '../../types';
+import type { ExperimentBuilderState } from '../../store/experiment-builder';
+
+export type ExperimentBuilderSubmission = ExperimentBuilderState & {
+  socialNetwork: SocialNetwork;
+};
 
 interface ExperimentBuilderProps {
-  onComplete?: (config: unknown) => void;
+  onComplete?: (config: ExperimentBuilderSubmission) => void;
   onCancel?: () => void;
   onBackFromStep2?: () => void;
 }

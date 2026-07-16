@@ -127,6 +127,25 @@ def _normalize_agent_config(agent_config: dict) -> dict:
     }
 
 
+def _scene_config_scenario_id(scene_config: dict | None) -> str:
+    """Return the requested scenario id from direct or nested scene config."""
+    if not isinstance(scene_config, dict):
+        return ""
+    nested = scene_config.get("generic_config")
+    if isinstance(nested, dict):
+        scenario_id = str(nested.get("scenario_id") or "").strip()
+        if scenario_id:
+            return scenario_id
+    return str(scene_config.get("scenario_id") or "").strip()
+
+
+def _normalize_scene_type(scene_type: str, scene_config: dict | None) -> str:
+    """Keep policy erosion on its dedicated cascade runtime even if the UI sends experiment."""
+    if _scene_config_scenario_id(scene_config) == "policy_erosion":
+        return "policy_cascade_scene"
+    return scene_type
+
+
 @get("/")
 async def list_simulations(request: Request) -> list[SimulationBase]:
     """
@@ -208,7 +227,7 @@ async def create_simulation(
             id=sim_id,
             owner_id=current_user.id,
             name=name,
-            scene_type=data.scene_type,
+            scene_type=_normalize_scene_type(data.scene_type, data.scene_config),
             scene_config=data.scene_config,
             agent_config=normalized_agent_config,
             status="draft",

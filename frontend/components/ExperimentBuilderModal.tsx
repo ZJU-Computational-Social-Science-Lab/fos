@@ -25,6 +25,18 @@ interface ExperimentBuilderModalProps {
   presentation?: 'modal' | 'page';
 }
 
+export function isPolicyCascadeScenario(scenarioData: { id?: string; name?: string } | null | undefined): boolean {
+  const name = scenarioData?.name || '';
+  return (
+    scenarioData?.id === 'policy_erosion' ||
+    scenarioData?.id === 'policy_diffusion' ||
+    scenarioData?.id === 'policyDiffusion' ||
+    name.toLowerCase().includes('policy meaning erosion') ||
+    name.includes('政策意义侵蚀') ||
+    name.includes('政策传播中的意义磨损')
+  );
+}
+
 export function launchExperimentFromBuilderState({
   t,
   addSimulation,
@@ -129,9 +141,7 @@ export function launchExperimentFromBuilderState({
     round_visibility: state.roundVisibility || 'simultaneous',
   };
 
-  const isPolicyCascade =
-    scenarioData?.id === 'policy_diffusion' ||
-    scenarioData?.id === 'policyDiffusion';
+  const isPolicyCascade = isPolicyCascadeScenario(scenarioData);
 
   const isNewArchitecture = scenarioData?.category === 'game_theory' ||
     scenarioData?.category === 'discussion' ||
@@ -316,9 +326,7 @@ export const ExperimentBuilderModal: React.FC<ExperimentBuilderModalProps> = ({
     };
 
     // Determine scene type: policy cascade uses dedicated scene, otherwise experiment/generic
-    const isPolicyCascade =
-      scenarioData?.id === 'policy_diffusion' ||
-      scenarioData?.id === 'policyDiffusion';
+    const isPolicyCascade = isPolicyCascadeScenario(scenarioData);
 
     // Determine if this uses the new Three-Layer Architecture
     // (strategic_decisions or any scenario with structured actions)

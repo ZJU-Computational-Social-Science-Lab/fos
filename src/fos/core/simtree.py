@@ -686,15 +686,27 @@ class SimTree:
                             {"message": description, "scoped": False, "recipients": []},
                         )
                     continue
+                if is_policy_scene and event_type == "broadcast" and not notice_only:
+                    sim.broadcast(
+                        PublicEvent(description, prefix="SYSTEM BROADCAST"),
+                        receivers=receivers,
+                    )
+                    continue
                 if receivers:
                     for receiver_name in receivers:
                         if receiver_name not in sim.agents:
                             raise ValueError(T("Unknown environment_event receiver: {receiver_name}", receiver_name=receiver_name))
-                        sim.agents[receiver_name].add_env_feedback(description, images=[])
+                        try:
+                            sim.agents[receiver_name].add_env_feedback(description, images=[])
+                        except TypeError:
+                            sim.agents[receiver_name].add_env_feedback(description)
                     sim.scene.on_private_event(sim, "environment", payload, receivers)
                 else:
                     for agent in sim.agents.values():
-                        agent.add_env_feedback(description, images=[])
+                        try:
+                            agent.add_env_feedback(description, images=[])
+                        except TypeError:
+                            agent.add_env_feedback(description)
                     sim.scene.on_event(sim, "environment", payload)
             else:
                 raise ValueError("Unknown op: " + name)

@@ -48,6 +48,16 @@ class PublicEvent(Event):
         time_str = _fmt_time_prefix(time)
         return f"{time_str}{self.prefix}: {self.content}"
 
+    def __eq__(self, other):
+        return (
+            isinstance(other, PublicEvent)
+            and self.content == other.content
+            and self.prefix == other.prefix
+            and self.images == other.images
+            and self.audio == other.audio
+            and self.video == other.video
+        )
+
 
 class NewsEvent(Event):
     def __init__(self, content):

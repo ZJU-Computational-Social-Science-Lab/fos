@@ -1,22 +1,20 @@
 /**
  * Checks that each scenario routes to the correct scene type.
  *
- * The key fix: "Policy Meaning Erosion" used to go to the legacy
- * policy_cascade_scene (Pipeline B) but should now go to experiment
- * (Pipeline A). Only explicit policy_diffusion IDs still use the legacy path.
+ * Policy Meaning Erosion uses the dedicated policy cascade scene because it
+ * has custom tier routing, follow-up actions, and policy-specific logs.
  */
 
 import { describe, expect, it } from 'vitest';
 
-// This reimplements the logic from ExperimentBuilderModal.tsx lines 132-154
+import { isPolicyCascadeScenario } from '../../components/ExperimentBuilderModal';
+
 function resolveSceneType(
   id: string | undefined,
   name: string | undefined,
   category: string | undefined,
 ): string {
-  const isPolicyCascade =
-    id === 'policy_diffusion' ||
-    id === 'policyDiffusion';
+  const isPolicyCascade = isPolicyCascadeScenario({ id, name });
 
   const isNewArchitecture = category === 'game_theory' ||
     category === 'discussion' ||
@@ -31,9 +29,9 @@ function resolveSceneType(
 }
 
 describe('scene type routing', () => {
-  it('routes policy_erosion to experiment (not policy_cascade_scene)', () => {
+  it('routes policy_erosion to policy_cascade_scene', () => {
     const result = resolveSceneType('policy_erosion', 'Policy Meaning Erosion', 'sociology');
-    expect(result).toBe('experiment');
+    expect(result).toBe('policy_cascade_scene');
   });
 
   it('routes policy_diffusion to policy_cascade_scene (still legacy)', () => {

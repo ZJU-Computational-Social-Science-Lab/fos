@@ -3,6 +3,23 @@ from __future__ import annotations
 from fos.core.agent import Agent
 
 class PolicyCascadePromptMixin:
+    def get_output_format(self):
+        return (
+            'Output JSON only. Use canonical action names: '
+            '{"action":"send_message","message":"..."} to speak or transmit; '
+            '{"action":"yield"} only when you are allowed to stop. '
+            'In cascade mode, if you received a policy and your tier is active, '
+            'prefer send_message and include concrete policy content for the next tier. '
+            'Never output template placeholders, ellipses, or empty attitude/supplement labels.'
+        )
+
+    def get_examples(self):
+        return (
+            'Cascade example: {"action":"send_message","message":"继续传达本轮政策的具体条款，并说明本层具体执行安排。"}\n'
+            'Distortion example: {"action":"send_message","message":"结合本层压力，仅下传可执行的具体条款，并说明哪些资源或时限需要后续确认。"}\n'
+            'No-action example: {"action":"yield"}'
+        )
+
     def get_behavior_guidelines(self):
         state_mode = str(self.state.get("task_mode") or "notice")
         if state_mode == "cascade":

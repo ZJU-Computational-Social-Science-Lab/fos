@@ -1,40 +1,71 @@
-"""Minimal policy feedback action stubs for Pipeline B scenes.
+from fos.core.action import Action
 
-Provides policy cascade action classes with NAME/DESC/INSTRUCTION.
-See docs/plans/policy-cascade-port-investigation.md
 
-Contains: AnnouncePolicyAdjustmentAction, ConsultPeerAction,
-    EscalateComplaintAction, NotifySubordinateAction, ReportUpwardAction
+class ReportUpwardAction(Action):
+    NAME = "report_upward"
+    DESC = "Privately report execution difficulty to a direct superior."
+    REPROMPT_PARAM = "message"
+    REPROMPT_SCENE_TYPES = {"policy_cascade_scene"}
+    REPROMPT_TASK_MODES = {"follow_up", "follow_up_thread"}
+    INSTRUCTION = """- report_upward: Report execution difficulty to a direct superior
+  <Action name="report_upward"><target>Name</target><message>Your difficulty report</message></Action>
 """
 
-from fos.i18n import T
+    def handle(self, action_data, agent, simulator, scene):
+        return scene.handle_policy_special_action(self.NAME, action_data, agent, simulator)
 
 
-class AnnouncePolicyAdjustmentAction:
-    NAME = T("prompts.actions.announce_policy_adjustment.name")
-    DESC = T("prompts.actions.announce_policy_adjustment.desc")
-    INSTRUCTION = T("prompts.actions.announce_policy_adjustment.instruction")
+class EscalateComplaintAction(Action):
+    NAME = "escalate_complaint"
+    DESC = "Escalate a complaint or risk report to a higher-level superior."
+    REPROMPT_PARAM = "message"
+    REPROMPT_SCENE_TYPES = {"policy_cascade_scene"}
+    REPROMPT_TASK_MODES = {"follow_up", "follow_up_thread"}
+    INSTRUCTION = """- escalate_complaint: Escalate a complaint to a higher-level superior
+  <Action name="escalate_complaint"><target>Name</target><message>Your escalation report</message></Action>
+"""
+
+    def handle(self, action_data, agent, simulator, scene):
+        return scene.handle_policy_special_action(self.NAME, action_data, agent, simulator)
 
 
-class ConsultPeerAction:
-    NAME = T("prompts.actions.consult_peer.name")
-    DESC = T("prompts.actions.consult_peer.desc")
-    INSTRUCTION = T("prompts.actions.consult_peer.instruction")
+class ConsultPeerAction(Action):
+    NAME = "consult_peer"
+    DESC = "Privately consult or coordinate with a connected peer on the same tier."
+    REPROMPT_PARAM = "message"
+    REPROMPT_SCENE_TYPES = {"policy_cascade_scene"}
+    REPROMPT_TASK_MODES = {"follow_up", "follow_up_thread"}
+    INSTRUCTION = """- consult_peer: Privately consult a connected peer on the same tier
+  <Action name="consult_peer"><target>Name</target><message>Your consultation message</message></Action>
+"""
+
+    def handle(self, action_data, agent, simulator, scene):
+        return scene.handle_policy_special_action(self.NAME, action_data, agent, simulator)
 
 
-class EscalateComplaintAction:
-    NAME = T("prompts.actions.escalate_complaint.name")
-    DESC = T("prompts.actions.escalate_complaint.desc")
-    INSTRUCTION = T("prompts.actions.escalate_complaint.instruction")
+class NotifySubordinateAction(Action):
+    NAME = "notify_subordinate"
+    DESC = "Privately notify a directly connected subordinate."
+    REPROMPT_PARAM = "message"
+    REPROMPT_SCENE_TYPES = {"policy_cascade_scene"}
+    REPROMPT_TASK_MODES = {"follow_up", "follow_up_thread"}
+    INSTRUCTION = """- notify_subordinate: Privately notify a directly connected subordinate
+  <Action name="notify_subordinate"><target>Name</target><message>Your notification</message></Action>
+"""
+
+    def handle(self, action_data, agent, simulator, scene):
+        return scene.handle_policy_special_action(self.NAME, action_data, agent, simulator)
 
 
-class NotifySubordinateAction:
-    NAME = T("prompts.actions.notify_subordinate.name")
-    DESC = T("prompts.actions.notify_subordinate.desc")
-    INSTRUCTION = T("prompts.actions.notify_subordinate.instruction")
+class AnnouncePolicyAdjustmentAction(Action):
+    NAME = "announce_policy_adjustment"
+    DESC = "Issue a new policy adjustment announcement that reopens cascade transmission."
+    REPROMPT_PARAM = "message"
+    REPROMPT_SCENE_TYPES = {"policy_cascade_scene"}
+    REPROMPT_TASK_MODES = {"follow_up", "follow_up_thread"}
+    INSTRUCTION = """- announce_policy_adjustment: Issue a policy adjustment announcement
+  <Action name="announce_policy_adjustment"><message>Your adjustment announcement</message></Action>
+"""
 
-
-class ReportUpwardAction:
-    NAME = T("prompts.actions.report_upward.name")
-    DESC = T("prompts.actions.report_upward.desc")
-    INSTRUCTION = T("prompts.actions.report_upward.instruction")
+    def handle(self, action_data, agent, simulator, scene):
+        return scene.handle_policy_special_action(self.NAME, action_data, agent, simulator)
