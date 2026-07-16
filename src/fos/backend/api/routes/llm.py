@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from typing import Any, Dict, List, Optional
 
@@ -27,6 +28,15 @@ from ....core.llm_config import LLMConfig, guess_supports_vision
 from ...services.stratified_distribution import stratified_provider_assignment
 
 logger = logging.getLogger(__name__)
+
+
+def _agent_archetype_timeout_s() -> int:
+    raw = os.getenv("FOS_AGENT_ARCHETYPE_TIMEOUT_S", "8")
+    try:
+        timeout = int(float(raw))
+    except (TypeError, ValueError):
+        timeout = 8
+    return max(1, min(timeout, 60))
 
 
 class GenerateAgentsRequest(BaseModel):
@@ -319,10 +329,13 @@ async def generate_agents_demographics(
                 top_p=1.0,
                 frequency_penalty=0.0,
                 presence_penalty=0.0,
-                max_tokens=1024,
+                max_tokens=256,
                 supports_vision=guess_supports_vision(provider.model),
             )
             llm = create_llm_client(cfg)
+            archetype_timeout_s = _agent_archetype_timeout_s()
+            llm.timeout_s = min(float(getattr(llm, "timeout_s", archetype_timeout_s)), float(archetype_timeout_s))
+            llm.max_retries = 0
 
             locale = data.language or get_request_locale()
 
@@ -385,6 +398,7 @@ async def generate_agents_demographics(
                     traits=traits_dicts,
                     llm_client=llm,
                     language=data.language,
+                    timeout=archetype_timeout_s,
                 )
             except ValueError as ve:
                 # Re-raise ValueError with more context

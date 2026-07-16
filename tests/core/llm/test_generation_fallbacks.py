@@ -15,6 +15,7 @@ from unittest.mock import MagicMock
 
 from fos.core.llm.generation import (
     generate_archetype_template,
+    generate_agents_with_archetypes,
     _validate_and_normalize_probabilities,
     _validate_trait_ranges,
     add_gaussian_noise,
@@ -72,6 +73,31 @@ class TestGenerationTimeout:
         assert result["description"] == "Fast enough"
         assert result["roles"] == ["R1"]
 
+    def test_agent_generation_timeout_still_returns_agents(self):
+        """Slow archetype calls fall back instead of failing the whole endpoint."""
+        slow_client = MagicMock()
+
+        def slow_chat(*args, **kwargs):
+            time.sleep(2)
+            return '{"description": "x", "roles": ["a"]}'
+
+        slow_client.chat.side_effect = slow_chat
+
+        with pytest.warns(UserWarning, match="LLM timeout"):
+            agents = generate_agents_with_archetypes(
+                total_agents=3,
+                demographics=[{"name": "Age", "categories": ["Young"]}],
+                archetype_probabilities=None,
+                traits=[{"name": "Trust", "mean": 50, "std": 10}],
+                llm_client=slow_client,
+                language="en",
+                timeout=0,
+            )
+
+        assert len(agents) == 3
+        assert all(agent["role"] for agent in agents)
+        assert all(agent["profile"] for agent in agents)
+
 
 # ---------------------------------------------------------------------------
 # Error Fallback Paths
@@ -110,7 +136,7 @@ class TestGenerationErrorFallbacks:
         client.chat.return_value = "No JSON here, just text."
 
         archetype = _archetype()
-        with pytest.warns(UserWarning, match="No JSON found"):
+        with pytest.warns(UserWarning, match="Invalid JSON"):
             result = generate_archetype_template(archetype, client)
 
         assert "description" in result
