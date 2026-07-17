@@ -31,12 +31,12 @@ logger = logging.getLogger(__name__)
 
 
 def _agent_archetype_timeout_s() -> int:
-    raw = os.getenv("FOS_AGENT_ARCHETYPE_TIMEOUT_S", "8")
+    raw = os.getenv("FOS_AGENT_ARCHETYPE_TIMEOUT_S", "30")
     try:
         timeout = int(float(raw))
     except (TypeError, ValueError):
-        timeout = 8
-    return max(1, min(timeout, 60))
+        timeout = 30
+    return max(1, min(timeout, 120))
 
 
 class GenerateAgentsRequest(BaseModel):

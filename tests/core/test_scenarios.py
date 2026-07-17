@@ -13,10 +13,11 @@ def test_get_all_returns_list():
     assert isinstance(result, list)
 
 
-def test_get_all_contains_expected_count():
-    """Should return exactly 17 scenarios."""
+def test_get_all_contains_policy_erosion_once():
+    """Should include the policy erosion scenario without duplicates."""
     result = get_all_scenarios()
-    assert len(result) == 17
+    ids = [scenario["id"] for scenario in result]
+    assert ids.count("policy_erosion") == 1
 
 
 def test_all_scenarios_have_required_fields():

@@ -84,6 +84,10 @@ class PolicyCascadeRuntimeMixin:
 
         normalized_action = str(action_name or "").strip()
         no_action_signal = effective_task_mode in {"follow_up", "follow_up_thread"} and self._follow_up_no_action_signal(payload)
+        if effective_task_mode == "cascade" and normalized_action in special_actions:
+            action_name = "send_message"
+            payload["action"] = "send_message"
+            payload["message"] = self._payload_message_text(payload)
         if no_action_signal:
             action_name = "send_message"
             payload["action"] = "send_message"

@@ -42,13 +42,13 @@ class TestCreateClient:
     @patch("fos.core.llm.providers.openai.OpenAI")
     def test_creates_client_with_key(self, mock_cls):
         create_openai_client("sk-test")
-        mock_cls.assert_called_once_with(api_key="sk-test", base_url=None)
+        mock_cls.assert_called_once_with(api_key="sk-test", base_url=None, max_retries=0)
 
     @patch("fos.core.llm.providers.openai.OpenAI")
     def test_creates_client_with_base_url(self, mock_cls):
         create_openai_client("sk-test", base_url="http://localhost:1234")
         mock_cls.assert_called_once_with(
-            api_key="sk-test", base_url="http://localhost:1234"
+            api_key="sk-test", base_url="http://localhost:1234", max_retries=0
         )
 
 
@@ -65,7 +65,7 @@ class TestCloneClient:
         provider.base_url = "http://custom"
         clone_openai_client(provider, 10.0)
         mock_cls.assert_called_once_with(
-            api_key="sk-x", base_url="http://custom"
+            api_key="sk-x", base_url="http://custom", max_retries=0
         )
 
 

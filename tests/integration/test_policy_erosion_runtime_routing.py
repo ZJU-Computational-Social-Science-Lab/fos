@@ -126,6 +126,53 @@ class PlaceholderCascadeFakeChatClient:
         """
 
 
+class CascadeSpecialActionFakeChatClient:
+    """Small model may pick a follow-up action while it is still relaying policy."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def chat(self, messages: list[dict[str, str]], json_mode: bool = False) -> str:
+        self.calls += 1
+        if self.calls == 2:
+            return """
+            {
+              "thoughts": "I should notify the next tier, but this is still cascade relay.",
+              "response": "第二条分支继续传达政策。",
+              "action": {
+                "name": "notify_subordinate",
+                "message": "第二条分支继续传达政策。"
+              },
+              "metadata": {}
+            }
+            """
+        return '{"action": "send_message", "message": "Policy stays clear."}'
+
+
+class MissingMessageRepromptFakeChatClient:
+    """First selects a policy follow-up action, then answers the reprompt."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def chat(self, messages: list[dict[str, str]], json_mode: bool = False) -> str:
+        self.calls += 1
+        if self.calls == 1:
+            return """
+            {
+              "thoughts": "I need to report upward.",
+              "response": "",
+              "action": {
+                "name": "report_upward",
+                "target": "Director"
+              },
+              "context_update": "Selected report_upward without message.",
+              "metadata": {}
+            }
+            """
+        return "资源缺口和执行成本已经影响政策落地，需要上级明确支持口径。"
+
+
 class FixedJsonChatClient:
     """Current-architecture fake client that always returns a valid policy action."""
 
@@ -199,6 +246,48 @@ def _policy_record(scene_type: str, *, cascade_mode: str = "strict_cascade") -> 
     )
 
 
+def _branched_policy_record() -> SimpleNamespace:
+    return SimpleNamespace(
+        id="POLICY-BRANCH",
+        scene_type="policy_cascade_scene",
+        scene_config={
+            "generic_config": {
+                "scenario_id": "policy_erosion",
+                "description": "Transmit the policy through two branches.",
+                "social_network": {
+                    "Agent 1": ["Agent 3"],
+                    "Agent 2": ["Agent 4"],
+                    "Agent 3": ["Agent 5"],
+                    "Agent 4": ["Agent 6"],
+                    "Agent 5": [],
+                    "Agent 6": [],
+                },
+                "parameters": {
+                    "policy_text": "Keep the policy wording intact.",
+                    "tier_order": ["top", "mid", "low"],
+                    "cascade_mode": "distortion_cascade",
+                    "distortion_strength": 0.6,
+                    "conflict_sensitivity": 0.5,
+                    "block_probability": 0.0,
+                },
+            },
+        },
+        name="Policy erosion",
+        description="Transmit the policy through tiers.",
+        notes="",
+        agent_config={
+            "agents": [
+                {"name": "Agent 1", "properties": {"tier": "top"}},
+                {"name": "Agent 2", "properties": {"tier": "top"}},
+                {"name": "Agent 3", "properties": {"tier": "mid"}},
+                {"name": "Agent 4", "properties": {"tier": "mid"}},
+                {"name": "Agent 5", "properties": {"tier": "low"}},
+                {"name": "Agent 6", "properties": {"tier": "low"}},
+            ]
+        },
+    )
+
+
 def test_create_simulation_normalizes_policy_erosion_scene_type() -> None:
     """Policy erosion should be stored on the dedicated cascade scene."""
     scene_config = _policy_record("experiment").scene_config
@@ -247,6 +336,70 @@ def test_policy_erosion_runtime_runs_initial_cascade_then_follow_up() -> None:
 
     assert simulator.scene.state["task_mode"] == "follow_up"
     assert len(tree.nodes[tree.root]["logs"]) > before_follow_up_logs
+
+
+def test_policy_erosion_cascade_prompt_uses_newui_contract_without_no_action_hint() -> None:
+    """Cascade prompt should match newui's mode-specific contract."""
+    tree = simtree_runtime._build_tree_for_sim(
+        _policy_record("policy_cascade_scene", cascade_mode="distortion_cascade"),
+        clients={"chat": FixedJsonChatClient()},
+    )
+    simulator = tree.nodes[tree.root]["sim"]
+    agent = simulator.agents["Director"]
+    simulator._refresh_scene_action_space(agent)
+
+    prompt = agent._build_prompt(simulator.scene, initiative=False)
+
+    assert "Action Space:" in prompt
+    assert "Usage:" in prompt
+    assert "当前失真参数" in prompt
+    assert "Available actions:" not in prompt
+    assert "当前已没有任何动作倾向" not in prompt
+    assert '"name": "yield"' in prompt
+
+
+def test_policy_erosion_follow_up_prompt_uses_yield_not_no_action_template() -> None:
+    """Follow-up prompt should not prime small models to emit the no-action sentence."""
+    tree = simtree_runtime._build_tree_for_sim(
+        _policy_record("policy_cascade_scene", cascade_mode="distortion_cascade"),
+        clients={"chat": FixedJsonChatClient()},
+    )
+    simulator = tree.nodes[tree.root]["sim"]
+    scene = simulator.scene
+    scene.state["task_mode"] = "follow_up"
+    scene.state["latest_notice"] = "员工反馈出现口径分歧，需要继续讨论。"
+    agent = simulator.agents["Manager"]
+    simulator._refresh_scene_action_space(agent)
+
+    prompt = agent._build_prompt(scene, initiative=False)
+
+    assert "Action Space:" in prompt
+    assert "report_upward" in prompt
+    assert "consult_peer" in prompt
+    assert "当前已没有任何动作倾向" not in prompt
+    assert '"name": "yield"' in prompt
+
+
+def test_policy_erosion_follow_up_action_message_reprompt_matches_newui_contract() -> None:
+    """Policy-only Agent path should reprompt for missing action message text."""
+    scene = PolicyCascadeScene("policy", "", cascade_mode="distortion_cascade")
+    director = _legacy_agent("Director", "top")
+    manager = _legacy_agent("Manager", "mid")
+    simulator = Simulator(
+        [director, manager],
+        scene,
+        clients={"chat": MissingMessageRepromptFakeChatClient()},
+        ordering=SequentialOrdering(),
+    )
+    scene.state["task_mode"] = "follow_up"
+    simulator._refresh_scene_action_space(manager)
+
+    actions = manager.process(simulator.clients, scene=scene)
+
+    action_payload = actions[0]["action"]
+    assert action_payload["name"] == "report_upward"
+    assert action_payload["target"] == "Director"
+    assert "资源缺口" in action_payload["message"]
 
 
 def test_policy_erosion_prompt_does_not_include_copyable_placeholders() -> None:
@@ -391,6 +544,72 @@ def test_policy_erosion_distortion_mode_emits_policy_diff_logs() -> None:
     assert distortion_logs[0]["data"]["agent"] == "Director"
     assert "original_message" in distortion_logs[0]["data"]
     assert "final_message" in distortion_logs[0]["data"]
+
+
+def test_policy_erosion_distortion_first_follow_up_does_not_auto_skip_level() -> None:
+    """First follow-up discussion should not immediately become a skip-level complaint."""
+    record = _policy_record("policy_cascade_scene", cascade_mode="distortion_cascade")
+    record.scene_config["generic_config"]["parameters"]["policy_text"] = (
+        "关于实施阶段性薪酬调整与稳岗安排的通知\n"
+        "原文：\n"
+        "1. 政策目标：保障组织整体稳定运行，在未来 “6 个月内” 完成目标。\n"
+        "2. 调整标准：实施 “10% 的阶段性下调”。\n"
+        "3. 不可改写条款：必须原样保留 “6 个月内” “10% 的阶段性下调” “保障组织整体稳定运行”。\n"
+        "4. 报告要求：5个工作日内提交落实情况。"
+    )
+    tree = simtree_runtime._build_tree_for_sim(
+        record,
+        clients={"chat": DistortingFakeChatClient()},
+    )
+    simulator = tree.nodes[tree.root]["sim"]
+
+    simulator.run(max_turns=1)
+    before_follow_up = len(tree.nodes[tree.root]["logs"])
+    for _ in range(3):
+        simulator.run(max_turns=1)
+
+    follow_up_logs = tree.nodes[tree.root]["logs"][before_follow_up:]
+    opened_threads = [
+        log["data"]
+        for log in follow_up_logs
+        if log["type"] == "policy_thread_opened"
+    ]
+    assert all(thread.get("kind") != "skip_level_complaint" for thread in opened_threads)
+
+
+def test_policy_erosion_cascade_special_action_is_relayed_not_threaded() -> None:
+    """Cascade relay should not fail when a model picks a follow-up-only action."""
+    tree = simtree_runtime._build_tree_for_sim(
+        _branched_policy_record(),
+        clients={"chat": CascadeSpecialActionFakeChatClient()},
+    )
+    simulator = tree.nodes[tree.root]["sim"]
+
+    simulator.run(max_turns=1)
+
+    logs = tree.nodes[tree.root]["logs"]
+    action_errors = [
+        log
+        for log in logs
+        if log["type"] == "action_end"
+        and "Provide 'target'" in str(log["data"].get("summary") or log["data"].get("error") or "")
+    ]
+    broadcasts = [
+        log
+        for log in logs
+        if log["type"] == "system_broadcast"
+        and log["data"].get("code") == "scene_chat"
+    ]
+
+    assert not action_errors
+    assert ("Agent 2", ["Agent 4"]) in [
+        (log["data"]["sender"], log["data"]["recipients"])
+        for log in broadcasts
+    ]
+    assert ("Agent 4", ["Agent 6"]) in [
+        (log["data"]["sender"], log["data"]["recipients"])
+        for log in broadcasts
+    ]
 
 
 def test_policy_erosion_distortion_rejects_placeholder_cascade_draft() -> None:

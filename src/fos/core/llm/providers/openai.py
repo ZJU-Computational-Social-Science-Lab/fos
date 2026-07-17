@@ -14,6 +14,8 @@ The OpenAI provider supports:
 - Configurable temperature, max_tokens, penalties
 """
 
+import os
+
 from openai import OpenAI
 
 from fos.i18n import T
@@ -30,7 +32,8 @@ def create_openai_client(api_key: str, base_url: str | None = None) -> OpenAI:
     Returns:
         Configured OpenAI client instance
     """
-    return OpenAI(api_key=api_key, base_url=base_url)
+    max_retries = int(os.getenv("OPENAI_SDK_MAX_RETRIES", "0"))
+    return OpenAI(api_key=api_key, base_url=base_url, max_retries=max_retries)
 
 
 def normalize_messages_for_openai(
@@ -105,6 +108,18 @@ def normalize_messages_for_openai(
     return norm
 
 
+def _extract_message_content(message) -> str:
+    content = getattr(message, "content", None)
+    if isinstance(content, str) and content.strip():
+        return content.strip()
+
+    reasoning_content = getattr(message, "reasoning_content", None)
+    if isinstance(reasoning_content, str) and reasoning_content.strip():
+        return reasoning_content.strip()
+
+    return ""
+
+
 def openai_chat(
     client: OpenAI,
     model: str,
@@ -161,7 +176,7 @@ def openai_chat(
     try:
         resp = client.chat.completions.create(**kwargs)
         msg = resp.choices[0].message
-        content = (msg.content or getattr(msg, "reasoning_content", None) or "").strip()
+        content = _extract_message_content(msg)
         if content:
             return content
     except Exception as exc:
@@ -212,15 +227,11 @@ def openai_chat(
         try:
             resp = client.chat.completions.create(**fallback_kwargs)
             msg = resp.choices[0].message
-            content = (
-                msg.content or getattr(msg, "reasoning_content", None) or ""
-            ).strip()
+            content = _extract_message_content(msg)
         except Exception:
             content = ""
 
     if not content:
-        if used_fallback:
-            return ""
         raise ValueError(T("OpenAI-compatible provider returned empty response"))
 
     return content
@@ -290,7 +301,9 @@ def clone_openai_client(original_provider, timeout_s: float) -> OpenAI:
     Returns:
         New OpenAI client instance
     """
+    max_retries = int(os.getenv("OPENAI_SDK_MAX_RETRIES", "0"))
     return OpenAI(
         api_key=original_provider.api_key,
         base_url=original_provider.base_url,
+        max_retries=max_retries,
     )

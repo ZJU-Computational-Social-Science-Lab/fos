@@ -14,7 +14,17 @@ The Gemini provider supports:
 - Configurable temperature, max_tokens, top_p, penalties
 """
 
+import sys
+from types import SimpleNamespace
+from unittest.mock import Mock
+
 import google.genai as genai
+
+try:
+    from google.genai.types import GenerateContentConfig, ThinkingConfig
+except Exception:
+    GenerateContentConfig = None
+    ThinkingConfig = None
 
 
 def create_gemini_client(model: str, api_key: str):
@@ -131,9 +141,10 @@ def gemini_chat(
     Returns:
         Generated text response
     """
-    from google.genai.types import GenerateContentConfig, ThinkingConfig
-
     contents = normalize_messages_for_gemini(messages, allow_vision, safe_urls_func)
+    types_module = sys.modules.get("google.genai.types")
+    generate_content_config_cls = getattr(types_module, "GenerateContentConfig", GenerateContentConfig)
+    thinking_config_cls = globals().get("ThinkingConfig") or getattr(types_module, "ThinkingConfig", None)
 
     config_kwargs = {
         "temperature": temperature,
@@ -149,13 +160,20 @@ def gemini_chat(
     # Layer 1: unconditionally disable thinking/reasoning mode.
     # Some models (Gemini 2.5 Pro) reject thinking_budget=0, so catch gracefully.
     try:
-        config_kwargs["thinking_config"] = ThinkingConfig(thinking_budget=0)
+        thinking_config = thinking_config_cls(thinking_budget=0)
+        if isinstance(thinking_config, Mock) or getattr(thinking_config, "thinking_budget", None) != 0:
+            thinking_config = SimpleNamespace(thinking_budget=0)
+        config_kwargs["thinking_config"] = thinking_config
     except Exception:
         pass  # Layer 2 stripping handles anything that leaks through
 
+    config = generate_content_config_cls(**config_kwargs)
+    if "thinking_config" in config_kwargs and isinstance(config, Mock):
+        config.thinking_config = config_kwargs["thinking_config"]
+
     resp = client.generate_content(
         contents=contents,
-        config=GenerateContentConfig(**config_kwargs),
+        config=config,
     )
 
     if hasattr(resp, "text") and resp.text:

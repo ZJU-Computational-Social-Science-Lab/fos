@@ -228,6 +228,13 @@ class PolicyCascadeThreadMixin:
         dialogue_attempts = self._dialogue_attempt_count(agent.name)
         return severe and ignored_count >= 3 and dialogue_attempts >= 6
 
+    def _distortion_skip_level_ready(self, agent: Agent, tier: str) -> bool:
+        if self._cascade_mode() != "distortion_cascade":
+            return False
+        if not self._severe_skip_level_risk(agent, tier):
+            return False
+        return self._ignored_feedback_count(agent.name) >= 1
+
     def _auto_upward_feedback_message(self, agent: Agent, target: str, issues: List[str]) -> str:
         issue_text = "、".join(issues) if issues else "执行困难"
         return self._tr("prompts.policy_cascade.threads.auto_upward", agent, target=target, issue_text=issue_text)
@@ -351,9 +358,8 @@ class PolicyCascadeThreadMixin:
                 continue
 
             ignored_count = self._ignored_feedback_count(agent.name)
-            severe = self._severe_skip_level_risk(agent, tier)
 
-            if skip_targets and severe:
+            if skip_targets and self._distortion_skip_level_ready(agent, tier):
                 target = skip_targets[0]
                 if not self._has_active_thread(agent.name, target, ["skip_level_complaint"]):
                     thread = self._open_thread(

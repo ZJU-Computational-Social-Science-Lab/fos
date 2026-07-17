@@ -118,6 +118,13 @@ class Agent:
             action = _parse_action_response(cleaned)
             actions = [action] if action else []
         if policy_scene:
+            actions = self._policy_reprompt_missing_action_params(
+                actions,
+                client,
+                messages,
+                cleaned,
+                scene,
+            )
             assistant_memory = _compact_assistant_memory(actions, scene)
         else:
             actions = [_flatten_legacy_action(action) for action in actions]
@@ -216,6 +223,9 @@ class Agent:
 
     def _build_prompt(self, scene: Any | None, initiative: bool) -> str:
         """Build the short prompt used by the old policy cascade runner."""
+        if scene is not None and getattr(scene, "TYPE", "") == "policy_cascade_scene":
+            return self._build_policy_cascade_prompt(scene, initiative)
+
         parts = [f"You are {self.name}."]
         if self.user_profile:
             parts.append(self.user_profile)
@@ -234,42 +244,281 @@ class Agent:
             parts.append("Available actions: " + ", ".join(actions))
         if initiative:
             parts.append("Take initiative if the scene calls for it.")
-        if scene is not None and getattr(scene, "TYPE", "") == "policy_cascade_scene":
-            no_action = ""
-            if hasattr(scene, "_follow_up_no_action_message"):
-                try:
-                    no_action = str(scene._follow_up_no_action_message(self) or "")
-                except Exception:
-                    no_action = ""
-            parts.append(
-                "IMPORTANT - Output Format:\n"
-                "You MUST respond with one valid JSON object containing these five fields: "
-                '"thoughts", "response", "action", "context_update", and "metadata".\n'
-                'The "action" field MUST be an object with a valid "name" from Available actions.\n'
-                "Use English action names exactly. Do not output plain text, Markdown, Python dicts, or nested JSON strings.\n"
-                'For speech/transmission use: {"action":{"name":"send_message","message":"..."}}.\n'
-                'For yielding use: {"action":{"name":"yield"}}.\n'
-                f'If there is truly no further follow-up action, still output JSON with send_message and message "{no_action}".'
-            )
-            parts.append(
-                "Valid JSON examples:\n"
-                '{"thoughts":"I should respond to the current policy state.",'
-                '"response":"",'
-                '"action":{"name":"send_message","message":"I will report the concrete execution blocker and requested support."},'
-                '"context_update":"Reported one concrete execution blocker.",'
-                '"metadata":{}}\n'
-                '{"thoughts":"No further action remains.",'
-                '"response":"",'
-                f'"action":{{"name":"send_message","message":"{no_action}"}},'
-                '"context_update":"No further follow-up action remains.",'
-                '"metadata":{}}'
-            )
-        else:
-            parts.append(
-                'Reply as JSON only. Use canonical action names exactly, for example '
-                '{"action":"send_message","message":"..."} or {"action":"yield"}.'
-            )
+        parts.append(
+            'Reply as JSON only. Use canonical action names exactly, for example '
+            '{"action":"send_message","message":"..."} or {"action":"yield"}.'
+        )
         return "\n\n".join(part for part in parts if part)
+
+    def _build_policy_cascade_prompt(self, scene: Any, initiative: bool) -> str:
+        action_catalog = "\n".join(
+            f"- {getattr(action, 'NAME', '')}: {getattr(action, 'DESC', '')}".strip()
+            for action in self.action_space
+            if getattr(action, "NAME", "")
+        )
+        action_instructions = "".join(
+            str(getattr(action, "INSTRUCTION", "") or "") for action in self.action_space
+        )
+
+        knowledge_block = ""
+        enabled_kb = [item for item in self.knowledge_base if isinstance(item, dict) and item.get("enabled", True)]
+        if enabled_kb:
+            kb_preview = []
+            for index, item in enumerate(enabled_kb[:5], start=1):
+                title = item.get("title") or "Untitled"
+                content_preview = str(item.get("content") or "")[:80]
+                if len(str(item.get("content") or "")) > 80:
+                    content_preview += "..."
+                kb_preview.append(f"  [{index}] {title}: {content_preview}")
+            knowledge_block = "\nKnowledge Base:\n" + "\n".join(kb_preview)
+
+        identity_parts = [self.name]
+        if self.role_prompt:
+            identity_parts.append(self.role_prompt)
+        identity_line = " - ".join(identity_parts)
+
+        scene_block = ""
+        if hasattr(scene, "get_compact_description"):
+            scene_block = str(scene.get_compact_description() or "")
+        elif hasattr(scene, "get_scenario_description"):
+            scene_block = str(scene.get_scenario_description() or "")
+        if hasattr(scene, "get_behavior_guidelines"):
+            scene_block = f"{scene_block}\n\n{scene.get_behavior_guidelines()}".strip()
+        if hasattr(scene, "get_agent_status_prompt"):
+            status_prompt = str(scene.get_agent_status_prompt(self) or "")
+            if status_prompt:
+                scene_block = f"{scene_block}\n\n{status_prompt}".strip()
+
+        example_block = self._policy_cascade_example_block(scene)
+        initial_instruction = "Take initiative if the scene calls for it." if initiative else ""
+
+        return f"""{identity_line}
+
+{self.user_profile if len(self.user_profile) < 500 else self.user_profile[:500] + "..."}
+
+Language: {self.language}. Respond in {self.language} for content; use English for action names.
+{knowledge_block}
+
+{scene_block}
+
+Action Space:
+{action_catalog}
+
+Usage:
+{action_instructions}
+
+{initial_instruction}
+
+IMPORTANT - Output Format:
+You MUST respond with a valid JSON object containing these 5 sections:
+
+1. "thoughts": Your brief thinking about the current situation (1-2 sentences)
+
+2. "response": What you want to communicate (can be empty string if no speech needed)
+
+3. "action": The action you want to take, containing:
+   - "name": action name from the Action Space above
+   - Additional key-value pairs for action parameters (if required)
+
+4. "context_update": Brief notes to remember for future (goals, observations, plans)
+
+5. "metadata": Optional object with any additional metadata
+
+{example_block}
+
+You must always provide an "action" with a valid "name" from the Action Space. If you only want to speak, use "send_message" and include the text in the "message" field. Use "yield" when you are done with your turn.
+""".strip()
+
+    def _policy_cascade_example_block(self, scene: Any) -> str:
+        def _compact_policy_example(text: str) -> str:
+            if hasattr(scene, "_policy_prompt_excerpt"):
+                summary = scene._policy_prompt_excerpt(text)
+                if summary:
+                    return summary
+            cleaned = str(text or "").strip()
+            return cleaned[:48] if cleaned else "逐级传达政策，并保留关键执行条款"
+
+        private_event = scene._private_event_for(self.name) if hasattr(scene, "_private_event_for") else {}
+        has_private_source = bool(private_event)
+        task_mode = str(private_event.get("task_mode") or scene.state.get("task_mode", "notice") or "notice")
+        notice_kind = str(private_event.get("notice_kind") or scene.state.get("notice_kind", "execution") or "execution")
+        cascade_mode = str(scene.state.get("cascade_mode", "strict_cascade") or "strict_cascade")
+        policy_text = str(
+            private_event.get("relayed_policy")
+            or private_event.get("latest_policy")
+            or scene.state.get("relayed_policy", "")
+            or scene.state.get("latest_policy", "")
+            or ""
+        ).strip()
+        source_policy_text = str(private_event.get("source_policy") or scene.state.get("source_policy", "") or policy_text).strip()
+        notice_text = str(private_event.get("latest_notice") or scene.state.get("latest_notice", "") or "").strip()
+        tier = str(getattr(scene, "_tier_map", {}).get(self.name, self.properties.get("tier", "")) or "").strip()
+        role_kind = scene._tier_role_kind(tier) if hasattr(scene, "_tier_role_kind") else "mid"
+
+        if task_mode == "cascade":
+            example_policy = policy_text or source_policy_text or "最新政策原文"
+            example_policy_summary = _compact_policy_example(source_policy_text or example_policy)
+            if cascade_mode == "distortion_cascade":
+                if role_kind == "top":
+                    if has_private_source:
+                        example_message = f"对于这条仅向我私下传达的政策，我决定先强调“{example_policy_summary}”，暂不展开全部资源承诺。"
+                    else:
+                        example_message = f"关于上级刚才的传达，我决定继续强调“{example_policy_summary}”，暂不展开全部资源承诺。"
+                    context_update = "已按本层利益重述政策重点，并保留部分信息"
+                elif role_kind == "mid":
+                    if has_private_source:
+                        example_message = f"我会只向下传达可立即执行的部分，先保留“{example_policy_summary}”，其余内容暂缓。"
+                    else:
+                        example_message = f"考虑到本部门考核压力，我只向下传达可立即执行的部分，先保留“{example_policy_summary}”。"
+                    context_update = "已结合中层压力选择性下传政策"
+                else:
+                    if has_private_source:
+                        example_message = f"该政策与一线负担存在冲突，我会先按基层可执行口径保留“{example_policy_summary}”，并上报执行困难。"
+                    else:
+                        example_message = f"该政策与一线负担存在冲突，我会先保留“{example_policy_summary}”中的最低执行要求。"
+                    context_update = "已因基层执行冲突而弱化落实"
+                distortion_note = (
+                    f"当前失真参数：失真强度={float(scene.state.get('distortion_strength', 0.6) or 0.6):.2f}，"
+                    f"利益冲突敏感度={float(scene.state.get('conflict_sensitivity', 0.5) or 0.5):.2f}，"
+                    f"截留概率={float(scene.state.get('block_probability', 0.25) or 0.25):.2f}。"
+                )
+            elif role_kind == "top":
+                example_message = f"我会按原文继续传达“{example_policy_summary}”。态度：完全支持并按原文执行。补充：由我批准专项预算并建立月度问责机制。"
+                context_update = "已按原文转发，并补充高层统筹与资源安排"
+                distortion_note = ""
+            elif role_kind == "mid":
+                example_message = f"我会按原文继续传达“{example_policy_summary}”。态度：完全支持并按原文执行。补充：我将在48小时内拆解任务到各部门并建立周报台账。"
+                context_update = "已按原文转发，并补充中层协调与任务拆解"
+                distortion_note = ""
+            else:
+                example_message = f"我会按原文继续传达“{example_policy_summary}”。态度：完全支持并按原文执行。补充：我将按排查清单逐项核验，并在发现异常后24小时内上报。"
+                context_update = "已按原文转发，并补充基层执行与异常上报"
+                distortion_note = ""
+            message_json = json.dumps(example_message, ensure_ascii=False)
+            silent_context = "等待下一级反馈" if cascade_mode != "distortion_cascade" else "因本层利益冲突暂缓下传"
+            example_block = f"""Example JSON response:
+```json
+{{
+    "thoughts": "转发最新政策，保持原文并附执行计划。",
+    "response": "",
+    "action": {{
+        "name": "send_message",
+        "message": {message_json}
+    }},
+    "context_update": "{context_update}",
+    "metadata": {{}}
+}}
+```
+
+If you only want to speak without taking an action:
+```json
+{{
+    "thoughts": "无需转发时保持静默等待。",
+    "response": "",
+    "action": {{
+        "name": "yield"
+    }},
+    "context_update": "{silent_context}",
+    "metadata": {{}}
+}}
+```"""
+            return f"{distortion_note}\n\n{example_block}" if cascade_mode == "distortion_cascade" else example_block
+
+        if notice_kind == "analysis":
+            if role_kind == "top":
+                notice_message = f"作为高层，我对“{notice_text or '最新任务'}”的看法是：优点在于有利于统一部署、压实责任和跟踪问效；缺点在于如果资源和配套制度不足，容易形成层层加码；建议同步明确牵头单位、预算安排和督促检查节奏。"
+                context_update = "已从高层视角完成政策解读与优缺点分析"
+            elif role_kind == "mid":
+                notice_message = f"作为中层，我对“{notice_text or '最新任务'}”的看法是：优点在于便于分解任务、建立台账和协同推进；缺点在于若验收标准不清，容易造成重复报送和责任交叉；建议尽快细化举措、明确时间表和周报机制。"
+                context_update = "已从中层视角完成政策解读与优缺点分析"
+            else:
+                notice_message = f"作为基层执行者，我对“{notice_text or '最新任务'}”的看法是：优点在于有助于逐项排查、现场核验和及时上报；缺点在于若模板过多、口径频繁变化，会增加执行负担；建议简化报送字段并明确整改、复查和销号标准。"
+                context_update = "已从基层视角完成政策解读与优缺点分析"
+        elif role_kind == "top":
+            notice_message = f"关于系统公告“{notice_text or '最新任务'}”，作为高层，我将明确总体目标、资源投放、压实责任和考核机制，并指定牵头负责人。"
+            context_update = "已从高层视角回应系统公告"
+        elif role_kind == "mid":
+            notice_message = f"关于系统公告“{notice_text or '最新任务'}”，作为中层，我将分解任务、协调相关单位、建立工作台账，并给出周度推进时间表。"
+            context_update = "已从中层视角回应系统公告"
+        else:
+            notice_message = f"关于系统公告“{notice_text or '最新任务'}”，作为基层执行者，我将按清单落实排查步骤、现场核验问题、推进整改复查并及时上报反馈。"
+            context_update = "已从基层视角回应系统公告"
+        message_json = json.dumps(notice_message, ensure_ascii=False)
+        return f"""Example JSON response:
+```json
+{{
+    "thoughts": "需要直接回应最新系统公告，并给出符合本职位职责的解读。",
+    "response": "",
+    "action": {{
+        "name": "send_message",
+        "message": {message_json}
+    }},
+    "context_update": "{context_update}",
+    "metadata": {{}}
+}}
+```
+
+If you only want to speak without taking an action:
+```json
+{{
+    "thoughts": "当前没有新增任务时可以结束回合。",
+    "response": "",
+    "action": {{
+        "name": "yield"
+    }},
+    "context_update": "等待下一条系统公告",
+    "metadata": {{}}
+}}
+```"""
+
+    def _policy_reprompt_missing_action_params(
+        self,
+        actions: list[dict[str, Any]],
+        client: Any,
+        messages: list[dict[str, str]],
+        llm_output: str,
+        scene: Any | None,
+    ) -> list[dict[str, Any]]:
+        if not scene or getattr(scene, "TYPE", "") != "policy_cascade_scene":
+            return actions
+        action_lookup = {getattr(action, "NAME", ""): action for action in self.action_space}
+        for item in actions:
+            if not isinstance(item, dict):
+                continue
+            action_payload = item.get("action") or {}
+            if not isinstance(action_payload, dict):
+                continue
+            action_name = str(action_payload.get("name") or action_payload.get("action") or "").strip()
+            if not action_name:
+                continue
+            action_def = action_lookup.get(action_name)
+            if action_def is None:
+                continue
+            reprompt_param = getattr(action_def, "REPROMPT_PARAM", None)
+            if not reprompt_param:
+                continue
+            reprompt_scene_types = getattr(action_def, "REPROMPT_SCENE_TYPES", None)
+            if reprompt_scene_types and getattr(scene, "TYPE", "") not in reprompt_scene_types:
+                continue
+            reprompt_task_modes = getattr(action_def, "REPROMPT_TASK_MODES", None)
+            if reprompt_task_modes and hasattr(scene, "_effective_task_mode_for"):
+                task_mode = scene._effective_task_mode_for(self)
+                if task_mode not in reprompt_task_modes:
+                    continue
+            if str(action_payload.get(reprompt_param) or item.get(reprompt_param) or "").strip():
+                continue
+            reprompt_instruction = self._json_retry_feedback(
+                f"Action '{action_name}' is missing required field '{reprompt_param}'. Return only the {reprompt_param} text."
+            )
+            reprompt_messages = [
+                *messages,
+                {"role": "assistant", "content": llm_output},
+                {"role": "user", "content": reprompt_instruction},
+            ]
+            reprompt_output = strip_thinking_tokens(str(client.chat(reprompt_messages, json_mode=False) or "")).strip()
+            if reprompt_output:
+                action_payload[reprompt_param] = reprompt_output
+        return actions
 
     def add_env_feedback(self, msg: str) -> None:
         self.short_memory.append("system", msg)

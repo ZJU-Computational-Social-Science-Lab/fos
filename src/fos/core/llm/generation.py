@@ -134,42 +134,62 @@ def generate_archetype_template(
         warnings.warn(f"LLM timeout for archetype '{attrs_str}'", UserWarning)
         return fallback_template()
 
-    import queue
-    import threading
-
-    result_queue = queue.Queue()
-    exception_queue = queue.Queue()
-
-    def llm_call():
+    def call_llm() -> str:
         try:
-            try:
-                result = llm_client.chat(messages, json_mode=True)
-            except TypeError as error:
-                if "json_mode" not in str(error):
-                    raise
-                result = llm_client.chat(messages)
-            result_queue.put(result)
+            return llm_client.chat(messages, json_mode=True)
+        except TypeError as error:
+            if "json_mode" not in str(error):
+                raise
+            return llm_client.chat(messages)
+
+    try:
+        from fos.core.llm.client import LLMClient
+
+        managed_timeout_client = isinstance(llm_client, LLMClient)
+    except Exception:
+        managed_timeout_client = False
+
+    if managed_timeout_client:
+        original_timeout = float(getattr(llm_client, "timeout_s", timeout))
+        try:
+            llm_client.timeout_s = min(original_timeout, float(timeout))
+            response = call_llm()
         except Exception as e:
-            exception_queue.put(e)
+            warnings.warn(f"LLM error for archetype '{attrs_str}': {e}", UserWarning)
+            return fallback_template()
+        finally:
+            llm_client.timeout_s = original_timeout
+    else:
+        import queue
+        import threading
 
-    llm_thread = threading.Thread(target=llm_call, daemon=True)
-    llm_thread.start()
-    llm_thread.join(timeout=timeout)
+        result_queue = queue.Queue()
+        exception_queue = queue.Queue()
 
-    if llm_thread.is_alive():
-        warnings.warn(f"LLM timeout for archetype '{attrs_str}'", UserWarning)
-        return fallback_template()
+        def llm_call():
+            try:
+                result_queue.put(call_llm())
+            except Exception as e:
+                exception_queue.put(e)
 
-    if not exception_queue.empty():
-        e = exception_queue.get()
-        warnings.warn(f"LLM error for archetype '{attrs_str}': {e}", UserWarning)
-        return fallback_template()
+        llm_thread = threading.Thread(target=llm_call, daemon=True)
+        llm_thread.start()
+        llm_thread.join(timeout=timeout)
 
-    if result_queue.empty():
-        warnings.warn(f"LLM error for archetype '{attrs_str}': no response", UserWarning)
-        return fallback_template()
+        if llm_thread.is_alive():
+            warnings.warn(f"LLM timeout for archetype '{attrs_str}'", UserWarning)
+            return fallback_template()
 
-    response = result_queue.get()
+        if not exception_queue.empty():
+            e = exception_queue.get()
+            warnings.warn(f"LLM error for archetype '{attrs_str}': {e}", UserWarning)
+            return fallback_template()
+
+        if result_queue.empty():
+            warnings.warn(f"LLM error for archetype '{attrs_str}': no response", UserWarning)
+            return fallback_template()
+
+        response = result_queue.get()
 
     if not response or not response.strip():
         warnings.warn(f"LLM returned an empty response for archetype '{attrs_str}'", UserWarning)
