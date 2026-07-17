@@ -427,6 +427,109 @@ def test_policy_erosion_follow_up_target_name_tolerates_missing_spaces() -> None
     assert "解释口径" in opened[0]["message"]
 
 
+def test_policy_erosion_follow_up_target_name_tolerates_common_small_model_aliases() -> None:
+    """Policy follow-up target matching should tolerate common local-model aliases."""
+    scene = PolicyCascadeScene("policy", "", cascade_mode="distortion_cascade")
+    agent3 = _legacy_agent("智能体 3", "mid")
+    agent4 = _legacy_agent("智能体 4", "mid")
+    simulator = _legacy_simulator(scene, [agent3, agent4])
+    scene.state["task_mode"] = "follow_up"
+
+    for alias in ["4号智能体", "Agent4", "智能体四"]:
+        success, result, summary, _, _ = scene.handle_policy_special_action(
+            "consult_peer",
+            {"target": alias, "message": f"请{alias}一起核对政策调整口径。"},
+            agent3,
+            simulator,
+        )
+
+        assert success is True
+        assert result["target"] == "智能体 4"
+        assert "No such person" not in summary
+
+
+def test_policy_erosion_infers_target_from_common_small_model_aliases() -> None:
+    """Policy target inference should understand aliases in the message text."""
+    scene = PolicyCascadeScene("policy", "", cascade_mode="distortion_cascade")
+    agent3 = _legacy_agent("智能体 3", "mid")
+    agent4 = _legacy_agent("智能体 4", "mid")
+    _legacy_simulator(scene, [agent3, agent4])
+    scene.state["task_mode"] = "follow_up"
+
+    inferred = scene._infer_special_action_target(
+        "consult_peer",
+        {"message": "我需要和4号智能体统一阶段性薪酬调整口径。"},
+        agent3,
+        "follow_up",
+    )
+
+    assert inferred == "智能体 4"
+
+
+def test_policy_erosion_thread_ignored_emits_readable_notice() -> None:
+    """Ignoring a policy thread should emit the policy_thread_ignored event."""
+    events: list[tuple[str, dict]] = []
+    scene = PolicyCascadeScene("policy", "", cascade_mode="distortion_cascade")
+    agent3 = _legacy_agent("智能体 3", "mid")
+    agent4 = _legacy_agent("智能体 4", "mid")
+    simulator = _legacy_simulator(scene, [agent3, agent4], events)
+
+    thread = scene._open_thread(
+        "peer_consult",
+        agent3,
+        agent4.name,
+        "请核对政策调整口径。",
+        simulator,
+        {"issues": ["口径分歧"]},
+    )
+    scene._ignore_thread(thread, agent4, simulator)
+
+    ignored = [payload for event_type, payload in events if event_type == "policy_thread_ignored"]
+    assert ignored
+    assert ignored[-1]["agent"] == "智能体 4"
+    assert ignored[-1]["kind"] == "peer_consult"
+    assert ignored[-1]["notice"]
+
+
+def test_policy_erosion_policy_adjustment_reopens_branch_cascade() -> None:
+    """announce_policy_adjustment should broadcast and queue downstream cascade."""
+    events: list[tuple[str, dict]] = []
+    scene = PolicyCascadeScene("policy", "", cascade_mode="distortion_cascade")
+    top = _legacy_agent("智能体 1", "top")
+    manager = _legacy_agent("智能体 3", "mid")
+    staff = _legacy_agent("智能体 5", "low")
+    simulator = _legacy_simulator(scene, [top, manager, staff], events)
+    scene.state["task_mode"] = "follow_up"
+    scene.state["latest_policy"] = "原政策文本"
+    scene.state["source_policy"] = "原政策文本"
+    scene.state["relayed_policy"] = "原政策文本"
+    scene.state["policy_version"] = 1
+    scene.state["processed_policy_version"] = 1
+    scene.state["persistent_conditions"] = {"public_opinion_pressure": 0.7}
+    scene.state["social_network"] = {"智能体 1": ["智能体 3"], "智能体 3": ["智能体 5"], "智能体 5": []}
+
+    success, result, summary, _, _ = scene.handle_policy_special_action(
+        "announce_policy_adjustment",
+        {"message": "统一补充稳岗安排和申诉反馈渠道。"},
+        manager,
+        simulator,
+    )
+    simulator.emit_remaining_events()
+
+    assert success is True
+    assert result["recipients"] == ["智能体 5"]
+    assert "政策调整" in result["message"]
+    assert "发布" in summary
+    issued = [payload for event_type, payload in events if event_type == "policy_adjustment_issued"]
+    assert issued[-1]["sender"] == "智能体 3"
+    assert issued[-1]["recipients"] == ["智能体 5"]
+    private_event = scene.state["private_events"]["智能体 5"]
+    assert private_event["task_mode"] == "cascade"
+    assert "稳岗安排" in private_event["relayed_policy"]
+    broadcasts = [payload for event_type, payload in events if event_type == "system_broadcast"]
+    assert any(payload.get("recipients") == ["智能体 5"] for payload in broadcasts)
+
+
 def test_policy_erosion_prompt_does_not_include_copyable_placeholders() -> None:
     """Policy prompts should not contain placeholders that small models can copy."""
     client = FakeChatClient()

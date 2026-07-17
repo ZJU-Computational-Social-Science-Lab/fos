@@ -255,6 +255,12 @@ export const mapBackendEventsToLogs = (
       policyThreadOpened: pickText('Policy follow-up started', '政策后续讨论发起'),
       policyThreadReply: pickText('Policy follow-up reply', '政策后续讨论回复'),
       policyThreadIgnored: pickText('Policy follow-up ignored', '政策后续讨论暂未回应'),
+      policyAdjustmentIssued: pickText('Policy adjustment issued', '政策调整已发布'),
+      cascadeNetworkDeadEnd: pickText('Policy cascade stopped by network dead end', '政策传递因网络断点停止'),
+      nextTierLabel: pickText('Next tier', '下一层级'),
+      directConnectionsLabel: pickText('Direct connections', '直接连接'),
+      nextTierCandidatesLabel: pickText('Next-tier candidates', '下一层候选'),
+      reachableNextTierLabel: pickText('Reachable next-tier agents', '可达下一层智能体'),
       choseAction: (agent: string, action: string) => pickText(`${agent} chose ${action}`, `${agent} 选择了 ${action}`)
     };
 
@@ -504,7 +510,7 @@ export const mapBackendEventsToLogs = (
     if (evType === 'policy_thread_ignored') {
       const agentName: string = data.agent || data.sender || '';
       const agentLabel = getDisplayAgentName(agentName);
-      const reason = String(data.reason || data.message || '').trim();
+      const reason = String(data.reason || data.message || data.notice || '').trim();
       const content = reason
         ? `${labels.policyThreadIgnored}: ${agentLabel}\n${reason}`
         : `${labels.policyThreadIgnored}: ${agentLabel}`;
@@ -513,6 +519,49 @@ export const mapBackendEventsToLogs = (
         type: 'AGENT_METADATA',
         agentId: agentName ? nameToId.get(agentName) : undefined,
         content,
+      };
+    }
+
+    if (evType === 'policy_adjustment_issued') {
+      const senderName: string = data.sender || data.agent || '';
+      const senderLabel = getDisplayAgentName(senderName);
+      const tier = String(data.tier || '').trim();
+      const recipients = Array.isArray(data.recipients)
+        ? data.recipients.map((value: unknown) => getDisplayAgentName(String(value || '').trim())).filter(Boolean)
+        : [];
+      const message = String(data.message || '').trim();
+      const recipientText = recipients.length > 0 ? recipients.join(', ') : labels.allAgents;
+      const header = tier
+        ? `${labels.policyAdjustmentIssued}: ${senderLabel} (${tier})`
+        : `${labels.policyAdjustmentIssued}: ${senderLabel}`;
+      return {
+        ...base,
+        type: 'ENVIRONMENT',
+        agentId: senderName ? nameToId.get(senderName) : undefined,
+        content: [header, `${labels.recipientsLabel}: ${recipientText}`, message].filter(Boolean).join('\n'),
+      };
+    }
+
+    if (evType === 'cascade_network_dead_end') {
+      const agentName: string = data.agent || '';
+      const agentLabel = getDisplayAgentName(agentName);
+      const tier = String(data.tier || '').trim();
+      const nextTier = String(data.next_tier || '').trim();
+      const directConnections = Array.isArray(data.direct_connections) ? data.direct_connections.join(', ') : '';
+      const nextTierCandidates = Array.isArray(data.next_tier_candidates) ? data.next_tier_candidates.join(', ') : '';
+      const nextTierConnections = Array.isArray(data.next_tier_connections) ? data.next_tier_connections.join(', ') : '';
+      const lines = [
+        tier ? `${agentLabel} (${tier}) - ${labels.cascadeNetworkDeadEnd}` : `${agentLabel} - ${labels.cascadeNetworkDeadEnd}`,
+        nextTier ? `${labels.nextTierLabel}: ${nextTier}` : '',
+        directConnections ? `${labels.directConnectionsLabel}: ${directConnections}` : '',
+        nextTierCandidates ? `${labels.nextTierCandidatesLabel}: ${nextTierCandidates}` : '',
+        `${labels.reachableNextTierLabel}: ${nextTierConnections || pickText('None', '无')}`,
+      ].filter(Boolean);
+      return {
+        ...base,
+        type: 'SYSTEM',
+        agentId: agentName ? nameToId.get(agentName) : undefined,
+        content: lines.join('\n'),
       };
     }
 

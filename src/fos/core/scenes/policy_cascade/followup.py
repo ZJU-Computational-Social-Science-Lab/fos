@@ -270,10 +270,17 @@ class PolicyCascadeFollowUpMixin:
         content = str(text or "")
         if not content:
             return ""
+        normalized_content = ""
+        if hasattr(self, "_normalize_policy_target_alias"):
+            normalized_content = self._normalize_policy_target_alias(content)
         ordered = sorted([name for name in candidates if name], key=len, reverse=True)
         for name in ordered:
             if name in content:
                 return name
+            if normalized_content and hasattr(self, "_policy_target_aliases"):
+                aliases = self._policy_target_aliases(name)
+                if any(alias and alias in normalized_content for alias in aliases):
+                    return name
         return ""
 
     def _infer_special_action_target(self, action_name: str, payload: dict, agent: Agent, effective_task_mode: str) -> str:

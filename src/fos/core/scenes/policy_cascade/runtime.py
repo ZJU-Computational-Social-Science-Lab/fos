@@ -440,11 +440,51 @@ class PolicyCascadeRuntimeMixin:
         if not cleaned or cleaned in simulator.agents:
             return cleaned
 
-        compact = "".join(cleaned.split())
+        compact = self._normalize_policy_target_alias(cleaned)
         for name in simulator.agents:
-            if "".join(str(name).split()) == compact:
+            if compact in self._policy_target_aliases(str(name)):
                 return name
         return cleaned
+
+    def _normalize_policy_target_alias(self, value: str) -> str:
+        return re.sub(r"[\s_\-：:，,。.!！（）()\[\]【】]+", "", str(value or "").lower())
+
+    def _policy_target_aliases(self, agent_name: str) -> set[str]:
+        """Aliases for policy-only target matching used with small local models."""
+        raw = str(agent_name or "").strip()
+        aliases = {self._normalize_policy_target_alias(raw)}
+        match = re.search(r"(\d+)", raw)
+        if not match:
+            return {alias for alias in aliases if alias}
+
+        number = match.group(1)
+        chinese_number = self._policy_chinese_number(int(number))
+        variants = [
+            f"智能体{number}",
+            f"{number}号智能体",
+            f"agent{number}",
+            f"agent {number}",
+        ]
+        if chinese_number:
+            variants.extend(
+                [
+                    f"智能体{chinese_number}",
+                    f"{chinese_number}号智能体",
+                ]
+            )
+        aliases.update(self._normalize_policy_target_alias(item) for item in variants)
+        return {alias for alias in aliases if alias}
+
+    def _policy_chinese_number(self, number: int) -> str:
+        digits = "零一二三四五六七八九"
+        if 0 <= number <= 10:
+            return "十" if number == 10 else digits[number]
+        if number < 20:
+            return "十" + digits[number % 10]
+        if number < 100:
+            tens, ones = divmod(number, 10)
+            return digits[tens] + "十" + (digits[ones] if ones else "")
+        return ""
 
     def deliver_message(self, event, sender: Agent, simulator):
         event.code = "scene_chat"

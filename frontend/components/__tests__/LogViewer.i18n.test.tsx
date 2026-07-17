@@ -83,4 +83,89 @@ describe('LogViewer i18n runtime seam', () => {
     expect(logs[0]?.content).toContain('智能体 3 -> 智能体 4');
     expect(logs[0]?.content).toContain('统一阶段性薪酬调整');
   });
+
+  it('test_policy_adjustment_event_shows_adjustment_content', () => {
+    (i18n as { language: string }).language = 'zh';
+    const logs = mapBackendEventsToLogs(
+      [
+        {
+          type: 'policy_adjustment_issued',
+          data: {
+            sender: '智能体 3',
+            tier: 'mid',
+            recipients: ['智能体 5'],
+            message: '【政策调整】统一补充稳岗安排和申诉反馈渠道。',
+          },
+        },
+      ],
+      'node-1',
+      2,
+      [
+        { id: 'a3', name: '智能体 3' },
+        { id: 'a5', name: '智能体 5' },
+      ] as any,
+      true,
+    );
+
+    expect(logs).toHaveLength(1);
+    expect(logs[0]?.type).toBe('ENVIRONMENT');
+    expect(logs[0]?.content).toContain('政策调整已发布');
+    expect(logs[0]?.content).toContain('智能体 3 (mid)');
+    expect(logs[0]?.content).toContain('接收者: 智能体 5');
+    expect(logs[0]?.content).toContain('稳岗安排');
+  });
+
+  it('test_cascade_network_dead_end_event_shows_blocked_tier_details', () => {
+    (i18n as { language: string }).language = 'zh';
+    const logs = mapBackendEventsToLogs(
+      [
+        {
+          type: 'cascade_network_dead_end',
+          data: {
+            agent: '智能体 3',
+            tier: 'mid',
+            next_tier: 'low',
+            direct_connections: ['智能体 1'],
+            next_tier_candidates: ['智能体 5'],
+            next_tier_connections: [],
+          },
+        },
+      ],
+      'node-1',
+      2,
+      [{ id: 'a3', name: '智能体 3' }] as any,
+      true,
+    );
+
+    expect(logs).toHaveLength(1);
+    expect(logs[0]?.type).toBe('SYSTEM');
+    expect(logs[0]?.content).toContain('政策传递因网络断点停止');
+    expect(logs[0]?.content).toContain('下一层级: low');
+    expect(logs[0]?.content).toContain('可达下一层智能体: 无');
+  });
+
+  it('test_policy_thread_ignored_event_shows_notice_text', () => {
+    (i18n as { language: string }).language = 'zh';
+    const logs = mapBackendEventsToLogs(
+      [
+        {
+          type: 'policy_thread_ignored',
+          data: {
+            kind: 'peer_consult',
+            agent: '智能体 4',
+            notice: '智能体 4 暂未处理该线程。',
+          },
+        },
+      ],
+      'node-1',
+      2,
+      [{ id: 'a4', name: '智能体 4' }] as any,
+      true,
+    );
+
+    expect(logs).toHaveLength(1);
+    expect(logs[0]?.type).toBe('AGENT_METADATA');
+    expect(logs[0]?.content).toContain('政策后续讨论暂未回应');
+    expect(logs[0]?.content).toContain('智能体 4 暂未处理该线程');
+  });
 });
