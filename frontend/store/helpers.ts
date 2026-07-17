@@ -252,6 +252,9 @@ export const mapBackendEventsToLogs = (
       systemEvent: pickText('System event', '系统事件'),
       runtimeFailed: pickText('Runtime failed', '运行失败'),
       agentResponse: pickText('Agent response', 'Agent responded'),
+      policyThreadOpened: pickText('Policy follow-up started', '政策后续讨论发起'),
+      policyThreadReply: pickText('Policy follow-up reply', '政策后续讨论回复'),
+      policyThreadIgnored: pickText('Policy follow-up ignored', '政策后续讨论暂未回应'),
       choseAction: (agent: string, action: string) => pickText(`${agent} chose ${action}`, `${agent} 选择了 ${action}`)
     };
 
@@ -471,6 +474,45 @@ export const mapBackendEventsToLogs = (
         ...base,
         type: 'ENVIRONMENT',
         content: content ? `${label}\n${content}` : label,
+      };
+    }
+
+    if (evType === 'policy_thread_opened' || evType === 'policy_thread_reply') {
+      const senderName: string = data.sender || data.agent || '';
+      const recipientName: string = data.recipient || data.target || '';
+      const senderLabel = getDisplayAgentName(senderName);
+      const recipientLabel = getDisplayAgentName(recipientName);
+      const message = String(data.message || '').trim();
+      const kind = String(data.kind || '').trim();
+      const title = evType === 'policy_thread_opened' ? labels.policyThreadOpened : labels.policyThreadReply;
+      const route = recipientName
+        ? pickText(`${senderLabel} -> ${recipientLabel}`, `${senderLabel} -> ${recipientLabel}`)
+        : senderLabel;
+      const content = [
+        kind ? `${title} (${kind})` : title,
+        route,
+        message,
+      ].filter(Boolean).join('\n');
+      return {
+        ...base,
+        type: 'AGENT_SAY',
+        agentId: senderName ? nameToId.get(senderName) : undefined,
+        content,
+      };
+    }
+
+    if (evType === 'policy_thread_ignored') {
+      const agentName: string = data.agent || data.sender || '';
+      const agentLabel = getDisplayAgentName(agentName);
+      const reason = String(data.reason || data.message || '').trim();
+      const content = reason
+        ? `${labels.policyThreadIgnored}: ${agentLabel}\n${reason}`
+        : `${labels.policyThreadIgnored}: ${agentLabel}`;
+      return {
+        ...base,
+        type: 'AGENT_METADATA',
+        agentId: agentName ? nameToId.get(agentName) : undefined,
+        content,
       };
     }
 

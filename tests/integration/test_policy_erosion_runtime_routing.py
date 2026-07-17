@@ -402,6 +402,31 @@ def test_policy_erosion_follow_up_action_message_reprompt_matches_newui_contract
     assert "资源缺口" in action_payload["message"]
 
 
+def test_policy_erosion_follow_up_target_name_tolerates_missing_spaces() -> None:
+    """Policy follow-up actions should resolve model target names like 智能体4."""
+    events: list[tuple[str, dict]] = []
+    scene = PolicyCascadeScene("policy", "", cascade_mode="distortion_cascade")
+    agent3 = _legacy_agent("智能体 3", "mid")
+    agent4 = _legacy_agent("智能体 4", "mid")
+    simulator = _legacy_simulator(scene, [agent3, agent4], events)
+    scene.state["task_mode"] = "follow_up"
+
+    success, result, summary, _, _ = scene.handle_policy_special_action(
+        "consult_peer",
+        {"target": "智能体4", "message": "我们需要统一阶段性薪酬调整的解释口径。"},
+        agent3,
+        simulator,
+    )
+
+    assert success is True
+    assert result["target"] == "智能体 4"
+    assert "解释口径" in result["message"]
+    assert "No such person" not in summary
+    opened = [payload for event_type, payload in events if event_type == "policy_thread_opened"]
+    assert opened[0]["recipient"] == "智能体 4"
+    assert "解释口径" in opened[0]["message"]
+
+
 def test_policy_erosion_prompt_does_not_include_copyable_placeholders() -> None:
     """Policy prompts should not contain placeholders that small models can copy."""
     client = FakeChatClient()

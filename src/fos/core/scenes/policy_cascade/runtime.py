@@ -302,6 +302,7 @@ class PolicyCascadeRuntimeMixin:
 
     def handle_policy_special_action(self, action_name: str, action_data: dict, agent: Agent, simulator):
         target = str(action_data.get("target") or action_data.get("to") or "").strip()
+        target = self._resolve_policy_action_target(target, simulator)
         message = self._sanitize_message(str(action_data.get("message") or ""))
         tier = self._tier_map.get(agent.name) or self._extract_tier(agent)
         current_thread_event = self._private_event_for(agent.name)
@@ -432,6 +433,18 @@ class PolicyCascadeRuntimeMixin:
         error = f"Unknown special action: {action_name}"
         agent.add_env_feedback(error)
         return False, {"error": error}, error, {}, True
+
+    def _resolve_policy_action_target(self, target: str, simulator) -> str:
+        """Resolve policy-only action targets with harmless whitespace tolerance."""
+        cleaned = str(target or "").strip()
+        if not cleaned or cleaned in simulator.agents:
+            return cleaned
+
+        compact = "".join(cleaned.split())
+        for name in simulator.agents:
+            if "".join(str(name).split()) == compact:
+                return name
+        return cleaned
 
     def deliver_message(self, event, sender: Agent, simulator):
         event.code = "scene_chat"

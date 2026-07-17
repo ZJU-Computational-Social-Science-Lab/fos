@@ -52,4 +52,35 @@ describe('LogViewer i18n runtime seam', () => {
   it('test_step_group_label_includes_the_step_number_in_chinese', () => {
     expect(zh.components.logViewer.stepGroup).toBe('步骤 {{step}}');
   });
+
+  it('test_policy_thread_reply_keeps_discussion_message_visible', () => {
+    (i18n as { language: string }).language = 'zh';
+    const logs = mapBackendEventsToLogs(
+      [
+        {
+          type: 'policy_thread_reply',
+          data: {
+            kind: 'peer_consult',
+            sender: '智能体 3',
+            recipient: '智能体 4',
+            message: '我们需要统一阶段性薪酬调整的解释口径。',
+          },
+        },
+      ],
+      'node-1',
+      2,
+      [
+        { id: 'a3', name: '智能体 3' },
+        { id: 'a4', name: '智能体 4' },
+      ] as any,
+      true,
+    );
+
+    expect(logs).toHaveLength(1);
+    expect(logs[0]?.type).toBe('AGENT_SAY');
+    expect(logs[0]?.agentId).toBe('a3');
+    expect(logs[0]?.content).toContain('政策后续讨论回复');
+    expect(logs[0]?.content).toContain('智能体 3 -> 智能体 4');
+    expect(logs[0]?.content).toContain('统一阶段性薪酬调整');
+  });
 });
