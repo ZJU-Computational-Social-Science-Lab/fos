@@ -252,11 +252,12 @@ class LLMClient:
         Raises:
             ValueError: If provider dialect is unknown
         """
+        _last_llm_meta = {}
         supports_vision = bool(getattr(self.provider, "supports_vision", False))
 
         def _call_openai():
             openai = _get_openai()
-            return openai["openai_chat"](
+            raw_result = openai["openai_chat"](
                 client=self.client,
                 model=self.provider.model,
                 messages=messages,
@@ -269,6 +270,11 @@ class LLMClient:
                 safe_urls_func=validate_media_url,
                 json_mode=json_mode,
             )
+            if isinstance(raw_result, dict):
+                nonlocal _last_llm_meta
+                _last_llm_meta = raw_result
+                return raw_result.get("content", "")
+            return raw_result
 
         def _call_gemini():
             gemini = _get_gemini()
@@ -306,6 +312,8 @@ class LLMClient:
                 json_mode=json_mode,
             )
 
+        import time as _time2
+        _llm_start = _time2.perf_counter()
         if self.provider.dialect == "openai":
             result = self._with_timeout_and_retry(_call_openai)
         elif self.provider.dialect == "gemini":
@@ -316,10 +324,45 @@ class LLMClient:
             result = self._with_timeout_and_retry(_call_ollama)
         else:
             raise ValueError(T("Unknown LLM dialect: {dialect}", dialect=self.provider.dialect))
+        _elapsed = _time2.perf_counter() - _llm_start
+
+        try:
+            from profiling import prof
+            p = prof()
+        except Exception:
+            p = None
+        if p:
+            resp_meta = _last_llm_meta if _last_llm_meta else None
+            p.record_llm(model=self.provider.model, phase=None,
+                         seconds=_elapsed, response=resp_meta)
 
         # Layer 2: strip any thinking/reasoning tokens that leaked through
+        text = str(result or "")
+        # Harmony-aware: extract only the final assistant message from gpt-oss channels
+        import re as _re
+        def _extract_harmony_final(t: str) -> str:
+            blocks = _re.findall(
+                r'<\|start\|>assistant(\w*)<\|message\|>(.*?)(?:<\|end\|>|$)',
+                t, _re.DOTALL)
+            finals = [c for (ch, c) in blocks if ch in ("final", "")]
+            if finals:
+                return finals[-1].strip()
+            if blocks:  # channels present but no final => reasoning only
+                return ""
+            return t  # no harmony markers: pass through
+        text = _extract_harmony_final(text)
+        # Fallback: if text still contains bare "assistantfinal" (structure variant regex missed)
+        if "assistantfinal" in text:
+            # Split on LAST occurrence, keep what follows
+            parts = text.rsplit("assistantfinal", 1)
+            if len(parts) == 2:
+                text = parts[1]
+                # Strip leading delimiters: <|message|>, |response=, response=, or bare |
+                text = _re.sub(r'^\s*(?:<\|message\|>|\|response=|response=|\|)\s*', '', text)
+        # Safety net: remove any remaining harmony tokens
+        text = _re.sub(r'<\|[^|]*\|>', '', text)
         # (strip_thinking_tokens handles None/falsy by returning empty string)
-        return strip_thinking_tokens(str(result or ""))
+        return strip_thinking_tokens(text)
 
     # -------------------------------------------------------------------------
     # Completion API
