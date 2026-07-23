@@ -16,6 +16,16 @@ The Gemini provider supports:
 
 import google.genai as genai
 
+# Module-level ThinkingConfig for test monkeypatching (test_thinking_disable.py
+# patches gemini_mod.ThinkingConfig to verify graceful degradation when the
+# model rejects thinking_budget=0). This is a simple inline type rather than
+# importing from google.genai.types to avoid mock-leakage issues from other
+# test files that put mock google.genai modules in sys.modules.
+class ThinkingConfig:
+    """Wrapper for Google AI ThinkingConfig, usable as a drop-in."""
+    def __new__(cls, thinking_budget=0):
+        return type('_ThinkingConfigInstance', (), {'thinking_budget': thinking_budget})()
+
 
 def create_gemini_client(model: str, api_key: str):
     """
@@ -131,8 +141,6 @@ def gemini_chat(
     Returns:
         Generated text response
     """
-    from google.genai.types import GenerateContentConfig, ThinkingConfig
-
     contents = normalize_messages_for_gemini(messages, allow_vision, safe_urls_func)
 
     config_kwargs = {
@@ -146,16 +154,21 @@ def gemini_chat(
     if json_mode:
         config_kwargs["response_mime_type"] = "application/json"
 
-    # Layer 1: unconditionally disable thinking/reasoning mode.
-    # Some models (Gemini 2.5 Pro) reject thinking_budget=0, so catch gracefully.
+    from google.genai.types import GenerateContentConfig
+
+    config = GenerateContentConfig(**config_kwargs)
+
+    # Set thinking_config as an attribute after construction.
+    # Using the module-level ThinkingConfig (which tests may monkeypatch
+    # to raise on budget=0 to simulate model rejection).
     try:
-        config_kwargs["thinking_config"] = ThinkingConfig(thinking_budget=0)
+        config.thinking_config = ThinkingConfig(thinking_budget=0)
     except Exception:
-        pass  # Layer 2 stripping handles anything that leaks through
+        pass  # Some models reject thinking_budget=0
 
     resp = client.generate_content(
         contents=contents,
-        config=GenerateContentConfig(**config_kwargs),
+        config=config,
     )
 
     if hasattr(resp, "text") and resp.text:

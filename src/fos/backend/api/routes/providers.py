@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 import httpx
 from litestar import Router, delete, get, patch, post
 from litestar.exceptions import HTTPException
+from fos.i18n import T
 from litestar.connection import Request
 from sqlalchemy import select
 
@@ -138,7 +139,7 @@ async def _test_ollama_connection(
                 available_models.add(model)
 
     if model_name not in available_models:
-        raise ValueError(f"Ollama model not found: {model_name}")
+        raise ValueError(T("api.providers.ollama_model_not_found", model_name=model_name))
 
 
 @get("/")

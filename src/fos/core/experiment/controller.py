@@ -431,7 +431,7 @@ class ExperimentController:
                 # Send follow-up prompt; use json_mode only for json-type follow-ups
                 messages = [{"role": "user", "content": followup_prompt}]
                 followup_response = await asyncio.to_thread(
-                    llm_client.chat, messages, json_mode=(followup_mode == "json"), max_tokens=4096
+                    llm_client.chat, messages, json_mode=(followup_mode == "json")
                 )
 
                 # Log the follow-up response IMMEDIATELY after the prompt

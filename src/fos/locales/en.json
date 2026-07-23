@@ -273,7 +273,8 @@
     },
     "providers": {
       "connectivity_verified": "Provider connectivity verified",
-      "activated": "Activated provider"
+      "activated": "Activated provider",
+      "ollama_model_not_found": "Ollama model not found: {model_name}"
     },
     "templates": {
       "deleted": "Template deleted"
@@ -1360,6 +1361,7 @@
     "previous_rounds": "Previous rounds:\n{rounds}",
     "payoffs_suffix": ". Payoffs: {payoffs}",
     "scores_suffix": ". Running total: {scores}",
+    "write_one_sentence": "Write only one sentence.",
     "followup_plain": "You chose to {action}. Please provide your response.",
     "followup_params": "You chose to {action}. This action requires parameters.",
     "range_constraint": "CRITICAL: {param} must be {type} between {min} and {max}.",
