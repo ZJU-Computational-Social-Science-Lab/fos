@@ -1,3 +1,4 @@
+import pytest; pytest.importorskip("torch", reason="torch not installed (required for RAG e2e tests)")
 """
 End-to-end tests for the text RAG pipeline in FOS.
 

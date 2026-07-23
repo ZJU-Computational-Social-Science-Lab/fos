@@ -16,6 +16,11 @@ import pytest
 
 from fos.backend.api.routes import providers as route_module
 from fos.core.llm_config import LLMConfig
+import os
+pytestmark = pytest.mark.skipif(\
+    not os.environ.get("FOS_TEST_LIVE_PROVIDER"),\
+    reason="requires running LLM provider (set FOS_TEST_LIVE_PROVIDER=1 to enable)"\
+)
 
 
 class _FakeSession:
