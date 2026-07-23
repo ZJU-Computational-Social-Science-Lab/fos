@@ -73,6 +73,9 @@ MIGRATION.md
 # Large media files
 *.mp4
 
+# Traffic logs
+*.jsonl
+
 # Scratch scripts
 _write_scene.py
 

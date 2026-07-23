@@ -116,6 +116,12 @@ class ActionResult:
     skipped: bool = False
     error: str = ""
     debug_log: List[str] = field(default_factory=list)
+    prompt_tokens: int = 0
+    degraded: bool = False
+    degrade_reason: str = ""
+    rounds_dropped: int = 0
+    tokens_before: int = 0
+    tokens_after: int = 0
 
 
 class ExperimentController:
@@ -425,7 +431,7 @@ class ExperimentController:
                 # Send follow-up prompt; use json_mode only for json-type follow-ups
                 messages = [{"role": "user", "content": followup_prompt}]
                 followup_response = await asyncio.to_thread(
-                    llm_client.chat, messages, json_mode=(followup_mode == "json")
+                    llm_client.chat, messages, json_mode=(followup_mode == "json"), max_tokens=4096
                 )
 
                 # Log the follow-up response IMMEDIATELY after the prompt

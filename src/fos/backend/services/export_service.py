@@ -128,6 +128,15 @@ def transform_event_for_export(event: dict, scenario_params: dict) -> dict:
         if field in payload:
             result[field] = payload[field]
 
+    # Pass through degradation fields from payload (added by scene_lifecycle)
+    _degradation_fields = (
+        "prompt_tokens", "degraded", "degrade_reason",
+        "rounds_dropped", "tokens_before", "tokens_after",
+    )
+    for field in _degradation_fields:
+        if field in payload:
+            result[field] = payload[field]
+
     return result
 
 

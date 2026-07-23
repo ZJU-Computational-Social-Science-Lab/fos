@@ -7,7 +7,15 @@ with support for visibility filtering and structured output.
 Contains: build_context_summary, build_structured_context
 """
 
+import json
+import os
+import urllib.request
 from typing import TYPE_CHECKING, Any, Dict, List
+
+
+# Module-level cache for real token counts from llama-server /tokenize endpoint
+# Key: text string, Value: token count
+_token_cache: Dict[str, int] = {}
 
 if TYPE_CHECKING:
     from fos.core.experiment.information_model import InformationModel
@@ -165,6 +173,102 @@ def _filter_round_history(
     return filtered
 
 
+# -- Transmit cap helpers --
+
+def _get_tokenize_url() -> str:
+    """Resolve the /tokenize endpoint URL from environment or default."""
+    url = os.environ.get("FOS_TOKENIZE_URL")
+    if url:
+        return url
+    base = os.environ.get("LLM_BASE_URL", "http://127.0.0.1:8080")
+    return base.rstrip("/") + "/tokenize"
+
+
+def _tokenize_remote(text: str) -> int:
+    """Call llama-server /tokenize endpoint. Returns token count.
+    Falls back to chars//4 on any network error."""
+    if not text:
+        return 0
+    url = _get_tokenize_url()
+    try:
+        req = urllib.request.Request(
+            url,
+            data=json.dumps({"content": text}).encode(),
+            headers={"Content-Type": "application/json"},
+        )
+        resp = urllib.request.urlopen(req, timeout=10)
+        data = json.loads(resp.read())
+        return len(data.get("tokens", []))
+    except Exception:
+        return len(text) // 4  # emergency fallback only
+
+
+def _count_tokens(text: str | None) -> int:
+    """Count tokens using the real llama-server tokenizer with caching.
+    Falls back to chars//4 on network error."""
+    if not text:
+        return 0
+    if text in _token_cache:
+        return _token_cache[text]
+    count = _tokenize_remote(text)
+    _token_cache[text] = count
+    return max(1, count)
+
+def _truncate_at_sentence(text: str, max_tokens: int) -> str:
+    """Truncate text at the last complete sentence boundary under max_tokens.
+    Uses real tokenizer via binary search on character cut point.
+    Falls back to chars//4 heuristic if tokenizer is unavailable."""
+    if not text:
+        return text
+    # Quick check: tokenize the full text
+    if _count_tokens(text) <= max_tokens:
+        return text
+    # Binary search on character position to find the longest prefix within budget
+    lo, hi = 0, len(text)
+    best = 0
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        tok = _count_tokens(text[:mid])
+        if tok <= max_tokens:
+            best = mid
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    # Find the last sentence boundary before the best cutoff
+    chunk = text[:best]
+    last_boundary = -1
+    for punct in [". ", "! ", "? "]:
+        pos = chunk.rfind(punct)
+        if pos >= 0:
+            last_boundary = max(last_boundary, pos + 1)
+    if last_boundary >= 0:
+        return text[:last_boundary]
+    # No sentence boundary found — hard cut at the token budget
+    return chunk
+
+def _truncate_speech_events(events, cap_tokens):
+    """Mutate events in-place: truncate speech messages at cap_tokens."""
+    if not cap_tokens or cap_tokens <= 0:
+        return events
+    for e in events:
+        params = getattr(e, 'parameters', None) or {}
+        msg = params.get('message', '')
+        if not msg:
+            continue
+        full_tok = _count_tokens(msg)
+        e.full_tokens = full_tok
+        if full_tok <= cap_tokens:
+            e.transmitted_message = msg
+            e.truncated = False
+            e.transmitted_tokens = full_tok
+        else:
+            tm = _truncate_at_sentence(msg, cap_tokens)
+            e.transmitted_message = tm
+            e.truncated = True
+            e.transmitted_tokens = _count_tokens(tm)
+    return events
+# -- end transmit cap --
+
 def build_structured_context(
     for_agent: str,
     events: list,
@@ -189,6 +293,11 @@ def build_structured_context(
     Returns:
         Formatted context string
     """
+    # Apply transmit cap to speech events before rendering
+    cap = getattr(info_model, "transmit_cap_tokens", 0)
+    if cap and cap > 0:
+        events = _truncate_speech_events(list(events), cap)
+
     if not events:
         return "This is the first round."
 

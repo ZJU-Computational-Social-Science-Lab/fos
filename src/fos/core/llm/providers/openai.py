@@ -105,6 +105,39 @@ def normalize_messages_for_openai(
     return norm
 
 
+
+def _extract_timings(resp):
+    """Pull llama.cpp server-side timings (prompt_ms/predicted_ms) if present."""
+    if resp is None:
+        return None
+    candidates = []
+    me = getattr(resp, "model_extra", None)
+    if isinstance(me, dict):
+        candidates.append(me.get("timings"))
+    candidates.append(getattr(resp, "timings", None))
+    try:
+        if hasattr(resp, "model_dump"):
+            candidates.append(resp.model_dump().get("timings"))
+    except Exception:
+        pass
+    if isinstance(resp, dict):
+        candidates.append(resp.get("timings"))
+    for t in candidates:
+        if not t:
+            continue
+        if isinstance(t, dict):
+            return t
+        if hasattr(t, "model_dump"):
+            try:
+                return t.model_dump()
+            except Exception:
+                pass
+        try:
+            return dict(t)
+        except Exception:
+            pass
+    return None
+
 def openai_chat(
     client: OpenAI,
     model: str,
@@ -162,8 +195,13 @@ def openai_chat(
         resp = client.chat.completions.create(**kwargs)
         msg = resp.choices[0].message
         content = (msg.content or getattr(msg, "reasoning_content", None) or "").strip()
+        usage = None
+        try:
+            usage = resp.usage.model_dump() if hasattr(resp, 'usage') and resp.usage else None
+        except Exception:
+            pass
         if content:
-            return content
+            return {"content": content, "usage": usage, "timings": _extract_timings(resp), "_raw_resp": resp}
     except Exception as exc:
         # lms / llama.cpp servers reject "json_object" type and require
         # "json_schema" or "text". Their error messages mention either
@@ -220,10 +258,16 @@ def openai_chat(
 
     if not content:
         if used_fallback:
-            return ""
+            return {"content": "", "usage": None, "timings": None, "_raw_resp": None}
         raise ValueError(T("OpenAI-compatible provider returned empty response"))
 
-    return content
+    # If we fell through without capturing usage (used_fallback path from line 213),
+    # return content-only dict
+    try:
+        _ = usage
+    except NameError:
+        usage = None
+    return {"content": content, "usage": usage, "timings": _extract_timings(resp), "_raw_resp": resp}
 
 
 def openai_completion(

@@ -147,6 +147,14 @@ class ExperimentRunnerAdapter:
             if self.scene.is_complete():
                 break
             try:
+                from profiling import prof
+                _p = prof()
+                _phase = getattr(self.scene, "cycle_phase", None)
+                if _p and _phase is not None:
+                    _p.set_phase(getattr(_phase, "value", str(_phase)))
+            except Exception:
+                pass
+            try:
                 self._run_scene_round()
             except Exception as exc:
                 self._emit_runtime_error(exc)

@@ -41,6 +41,10 @@ class InformationModel:
     recent_window: int = 3
     primacy_keep: bool = True
     context_budget_chars: int = 0
+    # Transmit cap: max tokens per speech stored in context_summary (0 = no cap)
+    transmit_cap_tokens: int = 500
+    # Reduced cap used when re-rendering after a prompt overflow
+    recap_tokens: int = 400
     payoff_template: Optional[str] = None
     include_scores: bool = True
     show_average_contribution: bool = False
