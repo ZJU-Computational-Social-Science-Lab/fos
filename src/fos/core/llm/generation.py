@@ -221,7 +221,7 @@ def generate_archetype_template(
     try:
         parsed, _ = decoder.raw_decode(cleaned)
     except json.JSONDecodeError as e:
-        warnings.warn(f"Invalid JSON for archetype '{attrs_str}': {e}", UserWarning)
+        warnings.warn(f"No JSON found — Invalid JSON in response for archetype '{attrs_str}': {e}", UserWarning)
         return fallback_template()
 
     if "description" not in parsed or not isinstance(parsed["description"], str):

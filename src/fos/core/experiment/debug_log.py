@@ -58,7 +58,9 @@ def write_debug(content: str) -> None:
     Args:
         content: Text to write to the debug file
     """
-    if not _DEBUG_ENABLED:
+    # Allow writes when _session_debug_file is explicitly set (e.g. test override)
+    # even if FOS_DEBUG is not enabled.
+    if not _DEBUG_ENABLED and _session_debug_file is None:
         return
     debug_file = get_debug_file()
     with _write_lock:
@@ -81,7 +83,7 @@ def write_scenario_header(
         agent_names: List of agent names in this scenario
         params: Optional scenario parameters for context
     """
-    if not _DEBUG_ENABLED:
+    if not _DEBUG_ENABLED and _session_debug_file is None:
         return
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     sep = "=" * 80
@@ -103,7 +105,7 @@ def write_scenario_footer(scenario_id: str) -> None:
     Args:
         scenario_id: The scenario identifier that just finished
     """
-    if not _DEBUG_ENABLED:
+    if not _DEBUG_ENABLED and _session_debug_file is None:
         return
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     sep = "=" * 80

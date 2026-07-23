@@ -355,12 +355,6 @@ class SceneLifecycleMixin:
                 "round": round_num,
                 "success": action.success,
                 "skipped": action.skipped,
-                "prompt_tokens": getattr(action, "prompt_tokens", 0),
-                "degraded": getattr(action, "degraded", False),
-                "degrade_reason": getattr(action, "degrade_reason", ""),
-                "rounds_dropped": getattr(action, "rounds_dropped", 0),
-                "tokens_before": getattr(action, "tokens_before", 0),
-                "tokens_after": getattr(action, "tokens_after", 0),
             }
             # Include execution-level metadata
             if exec_result.get("record_only"):

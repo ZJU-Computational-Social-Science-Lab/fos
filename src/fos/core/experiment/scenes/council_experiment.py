@@ -344,7 +344,7 @@ class CouncilExperimentScene(ExperimentScene):
             None otherwise.
         """
         if self.cycle_phase in (CouncilCyclePhase.DELIBERATION, CouncilCyclePhase.POST_VOTE_DISCUSSION):
-            return "Write only one sentence."
+            return T("experiment.write_one_sentence", locale=self.language) if hasattr(self, "language") else T("experiment.write_one_sentence")
         return None
 
     def _advance_round(self) -> None:

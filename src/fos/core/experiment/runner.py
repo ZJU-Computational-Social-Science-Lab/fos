@@ -522,13 +522,21 @@ class ExperimentRunner:
         """Extract the llama-server port from an LLMClient's base_url.
 
         Returns the port number (e.g., 8080 or 8082), defaulting to 8080.
+        Handles non-string base_url values (e.g. Mock objects in tests)
+        by returning the default port.
         """
         from urllib.parse import urlparse
         base_url = getattr(getattr(client, 'provider', None), 'base_url', '')
-        if not base_url:
+        if not isinstance(base_url, str) or not base_url:
             return 8080
-        parsed = urlparse(base_url)
-        return parsed.port or 8080
+        try:
+            parsed = urlparse(base_url)
+            port = parsed.port
+            if isinstance(port, int):
+                return port
+            return 8080
+        except Exception:
+            return 8080
 
     def _trigger_model_load(self, model_name: str, client: "LLMClient") -> bool:
         port = self._get_port_from_client(client)

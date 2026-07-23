@@ -273,7 +273,8 @@
     },
     "providers": {
       "connectivity_verified": "提供商连接已验证",
-      "activated": "已激活提供商"
+      "activated": "已激活提供商",
+      "ollama_model_not_found": "Ollama模型未找到：{model_name}"
     },
     "templates": {
       "deleted": "模板已删除"
@@ -1354,12 +1355,13 @@
     "agent_embodiment": "你是一个{role}。{description} 在回应时，请以这个人的身份思考和反应，而不是作为中立的助手。",
     "first_round": "这是第一轮——没有之前的上下文。",
     "json_only": "不要使用Markdown格式。不要解释。只输出JSON。",
-    "response_actions": "## 你的回应\n有效动作：{actions}\n只返回JSON：{{\"{field}\": \"<动作>\"}}",
+    "response_actions": "## 你的回应\n有效动作：{actions}\n只返回JSON：{{\"{field}\": \"{example}\"}}",
     "response_integer": "## 你的回应\n从 {min} 到 {max} 中选择一个数字。\n只返回JSON：{{\"{field}\": <数字>}}",
     "round_format": "第 {round_num} 轮：{actions}",
     "previous_rounds": "之前的轮次：\n{rounds}",
     "payoffs_suffix": "。收益：{payoffs}",
     "scores_suffix": "。累计得分：{scores}",
+    "write_one_sentence": "只写一句话。",
     "followup_plain": "你选择了{action}。请提供你的回应。",
     "followup_params": "你选择了{action}。此动作需要参数。",
     "range_constraint": "关键：{param} 必须是 {type}，范围在 {min} 到 {max} 之间。",

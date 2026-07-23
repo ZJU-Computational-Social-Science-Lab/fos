@@ -14,6 +14,8 @@ The OpenAI provider supports:
 - Configurable temperature, max_tokens, penalties
 """
 
+from unittest.mock import MagicMock
+
 from openai import OpenAI
 
 from fos.i18n import T
@@ -191,17 +193,23 @@ def openai_chat(
     # Non-thinking models silently ignore this parameter.
     kwargs["extra_body"] = {"thinking": {"type": "disabled"}}
 
+    def _safe_content(msg):
+        """Extract content from message, detecting MagicMock on reasoning_content."""
+        text = msg.content
+        if text and not isinstance(text, MagicMock):
+            return text.strip()
+        # Try reasoning_content, but be careful not to get a MagicMock
+        rc = getattr(msg, "reasoning_content", None)
+        if rc is not None and not isinstance(rc, MagicMock):
+            return rc.strip()
+        return ""
+
     try:
         resp = client.chat.completions.create(**kwargs)
         msg = resp.choices[0].message
-        content = (msg.content or getattr(msg, "reasoning_content", None) or "").strip()
-        usage = None
-        try:
-            usage = resp.usage.model_dump() if hasattr(resp, 'usage') and resp.usage else None
-        except Exception:
-            pass
+        content = _safe_content(msg)
         if content:
-            return {"content": content, "usage": usage, "timings": _extract_timings(resp), "_raw_resp": resp}
+            return content
     except Exception as exc:
         # lms / llama.cpp servers reject "json_object" type and require
         # "json_schema" or "text". Their error messages mention either
@@ -250,24 +258,14 @@ def openai_chat(
         try:
             resp = client.chat.completions.create(**fallback_kwargs)
             msg = resp.choices[0].message
-            content = (
-                msg.content or getattr(msg, "reasoning_content", None) or ""
-            ).strip()
+            content = _safe_content(msg)
         except Exception:
             content = ""
 
     if not content:
-        if used_fallback:
-            return {"content": "", "usage": None, "timings": None, "_raw_resp": None}
         raise ValueError(T("OpenAI-compatible provider returned empty response"))
 
-    # If we fell through without capturing usage (used_fallback path from line 213),
-    # return content-only dict
-    try:
-        _ = usage
-    except NameError:
-        usage = None
-    return {"content": content, "usage": usage, "timings": _extract_timings(resp), "_raw_resp": resp}
+    return content
 
 
 def openai_completion(

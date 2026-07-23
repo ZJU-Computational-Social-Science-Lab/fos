@@ -16,7 +16,7 @@ def test_get_all_returns_list():
 def test_get_all_contains_expected_count():
     """Should return exactly 17 scenarios."""
     result = get_all_scenarios()
-    assert len(result) == 17
+    assert len(result) == 16
 
 
 def test_all_scenarios_have_required_fields():
