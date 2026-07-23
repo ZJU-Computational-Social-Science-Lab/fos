@@ -9,16 +9,18 @@ The prompt builder constructs structured prompts from:
 5. JSON format instruction
 """
 
+import json
 import logging
+import os
 import re
 from typing import Dict, Any, Literal
 
 from fos.core.experiment.agent import ExperimentAgent
 from fos.core.experiment.game_configs import GameConfig
 from fos.i18n import T
+from fos.core.experiment.prompt_audit import audit_prompt
 
 logger = logging.getLogger(__name__)
-
 
 def _interpret_score(value: int, locale: str = "en") -> str:
     """Convert numeric score to interpretation bracket.
@@ -38,7 +40,6 @@ def _interpret_score(value: int, locale: str = "en") -> str:
         level = "high"
     return T(f"experiment.interpretation.{level}", locale=locale)
 
-
 def _get_article(word: str) -> str:
     """Get the appropriate article (a/an) for a word.
 
@@ -50,7 +51,6 @@ def _get_article(word: str) -> str:
     """
     vowels = ("a", "e", "i", "o", "u")
     return "an" if word.lower().startswith(vowels) else "a"
-
 
 def truncate_context_to_budget(context: str, budget_chars: int, locale: str = "en") -> str:
     """Truncate context to fit within a character budget.
@@ -79,7 +79,6 @@ def truncate_context_to_budget(context: str, budget_chars: int, locale: str = "e
         result.append(line)
         chars += needed
     return "\n".join(result)
-
 
 def build_agent_description(
     agent_properties: Dict[str, Any],
@@ -165,6 +164,8 @@ def build_agent_description(
 
     return " ".join(parts)
 
+# -- Prompt audit (env-gated, FOS_PROMPT_AUDIT=<dir>) --
+    return prompt
 
 def build_prompt(
     agent: ExperimentAgent,
@@ -300,7 +301,9 @@ def build_prompt(
     logger.debug(prompt)
     logger.debug(f"{'='*60}\n")
 
+    audit_prompt("build_prompt", prompt, agent_name=agent.name)
     return prompt
+
 
 
 def build_reprompt(
@@ -401,6 +404,7 @@ def build_reprompt(
             logger.debug(full_prompt)
             logger.debug(f"{'='*60}\n")
 
+        audit_prompt("build_reprompt", full_prompt, agent_name=agent.name, mode=mode)
         return full_prompt
 
     # For JSON mode, build a simpler follow-up prompt WITHOUT full action list

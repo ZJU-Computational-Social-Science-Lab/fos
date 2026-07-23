@@ -44,6 +44,11 @@ class RoundEvent:
     observed_by: List[str] = field(default_factory=list)
     payoff: Optional[int] = None
     feedback: Optional[str] = None  # Coordination feedback text
+    # Transmit cap tracking (for speech truncation)
+    transmitted_message: Optional[str] = None  # Capped version shown to neighbours
+    truncated: bool = False  # Whether the speech was capped
+    full_tokens: int = 0  # Token count of full speech
+    transmitted_tokens: int = 0  # Token count of transmitted version
 
     def __post_init__(self):
         if not self.observed_by:

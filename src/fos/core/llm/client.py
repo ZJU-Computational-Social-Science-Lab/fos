@@ -21,6 +21,7 @@ Environment variables:
 """
 
 import os
+import json
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutTimeout
 from copy import deepcopy
@@ -67,6 +68,14 @@ def _get_ollama():
     return _ollama
 
 
+class PromptOverflowError(Exception):
+    """Raised when a prompt exceeds the server context window."""
+    def __init__(self, token_count: int, ctx_size: int):
+        self.token_count = token_count
+        self.ctx_size = ctx_size
+        super().__init__(f"Prompt ({token_count} tokens) exceeds context size ({ctx_size})")
+
+
 class LLMClient:
     """
     LLM client with support for multiple providers and automatic retry.
@@ -94,6 +103,7 @@ class LLMClient:
             ValueError: If provider dialect is unknown
         """
         self.provider = provider
+        self.server_ctx_size = int(os.environ.get("FOS_SERVER_CTX_SIZE", "32768"))
 
         # Timeout and retry settings (environment-driven defaults)
         self.timeout_s = float(os.getenv("LLM_TIMEOUT_S", "300"))
@@ -231,7 +241,7 @@ class LLMClient:
     # Chat API
     # -------------------------------------------------------------------------
 
-    def chat(self, messages: List[Dict[str, Any]], json_mode: bool = False) -> str:
+    def chat(self, messages: List[Dict[str, Any]], json_mode: bool = False, max_tokens: int | None = None) -> str:
         """
         Generate chat completion with vision support.
 
@@ -252,8 +262,52 @@ class LLMClient:
         Raises:
             ValueError: If provider dialect is unknown
         """
+        _max_tokens = max_tokens if max_tokens is not None else self.provider.max_tokens
         _last_llm_meta = {}
         supports_vision = bool(getattr(self.provider, "supports_vision", False))
+
+        # -- LLM traffic log: dispatch capture --
+        _log_path = None
+        _raw_log = {}
+        try:
+            _log_env = os.environ.get("FOS_LLM_LOG", "llm_traffic.jsonl")
+            if _log_env.lower() != "off":
+                _log_path = _log_env or "llm_traffic.jsonl"
+                _prompt_chars = sum(len(str(m.get("content", ""))) for m in messages)
+                _raw_log = {
+                    "ts": time.time(),
+                    "model": self.provider.model,
+                    "max_tokens_sent": _max_tokens,
+                    "approx_prompt_tokens": _prompt_chars // 4,
+                    "messages": messages,
+                }
+        except Exception:
+            _log_path = None
+        # -- end dispatch log prep --
+
+        # ── Pre-flight tokenize check ──
+        _prompt_text = "\n".join(str(m.get("content", "")) for m in messages)
+        _measured_tokens = 0
+        try:
+            _base = self.provider.base_url or ""
+            if _base:
+                _tok_url = _base.rstrip("/") + "/tokenize"
+                import urllib.request as _ur
+                import json as _j
+                _req = _ur.Request(_tok_url, data=_j.dumps({"content": _prompt_text}).encode(),
+                                   headers={"Content-Type": "application/json"})
+                _resp = _ur.urlopen(_req, timeout=10)
+                _data = _j.loads(_resp.read())
+                _measured_tokens = len(_data.get("tokens", []))
+        except Exception:
+            _measured_tokens = len(_prompt_text) // 4  # fallback
+
+        _raw_log["measured_prompt_tokens"] = _measured_tokens
+
+        _limit = self.server_ctx_size - _max_tokens - 100
+        if _measured_tokens > _limit:
+            raise PromptOverflowError(_measured_tokens, self.server_ctx_size)
+        # ── end pre-flight ──
 
         def _call_openai():
             openai = _get_openai()
@@ -262,7 +316,7 @@ class LLMClient:
                 model=self.provider.model,
                 messages=messages,
                 temperature=self.provider.temperature,
-                max_tokens=self.provider.max_tokens,
+                max_tokens=_max_tokens,
                 frequency_penalty=self.provider.frequency_penalty,
                 presence_penalty=self.provider.presence_penalty,
                 timeout=self.timeout_s,
@@ -283,7 +337,7 @@ class LLMClient:
                 model=self.provider.model,
                 messages=messages,
                 temperature=self.provider.temperature,
-                max_tokens=self.provider.max_tokens,
+                max_tokens=_max_tokens,
                 top_p=self.provider.top_p,
                 frequency_penalty=self.provider.frequency_penalty,
                 presence_penalty=self.provider.presence_penalty,
@@ -305,7 +359,7 @@ class LLMClient:
                 messages=messages,
                 temperature=self.provider.temperature,
                 top_p=self.provider.top_p,
-                max_tokens=self.provider.max_tokens,
+                max_tokens=_max_tokens,
                 timeout=self.timeout_s,
                 allow_vision=supports_vision,
                 safe_urls_func=validate_media_url,
@@ -314,16 +368,28 @@ class LLMClient:
 
         import time as _time2
         _llm_start = _time2.perf_counter()
-        if self.provider.dialect == "openai":
-            result = self._with_timeout_and_retry(_call_openai)
-        elif self.provider.dialect == "gemini":
-            result = self._with_timeout_and_retry(_call_gemini)
-        elif self.provider.dialect == "mock":
-            result = self._with_timeout_and_retry(_call_mock)
-        elif self.provider.dialect == "ollama":
-            result = self._with_timeout_and_retry(_call_ollama)
-        else:
-            raise ValueError(T("Unknown LLM dialect: {dialect}", dialect=self.provider.dialect))
+        try:
+            if self.provider.dialect == "openai":
+                result = self._with_timeout_and_retry(_call_openai)
+            elif self.provider.dialect == "gemini":
+                result = self._with_timeout_and_retry(_call_gemini)
+            elif self.provider.dialect == "mock":
+                result = self._with_timeout_and_retry(_call_mock)
+            elif self.provider.dialect == "ollama":
+                result = self._with_timeout_and_retry(_call_ollama)
+            else:
+                raise ValueError(T("Unknown LLM dialect: {dialect}", dialect=self.provider.dialect))
+        except Exception as _llm_err:
+            # -- LLM traffic log: error --
+            try:
+                if _log_path is not None:
+                    _raw_log["raw_result"] = None
+                    _raw_log["error"] = str(_llm_err)
+                    with open(_log_path, "a") as _lf:
+                        _lf.write(json.dumps(_raw_log, ensure_ascii=False) + "\n")
+            except Exception:
+                pass
+            raise
         _elapsed = _time2.perf_counter() - _llm_start
 
         try:
@@ -335,6 +401,17 @@ class LLMClient:
             resp_meta = _last_llm_meta if _last_llm_meta else None
             p.record_llm(model=self.provider.model, phase=None,
                          seconds=_elapsed, response=resp_meta)
+
+        # -- LLM traffic log: capture raw result (before harmony stripping) --
+        try:
+            if _log_path is not None:
+                _raw_log["raw_result"] = str(result) if result is not None else ""
+                _raw_log["error"] = None
+                with open(_log_path, "a") as _lf:
+                    _lf.write(json.dumps(_raw_log, ensure_ascii=False) + "\n")
+        except Exception:
+            pass
+        # -- end log write --
 
         # Layer 2: strip any thinking/reasoning tokens that leaked through
         text = str(result or "")

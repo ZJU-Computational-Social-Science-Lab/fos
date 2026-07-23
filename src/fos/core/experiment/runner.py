@@ -31,7 +31,8 @@ from fos.i18n import T
 from fos.core.experiment.payoff.engine import PayoffEngine
 from fos.core.experiment.feedback.builder import CoordinationFeedbackBuilder
 from fos.core.experiment.debug_log import write_debug
-from fos.core.llm.client import LLMClient
+from fos.core.llm.client import LLMClient, PromptOverflowError
+from fos.core.context_builder import _count_tokens, _truncate_speech_events, build_structured_context
 
 logger = logging.getLogger(__name__)
 
@@ -790,7 +791,8 @@ class ExperimentRunner:
                     "The exact words you say aloud this round."
                 ),
             }
-        return {"schema": schema, "mode": "json"}
+        mode = "plain_text" if str(action_name).strip().lower() in {"speak", "say", "talk"} else "json"
+        return {"schema": schema, "mode": mode}
 
     def set_scene_state(self, state: Dict[str, Any]) -> None:
         """Merge new state into scene_state. context_manager holds the same reference."""
@@ -1757,14 +1759,115 @@ class ExperimentRunner:
                                 skipped=True,
                                 round_num=round_num,
                                 error=f"Model load timeout: {model_name}",
+                                prompt_tokens=0,
+                                degraded=False,
+                                degrade_reason="",
+                                rounds_dropped=0,
+                                tokens_before=0,
+                                tokens_after=0,
                             )
                         self._last_model = model_name
 
                     # Chat request: model is locked, no other agent can unload it
-                    messages = [{"role": "user", "content": prompt}]
-                    raw_response = await asyncio.to_thread(
-                        agent_llm_client.chat, messages, json_mode=True
-                    )
+                    # --- 3-tier degradation handling ---
+                    _tokens_before = _count_tokens(prompt)
+                    _degraded = False
+                    _degrade_reason = ""
+                    _rounds_dropped = 0
+                    _tokens_after = 0
+                    _limit = getattr(agent_llm_client, 'server_ctx_size', None)
+                    if isinstance(_limit, int):
+                        _max_tokens = getattr(getattr(agent_llm_client, 'provider', None), 'max_tokens', 1024)
+                        if isinstance(_max_tokens, int):
+                            _limit = _limit - _max_tokens - 100
+                        else:
+                            _limit = None
+                    else:
+                        _limit = None
+
+                    if _limit is None or _tokens_before <= _limit:
+                        # Fits — send normally
+                        messages = [{"role": "user", "content": prompt}]
+                        raw_response = await asyncio.to_thread(
+                            agent_llm_client.chat, messages, json_mode=True
+                        )
+                    else:
+                        _degraded = True
+                        _tokens_after = _tokens_before
+                        # Tier 1: Rebuild with truncated speech (recap)
+                        _recap = getattr(self.information_model, "recap_tokens", 400) if hasattr(self, "information_model") else 400
+                        visible_events = [
+                            e for e in self.context_manager._round_events
+                            if agent.name in e.observed_by
+                        ]
+                        _capped_events = _truncate_speech_events(list(visible_events), _recap)
+                        _recap_context = build_structured_context(
+                            for_agent=agent.name, events=_capped_events, info_model=self.information_model,
+                            agent_score=agent.score if getattr(self.information_model, 'include_scores', False) else None,
+                        )
+                        _recap_prompt = build_prompt(
+                            agent=agent, game_config=self.game_config, context_summary=_recap_context,
+                            information_model=self.information_model, kb_context=kb_context,
+                            neighbor_context=neighbor_context, allowed_actions=allowed_actions,
+                            speak_instruction=speak_instruction, locale=_locale,
+                        )
+                        _recap_tokens = _count_tokens(_recap_prompt)
+                        if _recap_tokens <= _limit:
+                            _degrade_reason = "recap_400"
+                            _tokens_after = _recap_tokens
+                            messages = [{"role": "user", "content": _recap_prompt}]
+                            raw_response = await asyncio.to_thread(
+                                agent_llm_client.chat, messages, json_mode=True
+                            )
+                        else:
+                            # Tier 2: Drop oldest non-round-1 rounds one at a time
+                            _round_nums = sorted(set(e.round_num for e in visible_events))
+                            _drop_candidates = sorted([r for r in _round_nums if r != 1])
+                            raw_response = None
+                            for _drop_idx in range(len(_drop_candidates)):
+                                _kept_rounds = {1} | set(_drop_candidates[_drop_idx+1:])
+                                _filtered = [e for e in visible_events if e.round_num in _kept_rounds]
+                                _ctx = build_structured_context(
+                                    for_agent=agent.name, events=_filtered, info_model=self.information_model,
+                                    agent_score=agent.score if getattr(self.information_model, 'include_scores', False) else None,
+                                )
+                                _p = build_prompt(
+                                    agent=agent, game_config=self.game_config, context_summary=_ctx,
+                                    information_model=self.information_model, kb_context=kb_context,
+                                    neighbor_context=neighbor_context, allowed_actions=allowed_actions,
+                                    speak_instruction=speak_instruction, locale=_locale,
+                                )
+                                _tok = _count_tokens(_p)
+                                if _tok <= _limit:
+                                    _degrade_reason = "rounds_dropped"
+                                    _rounds_dropped = _drop_idx + 1
+                                    _tokens_after = _tok
+                                    messages = [{"role": "user", "content": _p}]
+                                    raw_response = await asyncio.to_thread(
+                                        agent_llm_client.chat, messages, json_mode=True
+                                    )
+                                    break
+                            # Tier 3: Nothing fits — return failure
+                            if raw_response is None:
+                                _degrade_reason = "failed"
+                                await self._write_debug_atomically(debug_buffer)
+                                agent.clear_feedback_buffer()
+                                return ActionResult(
+                                    agent_name=agent.name,
+                                    action_name="skip",
+                                    parameters={"error": "Prompt too large after all degradation tiers"},
+                                    summary="Skipped - prompt overflow",
+                                    success=False,
+                                    skipped=True,
+                                    round_num=round_num,
+                                    error=f"Prompt {_tokens_before}t exceeds limit {_limit}t after all degradation",
+                                    prompt_tokens=_tokens_before,
+                                    degraded=True,
+                                    degrade_reason="failed",
+                                    rounds_dropped=0,
+                                    tokens_before=_tokens_before,
+                                    tokens_after=_tokens_before,
+                                )
 
                     # Handle empty response gracefully (e.g., Qwen3 via Ollama returns 0 chars)
                     if not raw_response or not raw_response.strip():
@@ -1784,7 +1887,13 @@ class ExperimentRunner:
                             success=False,
                             skipped=True,
                             round_num=round_num,
-                            error="Empty LLM response"
+                            error="Empty LLM response",
+                            prompt_tokens=0,
+                            degraded=False,
+                            degrade_reason="",
+                            rounds_dropped=0,
+                            tokens_before=0,
+                            tokens_after=0,
                         )
 
                     # Process response through controller (Layer 3) — still inside lock
@@ -1847,10 +1956,104 @@ class ExperimentRunner:
                         self._model_switch_lock.release()
             else:
                 # No model name (mock/test client) — proceed without lock
-                messages = [{"role": "user", "content": prompt}]
-                raw_response = await asyncio.to_thread(
-                    agent_llm_client.chat, messages, json_mode=True
-                )
+                # --- 3-tier degradation handling ---
+                _tokens_before = _count_tokens(prompt)
+                _degraded = False
+                _degrade_reason = ""
+                _rounds_dropped = 0
+                _tokens_after = 0
+                _limit = getattr(agent_llm_client, 'server_ctx_size', None)
+                if isinstance(_limit, int):
+                    _max_tokens = getattr(getattr(agent_llm_client, 'provider', None), 'max_tokens', 1024)
+                    if isinstance(_max_tokens, int):
+                        _limit = _limit - _max_tokens - 100
+                    else:
+                        _limit = None
+                else:
+                    _limit = None
+
+                if _limit is None or _tokens_before <= _limit:
+                    messages = [{"role": "user", "content": prompt}]
+                    raw_response = await asyncio.to_thread(
+                        agent_llm_client.chat, messages, json_mode=True
+                    )
+                else:
+                    _degraded = True
+                    _tokens_after = _tokens_before
+                    # Tier 1: Rebuild with truncated speech (recap)
+                    _recap = getattr(self.information_model, "recap_tokens", 400) if hasattr(self, "information_model") else 400
+                    visible_events = [
+                        e for e in self.context_manager._round_events
+                        if agent.name in e.observed_by
+                    ]
+                    _capped_events = _truncate_speech_events(list(visible_events), _recap)
+                    _recap_context = build_structured_context(
+                        for_agent=agent.name, events=_capped_events, info_model=self.information_model,
+                        agent_score=agent.score if getattr(self.information_model, 'include_scores', False) else None,
+                    )
+                    _recap_prompt = build_prompt(
+                        agent=agent, game_config=self.game_config, context_summary=_recap_context,
+                        information_model=self.information_model, kb_context=kb_context,
+                        neighbor_context=neighbor_context, allowed_actions=allowed_actions,
+                        speak_instruction=speak_instruction, locale=_locale,
+                    )
+                    _recap_tokens = _count_tokens(_recap_prompt)
+                    if _recap_tokens <= _limit:
+                        _degrade_reason = "recap_400"
+                        _tokens_after = _recap_tokens
+                        messages = [{"role": "user", "content": _recap_prompt}]
+                        raw_response = await asyncio.to_thread(
+                            agent_llm_client.chat, messages, json_mode=True
+                        )
+                    else:
+                        # Tier 2: Drop oldest non-round-1 rounds one at a time
+                        _round_nums = sorted(set(e.round_num for e in visible_events))
+                        _drop_candidates = sorted([r for r in _round_nums if r != 1])
+                        raw_response = None
+                        for _drop_idx in range(len(_drop_candidates)):
+                            _kept_rounds = {1} | set(_drop_candidates[_drop_idx+1:])
+                            _filtered = [e for e in visible_events if e.round_num in _kept_rounds]
+                            _ctx = build_structured_context(
+                                for_agent=agent.name, events=_filtered, info_model=self.information_model,
+                                agent_score=agent.score if getattr(self.information_model, 'include_scores', False) else None,
+                            )
+                            _p = build_prompt(
+                                agent=agent, game_config=self.game_config, context_summary=_ctx,
+                                information_model=self.information_model, kb_context=kb_context,
+                                neighbor_context=neighbor_context, allowed_actions=allowed_actions,
+                                speak_instruction=speak_instruction, locale=_locale,
+                            )
+                            _tok = _count_tokens(_p)
+                            if _tok <= _limit:
+                                _degrade_reason = "rounds_dropped"
+                                _rounds_dropped = _drop_idx + 1
+                                _tokens_after = _tok
+                                messages = [{"role": "user", "content": _p}]
+                                raw_response = await asyncio.to_thread(
+                                    agent_llm_client.chat, messages, json_mode=True
+                                )
+                                break
+                        # Tier 3: Nothing fits — return failure
+                        if raw_response is None:
+                            _degrade_reason = "failed"
+                            await self._write_debug_atomically(debug_buffer)
+                            agent.clear_feedback_buffer()
+                            return ActionResult(
+                                agent_name=agent.name,
+                                action_name="skip",
+                                parameters={"error": "Prompt too large after all degradation tiers"},
+                                summary="Skipped - prompt overflow",
+                                success=False,
+                                skipped=True,
+                                round_num=round_num,
+                                error=f"Prompt {_tokens_before}t exceeds limit {_limit}t after all degradation",
+                                prompt_tokens=_tokens_before,
+                                degraded=True,
+                                degrade_reason="failed",
+                                rounds_dropped=0,
+                                tokens_before=_tokens_before,
+                                tokens_after=_tokens_before,
+                            )
 
                 if not raw_response or not raw_response.strip():
                     logger.error(f"Empty response from LLM for {agent.name}")
@@ -1868,7 +2071,13 @@ class ExperimentRunner:
                         success=False,
                         skipped=True,
                         round_num=round_num,
-                        error="Empty LLM response"
+                        error="Empty LLM response",
+                        prompt_tokens=0,
+                        degraded=False,
+                        degrade_reason="",
+                        rounds_dropped=0,
+                        tokens_before=0,
+                        tokens_after=0,
                     )
 
                 action_schemas = self.kernel.get_action_schemas() if self.kernel else {}
@@ -1951,6 +2160,14 @@ class ExperimentRunner:
             if result.error:
                 logger.debug(f"Error: {result.error}")
 
+            # Set degradation fields on result
+            result.prompt_tokens = _tokens_before
+            result.degraded = _degraded
+            result.degrade_reason = _degrade_reason
+            result.rounds_dropped = _rounds_dropped
+            result.tokens_before = _tokens_before
+            result.tokens_after = _tokens_after
+
             agent.clear_feedback_buffer()
             return result
 
@@ -1971,5 +2188,11 @@ class ExperimentRunner:
                 agent_name=agent.name,
                 round_num=round_num,
                 skipped=True,
-                error=str(e)
+                error=str(e),
+                prompt_tokens=0,
+                degraded=False,
+                degrade_reason="",
+                rounds_dropped=0,
+                tokens_before=0,
+                tokens_after=0,
             )

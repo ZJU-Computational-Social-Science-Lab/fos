@@ -126,16 +126,23 @@ def validate_and_clamp(result: dict, game_config: GameConfig) -> Optional[dict]:
 
         raw_action = str(action_value).strip().lower()
 
-        # Exact match (case-insensitive)
+        # Normalize both sides: strip underscores, spaces, hyphens
+        # so "vote_no" matches "Vote No" after lowercasing
+        def _norm(s: str) -> str:
+            return re.sub(r'[_\-\s]', '', s)
+        raw_norm = _norm(raw_action)
+
+        # Exact match (case-insensitive, normalized)
         for valid in valid_actions:
-            if raw_action == valid.lower():
+            if raw_norm == _norm(valid.lower()):
                 result[field] = valid
                 return result
 
-        # Fuzzy: check if a valid action is a substring
+        # Fuzzy: check if a valid action is a substring (normalized)
         # Handles "listening" -> "listen"
         for valid in valid_actions:
-            if valid.lower() in raw_action or raw_action in valid.lower():
+            vn = _norm(valid.lower())
+            if vn in raw_norm or raw_norm in vn:
                 result[field] = valid
                 return result
 

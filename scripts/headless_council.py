@@ -181,6 +181,80 @@ def default_proposals() -> list[ProposalSpec]:
                 "suspension of deployment pending review."
             ),
         ),
+        ProposalSpec(
+            key="proposal_g",
+            label="Proposal G — Aesthetic Objectivity",
+            text=(
+                "The beauty or aesthetic value of an artwork is objective — "
+                "some works are genuinely better than others, rather than "
+                "purely a matter of individual taste."
+            ),
+        ),
+        ProposalSpec(
+            key="proposal_h",
+            label="Proposal H — Personal Identity Continuity",
+            text=(
+                "If a machine painlessly destroyed a person's body and instantly "
+                "built an exact atom-for-atom copy of them elsewhere, that copy "
+                "would be the same person — the original would survive the process, "
+                "rather than being replaced by a distinct copy."
+            ),
+        ),
+        ProposalSpec(
+            key="proposal_i",
+            label="Proposal I — Objective Meaning of Life",
+            text=(
+                "Human life has an objective meaning that does not depend on "
+                "what any individual believes or feels about it, rather than "
+                "meaning being subjective or absent."
+            ),
+        ),
+        ProposalSpec(
+            key="proposal_j",
+            label="Proposal J — Regifting Ethics",
+            text=(
+                "Giving an unwanted gift to someone else, without the original "
+                "giver ever finding out, is ethically acceptable, rather than "
+                "being a form of dishonesty toward the giver."
+            ),
+        ),
+        ProposalSpec(
+            key="proposal_k",
+            label="Proposal K — Household Privacy Norms",
+            text=(
+                "Reading a partner's or family member's phone messages without "
+                "asking is acceptable when there is no specific reason to suspect "
+                "anything is wrong, rather than being a privacy violation "
+                "regardless of suspicion."
+            ),
+        ),
+        ProposalSpec(
+            key="proposal_l",
+            label="Proposal L — Public Space Noise Norms",
+            text=(
+                "Playing audio from a personal device without headphones in a "
+                "shared public space, such as public transit or a park, is "
+                "acceptable when kept at low volume, rather than being "
+                "inconsiderate regardless of volume."
+            ),
+        ),
+        ProposalSpec(
+            key="proposal_m",
+            label="Proposal M — Equal Bill-Splitting Fairness",
+            text=(
+                "When a group dines together, splitting the bill equally among "
+                "all participants is fairer than each person paying for exactly "
+                "what they ordered."
+            ),
+        ),
+        ProposalSpec(
+            key="proposal_n",
+            label="Proposal N — Shared Workplace Mandate",
+            text=(
+                "Organizations should require employees to work together in a "
+                "shared physical workplace rather than allowing full remote work."
+            ),
+        ),
     ]
 
 
@@ -331,7 +405,9 @@ def _warmup_single_model(backend, model_name, base_url, temperature):
 # Router model name mapping (FOS name → GGUF filename without .gguf)
 _LLAMACPP_ROUTER_MAP = {
     "openai/gpt-oss-20b": "gpt-oss-20b",
+    "gpt-oss-20b": "gpt-oss-20b",
     "google/gemma-4-26b-a4b": "gemma-4-26b-a4b",
+    "gemma-4-26b-a4b": "gemma-4-26b-a4b",
     "qwen/qwen3.6-35b-a3b": "qwen3.6-35b-a3b",
     "gemma4-26b-a4b-uncensored-hauhaucs-balanced": "gemma4-26b-a4b-uncensored",
     "qwen3.6-35b-a3b-uncensored-hauhaucs-aggressive": "qwen3.6-35b-a3b-uncensored",
@@ -557,7 +633,7 @@ def _build_small_world_edges(agent_names: list[str], seed: int) -> tuple[list[li
     edges: set[tuple[str, str]] = set()
     count = len(shuffled)
     for idx, name in enumerate(shuffled):
-        for step in (1, 2):
+        for step in (1,):  # k=2: one neighbour each direction
             neighbor = shuffled[(idx + step) % count]
             edges.add(_make_edge(name, neighbor))
     for _ in range(max(1, count // 2)):
@@ -818,6 +894,9 @@ def run_headless_council(
     print(f"  Output:     {output_dir.resolve()}")
     print(f"{'=' * 60}\n")
 
+    from profiling import start_profiler
+    start_profiler(output_dir / "council_timing.txt")
+
     # 1. Verify models
     print("1. Checking model availability...")
     ensure_models_available(backend, base_url, model_names)
@@ -1050,7 +1129,7 @@ def main() -> None:
     parser.add_argument(
         "--proposals",
         nargs="+",
-        choices=["all", "srma", "wealth-tax", "laws", "un-veto", "who-budget", "ai-approval"],
+        choices=["all", "srma", "wealth-tax", "laws", "un-veto", "who-budget", "ai-approval", "aesthetic-objectivity", "identity-continuity", "meaning-of-life", "regifting", "privacy-norms", "public-noise", "bill-splitting", "remote-work"],
         default=["all"],
         help="Which proposals to run. Pass multiple names to run specific ones, e.g. --proposals srma wealth-tax un-veto (default: all)",
     )
@@ -1091,6 +1170,14 @@ def main() -> None:
         "un-veto": [all_props[3]],
         "who-budget": [all_props[4]],
         "ai-approval": [all_props[5]],
+        "aesthetic-objectivity": [all_props[6]],
+        "identity-continuity": [all_props[7]],
+        "meaning-of-life": [all_props[8]],
+        "regifting": [all_props[9]],
+        "privacy-norms": [all_props[10]],
+        "public-noise": [all_props[11]],
+        "bill-splitting": [all_props[12]],
+        "remote-work": [all_props[13]],
     }
     if "all" in args.proposals:
         proposals = all_props
