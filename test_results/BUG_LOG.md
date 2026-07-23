@@ -2,7 +2,14 @@
 
 | ID | Date | Sev | Demo-path? | Module | Summary | Status | Regression test | Fixed in |
 |----|------|-----|------------|--------|---------|--------|-----------------|----------|
-| — | — | — | — | — | _(no bugs filed yet)_ | — | — | — |
+| BUG-001 | 2026-07-15 | P1 | N | Experiment → Game Config | Action names returned in Title-case, tests expect lowercase | FIXED | tests/unit/experiment/test_experiment_scene_game_config.py | d66d017 |
+| BUG-002 | 2026-07-15 | P1 | N | Experiment → Debug Log | `_session_debug_file` not written during mock runner execution | FIXED | tests/unit/test_debug_log_format.py | d66d017 |
+| BUG-003 | 2026-07-15 | P1 | N | LLM → OpenAI Provider | json_mode fallback returns mock chain instead of message content | FIXED | tests/core/llm/test_openai_provider.py | d66d017 |
+| BUG-004 | 2026-07-15 | P2 | N | LLM → Gemini Provider | Mock leak from openai tests + ThinkingConfig not re-exported | FIXED | tests/core/llm/test_thinking_disable.py | d66d017 |
+| BUG-005 | 2026-07-15 | P1 | N | Experiment → Regression | Action name casing in test_custom_scene_runtime | FIXED | tests/core/experiment/test_phase1_regression_units.py | d66d017 |
+| BUG-006 | 2026-07-15 | P2 | N | Experiment → RAG E2E | `ModuleNotFoundError: torch` — torch not installed | FIXED | tests/core/experiment/test_rag_e2e.py | c8d2852 |
+| BUG-007 | 2026-07-15 | P2 | N | Experiment → Runner | Mock object passed to `_get_port_from_client` instead of string | FIXED | tests/core/experiment/test_runner.py | d66d017 |
+| BUG-008 | 2026-07-15 | P1 | N | Experiment → Scene Params | Action name casing in test_custom_scene | FIXED | tests/core/experiment/test_scene_average_param.py | d66d017 |
 
 ## Severity
 
