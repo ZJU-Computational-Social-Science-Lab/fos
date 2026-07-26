@@ -12,8 +12,11 @@
       "pilot_no": null,
       "pilot_abstain": null,
       "pilot_skip": null,
-      "pilot_yes_share": null,
-      "notes": ""
+      "pilot_yes_share_excl_abstain": null,
+      "pilot_yes_share_incl_abstain": null,
+      "statement_type": "policy_proposal",
+      "word_count": 41,
+      "notes": "Run in the 15-network pilot reported in the current draft."
     },
     {
       "id": "wealth_tax",
@@ -26,12 +29,16 @@
       "pilot_no": null,
       "pilot_abstain": null,
       "pilot_skip": null,
-      "pilot_yes_share": null,
-      "notes": ""
+      "pilot_yes_share_excl_abstain": null,
+      "pilot_yes_share_incl_abstain": null,
+      "statement_type": "policy_proposal",
+      "word_count": 41,
+      "notes": "Run in the 15-network pilot reported in the current draft."
     },
     {
       "id": "un_veto",
       "short_name": "UNVeto",
+      "statement": "The permanent veto power held by the five permanent members of the UN Security Council should be abolished and replaced by a binding 60% supermajority voting rule applicable to all member states represented on the Council.",
       "domain": "institutional_policy",
       "origin": "original",
       "pilot_letter": null,
@@ -39,9 +46,11 @@
       "pilot_no": null,
       "pilot_abstain": null,
       "pilot_skip": null,
-      "pilot_yes_share": null,
-      "notes": "",
-      "statement": "The permanent veto power held by the five permanent members of the UN Security Council should be abolished and replaced by a binding 60% supermajority voting rule applicable to all member states represented on the Council."
+      "pilot_yes_share_excl_abstain": null,
+      "pilot_yes_share_incl_abstain": null,
+      "statement_type": "policy_proposal",
+      "word_count": 36,
+      "notes": "Run in the 15-network pilot reported in the current draft."
     },
     {
       "id": "aesthetic_objectivity",
@@ -54,8 +63,11 @@
       "pilot_no": 13,
       "pilot_abstain": 3,
       "pilot_skip": 0,
-      "pilot_yes_share": 0.24,
-      "notes": ""
+      "pilot_yes_share_excl_abstain": 0.235,
+      "pilot_yes_share_incl_abstain": 0.200,
+      "statement_type": "propositional_claim",
+      "word_count": 26,
+      "notes": "Pilot: 20 agents, 2 models (GPT-OSS 20B and Gemma 26B), no refusal-ablated variants. Pilot conditions (network topology, deliberation rounds, seed): TODO_CONFIRM. Main study population differs from pilot."
     },
     {
       "id": "meaning_of_life",
@@ -68,8 +80,11 @@
       "pilot_no": 15,
       "pilot_abstain": 0,
       "pilot_skip": 2,
-      "pilot_yes_share": 0.25,
-      "notes": ""
+      "pilot_yes_share_excl_abstain": 0.250,
+      "pilot_yes_share_incl_abstain": 0.250,
+      "statement_type": "propositional_claim",
+      "word_count": 26,
+      "notes": "Pilot: 20 agents, 2 models (GPT-OSS 20B and Gemma 26B), no refusal-ablated variants. Pilot conditions (network topology, deliberation rounds, seed): TODO_CONFIRM. Main study population differs from pilot."
     },
     {
       "id": "regifting",
@@ -82,8 +97,11 @@
       "pilot_no": 17,
       "pilot_abstain": 0,
       "pilot_skip": 0,
-      "pilot_yes_share": 0.15,
-      "notes": ""
+      "pilot_yes_share_excl_abstain": 0.150,
+      "pilot_yes_share_incl_abstain": 0.150,
+      "statement_type": "propositional_claim",
+      "word_count": 27,
+      "notes": "Pilot: 20 agents, 2 models (GPT-OSS 20B and Gemma 26B), no refusal-ablated variants. Pilot conditions (network topology, deliberation rounds, seed): TODO_CONFIRM. Main study population differs from pilot."
     },
     {
       "id": "shared_workplace",
@@ -96,8 +114,11 @@
       "pilot_no": 18,
       "pilot_abstain": 0,
       "pilot_skip": 1,
-      "pilot_yes_share": 0.10,
-      "notes": ""
+      "pilot_yes_share_excl_abstain": 0.100,
+      "pilot_yes_share_incl_abstain": 0.100,
+      "statement_type": "propositional_claim",
+      "word_count": 18,
+      "notes": "Pilot: 20 agents, 2 models (GPT-OSS 20B and Gemma 26B), no refusal-ablated variants. Pilot conditions (network topology, deliberation rounds, seed): TODO_CONFIRM. Main study population differs from pilot."
     }
   ]
 }
