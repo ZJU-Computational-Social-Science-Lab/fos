@@ -4,10 +4,10 @@ React + TypeScript frontend for FOS.
 
 ## Required Runtime
 
-- Node.js 22
-- npm 10
+- Node.js 22 or later
+- npm 10 or later
 
-The frontend has `engine-strict=true` in `.npmrc`, so dependency installation fails early when the local Node/npm version does not match the project baseline.
+The frontend has `engine-strict=true` in `.npmrc`, so dependency installation fails early when the local Node/npm version falls outside the supported range (Node 22+, npm 10+).
 
 ## Setup
 
@@ -16,7 +16,7 @@ nvm use
 npm ci
 ```
 
-If you do not use `nvm`, install Node 22 with your preferred version manager and confirm:
+If you do not use `nvm`, install Node.js 22 or later with your preferred version manager and confirm:
 
 ```bash
 node --version
