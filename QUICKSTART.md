@@ -7,8 +7,8 @@ This guide is the shared baseline for all developers.
 | Tool | Version |
 |------|---------|
 | Python | 3.12 |
-| Node.js | 22 |
-| npm | 10 |
+| Node.js | 22 or later |
+| npm | 10 or later |
 
 Version marker files are included at the repository root:
 
@@ -101,7 +101,7 @@ npm ci
 npm run dev
 ```
 
-If you do not use `nvm`, install Node.js 22 with your preferred version manager before running `npm ci`.
+If you do not use `nvm`, install Node.js 22 or later with your preferred version manager before running `npm ci`.
 
 ## Access The Platform
 
@@ -180,7 +180,7 @@ python --version
 
 ### Frontend dependency install fails
 
-Confirm the active Node.js version is 22:
+Confirm the active Node.js version is 22 or later:
 
 ```bash
 node --version

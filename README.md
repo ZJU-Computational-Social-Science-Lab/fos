@@ -33,7 +33,7 @@ fos/
 #### 1. Environment Setup
 
 ```bash
-# Required local versions: Python 3.12 and Node.js 22.
+# Required local versions: Python 3.12 and Node.js 22 or later.
 # The development baseline is the `main` branch.
 
 # Create virtual environment
@@ -114,7 +114,7 @@ npm run dev
 ### Tech Stack
 
 - **Backend**: Python 3.12, Litestar, SQLAlchemy, Pydantic
-- **Frontend**: Node.js 22, React 19, TypeScript, Vite, Zustand, TailwindCSS
+- **Frontend**: Node.js 22+, React 19, TypeScript, Vite, Zustand, TailwindCSS
 - **Database**: SQLite (development) / PostgreSQL (production)
 
 ### Development
@@ -154,7 +154,7 @@ fos/
 #### 1. 环境准备
 
 ```bash
-# 本地统一版本：Python 3.12 和 Node.js 22。
+# 本地统一版本：Python 3.12 和 Node.js 22 或更高版本。
 # 开发统一基线为 `main` 分支。
 
 # 创建虚拟环境
@@ -230,7 +230,7 @@ npm run dev
 ### 技术栈
 
 - **后端**: Python 3.12, Litestar, SQLAlchemy, Pydantic
-- **前端**: Node.js 22, React 19, TypeScript, Vite, Zustand, TailwindCSS
+- **前端**: Node.js 22 或更高版本, React 19, TypeScript, Vite, Zustand, TailwindCSS
 - **数据库**: SQLite (开发) / PostgreSQL (生产)
 
 ### 开发说明
