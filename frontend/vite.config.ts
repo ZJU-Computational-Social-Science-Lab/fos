@@ -114,6 +114,44 @@ function manualChunkName(id: string): string | undefined {
   return undefined;
 }
 
+const optimizeDepsInclude = [
+  "react",
+  "react-dom",
+  "react-dom/client",
+  "react-router-dom",
+  "scheduler",
+  "@tanstack/react-query",
+  "@tanstack/react-virtual",
+  "axios",
+  "i18next",
+  "react-i18next",
+  "zustand",
+  "zustand/middleware",
+  "zustand/react/shallow",
+  "lucide-react",
+  "@radix-ui/react-dropdown-menu",
+  "@radix-ui/react-select",
+  "@radix-ui/react-icons",
+  "@google/genai",
+  "uuid",
+  "zod",
+  "seedrandom",
+  "papaparse",
+  "d3",
+  "dagre",
+  "graphology",
+  "graphology-layout-forceatlas2",
+  "@react-sigma/core",
+  "@sigma/node-image",
+  "sigma",
+  "sigma/rendering",
+  "reactflow",
+  "recharts",
+  "react-markdown",
+  "rehype-raw",
+  "@mdx-js/react",
+];
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const host = env.LISTEN_ADDRESS || "0.0.0.0";
@@ -131,6 +169,9 @@ export default defineConfig(({ mode }) => {
       alias: {
         "@": path.resolve(__dirname, "./"),
       },
+    },
+    optimizeDeps: {
+      include: optimizeDepsInclude,
     },
     assetsInclude: ["**/*.md"],
     server: {
