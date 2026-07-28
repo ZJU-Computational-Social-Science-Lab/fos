@@ -13,6 +13,61 @@ export type Series = { agentId: string; agentName: string; values: number[] };
 export type MetricAggregatePoint = { round: number; mean: number; min: number; max: number };
 export type AgentCount = { agentId: string; count: number };
 export type RoundCount = { round: number; count: number };
+export type ResultsMetric = {
+  name: string;
+  series: Series[];
+  aggregate: MetricAggregatePoint[];
+  finalValues: { agentId: string; agentName: string; value: number }[];
+};
+export type ResultsBranchSnapshot = {
+  selectedNodeId: string | null;
+  selectedBranchLabel: string | null;
+  selectedBranchPath: string[];
+};
+export type ResultsComparisonSnapshot = {
+  baselineNodeId: string | null;
+  interventionNodeId: string | null;
+  baselineLabel: string | null;
+  interventionLabel: string | null;
+  baselineOnlyEventCount: number;
+  interventionOnlyEventCount: number;
+  agentDiffCount: number;
+  agentDiffFieldCount: number;
+  eventTypeCount: number;
+  summary: string | null;
+};
+export type ResultsDataset = {
+  title: string;
+  branchLogs: LogEntry[];
+  hydratedAgents: Agent[];
+  metrics: ResultsMetric[];
+  metricNames: string[];
+  activityByAgent: AgentCount[];
+  activityByRound: RoundCount[];
+  branch: ResultsBranchSnapshot;
+  comparison: ResultsComparisonSnapshot | null;
+};
+export type ResultsDatasetInput = {
+  title: string;
+  agents: Agent[];
+  logs: LogEntry[];
+  nodes: SimNode[];
+  selectedNodeId?: string | null;
+  comparison?: ResultsComparisonSnapshot | null;
+};
+export type ResultsSummaryInputSnapshot = {
+  title: string;
+  branch: ResultsBranchSnapshot;
+  metrics: {
+    name: string;
+    series: Series[];
+    aggregate: MetricAggregatePoint[];
+    finalValues: { agentId: string; agentName: string; value: number }[];
+  }[];
+  activityByAgent: AgentCount[];
+  activityByRound: RoundCount[];
+  comparison: ResultsComparisonSnapshot | null;
+};
 
 export function filterLogsToSelectedBranch(
   logs: LogEntry[],
@@ -237,4 +292,164 @@ export function hydrateAgentHistoryFromLogs(logs: LogEntry[], agents: Agent[]): 
 
     return { ...agent, history: newHistory };
   });
+}
+
+export function buildResultsDataset(input: ResultsDatasetInput): ResultsDataset {
+  if (typeof input.title !== 'string' || input.title.length === 0) {
+    throw new Error('buildResultsDataset: title must be a non-empty string');
+  }
+
+  if (!Array.isArray(input.agents)) {
+    throw new Error('buildResultsDataset: agents must be an array');
+  }
+
+  const nodes = Array.isArray(input.nodes) ? input.nodes : [];
+  const branchLogs = filterLogsToSelectedBranch(input.logs, nodes, input.selectedNodeId);
+  const hydratedAgents = hydrateAgentHistoryFromLogs(branchLogs, input.agents);
+  const metricNames = listMetrics(hydratedAgents);
+  const metrics = metricNames.flatMap((name) => {
+    const series = computeMetricTrajectories(hydratedAgents, name)
+      .filter((oneSeries) => oneSeries.values.length > 0);
+    if (series.length === 0) {
+      return [];
+    }
+    return {
+      name,
+      series,
+      aggregate: computeMetricAggregate(series),
+      finalValues: series.map((oneSeries) => ({
+        agentId: oneSeries.agentId,
+        agentName: oneSeries.agentName,
+        value: oneSeries.values[oneSeries.values.length - 1],
+      })),
+    };
+  });
+
+  return {
+    title: input.title,
+    branchLogs,
+    hydratedAgents,
+    metrics,
+    metricNames: metrics.map((metric) => metric.name),
+    activityByAgent: computeEventCountByAgent(branchLogs),
+    activityByRound: computeEventCountByRound(branchLogs),
+    branch: buildBranchSnapshot(nodes, input.selectedNodeId),
+    comparison: input.comparison ?? null,
+  };
+}
+
+export function buildResultsSummaryInputSnapshot(dataset: ResultsDataset): ResultsSummaryInputSnapshot {
+  return {
+    title: dataset.title,
+    branch: dataset.branch,
+    metrics: dataset.metrics.map((metric) => ({
+      name: metric.name,
+      series: metric.series,
+      aggregate: metric.aggregate,
+      finalValues: metric.finalValues,
+    })),
+    activityByAgent: dataset.activityByAgent,
+    activityByRound: dataset.activityByRound,
+    comparison: dataset.comparison,
+  };
+}
+
+export function buildResultsComparisonSnapshot(input: {
+  nodes: SimNode[];
+  baselineNodeId: string | null;
+  interventionNodeId: string | null;
+  compareData: any | null;
+}): ResultsComparisonSnapshot | null {
+  if (!input.baselineNodeId || !input.interventionNodeId) {
+    return null;
+  }
+
+  const onlyInBaseline = Array.isArray(input.compareData?.only_in_a)
+    ? input.compareData.only_in_a
+    : [];
+  const onlyInIntervention = Array.isArray(input.compareData?.only_in_b)
+    ? input.compareData.only_in_b
+    : [];
+  const agentDiffs = input.compareData?.agent_diffs && typeof input.compareData.agent_diffs === 'object'
+    ? input.compareData.agent_diffs as Record<string, Record<string, unknown>>
+    : {};
+
+  return {
+    baselineNodeId: input.baselineNodeId,
+    interventionNodeId: input.interventionNodeId,
+    baselineLabel: getNodeLabel(input.nodes, input.baselineNodeId),
+    interventionLabel: getNodeLabel(input.nodes, input.interventionNodeId),
+    baselineOnlyEventCount: onlyInBaseline.length,
+    interventionOnlyEventCount: onlyInIntervention.length,
+    agentDiffCount: Object.keys(agentDiffs).length,
+    agentDiffFieldCount: countAgentDiffFields(agentDiffs),
+    eventTypeCount: countComparisonEventTypes([...onlyInBaseline, ...onlyInIntervention]),
+    summary: typeof input.compareData?.summary === 'string' ? input.compareData.summary : null,
+  };
+}
+
+function buildBranchSnapshot(nodes: SimNode[], selectedNodeId: string | null | undefined): ResultsBranchSnapshot {
+  if (!selectedNodeId) {
+    return {
+      selectedNodeId: null,
+      selectedBranchLabel: null,
+      selectedBranchPath: [],
+    };
+  }
+
+  const path = getBranchPath(nodes, selectedNodeId);
+  return {
+    selectedNodeId,
+    selectedBranchLabel: getNodeLabel(nodes, selectedNodeId),
+    selectedBranchPath: path.map((node) => getNodeLabel(nodes, node.id) ?? node.id),
+  };
+}
+
+function getBranchPath(nodes: SimNode[], selectedNodeId: string): SimNode[] {
+  const nodesById = new Map(nodes.map((node) => [node.id, node]));
+  const path: SimNode[] = [];
+  const seen = new Set<string>();
+  let currentId: string | null | undefined = selectedNodeId;
+
+  while (currentId && !seen.has(currentId)) {
+    const node = nodesById.get(currentId);
+    if (!node) {
+      break;
+    }
+    seen.add(currentId);
+    path.push(node);
+    currentId = node.parentId;
+  }
+
+  return path.reverse();
+}
+
+function getNodeLabel(nodes: SimNode[], nodeId: string | null): string | null {
+  if (!nodeId) {
+    return null;
+  }
+
+  const node = nodes.find((item) => item.id === nodeId);
+  if (!node) {
+    return nodeId;
+  }
+
+  const displayId = node.display_id || node.id;
+  return node.name ? `${displayId} - ${node.name}` : displayId;
+}
+
+function countAgentDiffFields(agentDiffs: Record<string, Record<string, unknown>>): number {
+  return Object.values(agentDiffs).reduce(
+    (total, diffs) => total + Object.keys(diffs || {}).length,
+    0,
+  );
+}
+
+function countComparisonEventTypes(events: any[]): number {
+  const types = new Set<string>();
+  for (const event of events) {
+    const eventType = String(event?.type ?? event?.event_type ?? 'event');
+    types.add(eventType);
+  }
+  return types.size;
 }

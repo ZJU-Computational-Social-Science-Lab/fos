@@ -37,7 +37,9 @@ beforeEach(() => {
   useSimulationStore.setState({
     agents: [agent('a', 'Alice', { score: [10, 12, 15] })],
     currentProviderId: 7,
+    llmProviders: [{ id: 7, name: 'OpenAI', provider: 'openai', model: 'gpt-test' }],
     resultsSummary: null,
+    resultsSummaryMeta: null,
     isGeneratingResultsSummary: false,
     resultsSummaryError: null,
   } as any);
@@ -57,8 +59,56 @@ describe('generateResultsSummary', () => {
 
     const s = useSimulationStore.getState() as any;
     expect(s.resultsSummary).toBe('The agents cooperated.');
+    expect(s.resultsSummaryMeta.model).toBe('openai:gpt-test');
+    expect(s.resultsSummaryMeta.providerId).toBe(7);
+    expect(s.resultsSummaryMeta.inputSnapshot.metrics[0].name).toBe('score');
     expect(s.isGeneratingResultsSummary).toBe(false);
     expect(s.resultsSummaryError).toBeNull();
+  });
+
+  it('preserves a provided input snapshot for reproducible AI summaries', async () => {
+    post.mockResolvedValue({ data: { text: 'Branch comparison is stable.' } } as any);
+    const inputSnapshot = {
+      title: 'Snapshot test',
+      branch: {
+        selectedNodeId: '2',
+        selectedBranchLabel: '0.2 - Intervention',
+        selectedBranchPath: ['0 - Root', '0.2 - Intervention'],
+      },
+      metrics: [
+        {
+          name: 'payoff',
+          series: [{ agentId: 'a', agentName: 'Alice', values: [5, 8] }],
+          aggregate: [{ round: 1, mean: 5, min: 5, max: 5 }, { round: 2, mean: 8, min: 8, max: 8 }],
+          finalValues: [{ agentId: 'a', agentName: 'Alice', value: 8 }],
+        },
+      ],
+      activityByAgent: [{ agentId: 'a', count: 2 }],
+      activityByRound: [{ round: 1, count: 1 }, { round: 2, count: 1 }],
+      comparison: {
+        baselineNodeId: '1',
+        interventionNodeId: '2',
+        baselineLabel: '0.1 - Baseline',
+        interventionLabel: '0.2 - Intervention',
+        baselineOnlyEventCount: 1,
+        interventionOnlyEventCount: 2,
+        agentDiffCount: 1,
+        agentDiffFieldCount: 3,
+        eventTypeCount: 2,
+        summary: 'Intervention changed payoff.',
+      },
+    };
+
+    await (useSimulationStore.getState() as any).generateResultsSummary('Snapshot test', 'en', inputSnapshot);
+
+    const [, body] = post.mock.calls[0] as any;
+    expect(body.prompt).toContain('Branch comparison:');
+    expect(body.prompt).toContain('agent_diff_fields=3');
+
+    const s = useSimulationStore.getState() as any;
+    expect(s.resultsSummaryMeta.selectedBranchId).toBe('2');
+    expect(s.resultsSummaryMeta.inputSnapshot).toEqual(inputSnapshot);
+    expect(s.resultsSummaryMeta.generatedAt).toMatch(/T/);
   });
 
   it('records the error and rethrows when the LLM call fails, storing no fake summary', async () => {

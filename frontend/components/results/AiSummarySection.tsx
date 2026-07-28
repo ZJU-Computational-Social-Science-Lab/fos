@@ -2,20 +2,26 @@
 // AiSummarySection shows the button text from the labels it is given, shows an error when there is one,
 // and shows the summary only when a summary exists and loading has finished.
 import React from 'react';
+import type { ResultsSummaryMeta } from '@/store/experiments';
 
 interface AiSummarySectionProps {
   summary: string | null;
+  meta?: ResultsSummaryMeta | null;
   isGenerating: boolean;
   error: string | null;
   onGenerate: () => void;
   labels: {
     generate: string;
     generating: string;
+    generatedAt?: string;
+    model?: string;
+    selectedBranch?: string;
   };
 }
 
 export function AiSummarySection({
   summary,
+  meta = null,
   isGenerating,
   error,
   onGenerate,
@@ -34,6 +40,27 @@ export function AiSummarySection({
       </button>
       {error !== null ? <p role="alert" className="mt-2 text-sm" style={{ color: 'var(--color-text-error, #ef4444)' }}>{error}</p> : null}
       {summary !== null && !isGenerating ? <div className="mt-3 text-sm leading-relaxed" style={{ color: 'var(--ss-workspace-text)', whiteSpace: 'pre-wrap' }}>{summary}</div> : null}
+      {summary !== null && meta !== null && !isGenerating ? (
+        <dl
+          className="mt-3 grid gap-1 text-xs"
+          style={{ color: 'var(--ss-workspace-muted)' }}
+        >
+          <div>
+            <dt className="inline font-semibold">{labels.generatedAt ?? 'Generated at'}: </dt>
+            <dd className="inline">{meta.generatedAt}</dd>
+          </div>
+          <div>
+            <dt className="inline font-semibold">{labels.model ?? 'Model'}: </dt>
+            <dd className="inline">{meta.model}</dd>
+          </div>
+          {meta.selectedBranchId ? (
+            <div>
+              <dt className="inline font-semibold">{labels.selectedBranch ?? 'Selected branch'}: </dt>
+              <dd className="inline">{meta.selectedBranchPath.join(' > ') || meta.selectedBranchId}</dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
     </section>
   );
 }

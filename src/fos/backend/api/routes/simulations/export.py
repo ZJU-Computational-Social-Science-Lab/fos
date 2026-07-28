@@ -27,6 +27,7 @@ async def export_simulation(
     simulation_id: str,
     format: str = "csv",
     node_id: str | None = None,
+    results: bool = False,
 ) -> Response:
     """Export simulation logs in CSV or JSON format.
 
@@ -39,7 +40,7 @@ async def export_simulation(
     Returns:
         File download response with proper filename
     """
-    logger.info(f"Export request - simulation_id={simulation_id}, format={format}, node_id={node_id}")
+    logger.info(f"Export request - simulation_id={simulation_id}, format={format}, node_id={node_id}, results={results}")
 
     # Extract bearer token
     token = extract_bearer_token(request)
@@ -151,7 +152,7 @@ async def export_simulation(
             })
 
         # Export
-        content = export_events(events, scenario_params, format)
+        content = export_events(events, scenario_params, format, include_metrics=results)
         filename = generate_export_filename(scenario_id, format)
         logger.info(f"Export content length: {len(content)} chars, first 500 chars: {content[:500]}")
 

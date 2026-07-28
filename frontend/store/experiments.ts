@@ -11,10 +11,24 @@ import type { ExperimentVariant, SimulationReport, SocialNetwork, SimNode } from
 import * as experimentsApi from '../services/experiments';
 import type { EnvironmentSuggestion } from '../services/environmentSuggestions';
 import { addTime } from './helpers';
-import { listMetrics, computeMetricTrajectories, hydrateAgentHistoryFromLogs, filterLogsToSelectedBranch } from '../utils/resultsComputations';
+import {
+  buildResultsDataset,
+  buildResultsSummaryInputSnapshot,
+} from '../utils/resultsComputations';
+import type { ResultsSummaryInputSnapshot } from '../utils/resultsComputations';
 import { buildSummaryPrompt } from '../utils/summaryPrompt';
 import { extractApiErrorMessage, getBackendErrorDetail } from '../utils/apiError';
 import i18n from '../i18n';
+
+export type ResultsSummaryMeta = {
+  generatedAt: string;
+  providerId: number;
+  model: string;
+  selectedBranchId: string | null;
+  selectedBranchPath: string[];
+  prompt: string;
+  inputSnapshot: ResultsSummaryInputSnapshot;
+};
 
 export interface ExperimentsSlice {
   // Comparison state
@@ -31,6 +45,7 @@ export interface ExperimentsSlice {
   currentSimulation?: any;
   engineConfig?: any;
   agents?: any[];
+  llmProviders?: any[];
   timeConfig?: any;
   currentProviderId?: number | null;
   addNotification?: (type: string, message: string) => void;
@@ -72,9 +87,14 @@ export interface ExperimentsSlice {
 
   // Report generation
   resultsSummary: string | null;
+  resultsSummaryMeta: ResultsSummaryMeta | null;
   isGeneratingResultsSummary: boolean;
   resultsSummaryError: string | null;
-  generateResultsSummary: (title: string, language: 'en' | 'zh') => Promise<void>;
+  generateResultsSummary: (
+    title: string,
+    language: 'en' | 'zh',
+    inputSnapshot?: ResultsSummaryInputSnapshot,
+  ) => Promise<void>;
   generateReport: () => Promise<void>;
   exportReport: (format: 'json' | 'md') => void;
   updateAnalysisConfig: (patch: Partial<ExperimentsSlice['analysisConfig']>) => void;
@@ -120,6 +140,7 @@ export const createExperimentsSlice: StateCreator<
   autoAdvanceCurrent: 0,
   highlightedNodeId: null,
   resultsSummary: null,
+  resultsSummaryMeta: null,
   isGeneratingResultsSummary: false,
   resultsSummaryError: null,
 
@@ -966,25 +987,41 @@ export const createExperimentsSlice: StateCreator<
     }
   },
 
-  generateResultsSummary: async (title, language) => {
-    set({ isGeneratingResultsSummary: true, resultsSummaryError: null, resultsSummary: null });
+  generateResultsSummary: async (title, language, providedInputSnapshot) => {
+    set({
+      isGeneratingResultsSummary: true,
+      resultsSummaryError: null,
+      resultsSummary: null,
+      resultsSummaryMeta: null,
+    });
     try {
       const state = get();
       const providerId = state.currentProviderId;
       if (providerId === null || providerId === undefined) {
         throw new Error('generateResultsSummary: no LLM provider selected');
       }
-      const branchLogs = filterLogsToSelectedBranch(
-        state.logs || [],
-        state.nodes || [],
-        state.selectedNodeId,
+      const inputSnapshot = providedInputSnapshot ?? buildResultsSummaryInputSnapshot(
+        buildResultsDataset({
+          title,
+          agents: state.agents || [],
+          logs: state.logs || [],
+          nodes: state.nodes || [],
+          selectedNodeId: state.selectedNodeId,
+        }),
       );
-      const hydratedAgents = hydrateAgentHistoryFromLogs(branchLogs, state.agents);
-      const metrics = listMetrics(hydratedAgents).map((name) => ({
-        name,
-        series: computeMetricTrajectories(hydratedAgents, name),
+      const metrics = inputSnapshot.metrics.map((metric) => ({
+        name: metric.name,
+        series: metric.series,
       }));
-      const prompt = buildSummaryPrompt({ title, language, metrics });
+      const prompt = buildSummaryPrompt({
+        title,
+        language,
+        metrics,
+        branch: inputSnapshot.branch,
+        activityByAgent: inputSnapshot.activityByAgent,
+        activityByRound: inputSnapshot.activityByRound,
+        comparison: inputSnapshot.comparison,
+      });
       const { apiClient } = await import('../services/client');
       const res = await apiClient.post<{ text: string }>('llm/refine_report', {
         prompt,
@@ -994,7 +1031,23 @@ export const createExperimentsSlice: StateCreator<
       if (typeof text !== 'string' || text.length === 0) {
         throw new Error('generateResultsSummary: LLM returned no text');
       }
-      set({ resultsSummary: text, isGeneratingResultsSummary: false });
+      const provider = (state.llmProviders || []).find((item: any) => item.id === providerId);
+      const model = provider
+        ? `${provider.provider || provider.name || 'provider'}:${provider.model || 'default'}`
+        : `provider:${providerId}`;
+      set({
+        resultsSummary: text,
+        resultsSummaryMeta: {
+          generatedAt: new Date().toISOString(),
+          providerId,
+          model,
+          selectedBranchId: inputSnapshot.branch.selectedNodeId,
+          selectedBranchPath: inputSnapshot.branch.selectedBranchPath,
+          prompt,
+          inputSnapshot,
+        },
+        isGeneratingResultsSummary: false,
+      });
     } catch (e) {
       const message = extractApiErrorMessage(e);
       set({ isGeneratingResultsSummary: false, resultsSummaryError: message });

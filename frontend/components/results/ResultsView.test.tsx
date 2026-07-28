@@ -5,7 +5,7 @@
  * or branch filtering a person should see.
  */
 
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ResultsView } from './ResultsView';
 import { useSimulationStore } from '@/store';
@@ -16,6 +16,7 @@ const labels = {
   exportCsv: 'CSV', exportReport: 'Report', noActivity: 'No activity',
   reportSummary: 'Summary', reportNoSummary: 'None', reportFinalValues: 'Finals',
   reportAgent: 'Agent', reportFinalValue: 'Final',
+  branch: 'Branch', selectBranch: 'Select branch',
   perAgent: 'Per-agent', aggregate: 'Aggregate', mean: 'Mean', range: 'Range',
 };
 const agent = (id: string, name: string, history: Record<string, number[]>) => ({
@@ -26,6 +27,17 @@ const sim = (name: string) => ({ id: 's1', name, templateId: 't', status: 'activ
 const logWithOutcome = (agentId: string, round: number, outcome: Record<string, number>): LogEntry => ({
   id: `lo-${round}-${agentId}`, nodeId: 'n1', round, type: 'AGENT_ACTION',
   agentId, content: 'x', timestamp: '2026-05-21T10:00:00.000Z', outcome,
+});
+
+beforeEach(() => {
+  useSimulationStore.setState({
+    selectedNodeId: null,
+    nodes: [],
+    resultsSummary: null,
+    resultsSummaryMeta: null,
+    isGeneratingResultsSummary: false,
+    resultsSummaryError: null,
+  } as any);
 });
 
 describe('ResultsView', () => {
@@ -98,7 +110,7 @@ describe('ResultsView', () => {
     expect(screen.getByRole('button', { name: 'Generate' })).toBeTruthy();
   });
 
-  it('uses only the selected branch path when log outcomes come from several branches', () => {
+  it('uses only the selected branch path when log outcomes come from several branches', async () => {
     useSimulationStore.setState({
       currentSimulation: sim('Public goods'),
       selectedNodeId: '4',
@@ -121,6 +133,7 @@ describe('ResultsView', () => {
 
     expect(screen.getAllByText('5').length).toBeGreaterThan(0);
     expect(screen.queryByText('10')).toBeNull();
+    expect(await screen.findByText('No visible differences.')).toBeTruthy();
   });
 
   it('auto-selects aggregate mode and renders a band polygon when agents exceed the threshold', () => {

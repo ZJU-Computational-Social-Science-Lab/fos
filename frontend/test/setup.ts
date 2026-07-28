@@ -73,7 +73,15 @@ vi.mock('../services/simulationTree', () => ({
 
 vi.mock('../services/experiments', () => ({
   submitExperiment: vi.fn(() => Promise.resolve({ run_id: 'run-123' })),
-  getExperimentRun: vi.fn(() => Promise.resolve({ status: 'completed' }))
+  getExperimentRun: vi.fn(() => Promise.resolve({ status: 'completed' })),
+  compareNodes: vi.fn(() => Promise.resolve({
+    node_a: 0,
+    node_b: 1,
+    only_in_a: [],
+    only_in_b: [],
+    agent_diffs: {},
+    summary: 'No visible differences.',
+  }))
 }));
 
 vi.mock('../services/environmentSuggestions', () => ({

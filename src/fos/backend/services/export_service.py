@@ -131,6 +131,63 @@ def transform_event_for_export(event: dict, scenario_params: dict) -> dict:
     return result
 
 
+def build_results_metrics(transformed_events: list[dict]) -> dict:
+    """Build reproducible result metrics from transformed export rows."""
+    agent_event_counts: dict[str, int] = {}
+    round_event_counts: dict[str, int] = {}
+    metric_points: dict[str, dict[str, dict[str, float]]] = {}
+
+    for event in transformed_events:
+        agent_id = str(event.get("agent_id") or "")
+        round_id = str(event.get("round") or "")
+
+        if agent_id:
+            agent_event_counts[agent_id] = agent_event_counts.get(agent_id, 0) + 1
+        if round_id:
+            round_event_counts[round_id] = round_event_counts.get(round_id, 0) + 1
+
+        payload = event.get("_raw_payload") or {}
+        outcome = payload.get("outcome") if isinstance(payload, dict) else None
+        if not isinstance(outcome, dict) or not agent_id or not round_id:
+            continue
+
+        for metric_name, value in outcome.items():
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                continue
+            metric_points.setdefault(str(metric_name), {}).setdefault(agent_id, {})[round_id] = float(value)
+
+    trajectories = []
+    for metric_name in sorted(metric_points):
+        agents = []
+        for agent_id in sorted(metric_points[metric_name]):
+            round_values = metric_points[metric_name][agent_id]
+            values = [
+                {"round": round_id, "value": round_values[round_id]}
+                for round_id in sorted(round_values, key=_round_sort_key)
+            ]
+            agents.append({"agent_id": agent_id, "values": values})
+        trajectories.append({"metric": metric_name, "agents": agents})
+
+    return {
+        "agent_event_counts": [
+            {"agent_id": agent_id, "count": count}
+            for agent_id, count in sorted(agent_event_counts.items(), key=lambda item: (-item[1], item[0]))
+        ],
+        "round_event_counts": [
+            {"round": round_id, "count": count}
+            for round_id, count in sorted(round_event_counts.items(), key=lambda item: _round_sort_key(item[0]))
+        ],
+        "trajectories": trajectories,
+    }
+
+
+def _round_sort_key(value: str) -> tuple[int, str]:
+    try:
+        return (0, f"{int(value):020d}")
+    except Exception:
+        return (1, value)
+
+
 def deduplicate_events(events: list[dict]) -> list[dict]:
     """Deduplicate events that appear in multiple tree nodes due to log inheritance.
 
@@ -165,7 +222,7 @@ def deduplicate_events(events: list[dict]) -> list[dict]:
     return deduplicated
 
 
-def export_events(events: list[dict], scenario_params: dict, format: str) -> str:
+def export_events(events: list[dict], scenario_params: dict, format: str, include_metrics: bool = False) -> str:
     """Export events to CSV or JSON format.
 
     Args:
@@ -177,9 +234,34 @@ def export_events(events: list[dict], scenario_params: dict, format: str) -> str
         Formatted export content
     """
     deduplicated_events = deduplicate_events(events)
-    transformed = [transform_event_for_export(e, scenario_params) for e in deduplicated_events]
+    transformed = []
+    for event in deduplicated_events:
+        row = transform_event_for_export(event, scenario_params)
+        if include_metrics:
+            row["_raw_payload"] = event.get("payload", {})
+        transformed.append(row)
+
+    metrics = build_results_metrics(transformed) if include_metrics else None
+    if include_metrics:
+        for row in transformed:
+            row.pop("_raw_payload", None)
+
+    if include_metrics:
+        agent_counts = {
+            item["agent_id"]: item["count"]
+            for item in (metrics or {}).get("agent_event_counts", [])
+        }
+        round_counts = {
+            str(item["round"]): item["count"]
+            for item in (metrics or {}).get("round_event_counts", [])
+        }
+        for row in transformed:
+            row["agent_event_count"] = agent_counts.get(str(row.get("agent_id") or ""), 0)
+            row["round_event_count"] = round_counts.get(str(row.get("round") or ""), 0)
 
     if format == "json":
+        if include_metrics:
+            return json.dumps({"events": transformed, "metrics": metrics}, indent=2, default=str)
         return json.dumps(transformed, indent=2, default=str)
 
     # CSV format
@@ -187,7 +269,8 @@ def export_events(events: list[dict], scenario_params: dict, format: str) -> str
         # Return header row only, using scenario params as column reference
         output = io.StringIO()
         base_cols = ["timestamp", "node_id", "round", "agent_id", "type", "action", "follow_up"]
-        fieldnames = base_cols + list(scenario_params.keys())
+        metric_cols = ["agent_event_count", "round_event_count"] if include_metrics else []
+        fieldnames = base_cols + list(scenario_params.keys()) + metric_cols
         writer = csv.DictWriter(output, fieldnames=fieldnames)
         writer.writeheader()
         return output.getvalue()

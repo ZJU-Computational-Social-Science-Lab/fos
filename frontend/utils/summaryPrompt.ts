@@ -9,12 +9,23 @@ formatAggregatePoint turns one aggregate round into a plain text line.
 */
 
 import { computeMetricAggregate } from './resultsComputations';
-import type { MetricAggregatePoint, Series } from './resultsComputations';
+import type {
+  AgentCount,
+  MetricAggregatePoint,
+  ResultsBranchSnapshot,
+  ResultsComparisonSnapshot,
+  RoundCount,
+  Series,
+} from './resultsComputations';
 
 export type SummaryPromptInput = {
   title: string;
   language: 'en' | 'zh';
   metrics: { name: string; series: Series[] }[];
+  branch?: ResultsBranchSnapshot | null;
+  activityByAgent?: AgentCount[];
+  activityByRound?: RoundCount[];
+  comparison?: ResultsComparisonSnapshot | null;
 };
 
 const ENGLISH_INSTRUCTION =
@@ -39,9 +50,55 @@ export function buildSummaryPrompt(input: SummaryPromptInput): string {
   }
 
   const instruction = input.language === 'en' ? ENGLISH_INSTRUCTION : CHINESE_INSTRUCTION;
+  const contextBlock = buildContextBlock(input);
   const dataBlock = input.metrics.map((metric) => buildMetricBlock(metric.name, metric.series)).join('\n');
 
-  return `${instruction}\n\nSimulation: ${input.title}\n\nData:\n${dataBlock}`;
+  return `${instruction}\n\nSimulation: ${input.title}\n\n${contextBlock}Data:\n${dataBlock}`;
+}
+
+function buildContextBlock(input: SummaryPromptInput): string {
+  const lines: string[] = [];
+
+  if (input.branch?.selectedNodeId) {
+    lines.push(`Selected branch: ${input.branch.selectedBranchLabel ?? input.branch.selectedNodeId}`);
+    if (input.branch.selectedBranchPath.length > 0) {
+      lines.push(`Branch path: ${input.branch.selectedBranchPath.join(' > ')}`);
+    }
+  }
+
+  if (Array.isArray(input.activityByAgent) && input.activityByAgent.length > 0) {
+    lines.push(
+      `Agent-attributed event counts: ${input.activityByAgent
+        .map((item) => `${item.agentId}=${item.count}`)
+        .join(', ')}`,
+    );
+  }
+
+  if (Array.isArray(input.activityByRound) && input.activityByRound.length > 0) {
+    lines.push(
+      `Round event counts: ${input.activityByRound
+        .map((item) => `round ${item.round}=${item.count}`)
+        .join(', ')}`,
+    );
+  }
+
+  if (input.comparison) {
+    lines.push(
+      [
+        'Branch comparison:',
+        `baseline=${input.comparison.baselineLabel ?? input.comparison.baselineNodeId ?? 'unknown'}`,
+        `intervention=${input.comparison.interventionLabel ?? input.comparison.interventionNodeId ?? 'unknown'}`,
+        `baseline_only_events=${input.comparison.baselineOnlyEventCount}`,
+        `intervention_only_events=${input.comparison.interventionOnlyEventCount}`,
+        `agent_diff_fields=${input.comparison.agentDiffFieldCount}`,
+      ].join(' '),
+    );
+    if (input.comparison.summary) {
+      lines.push(`Comparison summary: ${input.comparison.summary}`);
+    }
+  }
+
+  return lines.length > 0 ? `Context:\n${lines.join('\n')}\n\n` : '';
 }
 
 function buildMetricBlock(metricName: string, series: Series[]): string {

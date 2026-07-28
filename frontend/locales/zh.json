@@ -3812,6 +3812,26 @@
     "reportAgent": "智能体",
     "reportFinalValue": "最终值",
     "branch": "分支",
-    "selectBranch": "选择分支"
+    "selectBranch": "选择分支",
+    "baselineBranch": "基线分支",
+    "interventionBranch": "干预分支",
+    "branchComparison": "分支对比",
+    "comparisonLoading": "正在加载对比...",
+    "comparisonUnavailable": "请选择两个后端分支进行对比。",
+    "comparisonUniqueEvents": "独有事件",
+    "comparisonAgentDiffs": "智能体差异字段",
+    "comparisonEventTypes": "事件类型",
+    "reproducibility": "可复现信息",
+    "generatedAt": "生成时间",
+    "model": "模型",
+    "selectedBranch": "所选分支",
+    "inputSnapshot": "输入快照",
+    "activity": "活动",
+    "count": "次数",
+    "round": "轮次",
+    "baseline": "基线",
+    "intervention": "干预",
+    "uniqueEvents": "独有事件",
+    "agentDiffFields": "智能体差异字段"
   }
 }

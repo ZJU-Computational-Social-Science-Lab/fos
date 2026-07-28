@@ -347,3 +347,84 @@ def test_export_events_keeps_distinct_sibling_branch_logs():
     assert len(data) == 3, f"Expected 3 exported events, got {len(data)}"
     assert [item["node_id"] for item in data] == ["1", "2", "3"]
     assert [item["follow_up"] for item in data] == ["6", "5", "5"]
+
+
+def test_export_events_results_json_includes_reproducible_metrics():
+    """Enhanced results export includes metrics without changing the default JSON shape."""
+    from fos.backend.services.export_service import export_events
+    import json
+
+    events = [
+        {
+            "sequence": 1,
+            "tree_node_id": 2,
+            "event_type": "AGENT_ACTION",
+            "payload": {
+                "action": {"name": "allocate", "parameters": {"amount": 5}},
+                "agent": "Agent 1",
+                "round": 1,
+                "outcome": {"payoff": 8},
+            },
+            "created_at": datetime(2026, 3, 30, 14, 30, 0),
+        },
+        {
+            "sequence": 2,
+            "tree_node_id": 2,
+            "event_type": "AGENT_ACTION",
+            "payload": {
+                "action": {"name": "allocate", "parameters": {"amount": 7}},
+                "agent": "Agent 1",
+                "round": 2,
+                "outcome": {"payoff": 11},
+            },
+            "created_at": datetime(2026, 3, 30, 14, 31, 0),
+        },
+    ]
+
+    default_data = json.loads(export_events(events, {"scenario_id": "pgg"}, "json"))
+    results_data = json.loads(export_events(events, {"scenario_id": "pgg"}, "json", include_metrics=True))
+
+    assert isinstance(default_data, list)
+    assert len(results_data["events"]) == 2
+    assert results_data["metrics"]["agent_event_counts"] == [{"agent_id": "agent_1", "count": 2}]
+    assert results_data["metrics"]["round_event_counts"] == [
+        {"round": "1", "count": 1},
+        {"round": "2", "count": 1},
+    ]
+    assert results_data["metrics"]["trajectories"] == [
+        {
+            "metric": "payoff",
+            "agents": [
+                {
+                    "agent_id": "agent_1",
+                    "values": [{"round": "1", "value": 8.0}, {"round": "2", "value": 11.0}],
+                }
+            ],
+        }
+    ]
+
+
+def test_export_events_results_csv_adds_count_columns():
+    """Enhanced CSV keeps rows tabular while adding shared result counts."""
+    from fos.backend.services.export_service import export_events
+
+    events = [
+        {
+            "sequence": 1,
+            "tree_node_id": 2,
+            "event_type": "AGENT_ACTION",
+            "payload": {
+                "action": {"name": "allocate", "parameters": {"amount": 5}},
+                "agent": "Agent 1",
+                "round": 1,
+            },
+            "created_at": datetime(2026, 3, 30, 14, 30, 0),
+        }
+    ]
+
+    csv_content = export_events(events, {"scenario_id": "pgg"}, "csv", include_metrics=True)
+
+    assert "agent_event_count" in csv_content
+    assert "round_event_count" in csv_content
+    assert "agent_1" in csv_content
+    assert csv_content.strip().endswith(",1,1")

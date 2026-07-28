@@ -6,6 +6,9 @@ import {
   computeMetricAggregate,
   computeEventCountByAgent,
   computeEventCountByRound,
+  buildResultsComparisonSnapshot,
+  buildResultsDataset,
+  buildResultsSummaryInputSnapshot,
   hydrateAgentHistoryFromLogs,
 } from './resultsComputations';
 
@@ -214,5 +217,47 @@ describe('hydrateAgentHistoryFromLogs', () => {
   it('throws when agents is not an array', () => {
     // @ts-expect-error testing runtime guard
     expect(() => hydrateAgentHistoryFromLogs([], 'nope')).toThrow();
+  });
+});
+
+describe('buildResultsDataset', () => {
+  it('uses the shared branch-filtered logs for metrics, activity counts, and snapshot metadata', () => {
+    const nodes = [
+      { id: '0', display_id: '0', parentId: null, name: 'Root', depth: 0, isLeaf: false, status: 'completed', timestamp: '', worldTime: '' },
+      { id: '1', display_id: '0.1', parentId: '0', name: 'Baseline', depth: 1, isLeaf: false, status: 'completed', timestamp: '', worldTime: '' },
+      { id: '2', display_id: '0.2', parentId: '0', name: 'Intervention', depth: 1, isLeaf: true, status: 'completed', timestamp: '', worldTime: '' },
+    ] as any;
+    const comparison = buildResultsComparisonSnapshot({
+      nodes,
+      baselineNodeId: '1',
+      interventionNodeId: '2',
+      compareData: {
+        only_in_a: [{ type: 'AGENT_ACTION' }],
+        only_in_b: [{ type: 'ENVIRONMENT' }, { type: 'AGENT_ACTION' }],
+        agent_diffs: { Alice: { trust: { a: 1, b: 2 }, stress: { a: 4, b: 3 } } },
+        summary: 'Intervention branch diverged.',
+      },
+    });
+    const dataset = buildResultsDataset({
+      title: 'Branch test',
+      agents: [agent('a', 'Alice', {})],
+      logs: [
+        { ...logWithOutcome('a', 1, { payoff: 5 }), id: 'baseline', nodeId: '1' },
+        { ...logWithOutcome('a', 1, { payoff: 9 }), id: 'intervention', nodeId: '2' },
+      ],
+      nodes,
+      selectedNodeId: '2',
+      comparison,
+    });
+
+    expect(dataset.metricNames).toEqual(['payoff']);
+    expect(dataset.metrics[0].series[0].values).toEqual([9]);
+    expect(dataset.activityByAgent).toEqual([{ agentId: 'a', count: 1 }]);
+    expect(dataset.branch.selectedBranchPath).toEqual(['0 - Root', '0.2 - Intervention']);
+    expect(dataset.comparison?.agentDiffFieldCount).toBe(2);
+
+    const snapshot = buildResultsSummaryInputSnapshot(dataset);
+    expect(snapshot.metrics[0].finalValues).toEqual([{ agentId: 'a', agentName: 'Alice', value: 9 }]);
+    expect(snapshot.comparison?.interventionOnlyEventCount).toBe(2);
   });
 });
