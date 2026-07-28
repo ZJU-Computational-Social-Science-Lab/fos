@@ -145,6 +145,8 @@ Run the CI-equivalent deterministic suite:
 
 ```bash
 PYTHONPATH=src python -m pytest tests/ -q --no-header \
+  --cov=fos.core \
+  --cov-fail-under=58 \
   --ignore=tests/llm_prompt_testing \
   --ignore=tests/smoke_tests \
   --ignore=tests/integration/test_real_llm_phase1.py \
@@ -160,11 +162,22 @@ cd ..
 node --test tests/load/lib/loadUsers.test.mjs
 ```
 
+The GitHub Actions workflow in `.github/workflows/ci.yml` runs the same deterministic command groups with Python 3.12 and Node.js 22.
+
 For the full local suite, including long browser checks:
 
 ```bash
 python scripts/run_full_tests.py
 ```
+
+The full local suite runs all pytest tests plus the complete Playwright suite. It can require local model/provider setup that routine CI does not provision.
+
+## Beta Demo And Acceptance
+
+Use these documents before beta handoff or when onboarding a new developer:
+
+- [Beta demo script](docs/beta-demo.md): fixed walkthrough covering login, provider setup, experiment creation, main-branch execution, environment event application, branch comparison, and CSV/Markdown export.
+- [Beta acceptance criteria](docs/beta-acceptance.md): phase-level checklist for deciding whether the next beta build is ready.
 
 ## Troubleshooting
 

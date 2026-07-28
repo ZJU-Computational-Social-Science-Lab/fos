@@ -56,10 +56,29 @@ pip install -e .
 cd frontend && npm ci && cd ..
 ```
 
-Run every automated suite with `python scripts/run_full_tests.py`. The complete
-Playwright run requires an active Ollama provider whose configured model is
-installed locally. Routine CI runs deterministic browser smoke tests without
-Ollama.
+Routine CI and local deterministic checks use the same baseline commands:
+
+```bash
+PYTHONPATH=src python -m pytest tests/ -q --no-header \
+  --cov=fos.core \
+  --cov-fail-under=58 \
+  --ignore=tests/llm_prompt_testing \
+  --ignore=tests/smoke_tests \
+  --ignore=tests/integration/test_real_llm_phase1.py \
+  --ignore=tests/integration/test_llm_action_selection.py \
+  --ignore=tests/load
+
+cd frontend
+npm run test:run
+npm run build
+npm run test:e2e:smoke
+cd ..
+
+node --test tests/load/lib/loadUsers.test.mjs
+```
+
+Run every automated local suite with `python scripts/run_full_tests.py`. The complete
+Playwright run can require an active local model/provider setup that routine CI does not provision.
 
 #### 2. Configure Environment Variables
 
@@ -120,6 +139,13 @@ npm run dev
 ### Development
 
 See [AGENTS.md](./AGENTS.md) for project architecture and coding conventions.
+
+Beta handoff documents:
+
+- [Quick Start](./QUICKSTART.md): shared setup and command baseline.
+- [Frontend README](./frontend/README.md): FOS-specific frontend development guide.
+- [Beta demo script](./docs/beta-demo.md): fixed demo path from login through export.
+- [Beta acceptance criteria](./docs/beta-acceptance.md): phase-level completion checklist.
 
 ---
 
@@ -220,6 +246,31 @@ npm run dev
 - 后端 API: http://localhost:8000/api
 - API 文档: http://localhost:8000/schema/swagger
 
+#### 5. 标准测试命令
+
+本地确定性检查与 CI 保持一致：
+
+```bash
+PYTHONPATH=src python -m pytest tests/ -q --no-header \
+  --cov=fos.core \
+  --cov-fail-under=58 \
+  --ignore=tests/llm_prompt_testing \
+  --ignore=tests/smoke_tests \
+  --ignore=tests/integration/test_real_llm_phase1.py \
+  --ignore=tests/integration/test_llm_action_selection.py \
+  --ignore=tests/load
+
+cd frontend
+npm run test:run
+npm run build
+npm run test:e2e:smoke
+cd ..
+
+node --test tests/load/lib/loadUsers.test.mjs
+```
+
+完整本地测试可运行 `python scripts/run_full_tests.py`。完整 Playwright 测试可能需要本地模型或 provider 配置，常规 CI 不提供这些外部依赖。
+
 ### 使用流程
 
 1. 注册账号并登录
@@ -236,3 +287,10 @@ npm run dev
 ### 开发说明
 
 详见 [AGENTS.md](./AGENTS.md) 了解项目架构和编码规范。
+
+Beta 交付文档：
+
+- [Quick Start](./QUICKSTART.md)：统一环境与命令基线。
+- [Frontend README](./frontend/README.md)：FOS 前端开发说明。
+- [Beta demo script](./docs/beta-demo.md)：从登录到导出的固定演示路径。
+- [Beta acceptance criteria](./docs/beta-acceptance.md)：阶段验收清单。
