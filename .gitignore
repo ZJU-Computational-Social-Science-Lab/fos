@@ -60,6 +60,7 @@ frontend/e2e/test-results/
 fos.db
 fos.db-shm
 fos.db-wal
+runs/
 chroma_db/
 tmp/
 uploads/*/*
