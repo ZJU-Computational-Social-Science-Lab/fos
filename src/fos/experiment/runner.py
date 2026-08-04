@@ -1,57 +1,72 @@
 """
-Execution loop for the checkpointed experiment runner.
+Checkpointed execution layer around the FOS council machinery.
 
-Runs one experiment run end to end: rebuilds and verifies the network,
-loads and sha256-checks the population, places agents and confederates
-deterministically, runs three deliberation rounds, casts votes, and writes
-the result file atomically. Phase 2A has no LLM integration yet, so
-deliberation and votes are placeholders; the SIGINT handler leaves a run
-marked 'running' so a later invocation can resume it.
+This is the Phase 4 Step 2 checkpoint layer. It owns the run queue, the
+state database, per-round checkpoints, resume, status, and result
+collection — and delegates deliberation, prompts, neighbour context, and
+voting to the real FOS council scene (src/fos/core/experiment/). It never
+touches anything inside FOS; it calls tree.advance(turns=1) once per round
+and reads the finished node afterwards.
+
+For each run the layer: rebuilds and verifies the network, loads the
+population, places agents and confederates deterministically (sha256 seeds,
+never hash()), drives four FOS rounds one at a time with a checkpoint after
+every round, extracts results from the finished node, applies the
+empty-response gate (>5% empty LLM calls fails the run) and the validation
+gates, and writes the result file atomically.
 
 Functions:
-    run()                   — execute pending runs (or one specific run)
-    retry()                 — reset failed runs back to pending
-    _execute_one_run()      — run the full pipeline for a single run
-    _check_interrupted()    — raise RunInterrupted when SIGINT arrived
-    _matrix_row()           — one row of the run matrix CSV
-    _load_population()      — load and sha256-verify a population file
-    _proposal_statement()   — statement text for a proposal id
-    _derive_placement()     — compute permutation, confederates, agent copies
-    _build_result()         — assemble the full result dict
-    _write_result_atomically() — fsync then os.replace the result file
+    run()                 — execute pending runs (or one specific run)
+    retry()               — reset failed runs back to pending
+    request_interrupt()   — ask the current run to stop at the next round boundary
+    _execute_one_run()    — full pipeline for one run, resuming when possible
+    _check_interrupted()  — raise RunInterrupted when SIGINT arrived
+    _matrix_row()         — one row of the run matrix CSV
+    _load_population()    — load and sha256-verify a population file
+    _proposal_statement() — statement text for a proposal id
+    _write_checkpoint()   — persist the tree + placement + call history
+    _load_checkpoint()    — read a checkpoint back for resume
 """
 
 from __future__ import annotations
 
-import copy
 import csv
 import hashlib
 import json
 import os
-import random
 import signal
 import sqlite3
 import traceback
-from collections import Counter
-from datetime import datetime, timezone
 from typing import Any
 
-from fos.experiment import deliberation, network, store
-from fos.experiments import confederates as conf
+from fos.experiment import network, store
+from fos.experiment.clients import TrackedClient, _build_clients
+from fos.experiment.results import (
+    EMPTY_RATE_LIMIT,
+    TOTAL_ROUNDS,
+    _agent_degree_records,
+    _build_result,
+    _empty_stats,
+    _extract_results,
+    _validate_gates,
+    _write_result_atomically,
+)
+from fos.experiment.scene_builder import (
+    _build_tree,
+    _deserialize_tree,
+    derive_placement,
+    placement_from_json,
+    placement_to_json,
+)
 from fos.proposals import load_proposals
 
 REPO_ROOT = store.REPO_ROOT
 RUN_MATRIX_PATH = store.RUN_MATRIX_PATH
 POPULATIONS_DIR = REPO_ROOT / "data" / "populations"
-RESULTS_DIR = store.RESULTS_DIR
-
-CONFEDERATE_N_YES = 3
-CONFEDERATE_N_NO = 3
-DELIBERATION_ROUNDS = (1, 2, 3)
 
 
 class RunInterrupted(Exception):
-    """Raised between run steps when a SIGINT was received."""
+    """Raised at a round boundary when a SIGINT (or request_interrupt) arrived."""
 
 
 # ── SIGINT handling ─────────────────────────────────────────────────────────
@@ -60,7 +75,7 @@ _interrupted = False
 
 
 def _handle_sigint(signum: int, frame: Any) -> None:
-    """Record the interrupt; the run loop stops at the next step boundary."""
+    """Record the interrupt; the run loop stops at the next round boundary."""
     global _interrupted
     _interrupted = True
 
@@ -68,10 +83,13 @@ def _handle_sigint(signum: int, frame: Any) -> None:
 signal.signal(signal.SIGINT, _handle_sigint)
 
 
-def _check_interrupted(run_id: str, stage: str) -> None:
-    """Raise RunInterrupted when SIGINT arrived since the last check."""
-    if _interrupted:
-        raise RunInterrupted(f"Interrupted during {stage} for run {run_id}")
+def request_interrupt() -> None:
+    """Ask the current run to stop after the current round finishes.
+
+    Exposed so tests (and tooling) can simulate Ctrl-C without a signal.
+    """
+    global _interrupted
+    _interrupted = True
 
 
 # ── Public commands ──────────────────────────────────────────────────────────
@@ -84,7 +102,7 @@ def run(
 ) -> int:
     """Execute pending runs, or one specific run; returns how many completed.
 
-    Recover crashed 'running' runs first, then process runs in execution
+    Recovers crashed 'running' runs first, then processes runs in execution
     order. A NetworkMismatchError aborts the whole batch; any other failure
     marks that run failed and moves on; an interrupt stops the batch with
     the current run still marked 'running'.
@@ -105,9 +123,7 @@ def run(
         try:
             targets = store.list_runs(status="pending", conn=conn)
         except sqlite3.OperationalError:
-            print(
-                "State store not initialised — run 'python -m fos.experiment init' first"
-            )
+            print("State store not initialised — run 'python -m fos.experiment init' first")
             return 0
         if limit is not None:
             targets = targets[:limit]
@@ -116,23 +132,31 @@ def run(
         return 0
 
     executed = 0
-    for run_row in targets:
-        if _interrupted:
-            print("Interrupted — batch stopped (no run was in progress)")
-            break
-        try:
-            _execute_one_run(run_row["run_id"], conn)
-            executed += 1
-        except network.NetworkMismatchError as exc:
-            print(f"ABORT: {exc}")
-            break
-        except RunInterrupted as exc:
-            print(f"{exc} — run left in 'running' state")
-            break
-        except Exception as exc:
-            store.mark_failed(run_row["run_id"], traceback.format_exc(), conn)
-            print(f"Run {run_row['run_id']} FAILED: {exc}")
-            continue
+    previous_concurrency = os.environ.get("FOS_LLM_CONCURRENCY")
+    os.environ["FOS_LLM_CONCURRENCY"] = "1"  # sequential calls => deterministic attribution
+    try:
+        for run_row in targets:
+            if _interrupted:
+                print("Interrupted — batch stopped (no run was in progress)")
+                break
+            try:
+                _execute_one_run(run_row["run_id"], conn)
+                executed += 1
+            except network.NetworkMismatchError as exc:
+                print(f"ABORT: {exc}")
+                break
+            except RunInterrupted as exc:
+                print(f"{exc} — run left in 'running' state")
+                break
+            except Exception as exc:
+                store.mark_failed(run_row["run_id"], traceback.format_exc(), conn)
+                print(f"Run {run_row['run_id']} FAILED: {exc}")
+                continue
+    finally:
+        if previous_concurrency is None:
+            os.environ.pop("FOS_LLM_CONCURRENCY", None)
+        else:
+            os.environ["FOS_LLM_CONCURRENCY"] = previous_concurrency
     return executed
 
 
@@ -157,71 +181,98 @@ def _execute_one_run(run_id: str, conn: sqlite3.Connection | None = None) -> Non
         raise ValueError(f"Unknown run {run_id}")
     matrix = _matrix_row(run_id)
     config = network._load_network_config(int(run_row["config_id"]))
-    network_seed = int(matrix["network_seed"])
     proposal_id = run_row["proposal_id"]
-    network_label = network._network_label(config)
+    network_seed = int(matrix["network_seed"])
 
-    # Step 2 — rebuild the network and verify it against the expected stats.
-    edges = network._build_network(config, network_seed)
-    expected = network._load_expected_stats(
-        int(run_row["config_id"]), proposal_id, network_seed
-    )
-    network_stats = network._verify_network(edges, expected)
-    store.record_progress(run_id, "network_built", conn)
-    _check_interrupted(run_id, "network_built")
+    # Resume path: a checkpoint from a previous attempt already has the tree,
+    # placement, network stats, and completed rounds' LLM calls.
+    checkpoint_path = store.get_checkpoint_path(run_id)
+    progress = {p["stage"] for p in store.get_progress(run_id, conn)}
+    start_round = 0
+    if "placement_done" in progress and checkpoint_path.exists():
+        cp = _load_checkpoint(checkpoint_path)
+        placement = placement_from_json(cp["placement"])
+        clients, tracker = _build_clients(placement["run_agents"])
+        if tracker is not None:
+            tracker.preload_rounds(cp["round_calls"])
+        tree = _deserialize_tree(cp["tree"], clients)
+        current_node = cp["current_node"]
+        start_round = cp["round"] + 1
+        network_stats = cp["network_stats"]
+    else:
+        # Step 2 — rebuild the network and verify it against the expected stats.
+        edges = network._build_network(config, network_seed)
+        expected = network._load_expected_stats(int(run_row["config_id"]), proposal_id, network_seed)
+        network_stats = network._verify_network(edges, expected)
+        store.record_progress(run_id, "network_built", conn)
+        _check_interrupted(run_id, "network_built")
 
-    # Step 3 — load the population and check its sha256.
-    agents = _load_population(run_row["population_id"])
-    proposal_statement = _proposal_statement(proposal_id)
+        # Step 3 — load the population and check its sha256.
+        agents = _load_population(run_row["population_id"])
+        proposal_statement = _proposal_statement(proposal_id)
 
-    # Step 4 — placement: permutation, confederates, per-run agent copies.
-    placement = _derive_placement(matrix, config, agents, proposal_statement)
-    store.record_agent_call(
-        run_id,
-        0,
-        "_placement",
-        json.dumps(
-            {
-                "confederates": [
-                    {
-                        "agent_id": s.agent_id,
-                        "stance": s.stance,
-                        "speech_mode": s.speech_mode,
-                    }
-                    for s in placement["confederates"]
-                ],
-                "node_permutation": placement["permuted"],
-                "placement_seed": placement["placement_seed"],
-                "network_label": network_label,
-            }
-        ),
-        conn,
-    )
-    store.record_progress(run_id, "placement_done", conn)
-    _check_interrupted(run_id, "placement_done")
+        # Step 4 — placement: permutation, confederates, per-run agent copies.
+        placement = derive_placement(matrix, config, agents, proposal_statement, edges)
+        store.record_progress(run_id, "placement_done", conn)
 
-    # Step 5 — three deliberation rounds (placeholder responses for now).
-    for round_idx in DELIBERATION_ROUNDS:
-        deliberation._deliberation_round(
-            run_id, round_idx, placement["run_agents"], proposal_statement, conn
+        # Step 5 — build the FOS scene and tree around it.
+        clients, tracker = _build_clients(placement["run_agents"])
+        tree, current_node = _build_tree(placement, proposal_statement, clients)
+        _write_checkpoint(run_id, current_node, 0, placement, tracker, network_stats, tree)
+        _check_interrupted(run_id, "placement_done")
+
+    # Step 6 — rounds 1-4 one at a time (per-round resume).
+    round_start = max(start_round, 1)
+    if _interrupted:
+        raise RunInterrupted(f"Interrupted before round {round_start} for run {run_id}")
+    for round_idx in range(round_start, TOTAL_ROUNDS + 1):
+        if tracker is not None:
+            tracker.begin_round(round_idx)
+        current_node = tree.advance(current_node, turns=1)
+        if tracker is not None:
+            tracker.end_round(round_idx)
+        store.record_progress(run_id, f"round_{round_idx}", conn)
+        _write_checkpoint(run_id, current_node, round_idx, placement, tracker, network_stats, tree)
+        if _interrupted:
+            raise RunInterrupted(f"Interrupted after round {round_idx} for run {run_id}")
+
+    # Step 7 — extract results from the finished node.
+    _, deliberation, votes = _extract_results(tree, current_node, placement, tracker)
+
+    # Step 8 — empty-response detection (post-retry: FOS retries inside its client).
+    empty_count, total_calls = _empty_stats(tracker)
+    store.record_empty_stats(run_id, empty_count, total_calls, conn)
+    if total_calls and empty_count / total_calls > EMPTY_RATE_LIMIT:
+        pct = 100.0 * empty_count / total_calls
+        store.mark_failed(
+            run_id,
+            f"empty-response gate: {empty_count}/{total_calls} calls empty ({pct:.1f}%)",
+            conn,
         )
-        _check_interrupted(run_id, f"round_{round_idx}")
+        print(f"Run {run_id} FAILED: empty-response gate ({pct:.1f}% empty)")
+        return
 
-    # Step 6 — voting: confederates vote their stance, everyone else abstains.
-    votes = deliberation._cast_votes(placement["run_agents"], placement["confederates"])
-    store.record_progress(run_id, "votes_cast", conn)
-    _check_interrupted(run_id, "votes_cast")
+    # Step 9 — validation gates before marking complete.
+    agent_records = _agent_degree_records(placement)
+    _validate_gates(deliberation, agent_records, votes, placement["confederates"])
 
-    # Step 7 — write the result file atomically.
+    # Step 10 — write the result file atomically.
     result = _build_result(
-        run_id, run_row, matrix, config, placement, edges, network_stats, votes, conn
+        run_id, run_row, matrix, config, placement, network_stats,
+        votes, deliberation, empty_count, total_calls,
     )
     output_path = _write_result_atomically(run_id, result)
     store.record_progress(run_id, "written", conn)
 
-    # Step 8 — mark the run complete.
+    # Step 11 — mark the run complete.
     store.mark_complete(run_id, output_path, conn)
     print(f"Run {run_id} complete -> {output_path}")
+
+
+def _check_interrupted(run_id: str, stage: str) -> None:
+    """Raise RunInterrupted when SIGINT arrived since the last check."""
+    if _interrupted:
+        raise RunInterrupted(f"Interrupted during {stage} for run {run_id}")
 
 
 # ── Data loading ─────────────────────────────────────────────────────────────
@@ -261,152 +312,36 @@ def _proposal_statement(proposal_id: str) -> str:
     raise ValueError(f"unknown proposal id {proposal_id}")
 
 
-# ── Placement ────────────────────────────────────────────────────────────────
+# ── Checkpoints ──────────────────────────────────────────────────────────────
 
 
-def _derive_placement(
-    matrix: dict[str, str],
-    config: dict[str, Any],
-    agents: list[dict[str, Any]],
-    proposal_statement: str,
-) -> dict[str, Any]:
-    """Compute the deterministic placement for a run.
-
-    Placement uses branch 0 of the placement seed; confederate assignment
-    uses branch 1, so the two randomisations never overlap. Returns the
-    permuted node assignment, the confederate specs, and deep copies of the
-    agent configs with confederate prompts injected on the copy.
-    """
-    agent_names = [agent["agent_id"] for agent in agents]
-    base = int(matrix["placement_seed"])
-    label = network._network_label(config)
-    proposal_id = matrix["proposal_id"]
-    placement_seed = conf.derive_placement_seed(base, proposal_id, label, 0)
-    confederate_seed = conf.derive_placement_seed(base, proposal_id, label, 1)
-    placement_rng = random.Random(placement_seed)
-    confederate_rng = random.Random(confederate_seed)
-
-    permuted = conf.permute_node_assignment(agent_names, placement_rng)
-    conf_specs = conf.assign_confederates(
-        agent_names,
-        n_yes=CONFEDERATE_N_YES,
-        n_no=CONFEDERATE_N_NO,
-        rng=confederate_rng,
-        speech_mode="llm",
-    )
-    lookup = conf.build_confederate_lookup(conf_specs)
-
-    run_agents: list[dict[str, Any]] = []
-    for agent in agents:
-        run_agent = copy.deepcopy(agent)
-        spec = lookup.get(agent["agent_id"])
-        if spec is not None:
-            run_agent["confederate_prompt"] = conf.confederate_system_prompt(
-                spec, proposal_statement
-            )
-            run_agent["confederate_stance"] = spec.stance
-        else:
-            run_agent["confederate_prompt"] = None
-            run_agent["confederate_stance"] = ""
-        run_agents.append(run_agent)
-
-    return {
-        "agent_names": agent_names,
-        "permuted": permuted,
-        "confederates": conf_specs,
-        "placement_seed": placement_seed,
-        "run_agents": run_agents,
-    }
-
-
-# ── Result file ──────────────────────────────────────────────────────────────
-
-
-def _build_result(
+def _write_checkpoint(
     run_id: str,
-    run_row: dict[str, Any],
-    matrix: dict[str, str],
-    config: dict[str, Any],
+    current_node: int,
+    round_idx: int,
     placement: dict[str, Any],
-    edges: list[list[str]],
+    tracker: TrackedClient | None,
     network_stats: dict[str, Any],
-    votes: dict[str, str],
-    conn: sqlite3.Connection | None = None,
-) -> dict[str, Any]:
-    """Assemble the full result dict: run-level, per-agent, and deliberation."""
-    relabeled_edges = conf.relabel_edges(
-        edges, network.AGENT_NAMES, placement["permuted"]
-    )
-    degree_counts = Counter(node for pair in relabeled_edges for node in pair)
-    node_of = {name: idx for idx, name in enumerate(placement["permuted"])}
-    lookup = conf.build_confederate_lookup(placement["confederates"])
-
-    agents_out: list[dict[str, Any]] = []
-    for agent in placement["run_agents"]:
-        uid = agent["agent_id"]
-        spec = lookup.get(uid)
-        agents_out.append(
-            {
-                "agent_uid": uid,
-                "big_five": agent["big_five"],
-                "voting_model": agent["voting_model"],
-                "is_confederate": spec is not None,
-                "confederate_stance": spec.stance if spec is not None else "",
-                "degree": degree_counts.get(uid, 0),
-                "node_label": node_of.get(uid, -1),
-                "vote": votes.get(uid, "abstain"),
-            }
-        )
-
-    deliberation_out: list[dict[str, Any]] = []
-    for call in store.get_agent_calls(run_id, conn=conn):
-        if call["round_index"] < 1:
-            continue
-        response = json.loads(call["response_json"])
-        deliberation_out.append(
-            {
-                "round": call["round_index"],
-                "agent_uid": call["agent_uid"],
-                "text": response.get("text", ""),
-                "prompt": response.get("prompt", ""),
-            }
-        )
-
-    return {
+    tree: Any,
+) -> None:
+    """Persist the tree, placement, network stats, and completed rounds' calls."""
+    path = store.get_checkpoint_path(run_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
         "run_id": run_id,
-        "schema_version": "1.0",
-        "config_id": int(run_row["config_id"]),
-        "proposal_id": run_row["proposal_id"],
-        "population_id": run_row["population_id"],
-        "generator": config["generator"],
-        "network_label": network._network_label(config),
-        "network_seed": int(matrix["network_seed"]),
-        "placement_seed": placement["placement_seed"],
+        "round": round_idx,
+        "current_node": current_node,
+        "placement": placement_to_json(placement),
+        "round_calls": dict(tracker.round_calls) if tracker is not None else {},
         "network_stats": network_stats,
-        "confederates": [
-            {"agent_id": s.agent_id, "stance": s.stance, "speech_mode": s.speech_mode}
-            for s in placement["confederates"]
-        ],
-        "node_permutation": placement["permuted"],
-        "agents": agents_out,
-        "deliberation": deliberation_out,
-        "completed_at": _now_iso(),
+        "tree": tree.serialize(),
     }
-
-
-def _write_result_atomically(run_id: str, payload: dict[str, Any]) -> str:
-    """Write the result file via temp file + fsync + atomic rename."""
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    tmp_path = RESULTS_DIR / f"{run_id}.json.tmp"
-    final_path = RESULTS_DIR / f"{run_id}.json"
-    with tmp_path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, ensure_ascii=False, indent=2)
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, ensure_ascii=False)
         handle.flush()
         os.fsync(handle.fileno())
-    os.replace(tmp_path, final_path)
-    return f"runs/results/{run_id}.json"
 
 
-def _now_iso() -> str:
-    """Current UTC time in ISO-8601 format."""
-    return datetime.now(timezone.utc).isoformat()
+def _load_checkpoint(path) -> dict[str, Any]:
+    """Read a checkpoint file back for resume."""
+    return json.loads(path.read_text(encoding="utf-8"))
