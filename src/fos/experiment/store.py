@@ -1,74 +1,43 @@
 """
 SQLite state store for the checkpointed experiment runner.
 
-Stores one row per run, the progress stages reached, and every agent LLM
-call. All writes are committed immediately — nothing is buffered in memory.
+Stores one row per run (including empty-response statistics), the progress
+stages reached, and every agent LLM call. All writes are committed
+immediately. The runs directory can be redirected with the
+FOS_EXPERIMENT_RUNS_DIR environment variable so tests and deployments never
+touch the repository's own runs/ directory.
 
-Functions:
-    get_db, init_db, seed_from_csv, get_run, list_runs, get_progress,
-    mark_running, mark_complete, mark_failed, record_progress,
-    record_agent_call, get_agent_calls, reset_stale_runs, reset_failed_runs,
-    get_status_summary, matrix_run_ids
+Functions: get_db, init_db, seed_from_csv, get_run, list_runs, get_progress,
+mark_running, mark_complete, mark_failed, record_progress, record_agent_call,
+get_agent_calls, reset_stale_runs, reset_failed_runs, record_empty_stats,
+get_checkpoint_path, get_status_summary, matrix_run_ids
 """
 
 from __future__ import annotations
 
 import csv
 import json
+import os
 import sqlite3
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from fos.experiment.schema import TABLES, migrate_runs_table
+
 # ── Paths, resolved relative to the repository root ─────────────────────────
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-RUNS_DIR = REPO_ROOT / "runs"
+RUNS_DIR = Path(
+    os.environ.get("FOS_EXPERIMENT_RUNS_DIR", str(REPO_ROOT / "runs"))
+)
 STATE_DB_PATH = RUNS_DIR / "state.db"
 RUN_MATRIX_PATH = REPO_ROOT / "data" / "configs" / "run_matrix.csv"
 NETWORK_CONFIGS_PATH = REPO_ROOT / "data" / "configs" / "network_configs.json"
 RESULTS_DIR = RUNS_DIR / "results"
 
-# ── Schema ──────────────────────────────────────────────────────────────────
-
-TABLES = (
-    """
-    CREATE TABLE IF NOT EXISTS runs (
-        run_id TEXT PRIMARY KEY,
-        status TEXT NOT NULL DEFAULT 'pending',
-        config_id INTEGER NOT NULL,
-        proposal_id TEXT NOT NULL,
-        population_id TEXT NOT NULL,
-        execution_order INTEGER NOT NULL,
-        started_at TEXT,
-        finished_at TEXT,
-        attempts INTEGER DEFAULT 0,
-        last_error TEXT,
-        output_path TEXT
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS run_progress (
-        run_id TEXT NOT NULL,
-        stage TEXT NOT NULL,
-        completed_at TEXT NOT NULL,
-        PRIMARY KEY (run_id, stage),
-        FOREIGN KEY (run_id) REFERENCES runs(run_id)
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS agent_calls (
-        run_id TEXT NOT NULL,
-        round_index INTEGER NOT NULL,
-        agent_uid TEXT NOT NULL,
-        response_json TEXT NOT NULL,
-        completed_at TEXT NOT NULL,
-        PRIMARY KEY (run_id, round_index, agent_uid),
-        FOREIGN KEY (run_id) REFERENCES runs(run_id)
-    )
-    """,
-)
+# ── Schema (defined in schema.py) ─────────────────────────────────────────────
 
 # Generator names (network_configs.json) shortened for the status output.
 GENERATOR_ABBREVS = {"watts_strogatz": "ws", "holme_kim": "hk", "sbm": "sbm"}
@@ -97,11 +66,12 @@ def _resolve(conn: sqlite3.Connection | None) -> tuple[sqlite3.Connection, bool]
 
 
 def init_db(conn: sqlite3.Connection | None = None) -> None:
-    """Create the tables if they do not already exist."""
+    """Create the tables if they do not already exist; migrate old schemas."""
     c, opened = _resolve(conn)
     try:
         for statement in TABLES:
             c.execute(statement)
+        migrate_runs_table(c)
         c.commit()
     finally:
         if opened:
@@ -111,7 +81,7 @@ def init_db(conn: sqlite3.Connection | None = None) -> None:
 def seed_from_csv(conn: sqlite3.Connection | None = None) -> int:
     """Insert the run matrix rows into runs; returns how many rows were inserted.
 
-    Uses INSERT OR IGNORE, so re-running it never duplicates rows.
+    Uses INSERT OR IGNORE so re-running never duplicates rows.
     """
     rows = _read_run_matrix()
     c, opened = _resolve(conn)
@@ -190,11 +160,12 @@ def get_progress(
 
 
 def mark_running(run_id: str, conn: sqlite3.Connection | None = None) -> None:
-    """Mark a run as in progress and record its start time."""
+    """Mark a run as in progress, record its start time, count an attempt."""
     c, opened = _resolve(conn)
     try:
         c.execute(
-            "UPDATE runs SET status = 'running', started_at = ? WHERE run_id = ?",
+            "UPDATE runs SET status = 'running', started_at = ?, "
+            "attempts = attempts + 1 WHERE run_id = ?",
             (_now(), run_id),
         )
         c.commit()
@@ -237,6 +208,31 @@ def mark_failed(
     finally:
         if opened:
             c.close()
+
+
+def record_empty_stats(
+    run_id: str,
+    empty_count: int,
+    total_calls: int,
+    conn: sqlite3.Connection | None = None,
+) -> None:
+    """Store the empty-response count and total LLM calls for a run."""
+    c, opened = _resolve(conn)
+    try:
+        c.execute(
+            "UPDATE runs SET empty_response_count = ?, total_llm_calls = ? "
+            "WHERE run_id = ?",
+            (empty_count, total_calls, run_id),
+        )
+        c.commit()
+    finally:
+        if opened:
+            c.close()
+
+
+def get_checkpoint_path(run_id: str) -> Path:
+    """Return the checkpoint file path for a run: runs/checkpoints/{run_id}.json."""
+    return RUNS_DIR / "checkpoints" / f"{run_id}.json"
 
 
 def record_progress(
@@ -340,6 +336,7 @@ def get_status_summary(conn: sqlite3.Connection | None = None) -> dict[str, Any]
     Works even before the database is initialised: missing tables simply
     count as zero runs. Totals per generator and per population always come
     from the run matrix so they stay correct even when the DB is empty.
+    Empty-response statistics are summed across all runs.
     """
     c, opened = _resolve(conn)
     try:
@@ -374,6 +371,9 @@ def get_status_summary(conn: sqlite3.Connection | None = None) -> dict[str, Any]
     next_up: list[str] = []
     last_completed: dict[str, str] | None = None
     elapsed = 0.0
+    empty_total = 0
+    call_total = 0
+    max_empty_run: tuple[str, float] | None = None
 
     for run in runs:
         status = run["status"]
@@ -382,6 +382,14 @@ def get_status_summary(conn: sqlite3.Connection | None = None) -> dict[str, Any]
         pending += status == "pending"
         failed += status == "failed"
         abbr = _generator_abbr(generators.get(run["config_id"]))
+        empty_calls = int(run.get("empty_response_count") or 0)
+        total_calls = int(run.get("total_llm_calls") or 0)
+        empty_total += empty_calls
+        call_total += total_calls
+        if total_calls > 0:
+            pct = 100.0 * empty_calls / total_calls
+            if max_empty_run is None or pct > max_empty_run[1]:
+                max_empty_run = (run["run_id"], pct)
         label = run["population_id"].removeprefix("pop_")
         if status == "complete":
             gen_complete[abbr] += 1
@@ -420,6 +428,8 @@ def get_status_summary(conn: sqlite3.Connection | None = None) -> dict[str, Any]
     remaining_count = pending + failed
 
     return {
+        "empty_pct": (100.0 * empty_total / call_total) if call_total else 0.0,
+        "max_empty_run": max_empty_run,
         "n_proposals": n_proposals,
         "n_configs": n_configs,
         "total": len(matrix),
