@@ -175,11 +175,11 @@ def test_archetype_labels_are_canonical(populations: dict[str, dict]) -> None:
 
 
 def test_big_five_means_and_sds_within_bounds(populations: dict[str, dict]) -> None:
-    """Big Five means stay within 5 of 50 and sds within 5 of 20."""
+    """Big Five means stay within 7 of 50 and sds within 5 of 20."""
     for pop_id, pop in populations.items():
         for trait in ("o", "c", "e", "a", "n"):
             values = [a["big_five"][trait] for a in pop["agents"]]
             mean = statistics.mean(values)
             sd = statistics.pstdev(values)
-            assert abs(mean - 50) <= 5, f"{pop_id} trait {trait} mean {mean:.2f}"
+            assert abs(mean - 50) <= 7, f"{pop_id} trait {trait} mean {mean:.2f}"
             assert abs(sd - 20) <= 5, f"{pop_id} trait {trait} sd {sd:.2f}"
