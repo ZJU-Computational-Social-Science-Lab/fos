@@ -15,6 +15,11 @@ from fos.core.experiment.config import ExperimentConfig
 from fos.core.experiment.round_context import RoundContextManager
 from fos.core.experiment.information_model import InformationModel
 from fos.core.experiment.facilitator import CouncilPhase, SystemFacilitator
+from fos.experiments.confederates import (
+    ConfederateSpec,
+    assert_confederate_votes,
+    build_confederate_lookup,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +105,10 @@ class CouncilExperimentScene(ExperimentScene):
         # to integrate with existing vote action handlers in handlers.py
         self.cycle_phase: CouncilCyclePhase = CouncilCyclePhase.DELIBERATION
         self.rounds_in_cycle_phase: int = 0
+
+        # Confederate agent support
+        self._conf_lookup: dict[str, ConfederateSpec] = {}
+        self._conf_specs: list[ConfederateSpec] = []
 
         logger.info(f"CouncilExperimentScene initialized with {len(self.agents)} agents")
 
@@ -293,6 +302,22 @@ class CouncilExperimentScene(ExperimentScene):
         agent_names = {a.get("name") for a in self.config.agents}
         return agent_names.issubset(votes.keys())
 
+
+    def set_confederates(self, specs: list[ConfederateSpec]) -> None:
+        """Register confederate agents with the scene.
+
+        Called by the runner setup before any rounds are run.
+
+        Args:
+            specs: Confederate specifications
+        """
+        self._conf_specs = list(specs)
+        self._conf_lookup = build_confederate_lookup(specs)
+        logger.info(
+            f"Registered {len(specs)} confederates: "
+            f"{[(s.agent_id, s.stance) for s in specs]}"
+        )
+
     def check_cycle_phase_transition(self) -> None:
         """Check and execute cycle phase transition after round completes.
 
@@ -320,6 +345,9 @@ class CouncilExperimentScene(ExperimentScene):
 
         elif self.cycle_phase == CouncilCyclePhase.VOTING:
             if self.all_agents_voted():
+                # Hard assertion: confederate votes must match assigned stances
+                if self._conf_specs:
+                    assert_confederate_votes(self._conf_specs, self.state.extensions)
                 if self.check_voting_threshold():
                     self.cycle_phase = CouncilCyclePhase.POST_VOTE_DISCUSSION
                     logger.info("Threshold met, transitioning to POST_VOTE_DISCUSSION")

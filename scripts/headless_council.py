@@ -28,6 +28,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import io
 import json
@@ -63,6 +64,19 @@ from fos.core.llm.client import LLMClient
 from fos.core.llm.generation import generate_agents_with_archetypes
 from fos.core.llm_config import LLMConfig
 from fos.core.simtree import SimTree
+from fos.experiments.confederates import (
+    ConfederateSpec,
+    assign_confederates,
+    build_adjacency_from_edges,
+    build_confederate_lookup,
+    compute_k_yes,
+    confederate_neighbour_counts,
+    confederate_system_prompt,
+    confederate_vote_action,
+    derive_placement_seed,
+    permute_node_assignment,
+    relabel_edges,
+)
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
 
@@ -880,6 +894,8 @@ def run_headless_council(
     temperature: float = 0.7,
     proposals: list[ProposalSpec] | None = None,
     network_name: str = "small_world",
+    placement_seed: int | None = None,
+    confederate_speech: str = "llm",
 ) -> dict[str, Any]:
     """Run the full council pilot with the specified backend."""
     print(f"\n{'=' * 60}")
@@ -918,23 +934,6 @@ def run_headless_council(
     )
     agent_names = [str(a["name"]) for a in agents]
     print(f"   ✓ Generated {len(agents)} agents")
-
-    # 2b. Build per-agent metadata lookup for CSV export enrichment
-    agent_meta_base: dict[str, dict[str, Any]] = {}
-    for agent_config in agents:
-        name = agent_config["name"]
-        props = agent_config.get("properties") or {}
-        model_name = (agent_config.get("llm_config") or {}).get("model", "unknown")
-        agent_meta_base[name] = {
-            "model": model_name,
-            "archetype_id": props.get("archetype_id", ""),
-            "archetype_label": props.get("archetype_label", ""),
-            "Openness": int(round(props.get("Openness", 0))),
-            "Conscientiousness": int(round(props.get("Conscientiousness", 0))),
-            "Extraversion": int(round(props.get("Extraversion", 0))),
-            "Agreeableness": int(round(props.get("Agreeableness", 0))),
-            "Neuroticism": int(round(props.get("Neuroticism", 0))),
-        }
 
     # 3. Build networks
     print("3. Building network variants...")
@@ -976,6 +975,9 @@ def run_headless_council(
         "started_at": datetime.now(timezone.utc).isoformat(),
     })
 
+    # Base seed for per-run placement derivation
+    _base_placement_seed = placement_seed if placement_seed is not None else seed + 1000
+
     for proposal in selected_proposals:
         print(f"\n4. Running: {proposal.label}")
         scene = _build_council_scene(agents, proposal, {"edges": []})
@@ -989,15 +991,82 @@ def run_headless_council(
 
         for network in networks:
             branch_num += 1
+
+            # ── PER-RUN PLACEMENT ──
+            # Derive seed, permute node positions, relabel network edges.
+            # Agent identity (persona + model) is PERMANENT across runs.
+            run_placement_seed = derive_placement_seed(
+                _base_placement_seed, proposal.key, network.label, branch_num
+            )
+            placement_rng = random.Random(run_placement_seed)
+
+            # 1. Permute agent → node assignment
+            agent_names = [str(a["name"]) for a in agents]
+            permuted = permute_node_assignment(agent_names, placement_rng)
+            # node_of[agent] = position index in this run
+            node_of: dict[str, int] = {name: idx for idx, name in enumerate(permuted)}
+
+            # 2. Relabel network edges through the permutation
+            original_edges = network.network.get("edges", [])
+            relabeled_edges = relabel_edges(original_edges, agent_names, permuted)
+
+            # 3. Confederate assignment (on canonical agent ids)
+            conf_specs = assign_confederates(
+                agent_names,
+                n_yes=3,
+                n_no=3,
+                rng=placement_rng,
+                speech_mode=confederate_speech,
+            )
+            conf_lookup = build_confederate_lookup(conf_specs)
+            conf_yes_ids = [s.agent_id for s in conf_specs if s.stance == "yes"]
+            conf_no_ids = [s.agent_id for s in conf_specs if s.stance == "no"]
             print(
                 f"   [{branch_num}/{total_branches}] Network: {network.label} ... ",
                 end="",
                 flush=True,
             )
+            print(f'confederates yes={conf_yes_ids} no={conf_no_ids} placement_seed={run_placement_seed}', end="", flush=True)
 
+            # 4. Build per-run agent configs — deepcopy to preserve originals (Bug 2 fix)
+            run_agents = copy.deepcopy(agents)
+
+            # 5. Inject confederate system prompts (on per-run copy)
+            for agent_config in run_agents:
+                agent_name = agent_config.get("name", "")
+                if agent_name in conf_lookup:
+                    spec = conf_lookup[agent_name]
+                    if spec.speech_mode == "llm":
+                        conf_prompt = confederate_system_prompt(spec, proposal.text)
+                        existing_role = agent_config.get("role_prompt", "")
+                        agent_config["role_prompt"] = conf_prompt + ("\n\n" + existing_role if existing_role else "")
+
+            # 5. Build agent_meta_base — agent identity is STABLE across runs
+            agent_meta_base = {}
+            for agent_config in agents:
+                name = agent_config["name"]
+                props = agent_config.get("properties") or {}
+                model_name = (agent_config.get("llm_config") or {}).get("model", "unknown")
+                agent_meta_base[name] = {
+                    "model": model_name,
+                    "archetype_id": props.get("archetype_id", ""),
+                    "archetype_label": props.get("archetype_label", ""),
+                    "Openness": int(round(props.get("Openness", 0))),
+                    "Conscientiousness": int(round(props.get("Conscientiousness", 0))),
+                    "Extraversion": int(round(props.get("Extraversion", 0))),
+                    "Agreeableness": int(round(props.get("Agreeableness", 0))),
+                    "Neuroticism": int(round(props.get("Neuroticism", 0))),
+                }
+
+            # 6. Register confederates with the scene
+            scene.set_confederates(conf_specs)
+
+            # Build relabeled network dict for this run
+            run_network = dict(network.network)
+            run_network["edges"] = relabeled_edges
             branch_id = tree.branch(
                 root_id,
-                [{"op": "network_replace", "network": network.network}],
+                [{"op": "network_replace", "network": run_network}],
             )
 
             _write_progress(output_dir, {
@@ -1019,18 +1088,42 @@ def run_headless_council(
                 "deliberation_rounds": 3,
                 "voting_threshold": 0.5,
             }
-            # Compute per-agent degree from network edges
-            edges = network.network.get("edges", [])
-            edge_flat: list[str] = [n for pair in edges for n in pair]
+            # Compute per-agent degree from RELABELED edges (the node they occupied)
+            edge_flat: list[str] = [n for pair in relabeled_edges for n in pair]
             degree_counter = Counter(edge_flat)
             bloc_map = network.network.get("bloc_map", {})
             branch_meta: dict[str, dict[str, Any]] = {}
             for agent_name, base in agent_meta_base.items():
                 entry = dict(base)
-                entry["degree"] = degree_counter.get(agent_name, 0)
+                entry["agent_uid"] = agent_name  # stable identity
+                entry["node_label"] = node_of.get(agent_name, -1)  # position in this run
+                entry["degree"] = degree_counter.get(agent_name, 0)  # degree at occupied node
                 entry["network_label"] = network.label
                 entry["bloc_id"] = bloc_map.get(agent_name, -1)
+                # Confederate columns
+                entry["is_confederate"] = agent_name in conf_lookup
+                entry["confederate_stance"] = conf_lookup[agent_name].stance if agent_name in conf_lookup else ""
+                entry["placement_seed"] = run_placement_seed
                 branch_meta[agent_name] = entry
+
+            # Compute confederate neighbour counts from network edges
+            adjacency = build_adjacency_from_edges(relabeled_edges)
+            conf_neighbour_counts = confederate_neighbour_counts(adjacency, conf_specs)
+            for agent_name in agent_names:
+                if agent_name in branch_meta:
+                    cnts = conf_neighbour_counts.get(agent_name, {"conf_yes": 0, "conf_no": 0, "conf_total": 0})
+                    branch_meta[agent_name]["conf_yes_neighbours"] = cnts["conf_yes"]
+                    branch_meta[agent_name]["conf_no_neighbours"] = cnts["conf_no"]
+
+            # Compute k_yes_incl_conf / k_yes_excl_conf from final votes
+            final_votes = scene.state.extensions.get("votes", {})
+            conf_ids = {s.agent_id for s in conf_specs}
+            k_yes_counts = compute_k_yes(adjacency, final_votes, conf_ids)
+            for agent_name in agent_names:
+                if agent_name in branch_meta:
+                    kc = k_yes_counts.get(agent_name, {"k_yes_incl_conf": 0, "k_yes_excl_conf": 0})
+                    branch_meta[agent_name]["k_yes_incl_conf"] = kc["k_yes_incl_conf"]
+                    branch_meta[agent_name]["k_yes_excl_conf"] = kc["k_yes_excl_conf"]
 
             csv_text = export_events(
                 _node_logs_to_export_events(finished_id, node_logs, agent_meta=branch_meta),
@@ -1051,7 +1144,13 @@ def run_headless_council(
                     "network_label": network.label,
                     "node_id": finished_id,
                     "log_count": len(node_logs),
-                    "edges": network.network.get("edges", []),
+                    "edges": relabeled_edges,
+                    "placement_seed": run_placement_seed,
+                    "node_permutation": permuted,  # permuted[i] = agent at node i
+                    "confederates": [
+                        {"agent_id": s.agent_id, "stance": s.stance}
+                        for s in conf_specs
+                    ],
                 }
             )
             print(f"done ({len(node_logs)} events)")
@@ -1074,6 +1173,11 @@ def run_headless_council(
 
     # 5. Export
     print("\n5. Exporting results...")
+    summary["confederates"] = {
+        "specs": [{"agent_id": s.agent_id, "stance": s.stance, "speech_mode": s.speech_mode} for s in conf_specs],
+        "confederate_speech": confederate_speech,
+        "note": "per-run placement_seed recorded in summary.runs[].placement_seed",
+    }
     combined_csv = combine_branch_csv_exports(combined_exports)
     _write_text(output_dir / "combined_results.csv", combined_csv)
     _write_text(output_dir / "summary.json", json.dumps(summary, indent=2))
@@ -1140,6 +1244,18 @@ def main() -> None:
         help="Network topology (default: small_world)",
     )
     parser.add_argument(
+        "--confederate-speech",
+        choices=["llm", "scripted"],
+        default="llm",
+        help="How confederates produce deliberation messages (default: llm)",
+    )
+    parser.add_argument(
+        "--placement-seed",
+        type=int,
+        default=None,
+        help="Seed for confederate placement randomisation (default: seed+1000)",
+    )
+    parser.add_argument(
         "--concurrency",
         type=int,
         default=None,
@@ -1196,6 +1312,8 @@ def main() -> None:
         temperature=args.temperature,
         proposals=proposals,
         network_name=args.network,
+        placement_seed=args.placement_seed,
+        confederate_speech=args.confederate_speech,
     )
 
 
