@@ -58,3 +58,6 @@ sentence-transformers>=2.2.0
 
 # Vector Store (optional, for RAG)
 chromadb>=0.4.0  # Optional hybrid vector store
+
+# Graph analysis (confederate neighbour measurement, Phase 3)
+networkx>=3.2

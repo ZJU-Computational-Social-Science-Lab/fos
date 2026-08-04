@@ -27,6 +27,10 @@ from fos.core.experiment.controller import ExperimentController, ActionResult
 from fos.core.experiment.round_context import RoundContextManager
 from fos.core.experiment.prompt_builder import build_prompt
 from fos.core.experiment.action_handler import ActionHandler
+from fos.experiments.confederates import (
+    ConfederateSpec,
+    record_confederate_vote,
+)
 from fos.i18n import T
 from fos.core.experiment.payoff.engine import PayoffEngine
 from fos.core.experiment.feedback.builder import CoordinationFeedbackBuilder
@@ -1623,6 +1627,25 @@ class ExperimentRunner:
             allowed_actions = self.scene.get_scene_actions(agent.name)
         if self.scene and hasattr(self.scene, 'get_speak_instruction'):
             speak_instruction = self.scene.get_speak_instruction()
+
+        # CONFEDERATE VOTE INTERCEPTION
+        # If this agent is a confederate and we're in VOTING phase,
+        # write its predetermined vote directly — no LLM call.
+        conf_lookup = getattr(self.scene, '_conf_lookup', {}) if self.scene else {}
+        if agent.name in conf_lookup and allowed_actions and 'vote_yes' in allowed_actions:
+            conf_spec = conf_lookup[agent.name]
+            record_confederate_vote(conf_spec, self.scene.state.extensions)
+            # Return a synthetic ActionResult — no LLM call was made
+            vote_str = conf_spec.stance
+            return ActionResult(
+                agent_name=agent.name,
+                action_name=f'vote_{vote_str}',
+                parameters={'choice': vote_str},
+                summary=f'{agent.name} voted {vote_str} (confederate)',
+                success=True,
+                skipped=False,
+                raw_response='',
+            )
 
         _locale = getattr(getattr(self.scene, 'config', None), 'locale', 'en') if self.scene else 'en'
         prompt = build_prompt(
