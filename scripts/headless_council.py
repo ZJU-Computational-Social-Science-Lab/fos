@@ -641,6 +641,43 @@ def _make_agent_llm_config(
 # ── Network generation ────────────────────────────────────────────────────────
 
 
+def _build_watts_strogatz_edges(
+    agent_names: list[str], seed: int, k: int = 6, p: float = 0.1
+) -> tuple[list[list[str]], dict[str, int]]:
+    """Build edges with the Watts-Strogatz small-world model.
+
+    Each node starts on a ring connected to its k nearest neighbours (k/2 on
+    each side), then every lattice edge is rewired to a random other node
+    with probability p. Self-loops and duplicate edges are dropped. k should
+    be even so the lattice is regular; the configs in Phase 3 use k=6 or 8.
+    """
+    shuffled = _shuffle_agent_names(agent_names, seed)
+    rng = random.Random(seed)
+    n = len(shuffled)
+    half = k // 2
+    edges: set[tuple[str, str]] = set()
+    # Ring lattice: connect each node to the next `half` nodes on each side.
+    for idx in range(n):
+        for step in range(1, half + 1):
+            edges.add(_make_edge(shuffled[idx], shuffled[(idx + step) % n]))
+    # Rewire each lattice edge with probability p.
+    # Iterate in sorted order so the result is identical across runs
+    # (set iteration order depends on string hashes).
+    for left, right in sorted(edges):
+        if rng.random() < p:
+            edges.discard(_make_edge(left, right))
+            candidates = [
+                x
+                for x in shuffled
+                if x != left and x != right and _make_edge(left, x) not in edges
+            ]
+            if candidates:
+                edges.add(_make_edge(left, rng.choice(candidates)))
+            else:
+                edges.add(_make_edge(left, right))
+    return [list(e) for e in sorted(edges)], {}
+
+
 def _build_small_world_edges(agent_names: list[str], seed: int) -> tuple[list[list[str]], dict[str, int]]:
     shuffled = _shuffle_agent_names(agent_names, seed)
     rng = random.Random(seed)
@@ -740,32 +777,55 @@ def _build_holme_kim_edges(
     return [list(e) for e in sorted(edges)], {}
 
 
-def _build_sbm_edges(agent_names: list[str], seed: int) -> tuple[list[list[str]], dict[str, int]]:
-    """Stochastic block model with random bloc count and sizes.
+def _build_sbm_edges(
+    agent_names: list[str],
+    seed: int,
+    n_blocks: int | None = None,
+    block_sizes: list[int] | None = None,
+    p_in: float | None = None,
+    p_out: float | None = None,
+) -> tuple[list[list[str]], dict[str, int]]:
+    """Stochastic block model with caller-chosen or random blocs.
 
-    Blocs = max(3, N // 5), sizes drawn from a Poisson-like distribution
-    (Gaussian with mean = remaining/b and std = max(1, mean*0.3)).
-    Agents are randomly assigned to blocs.
-    Within-bloc edge probability: 40%. Cross-bloc: 5%.
+    With no block arguments this keeps the original behaviour: bloc count
+    max(3, N // 5), sizes drawn from a Gaussian, within-bloc edge
+    probability 40% and cross-bloc 5%. When n_blocks/block_sizes/p_in/p_out
+    are given (as in the Phase 3 config grid), those values are used
+    instead. Agents are randomly assigned to blocs in both cases.
     Returns (edges, bloc_map).
     """
     rng = random.Random(seed)
     n = len(agent_names)
-    target_blocs = max(3, n // 5)
 
-    # Generate uneven bloc sizes summing to n
     shuffled = list(agent_names)
     rng.shuffle(shuffled)
-    sizes: list[int] = []
-    remaining = n
-    for b in range(target_blocs, 0, -1):
-        if b == 1:
-            sizes.append(remaining)
-        else:
-            mean = remaining / b
-            size = max(1, min(remaining - (b - 1), round(rng.gauss(mean, max(1, mean * 0.3)))))
-            sizes.append(size)
-            remaining -= size
+    if block_sizes is None:
+        target_blocs = max(3, n // 5)
+        # Generate uneven bloc sizes summing to n
+        sizes: list[int] = []
+        remaining = n
+        for b in range(target_blocs, 0, -1):
+            if b == 1:
+                sizes.append(remaining)
+            else:
+                mean = remaining / b
+                size = max(
+                    1,
+                    min(remaining - (b - 1), round(rng.gauss(mean, max(1, mean * 0.3)))),
+                )
+                sizes.append(size)
+                remaining -= size
+    else:
+        if sum(block_sizes) != n or (n_blocks is not None and len(block_sizes) != n_blocks):
+            raise ValueError(
+                f"block_sizes must sum to {n} and match n_blocks: "
+                f"sum={sum(block_sizes)} n_blocks={n_blocks} len={len(block_sizes)}"
+            )
+        sizes = list(block_sizes)
+    if p_in is None:
+        p_in = 0.40
+    if p_out is None:
+        p_out = 0.05
 
     # Assign agents to blocs
     bloc_of: dict[str, int] = {}
@@ -781,10 +841,10 @@ def _build_sbm_edges(agent_names: list[str], seed: int) -> tuple[list[list[str]]
     for i, a in enumerate(all_agents):
         for b in all_agents[i + 1:]:
             if bloc_of[a] == bloc_of[b]:
-                if rng.random() <= 0.40:
+                if rng.random() <= p_in:
                     edges.add(_make_edge(a, b))
             else:
-                if rng.random() <= 0.05:
+                if rng.random() <= p_out:
                     edges.add(_make_edge(a, b))
 
     # Minimum 1-edge guarantee
