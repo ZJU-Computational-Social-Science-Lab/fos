@@ -145,6 +145,13 @@ def _format_status(summary: dict[str, Any]) -> str:
         lines.append(f"Failed:     {summary['failed']}")
     lines.append("")
 
+    empty_line = f"Empty responses:   {summary['empty_pct']:.1f}% of calls"
+    if summary["max_empty_run"]:
+        run_id, pct = summary["max_empty_run"]
+        empty_line += f" (max {pct:.1f}% in {run_id})"
+    lines.append(empty_line)
+    lines.append("")
+
     generator_parts = "   ".join(
         f"{abbr}  {f'{complete}/{total}':>5}"
         for abbr, (complete, total) in summary["by_generator"].items()

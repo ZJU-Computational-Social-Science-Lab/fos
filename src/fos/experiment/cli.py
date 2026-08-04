@@ -29,7 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
         "verify", help="check that all result files exist and are valid"
     )
     run_parser = subparsers.add_parser(
-        "run", help="execute pending runs (placeholder responses for now)"
+        "run", help="execute pending runs through the FOS council scene"
     )
     run_parser.add_argument(
         "--limit", type=int, default=None, help="max number of runs to execute"
