@@ -155,7 +155,7 @@ def measure_network(
         "max_degree": max(degree_values),
         "min_degree": min(degree_values),
         "degree_gini": gini_degree(degree_values),
-        "global_clustering": nx.transitivity(graph),
+        "global_clustering": nx.average_clustering(graph),
         "mean_path_length": nx.average_shortest_path_length(largest_graph),
         "modularity": modularity,
         "n_components": len(components),
