@@ -6,33 +6,33 @@ Generated from 6 populations of 100 agents each (27-cell grid: age x political v
 
 | Cell (age | political | sector) | pop_a1 | pop_a2 | pop_b1 | pop_b2 | pop_c1 | pop_c2 | max-min | flag |
 |---|---|---|---|---|---|---|---|---|
-| young | liberal | public | 5 | 4 | 6 | 1 | 5 | 2 | 5 | ⚠ FLAG |
-| young | liberal | private | 2 | 3 | 3 | 2 | 4 | 5 | 3 | ⚠ FLAG |
-| young | liberal | nonprofit | 4 | 7 | 4 | 6 | 5 | 1 | 6 | ⚠ FLAG |
-| young | moderate | public | 3 | 3 | 2 | 3 | 5 | 4 | 3 | ⚠ FLAG |
-| young | moderate | private | 4 | 2 | 3 | 7 | 4 | 3 | 5 | ⚠ FLAG |
-| young | moderate | nonprofit | 2 | 3 | 1 | 4 | 0 | 0 | 4 | ⚠ FLAG |
-| young | conservative | public | 5 | 5 | 4 | 1 | 2 | 6 | 5 | ⚠ FLAG |
-| young | conservative | private | 2 | 0 | 4 | 8 | 2 | 2 | 8 | ⚠ FLAG |
-| young | conservative | nonprofit | 1 | 2 | 1 | 2 | 3 | 3 | 2 |  |
-| middle | liberal | public | 2 | 3 | 4 | 4 | 7 | 3 | 5 | ⚠ FLAG |
-| middle | liberal | private | 6 | 2 | 6 | 7 | 5 | 2 | 5 | ⚠ FLAG |
-| middle | liberal | nonprofit | 2 | 5 | 2 | 2 | 2 | 1 | 4 | ⚠ FLAG |
-| middle | moderate | public | 5 | 3 | 7 | 3 | 3 | 3 | 4 | ⚠ FLAG |
-| middle | moderate | private | 5 | 4 | 3 | 3 | 3 | 4 | 2 |  |
-| middle | moderate | nonprofit | 4 | 3 | 3 | 1 | 4 | 5 | 4 | ⚠ FLAG |
-| middle | conservative | public | 4 | 6 | 2 | 9 | 8 | 4 | 7 | ⚠ FLAG |
-| middle | conservative | private | 2 | 7 | 2 | 1 | 8 | 5 | 7 | ⚠ FLAG |
-| middle | conservative | nonprofit | 8 | 2 | 3 | 1 | 5 | 4 | 7 | ⚠ FLAG |
-| older | liberal | public | 6 | 5 | 3 | 1 | 2 | 5 | 5 | ⚠ FLAG |
-| older | liberal | private | 4 | 3 | 6 | 2 | 1 | 7 | 6 | ⚠ FLAG |
-| older | liberal | nonprofit | 1 | 4 | 5 | 6 | 4 | 5 | 5 | ⚠ FLAG |
-| older | moderate | public | 3 | 5 | 5 | 4 | 3 | 3 | 2 |  |
-| older | moderate | private | 5 | 1 | 4 | 3 | 4 | 4 | 4 | ⚠ FLAG |
-| older | moderate | nonprofit | 2 | 5 | 7 | 3 | 1 | 4 | 6 | ⚠ FLAG |
-| older | conservative | public | 5 | 2 | 5 | 4 | 3 | 3 | 3 | ⚠ FLAG |
-| older | conservative | private | 4 | 5 | 3 | 6 | 2 | 6 | 4 | ⚠ FLAG |
-| older | conservative | nonprofit | 4 | 6 | 2 | 6 | 5 | 6 | 4 | ⚠ FLAG |
+| 18-29 | progressive | public service | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 18-29 | progressive | private sector | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 18-29 | progressive | not in paid work | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 18-29 | moderate | public service | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 18-29 | moderate | private sector | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 18-29 | moderate | not in paid work | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 18-29 | conservative | public service | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 18-29 | conservative | private sector | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 18-29 | conservative | not in paid work | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 30-49 | progressive | public service | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 30-49 | progressive | private sector | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 30-49 | progressive | not in paid work | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 30-49 | moderate | public service | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 30-49 | moderate | private sector | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 30-49 | moderate | not in paid work | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 30-49 | conservative | public service | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 30-49 | conservative | private sector | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 30-49 | conservative | not in paid work | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 50+ | progressive | public service | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 50+ | progressive | private sector | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 50+ | progressive | not in paid work | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 50+ | moderate | public service | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 50+ | moderate | private sector | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 50+ | moderate | not in paid work | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 50+ | conservative | public service | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 50+ | conservative | private sector | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
+| 50+ | conservative | not in paid work | 0 | 0 | 0 | 0 | 0 | 0 | 0 |  |
 
 Cells whose count differs by more than 2 agents across populations are flagged with ⚠ FLAG.
 
@@ -95,12 +95,12 @@ Cells whose count differs by more than 2 agents across populations are flagged w
 
 ## 3. Voting model counts (per population)
 
-| Population | gpt-oss-20b | qwen3.6-35b-a3b | qwen3.6-35b-a3b-uncensored-hauhaucs-aggressive | gemma-4-26b-a4b | gemma4-26b-a4b-uncensored-hauhaucs-balanced | total |
-|---|---|---|---|---|---|---|
-| pop_a1 | 20 | 20 | 20 | 20 | 20 | 100 |
-| pop_a2 | 20 | 20 | 20 | 20 | 20 | 100 |
-| pop_b1 | 20 | 20 | 20 | 20 | 20 | 100 |
-| pop_b2 | 20 | 20 | 20 | 20 | 20 | 100 |
-| pop_c1 | 20 | 20 | 20 | 20 | 20 | 100 |
-| pop_c2 | 20 | 20 | 20 | 20 | 20 | 100 |
+| Population | qwen3.6-35b-a3b-uncensored-hauhaucs-aggressive | gemma4-26b-a4b-uncensored-hauhaucs-balanced | total |
+|---|---|---|---|
+| pop_a1 | 20 | 20 | 100 |
+| pop_a2 | 20 | 20 | 100 |
+| pop_b1 | 20 | 20 | 100 |
+| pop_b2 | 20 | 20 | 100 |
+| pop_c1 | 20 | 20 | 100 |
+| pop_c2 | 20 | 20 | 100 |
 
