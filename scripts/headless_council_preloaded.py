@@ -597,51 +597,67 @@ def _pick_weighted_name(
     return rng.choices(choices, weights=weights, k=1)[0]
 
 
-def _build_holme_kim_edges(agent_names: list[str], seed: int) -> tuple[list[list[str]], dict[str, int]]:
+def _neighbours_of(node: str, edges: set[tuple[str, str]], blocked: set[str]) -> list[str]:
+    """Return the names directly connected to node, skipping blocked names."""
+    found: list[str] = []
+    for left, right in edges:
+        if left == node and right not in blocked:
+            found.append(right)
+        elif right == node and left not in blocked:
+            found.append(left)
+    return sorted(found)
+
+
+def _build_holme_kim_edges(
+    agent_names: list[str], seed: int, m: int = 3, p_triad: float = 0.5
+) -> tuple[list[list[str]], dict[str, int]]:
+    """Build edges with the Holme-Kim growing network model.
+
+    The first three nodes form a triangle, then every new node adds exactly
+    m edges. The first target is picked by preferential attachment (weight =
+    degree + 1). Each later target is picked uniformly from the neighbours of
+    the previous target with probability p_triad, otherwise by preferential
+    attachment (falling back to preferential attachment when the previous
+    target has no eligible neighbours). No extra edges are ever added, so the
+    mean degree stays close to 2*m no matter what p_triad is.
+    """
     shuffled = _shuffle_agent_names(agent_names, seed)
     rng = random.Random(seed)
-    edges: set[tuple[str, str]] = {
-        _make_edge(shuffled[0], shuffled[1]),
-        _make_edge(shuffled[1], shuffled[2]),
-        _make_edge(shuffled[0], shuffled[2]),
-    }
+    edges: set[tuple[str, str]] = set()
     degree_map = dict.fromkeys(agent_names, 0)
-    for left, right in edges:
+
+    # Seed triangle on the first three nodes.
+    for left, right in (
+        (shuffled[0], shuffled[1]),
+        (shuffled[1], shuffled[2]),
+        (shuffled[0], shuffled[2]),
+    ):
+        edges.add(_make_edge(left, right))
         degree_map[left] += 1
         degree_map[right] += 1
 
     for idx in range(3, len(shuffled)):
         new_name = shuffled[idx]
-        chosen: set[str] = set()
-        while len(chosen) < 2:
-            chosen.add(_pick_weighted_name(rng, shuffled[:idx], degree_map, chosen))
-        chosen_names = list(chosen)
-        for cn in chosen_names:
-            edge = _make_edge(new_name, cn)
-            edges.add(edge)
+        placed = shuffled[:idx]
+        chosen: list[str] = []
+        while len(chosen) < m:
+            if chosen and rng.random() < p_triad:
+                neighbours = _neighbours_of(chosen[-1], edges, set(chosen))
+                if neighbours:
+                    chosen.append(rng.choice(neighbours))
+                    continue
+            available = [n for n in placed if n not in chosen]
+            if not available:
+                # Every placed node is already chosen (early on, when there
+                # are fewer placed nodes than m). Connect to any placed node;
+                # duplicate edges are dropped by the edge set.
+                chosen.append(rng.choice(placed))
+                continue
+            chosen.append(_pick_weighted_name(rng, placed, degree_map, set(chosen)))
+        for target in chosen:
+            edges.add(_make_edge(new_name, target))
             degree_map[new_name] += 1
-            degree_map[cn] += 1
-        if rng.random() < 0.35:
-            friend = chosen_names[0]
-            others = [
-                n for n in shuffled[:idx] if n not in {friend, chosen_names[1]}
-            ]
-            if others:
-                tn = rng.choice(others)
-                edge = _make_edge(friend, tn)
-                if edge not in edges:
-                    edges.add(edge)
-                    degree_map[friend] += 1
-                    degree_map[tn] += 1
-
-    # Minimum 1-edge guarantee
-    degree = Counter(n for pair in edges for n in pair)
-    for agent in agent_names:
-        if degree.get(agent, 0) == 0:
-            # Pick a hub (degree-based weight) or random fallback
-            hubs = [n for n in agent_names if degree.get(n, 0) >= 2 and n != agent]
-            partner = rng.choice(hubs) if hubs else rng.choice([n for n in agent_names if n != agent])
-            edges.add(_make_edge(agent, partner))
+            degree_map[target] += 1
 
     return [list(e) for e in sorted(edges)], {}
 
