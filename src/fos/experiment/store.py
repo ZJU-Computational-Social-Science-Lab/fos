@@ -1,26 +1,14 @@
 """
 SQLite state store for the checkpointed experiment runner.
 
-Stores one row per experiment run, the progress stages each run has reached,
-and every LLM call an agent makes during a run. All writes are committed
-immediately — nothing is ever buffered in memory.
+Stores one row per run, the progress stages reached, and every agent LLM
+call. All writes are committed immediately — nothing is buffered in memory.
 
 Functions:
-    get_db()             — open a fresh connection to runs/state.db
-    init_db()            — create the tables if they do not exist
-    seed_from_csv()      — load data/configs/run_matrix.csv into runs (idempotent)
-    get_run()            — fetch one run as a dict
-    list_runs()          — fetch runs, optionally filtered by status
-    get_progress()       — fetch the completed stages of a run
-    mark_running()       — set a run to status 'running'
-    mark_complete()      — set a run to status 'complete'
-    mark_failed()        — set a run to status 'failed'
-    record_progress()    — record that a run finished a stage
-    record_agent_call()  — record one agent LLM call
-    get_agent_calls()    — fetch recorded agent calls
-    reset_stale_runs()   — return crashed 'running' runs to 'pending'
-    get_status_summary() — aggregate counts and timings for the status command
-    matrix_run_ids()     — run ids straight from the run matrix CSV
+    get_db, init_db, seed_from_csv, get_run, list_runs, get_progress,
+    mark_running, mark_complete, mark_failed, record_progress,
+    record_agent_call, get_agent_calls, reset_stale_runs, reset_failed_runs,
+    get_status_summary, matrix_run_ids
 """
 
 from __future__ import annotations
@@ -90,9 +78,8 @@ GENERATOR_ORDER = ("ws", "hk", "sbm")
 def get_db() -> sqlite3.Connection:
     """Open a fresh connection to runs/state.db, creating the directory first.
 
-    Every call returns a brand-new connection that is used by a single thread
-    and closed by the caller, so no connection is ever shared between threads.
-    WAL mode keeps readers and writers from blocking each other.
+    Every call returns a brand-new connection owned by the caller; WAL mode
+    keeps readers and writers from blocking each other.
     """
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(STATE_DB_PATH, check_same_thread=False)
@@ -328,6 +315,18 @@ def reset_stale_runs(conn: sqlite3.Connection | None = None) -> int:
             "UPDATE runs SET status = 'pending', attempts = attempts + 1 "
             "WHERE status = 'running'"
         )
+        c.commit()
+        return cursor.rowcount
+    finally:
+        if opened:
+            c.close()
+
+
+def reset_failed_runs(conn: sqlite3.Connection | None = None) -> int:
+    """Reset failed runs back to pending; returns how many were reset."""
+    c, opened = _resolve(conn)
+    try:
+        cursor = c.execute("UPDATE runs SET status = 'pending' WHERE status = 'failed'")
         c.commit()
         return cursor.rowcount
     finally:
