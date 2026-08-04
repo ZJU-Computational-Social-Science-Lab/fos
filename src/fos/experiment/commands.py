@@ -1,15 +1,18 @@
 """
-Implementations of the three runner commands: init, status, and verify.
+Implementations of the runner commands: init, status, verify, run, retry.
 
 init seeds the state store from the run matrix (idempotent), status prints
 a progress summary (read-only), and verify checks that every result file
-exists and contains the required keys (read-only).
+exists and contains the required keys (read-only). run and retry delegate
+to the runner module, which owns the execution loop.
 
 Functions:
     init()             — initialise the state store from the run matrix
     status()           — print the progress summary and return it
     verify()           — check every result file and print the outcome
     verify_runs()      — core verify logic, also usable from tests
+    run()              — execute pending runs (delegates to runner.run)
+    retry()            — reset failed runs to pending (delegates to runner.retry)
 """
 
 from __future__ import annotations
@@ -18,7 +21,7 @@ import json
 import sqlite3
 from typing import Any
 
-from fos.experiment import store
+from fos.experiment import runner, store
 
 REQUIRED_RESULT_KEYS = (
     "run_id",
@@ -61,6 +64,20 @@ def verify() -> None:
             print(f"Missing: {', '.join(report['missing'])}")
         for run_id, reason in report["invalid"]:
             print(f"Invalid: {run_id} ({reason})")
+
+
+def run(
+    limit: int | None = None,
+    run_id: str | None = None,
+    conn: sqlite3.Connection | None = None,
+) -> int:
+    """Execute pending runs, or one specific run; returns how many completed."""
+    return runner.run(limit=limit, run_id=run_id, conn=conn)
+
+
+def retry(conn: sqlite3.Connection | None = None) -> int:
+    """Reset every failed run back to pending; prints and returns the count."""
+    return runner.retry(conn=conn)
 
 
 def verify_runs(conn: sqlite3.Connection | None = None) -> dict[str, Any]:

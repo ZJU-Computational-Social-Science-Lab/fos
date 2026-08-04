@@ -1,9 +1,8 @@
 """
 Command-line interface for the checkpointed experiment runner.
 
-Dispatches the init, status, and verify subcommands to their implementations
-in commands.py. The run and retry subcommands arrive in a later phase and
-are deliberately not wired up yet.
+Dispatches the init, status, verify, run, and retry subcommands to their
+implementations in commands.py.
 
 Functions:
     build_parser() — construct the argparse parser with the subcommands
@@ -18,7 +17,7 @@ from fos.experiment import commands
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the argument parser with the init / status / verify subcommands."""
+    """Build the argument parser with the init / status / verify / run / retry subcommands."""
     parser = argparse.ArgumentParser(
         prog="fos.experiment",
         description="Checkpointed runner for the FOS council experiment.",
@@ -29,6 +28,16 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser(
         "verify", help="check that all result files exist and are valid"
     )
+    run_parser = subparsers.add_parser(
+        "run", help="execute pending runs (placeholder responses for now)"
+    )
+    run_parser.add_argument(
+        "--limit", type=int, default=None, help="max number of runs to execute"
+    )
+    run_parser.add_argument(
+        "--run-id", type=str, default=None, help="execute one specific run"
+    )
+    subparsers.add_parser("retry", help="reset failed runs back to pending")
     return parser
 
 
@@ -41,4 +50,8 @@ def main(argv: list[str] | None = None) -> int:
         commands.status()
     elif args.command == "verify":
         commands.verify()
+    elif args.command == "run":
+        return commands.run(limit=args.limit, run_id=args.run_id)
+    elif args.command == "retry":
+        commands.retry()
     return 0
