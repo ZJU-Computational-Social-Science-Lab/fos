@@ -175,14 +175,42 @@ def retry(conn: sqlite3.Connection | None = None) -> int:
 
 def _execute_one_run(run_id: str, conn: sqlite3.Connection | None = None) -> None:
     """Run the full pipeline for one run id (see module docstring for steps)."""
-    store.mark_running(run_id, conn)
     run_row = store.get_run(run_id, conn)
+
+    # ── Startup assertion: model manager must be reachable ──────────
+    import requests as _requests
+    _mm_url = os.environ.get("FOS_MODEL_MANAGER_URL")
+    if not _mm_url:
+        raise RuntimeError(
+            "FOS_MODEL_MANAGER_URL is not set. "
+            "Set it to http://127.0.0.1:8081 in .env before running experiments."
+        )
+    try:
+        _resp = _requests.get(f"{_mm_url.rstrip('/')}/status", timeout=5)
+        if _resp.status_code != 200:
+            raise RuntimeError(
+                f"Model manager at {_mm_url} returned HTTP {_resp.status_code} on /status"
+            )
+    except _requests.RequestException as exc:
+        raise RuntimeError(f"Model manager at {_mm_url} is not reachable: {exc}")
+
+    store.mark_running(run_id, conn)
+
     if run_row is None:
         raise ValueError(f"Unknown run {run_id}")
     matrix = _matrix_row(run_id)
     config = network._load_network_config(int(run_row["config_id"]))
     proposal_id = run_row["proposal_id"]
     network_seed = int(matrix["network_seed"])
+
+    # If this run previously failed, discard its checkpoint so we start fresh
+    if run_row.get("status") == "failed":
+        import shutil
+        ckpt_path = store.get_checkpoint_path(run_id)
+        ckpt_dir = ckpt_path.parent
+        if ckpt_dir.exists():
+            shutil.rmtree(ckpt_dir)
+            print(f"Run {run_id}: discarded stale checkpoint from failed run")
 
     # Resume path: a checkpoint from a previous attempt already has the tree,
     # placement, network stats, and completed rounds' LLM calls.
@@ -252,9 +280,34 @@ def _execute_one_run(run_id: str, conn: sqlite3.Connection | None = None) -> Non
         print(f"Run {run_id} FAILED: empty-response gate ({pct:.1f}% empty)")
         return
 
+    # Step 8.5 — resident-model audit (before gate checks)
+    _resident_audit = {}
+    for entry in deliberation:
+        prompt_text = entry.get("prompt", "")
+        # Extract model info from the prompt (not available in deliberation entries directly)
+        # Instead, collect from tracker
+    if tracker is not None:
+        from collections import defaultdict as _dd
+        _model_stats = _dd(lambda: {"count": 0, "residents": set()})
+        for round_idx in range(1, TOTAL_ROUNDS + 1):
+            for call in tracker.round_calls.get(round_idx, []):
+                model = call.get("model", "unknown")
+                resident = call.get("resident_model", "unknown")
+                _model_stats[model]["count"] += 1
+                _model_stats[model]["residents"].add(resident)
+        print("\n=== Resident-Model Audit ===")
+        for model, stats in sorted(_model_stats.items()):
+            residents = stats["residents"]
+            status = "OK" if len(residents) <= 1 else "FAIL"
+            print(f"  {model}: {stats['count']} calls, residents={residents} {status}")
+        print()
+
     # Step 9 — validation gates before marking complete.
     agent_records = _agent_degree_records(placement)
-    _validate_gates(deliberation, agent_records, votes, placement["confederates"])
+    _validate_gates(
+        deliberation, agent_records, votes, placement["confederates"],
+        bios={a["agent_id"]: a.get("bio", "") for a in placement.get("run_agents", [])},
+    )
 
     # Step 10 — write the result file atomically.
     result = _build_result(
