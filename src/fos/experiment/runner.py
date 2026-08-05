@@ -205,12 +205,9 @@ def _execute_one_run(run_id: str, conn: sqlite3.Connection | None = None) -> Non
 
     # If this run previously failed, discard its checkpoint so we start fresh
     if run_row.get("status") == "failed":
-        import shutil
         ckpt_path = store.get_checkpoint_path(run_id)
-        ckpt_dir = ckpt_path.parent
-        if ckpt_dir.exists():
-            shutil.rmtree(ckpt_dir)
-            print(f"Run {run_id}: discarded stale checkpoint from failed run")
+        ckpt_path.unlink(missing_ok=True)
+        print(f"Run {run_id}: discarded stale checkpoint from failed run")
 
     # Resume path: a checkpoint from a previous attempt already has the tree,
     # placement, network stats, and completed rounds' LLM calls.

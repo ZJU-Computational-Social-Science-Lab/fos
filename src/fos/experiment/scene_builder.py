@@ -25,7 +25,7 @@ from fos.experiment.results import DELIBERATION_ROUNDS
 from fos.experiments import confederates as conf
 
 
-def _fos_agent_config(agent: dict[str, Any], conf_prompt: str | None) -> dict[str, Any]:
+def _fos_agent_config(agent: dict[str, Any], conf_prompt: str | None, provider_id: str = "") -> dict[str, Any]:
     """Convert a population agent into the agent dict the FOS scene expects."""
     archetype = agent.get("archetype_cell") or {}
     big_five = agent.get("big_five") or {}
@@ -56,7 +56,7 @@ def _fos_agent_config(agent: dict[str, Any], conf_prompt: str | None) -> dict[st
             "api_key": "not-needed",
             "temperature": 0.7,
         },
-        "provider_id": "",
+        "provider_id": provider_id,
     }
 
 
@@ -64,13 +64,19 @@ def _build_council_scene(
     run_agents: list[dict[str, Any]],
     proposal_statement: str,
     network_dict: dict[str, Any],
+    confederates: list[Any] | None = None,
 ) -> Any:
     """Build the FOS council scene for a run (mirrors scripts/headless_council.py)."""
     from fos.core.experiment.config import ExperimentConfig
     from fos.core.experiment.scenes.council_experiment import CouncilExperimentScene
 
     fos_agents = [
-        _fos_agent_config(agent, agent.get("confederate_prompt")) for agent in run_agents
+        _fos_agent_config(
+            agent,
+            agent.get("confederate_prompt"),
+            provider_id=agent.get("provider_id", ""),
+        )
+        for agent in run_agents
     ]
     return CouncilExperimentScene(
         ExperimentConfig(
@@ -81,6 +87,14 @@ def _build_council_scene(
                 "proposal_text": proposal_statement,
                 "deliberation_rounds": DELIBERATION_ROUNDS,
                 "voting_threshold": 0.5,
+                "confederates": [
+                    {
+                        "agent_id": s.agent_id,
+                        "stance": s.stance,
+                        "speech_mode": s.speech_mode,
+                    }
+                    for s in (confederates or [])
+                ],
             },
             description=proposal_statement,
             social_network=network_dict,
@@ -98,7 +112,12 @@ def _build_tree(
     from fos.backend.services.simtree_runtime import ExperimentRunnerAdapter
     from fos.core.simtree import SimTree
 
-    scene = _build_council_scene(placement["run_agents"], proposal_statement, {"edges": []})
+    scene = _build_council_scene(
+        placement["run_agents"],
+        proposal_statement,
+        {"edges": []},
+        confederates=placement.get("confederates") or [],
+    )
     adapter = ExperimentRunnerAdapter(scene, clients)
     tree = SimTree.new(adapter, adapter.clients)
     root_id = tree.root
