@@ -31,6 +31,11 @@ def _fos_agent_config(agent: dict[str, Any], conf_prompt: str | None) -> dict[st
     big_five = agent.get("big_five") or {}
     bio = agent.get("bio", "") or ""
     role_prompt = f"{conf_prompt}\n\n{bio}" if conf_prompt else bio
+    # Resolve the correct port for this agent's model (dual-server routing)
+    from fos.experiment.clients import MODEL_PORT_MAP
+
+    _model = agent.get("voting_model", "openai/gpt-oss-20b")
+    _port = MODEL_PORT_MAP.get(_model, 8080)
     return {
         "name": agent["agent_id"],
         "properties": {
@@ -46,8 +51,8 @@ def _fos_agent_config(agent: dict[str, Any], conf_prompt: str | None) -> dict[st
         "role_prompt": role_prompt,
         "llm_config": {
             "dialect": "openai",
-            "model": agent.get("voting_model", "openai/gpt-oss-20b"),
-            "base_url": "http://localhost:8080/v1",
+            "model": _model,
+            "base_url": f"http://localhost:{_port}/v1",
             "api_key": "not-needed",
             "temperature": 0.7,
         },
