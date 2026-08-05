@@ -165,6 +165,7 @@ def _validate_gates(
     agent_records: dict[str, int],
     votes: dict[str, str],
     conf_specs: list[conf.ConfederateSpec],
+    bios: dict[str, str] | None = None,
 ) -> None:
     """Run the validation gates; raise with a specific message when one fails."""
     prompts: dict[tuple[str, int], int] = {
@@ -178,6 +179,33 @@ def _validate_gates(
         and (uid, 3) in prompts
         and prompts[(uid, 3)] <= prompts[(uid, 1)]
     ]
+    # ── attribution self-check ──
+    # Verify positional attribution for SPEAK actions only (skip actions
+    # may produce entries with no prompt, which is fine).
+    # We compare a collapsed 60-char slice from the MIDDLE of the bio
+    # (bio[20:80]) against the collapsed prompt to avoid prefix collisions
+    # between agents in the same archetype cell.
+    mismatches = 0
+    for entry in deliberation:
+        if entry.get("action") != "speak":
+            continue
+        uid = entry["agent_uid"]
+        prompt = entry.get("prompt", "")
+        if not prompt.strip():
+            mismatches += 1
+            continue
+        expected_bio = bios.get(uid) if bios else None
+        if expected_bio and expected_bio.strip():
+            bio_slice = " ".join(expected_bio[20:80].split())
+            prompt_collapsed = " ".join(prompt.split())
+            if bio_slice not in prompt_collapsed:
+                mismatches += 1
+    if mismatches:
+        raise RuntimeError(
+            f"attribution gate failed: {mismatches} speak-action prompts "
+            f"do not contain their agent's bio (positional attribution broken)"
+        )
+
     if problems:
         raise RuntimeError(
             f"neighbour-context gate failed for agents with degree > 2: {problems[:10]}"
