@@ -109,6 +109,18 @@ class CouncilExperimentScene(ExperimentScene):
         # Confederate agent support
         self._conf_lookup: dict[str, ConfederateSpec] = {}
         self._conf_specs: list[ConfederateSpec] = []
+        _conf_param = (self.config.parameters or {}).get("confederates") or []
+        if _conf_param:
+            _specs = [
+                ConfederateSpec(
+                    agent_id=c["agent_id"],
+                    stance=c["stance"],
+                    speech_mode=c.get("speech_mode", "llm"),
+                )
+                for c in _conf_param
+            ]
+            self._conf_specs = _specs
+            self._conf_lookup = build_confederate_lookup(_specs)
 
         logger.info(f"CouncilExperimentScene initialized with {len(self.agents)} agents")
 

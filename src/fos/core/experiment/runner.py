@@ -1642,9 +1642,9 @@ class ExperimentRunner:
                 action_name=f'vote_{vote_str}',
                 parameters={'choice': vote_str},
                 summary=f'{agent.name} voted {vote_str} (confederate)',
+                round_num=0,
                 success=True,
                 skipped=False,
-                raw_response='',
             )
 
         _locale = getattr(getattr(self.scene, 'config', None), 'locale', 'en') if self.scene else 'en'

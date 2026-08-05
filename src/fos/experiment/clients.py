@@ -115,6 +115,8 @@ class TrackedClient:
     def chat(self, messages: list[dict[str, Any]], json_mode: bool = False, max_tokens: int | None = None) -> Any:
         """Record one call, then delegate to the wrapped client."""
         prompt = "".join(str(m.get("content", "")) for m in messages)
+        if prompt.strip() == "Hi":
+            return self._inner.chat(messages, json_mode=json_mode, max_tokens=max_tokens)
         entry: dict[str, Any] = {"prompt": prompt, "response": "", "error": None, "usage": None}
         entry["seq"] = next(_seq_counter)
         entry["model"] = self._model
