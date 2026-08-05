@@ -155,6 +155,7 @@ class ExperimentRunnerAdapter:
             except Exception:
                 pass
             try:
+                print(f"[DEBUG] adapter.run: about to call _run_scene_round, turn={_}", flush=True)
                 self._run_scene_round()
             except Exception as exc:
                 self._emit_runtime_error(exc)
