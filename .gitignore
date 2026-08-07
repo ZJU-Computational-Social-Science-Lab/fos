@@ -91,3 +91,8 @@ run_fos.sh
 /.pi
 /artifacts
 scripts/generate_paper_figures.py
+/extracted_users
+/persona_samples
+/personas
+*.csv
+*.csv
