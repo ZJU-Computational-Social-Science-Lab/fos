@@ -254,6 +254,7 @@ def _build_result(
         "proposal_id": run_row["proposal_id"],
         "population_id": run_row["population_id"],
         "generator": config["generator"],
+        "network_condition": "none" if config["generator"] == "none" else "networked",
         "network_label": network_label(config),
         "network_seed": int(matrix["network_seed"]),
         "placement_seed": placement["placement_seed"],
