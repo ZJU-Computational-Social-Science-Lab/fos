@@ -39,7 +39,7 @@ import sqlite3
 import traceback
 from typing import Any
 
-from fos.experiment import network, store
+from fos.experiment import baseline, network, store
 from fos.experiment.clients import TrackedClient, _build_clients
 from fos.experiment.results import (
     EMPTY_RATE_LIMIT,
@@ -199,7 +199,10 @@ def _execute_one_run(run_id: str, conn: sqlite3.Connection | None = None) -> Non
     if run_row is None:
         raise ValueError(f"Unknown run {run_id}")
     matrix = _matrix_row(run_id)
-    config = network._load_network_config(int(run_row["config_id"]))
+    if baseline.is_baseline(run_row["config_id"]):
+        config = baseline.baseline_config()
+    else:
+        config = network._load_network_config(int(run_row["config_id"]))
     proposal_id = run_row["proposal_id"]
     network_seed = int(matrix["network_seed"])
 
@@ -226,9 +229,13 @@ def _execute_one_run(run_id: str, conn: sqlite3.Connection | None = None) -> Non
         network_stats = cp["network_stats"]
     else:
         # Step 2 — rebuild the network and verify it against the expected stats.
-        edges = network._build_network(config, network_seed)
-        expected = network._load_expected_stats(int(run_row["config_id"]), proposal_id, network_seed)
-        network_stats = network._verify_network(edges, expected)
+        if baseline.is_baseline(run_row["config_id"]):
+            edges = []
+            network_stats = baseline.baseline_network_stats()
+        else:
+            edges = network._build_network(config, network_seed)
+            expected = network._load_expected_stats(int(run_row["config_id"]), proposal_id, network_seed)
+            network_stats = network._verify_network(edges, expected)
         store.record_progress(run_id, "network_built", conn)
         _check_interrupted(run_id, "network_built")
 
@@ -237,7 +244,12 @@ def _execute_one_run(run_id: str, conn: sqlite3.Connection | None = None) -> Non
         proposal_statement = _proposal_statement(proposal_id)
 
         # Step 4 — placement: permutation, confederates, per-run agent copies.
-        placement = derive_placement(matrix, config, agents, proposal_statement, edges)
+        _bl = baseline.is_baseline(run_row["config_id"])
+        placement = derive_placement(
+            matrix, config, agents, proposal_statement, edges,
+            n_yes=0 if _bl else 3,
+            n_no=0 if _bl else 3,
+        )
         store.record_progress(run_id, "placement_done", conn)
 
         # Step 5 — build the FOS scene and tree around it.

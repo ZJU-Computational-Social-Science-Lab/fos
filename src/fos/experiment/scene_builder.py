@@ -143,6 +143,8 @@ def derive_placement(
     agents: list[dict[str, Any]],
     proposal_statement: str,
     edges: list[list[str]],
+    n_yes: int = 3,
+    n_no: int = 3,
 ) -> dict[str, Any]:
     """Compute the deterministic placement for a run.
 
@@ -169,8 +171,8 @@ def derive_placement(
     permuted = conf.permute_node_assignment(agent_names, placement_rng)
     conf_specs = conf.assign_confederates(
         agent_names,
-        n_yes=3,
-        n_no=3,
+        n_yes=n_yes,
+        n_no=n_no,
         rng=confederate_rng,
         speech_mode="llm",
     )
