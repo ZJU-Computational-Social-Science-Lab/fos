@@ -96,3 +96,6 @@ scripts/generate_paper_figures.py
 /personas
 *.csv
 *.csv
+
+# Experiment checkpoints (large, regenerable)
+runs/checkpoints/
