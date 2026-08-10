@@ -31,7 +31,7 @@ def build_payoff_matrix() -> dict:
         for col_num in range(11, 21):
             row_payoff = row_num + (20 if row_num == col_num - 1 else 0)
             col_payoff = col_num + (20 if col_num == row_num - 1 else 0)
-            matrix[f"request_{row_num}_request_{col_num}"] = {
+            matrix[f"{row_num}_{col_num}"] = {
                 "row": row_payoff,
                 "col": col_payoff,
             }
@@ -40,21 +40,22 @@ def build_payoff_matrix() -> dict:
 
 def build_game_config() -> GameConfig:
     """Build the game configuration for the 11-20 Money Request Game."""
-    actions = [f"request_{n}" for n in range(11, 21)]
-    action_descriptions = {
-        f"request_{n}": f"Request {n} shekels" for n in range(11, 21)
-    }
     return GameConfig(
         name="game_11_20",
         description=(
-            "Two agents each pick a whole number from 11 to 20. "
-            "Your payoff equals the number you pick. "
-            "If you pick exactly one less than your opponent, "
-            "you get a bonus of 20."
+            "You and another player are playing a game in which each player "
+            "requests an amount of money. The amount must be (an integer) "
+            "between 11 and 20 shekels. Each player will receive the amount "
+            "he requests. A player will receive an additional amount of 20 "
+            "shekels if he asks for exactly one shekel less than the other "
+            "player.\n\n"
+            "What amount of money would you request?"
         ),
-        action_type="discrete",
-        actions=actions,
-        action_descriptions=action_descriptions,
+        action_type="integer",
+        actions=[],
+        output_field="amount",
+        min=11,
+        max=20,
         payoff_type="matrix",
         grouping_mode="pairwise",
         payoff_config={"matrix": build_payoff_matrix()},
@@ -106,10 +107,10 @@ async def main() -> None:
     print("\n=== Sanity checks (known payoff table entries) ===")
     matrix = build_payoff_matrix()
     known_entries = [
-        ("request_11_request_11", {"row": 11, "col": 11}),
-        ("request_19_request_20", {"row": 39, "col": 20}),
-        ("request_20_request_19", {"row": 20, "col": 39}),
-        ("request_15_request_15", {"row": 15, "col": 15}),
+        ("11_11", {"row": 11, "col": 11}),
+        ("19_20", {"row": 39, "col": 20}),
+        ("20_19", {"row": 20, "col": 39}),
+        ("15_15", {"row": 15, "col": 15}),
     ]
     for key, expected in known_entries:
         actual = matrix[key]
