@@ -1,0 +1,14 @@
+username                        gpt-oss-20b      gemma-4-26b-a4b  qwen3.6-35b-a3b
+------------------------------------------------------------------------------------------
+clumsybassdropper               request_12                                       
+fucksasuke                      request_11                                       
+threwnawayed                    request_15                        request_X      
+Justin_Bligh                    request_15                                       
+AngelKittichik                  request_19                        request_XX     
+hobbang819                      request_15                        request_X      
+thehacksmith                    request_15                                       
+thirdangletheory                request_15                        request_X      
+nowalkietalkies                 request_15                        request_X      
+bezimya74                       request_15                        request_X      
+rednaxela26                     request_15                        request_X      
+EnergizedNuke                   request_15                        request_X      
