@@ -151,6 +151,8 @@ def build_llm_config(model: str) -> LLMConfig:
         base_url=_LM_STUDIO_BASE_URL,
         api_key=_LM_STUDIO_API_KEY,
         model=model,
+        temperature=0.0,
+        max_tokens=4096,
     )
 
 
