@@ -17,6 +17,7 @@ Supported scenes:
 - Chat: Simple message sending with continuation detection
 """
 
+import json
 import re
 
 
@@ -102,6 +103,9 @@ class _MockModel:
 
         # JSON mode: return parseable JSON for experiment controller
         if json_mode:
+            int_response = self._integer_json_response(messages)
+            if int_response is not None:
+                return int_response
             return _action_to_json(action, messages)
 
         # Compose full response with XML Action
@@ -111,6 +115,72 @@ class _MockModel:
             f"--- Action ---\n{action_to_xml(action)}\n\n"
             f"--- Plan Update ---\n{plan_update}\n"
         )
+
+    def _integer_json_response(self, messages: list) -> str | None:
+        """Return a JSON integer response for integer-mode games, or None.
+
+        Handles games with numeric action types (e.g. output_field="amount"):
+        their prompts contain a response-format line shaped exactly like
+            Respond with ONLY JSON: {"amount": <number>}
+        and a range line like "Choose a value from 11 to 20.". The literal
+        <number> token cleanly separates integer mode from discrete mode
+        (whose value is a quoted string), so discrete prompts never match.
+
+        The chosen number is derived deterministically from the agent name
+        (stable polynomial hash, not Python's randomized hash()) so two
+        different agents get two different, reproducible numbers.
+
+        Args:
+            messages: List of message dicts with role/content
+
+        Returns:
+            JSON string like {"amount": 15}, or None if not integer mode
+        """
+        all_text = "\n".join(
+            m.get("content", "")
+            for m in messages
+            if isinstance(m.get("content"), str)
+        )
+
+        # Response-format line captures the output field name, e.g. "amount".
+        fmt_match = re.search(
+            r'Respond with ONLY JSON:\s*\{"(\w+)":\s*<number>\}',
+            all_text,
+        )
+        if not fmt_match:
+            return None
+        field = fmt_match.group(1)
+
+        # Range line captures min and max; fall back to a safe default range.
+        range_match = re.search(
+            r"Choose a (?:value|number) from\s+(\d+)\s+to\s+(\d+)",
+            all_text,
+        )
+        if range_match:
+            min_val = int(range_match.group(1))
+            max_val = int(range_match.group(2))
+        else:
+            min_val, max_val = 0, 100
+        if max_val < min_val:
+            min_val, max_val = max_val, min_val
+
+        # Deterministic per-agent pick: stable polynomial hash of the agent
+        # name, mapped into [min, max]. Prefer the system message (same
+        # extraction as chat()); fall back to the full prompt text because
+        # the runner sends the prompt as a user message.
+        sys_text = next(
+            (m["content"] for m in messages if m["role"] == "system"),
+            "",
+        )
+        name_match = re.search(r"You are\s+([^\n\.]+)", sys_text)
+        if not name_match:
+            name_match = re.search(r"You are\s+([^\n\.]+)", all_text)
+        name = name_match.group(1).strip() if name_match else "Agent"
+        h = 0
+        for ch in name:
+            h = (h * 31 + ord(ch)) & 0xFFFFFFFF
+        chosen = min_val + (h % (max_val - min_val + 1))
+        return json.dumps({field: chosen})
 
     def _council_response(self, agent_name: str, call_n: int) -> tuple:
         """Generate response for council/voting scene."""
