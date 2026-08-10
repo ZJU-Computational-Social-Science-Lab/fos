@@ -113,7 +113,7 @@ def build_payoff_matrix() -> dict:
         for col_num in range(11, 21):
             row_payoff = row_num + (20 if row_num == col_num - 1 else 0)
             col_payoff = col_num + (20 if col_num == row_num - 1 else 0)
-            matrix[f"request_{row_num}_request_{col_num}"] = {
+            matrix[f"{row_num}_{col_num}"] = {
                 "row": row_payoff,
                 "col": col_payoff,
             }
@@ -122,22 +122,22 @@ def build_payoff_matrix() -> dict:
 
 def build_game_config() -> GameConfig:
     """Build the game configuration for the 11-20 Money Request Game."""
-    actions = [f"request_{n}" for n in range(11, 21)]
-    action_descriptions = {
-        f"request_{n}": f"Request {n} shekels" for n in range(11, 21)
-    }
     return GameConfig(
         name="game_11_20",
         description=(
-            "You and another player are playing a game in which each player requests "
-            "an amount of money. The amount must be (an integer) between 11 and 20 "
-            "shekels. Each player will receive the amount he requests. A player will "
-            "receive an additional amount of 20 shekels if he asks for exactly one "
-            "shekel less than the other player."
+            "You and another player are playing a game in which each player "
+            "requests an amount of money. The amount must be (an integer) "
+            "between 11 and 20 shekels. Each player will receive the amount "
+            "he requests. A player will receive an additional amount of 20 "
+            "shekels if he asks for exactly one shekel less than the other "
+            "player.\n\n"
+            "What amount of money would you request?"
         ),
-        action_type="discrete",
-        actions=actions,
-        action_descriptions=action_descriptions,
+        action_type="integer",
+        actions=[],
+        output_field="amount",
+        min=11,
+        max=20,
         payoff_type="matrix",
         grouping_mode="pairwise",
         payoff_config={"matrix": build_payoff_matrix()},
@@ -154,14 +154,19 @@ def build_llm_config(model: str) -> LLMConfig:
     )
 
 
-def parse_chosen_number(action_name: str) -> int | None:
-    """Extract the requested number (11-20) from an action name like request_15."""
-    if not action_name or not action_name.startswith("request_"):
-        return None
+def parse_chosen_number(value) -> int | None:
+    """Return the requested number (11-20) the agent chose.
+
+    With integer mode the chosen value is already the plain integer amount
+    (e.g. 15). Validate it is in the 11-20 range and return it; otherwise None.
+    """
     try:
-        return int(action_name[len("request_"):])
-    except ValueError:
+        number = int(value)
+    except (TypeError, ValueError):
         return None
+    if 11 <= number <= 20:
+        return number
+    return None
 
 
 async def run_one_decision(

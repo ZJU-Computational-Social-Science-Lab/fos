@@ -116,7 +116,7 @@ def build_payoff_matrix() -> dict:
         for col_num in range(11, 21):
             row_payoff = row_num + (20 if row_num == col_num - 1 else 0)
             col_payoff = col_num + (20 if col_num == row_num - 1 else 0)
-            matrix[f"request_{row_num}_request_{col_num}"] = {
+            matrix[f"{row_num}_{col_num}"] = {
                 "row": row_payoff,
                 "col": col_payoff,
             }
@@ -125,10 +125,6 @@ def build_payoff_matrix() -> dict:
 
 def build_game_config() -> GameConfig:
     """Build the game configuration for the 11-20 Money Request Game."""
-    actions = [f"request_{n}" for n in range(11, 21)]
-    action_descriptions = {
-        f"request_{n}": f"Request {n} shekels" for n in range(11, 21)
-    }
     return GameConfig(
         name="game_11_20",
         description=(
@@ -137,11 +133,14 @@ def build_game_config() -> GameConfig:
             "between 11 and 20 shekels. Each player will receive the amount "
             "he requests. A player will receive an additional amount of 20 "
             "shekels if he asks for exactly one shekel less than the other "
-            "player."
+            "player.\n\n"
+            "What amount of money would you request?"
         ),
-        action_type="discrete",
-        actions=actions,
-        action_descriptions=action_descriptions,
+        action_type="integer",
+        actions=[],
+        output_field="amount",
+        min=11,
+        max=20,
         payoff_type="matrix",
         grouping_mode="pairwise",
         payoff_config={"matrix": build_payoff_matrix()},
@@ -180,7 +179,7 @@ async def run_one_decision(
 ) -> str:
     """Run exactly one round of the 11-20 game for one persona on one model.
 
-    Returns the action name the persona chose (for example "request_15").
+    Returns the amount the persona chose (an integer from 11 to 20, for example 15).
     """
     persona_text = load_persona_text(username)
     game_config = build_game_config()
@@ -207,7 +206,7 @@ def print_model_counts(model: str, results: list[tuple[str, str]]) -> None:
     """Print how often each number from 11 to 20 was chosen for a model."""
     print(f"\nCounts for {model}:")
     for n in range(11, 21):
-        count = sum(1 for _, chosen in results if chosen == f"request_{n}")
+        count = sum(1 for _, chosen in results if chosen == n)
         print(f"  {n}: {count}")
 
 
