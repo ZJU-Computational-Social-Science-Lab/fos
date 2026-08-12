@@ -79,10 +79,11 @@ def _normalize_dialect(raw: str, base_url: str | None) -> tuple[str, str | None]
     if raw_lower in {"lmstudio", "llamacpp", "vllm"}:
         return "openai", base_url
 
-    # Heuristic: openai + localhost base_url ⇒ treat as ollama-compatible API
-    # This catches the case where a user manually entered "openai" as provider
-    # type with a localhost URL (old behavior before explicit LM Studio support).
-    if val == "openai" and base_url and ("localhost" in base_url or ":11434" in base_url):
+    # Heuristic: "openai" provider + the canonical Ollama port 11434 ⇒ treat
+    # as ollama. The localhost hostname alone is NOT an Ollama signal: LM Studio,
+    # llama.cpp, vLLM, TGI and LocalAI all run on localhost and speak the OpenAI
+    # dialect, so only the port is a reliable Ollama fingerprint here.
+    if val == "openai" and base_url and ":11434" in base_url:
         if "/v1" in base_url:
             base_url = base_url.replace("/v1", "").rstrip("/")
         return "ollama", base_url
