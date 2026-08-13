@@ -1,7 +1,9 @@
 """
-Play the 11-20 Money Request Game once per persona on DeepSeek with the
-reasoning prompt and the persona text attached, writing each decision to
-results/deepseek_persona_reasoning.csv the moment it finishes.
+Play the 11-20 Money Request Game once per persona with the reasoning prompt
+and the persona text attached, writing each decision to
+results/{model}_persona_reasoning.csv (model name with "/" replaced by "_") the
+moment it finishes. The default target is DeepSeek, but --base-url can point at
+any OpenAI-compatible API such as LM Studio (localhost).
 
 What this does, in plain terms:
 - Read the first N usernames (--personas, default 5) from final_200_personas.csv.
@@ -22,8 +24,8 @@ What this does, in plain terms:
 - If a single decision fails, it is recorded as failed and the run continues.
 - At the end, print the count of each number from 11 to 20 with percentages,
   and how many decisions had a non-empty "reason" out of the total.
-- If the DEEPSEEK_API_KEY environment variable is not set at startup, print
-  "DEEPSEEK_API_KEY not set" and exit with code 1.
+- If no API key is available (via --api-key or the DEEPSEEK_API_KEY environment
+  variable), print "API key not set" and exit with code 1.
 
 FOS does not surface finish_reason, reasoning_content, reasoning_tokens, or raw
 content, so attach_response_capture() wraps the OpenAI SDK's
@@ -36,13 +38,15 @@ Functions:
     load_persona_text(username)  - read one persona file as a single string.
     build_payoff_matrix()        - build the 10x10 payoff matrix.
     build_game_config()          - build the GameConfig (with reasoning prompt).
-    build_llm_config(model)      - build a DeepSeek LLMConfig for one model.
+    build_llm_config(model, base_url, api_key)
+                               - build an OpenAI-dialect LLMConfig for one model.
     attach_response_capture()    - wrap the SDK to record finish_reason, content,
                                    reasoning_content, reasoning_tokens.
     extract_reason(content)      - pull the "reason" field out of raw JSON text.
     parse_chosen_number(value)   - validate/return the chosen number (11-20).
     run_one_decision(...)        - run one round, return choice + reason + meta.
-    results_csv_path()           - the results CSV path (results/deepseek_persona_reasoning.csv).
+    results_csv_path(model)      - the results CSV path for one model
+                                   (results/{model}_persona_reasoning.csv).
     write_csv_header(model)      - write the results CSV header.
     append_csv_row(model, ...)   - append one decision's row immediately.
     running_counts(decisions)    - short count string for progress lines.
@@ -74,7 +78,6 @@ from fos.core.llm_config import LLMConfig  # noqa: E402
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 _DEFAULT_MODEL = "deepseek-v4-flash"
-_RESULTS_CSV_NAME = "deepseek_persona_reasoning.csv"
 _PROGRESS_EVERY = 10
 
 
@@ -151,16 +154,22 @@ def build_game_config() -> GameConfig:
     )
 
 
-def build_llm_config(model: str = _DEFAULT_MODEL) -> LLMConfig:
-    """Build a DeepSeek LLMConfig (OpenAI-compatible dialect) for a model.
+def build_llm_config(
+    model: str = _DEFAULT_MODEL,
+    base_url: str = _DEEPSEEK_BASE_URL,
+    api_key: str = "",
+) -> LLMConfig:
+    """Build an OpenAI-dialect LLMConfig for one model at a given base URL.
 
-    Uses the DEEPSEEK_API_KEY environment variable and max_tokens 16384 (not
-    4096) so the model has room to return its reasoning plus the JSON answer.
+    Uses the passed base_url and api_key (the caller resolves the key from
+    --api-key or the DEEPSEEK_API_KEY environment variable) and max_tokens
+    16384 (not 4096) so the model has room to return its reasoning plus the
+    JSON answer.
     """
     return LLMConfig(
         dialect="openai",
-        base_url=_DEEPSEEK_BASE_URL,
-        api_key=os.getenv("DEEPSEEK_API_KEY", ""),
+        base_url=base_url,
+        api_key=api_key,
         model=model,
         temperature=0.0,
         max_tokens=16384,
@@ -263,14 +272,19 @@ def parse_chosen_number(value) -> int | None:
 
 
 async def run_one_decision(
-    username: str, model: str, llm_client: LLMClient, holder: dict
+    username: str,
+    model: str,
+    base_url: str,
+    api_key: str,
+    llm_client: LLMClient,
+    holder: dict,
 ) -> Decision:
-    """Run one round of the 11-20 game for one persona on DeepSeek.
+    """Run one round of the 11-20 game for one persona.
 
     role_prompt is the persona text loaded from personas/{username}.txt.
     """
     game_config = build_game_config()
-    llm_config = build_llm_config(model)
+    llm_config = build_llm_config(model, base_url, api_key)
 
     agent = ExperimentAgent(
         name=username,
@@ -318,14 +332,19 @@ async def run_one_decision(
         )
 
 
-def results_csv_path() -> Path:
-    """Build the results CSV path (always results/deepseek_persona_reasoning.csv)."""
-    return _REPO_ROOT / "results" / _RESULTS_CSV_NAME
+def results_csv_path(model: str) -> Path:
+    """Build the results CSV path for one model (results/{model}_persona_reasoning.csv).
+
+    The model name has "/" replaced by "_" so different models write to
+    different files instead of overwriting each other.
+    """
+    csv_name = f"{model.replace('/', '_')}_persona_reasoning.csv"
+    return _REPO_ROOT / "results" / csv_name
 
 
 def write_csv_header(model: str) -> None:
     """Write the results CSV header (truncating any prior file)."""
-    with results_csv_path().open("w", encoding="utf-8", newline="") as fh:
+    with results_csv_path(model).open("w", encoding="utf-8", newline="") as fh:
         csv.writer(fh).writerow(
             ["username", "model", "chosen_number", "reason", "succeeded", "finish_reason"]
         )
@@ -336,7 +355,7 @@ def append_csv_row(model: str, decision: Decision) -> None:
     succeeded = "true" if decision.success else "false"
     chosen = "" if decision.chosen_number is None else str(decision.chosen_number)
     finish = "" if decision.finish_reason is None else str(decision.finish_reason)
-    with results_csv_path().open("a", encoding="utf-8", newline="") as fh:
+    with results_csv_path(model).open("a", encoding="utf-8", newline="") as fh:
         csv.writer(fh).writerow(
             [decision.username, model, chosen, decision.reason or "",
              succeeded, finish]
@@ -394,7 +413,21 @@ async def main() -> None:
     parser.add_argument(
         "--model",
         default=_DEFAULT_MODEL,
-        help=f"DeepSeek model name (default: {_DEFAULT_MODEL}).",
+        help=f"Model name (default: {_DEFAULT_MODEL}).",
+    )
+    parser.add_argument(
+        "--base-url",
+        default=_DEEPSEEK_BASE_URL,
+        help=(
+            "Base URL of the OpenAI-compatible API to target "
+            f"(default: {_DEEPSEEK_BASE_URL}); e.g. LM Studio at "
+            "http://localhost:1234/v1."
+        ),
+    )
+    parser.add_argument(
+        "--api-key",
+        default=None,
+        help="API key; falls back to the DEEPSEEK_API_KEY environment variable.",
     )
     parser.add_argument(
         "--personas",
@@ -409,15 +442,18 @@ async def main() -> None:
     )
     args = parser.parse_args()
     model = args.model
+    api_key = (
+        args.api_key if args.api_key is not None else os.getenv("DEEPSEEK_API_KEY", "")
+    )
 
-    if not os.getenv("DEEPSEEK_API_KEY", ""):
-        print("DEEPSEEK_API_KEY not set")
+    if not api_key:
+        print("API key not set")
         sys.exit(1)
 
     usernames = load_usernames(args.personas)
     total = len(usernames)
 
-    llm_client = LLMClient(build_llm_config(model))
+    llm_client = LLMClient(build_llm_config(model, args.base_url, api_key))
     holder = attach_response_capture(llm_client)
 
     results_dir = _REPO_ROOT / "results"
@@ -426,7 +462,9 @@ async def main() -> None:
 
     decisions: list[Decision] = []
     for index, username in enumerate(usernames, start=1):
-        decision = await run_one_decision(username, model, llm_client, holder)
+        decision = await run_one_decision(
+            username, model, args.base_url, api_key, llm_client, holder
+        )
         decisions.append(decision)
         append_csv_row(model, decision)
         if decision.success:
@@ -461,7 +499,7 @@ async def main() -> None:
     print_final_stats(decisions)
     with_reason = sum(1 for d in decisions if d.reason)
     print(f"\nReason present: {with_reason}/{total} decisions")
-    print(f"\nresults written to {results_csv_path()}")
+    print(f"\nresults written to {results_csv_path(model)}")
 
 
 if __name__ == "__main__":
