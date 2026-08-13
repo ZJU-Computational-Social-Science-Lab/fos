@@ -61,6 +61,7 @@ import json
 import os
 import re
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -92,6 +93,10 @@ class Decision:
     success: bool
     error: str | None
     finish_reason: str | None
+    reasoning_tokens: int | None
+    reasoning_content: str | None
+    raw_content: str | None
+    elapsed_seconds: float
 
 
 def load_usernames(n: int) -> list[str]:
@@ -300,8 +305,10 @@ async def run_one_decision(
     )
     holder["finish_reason"] = None
     holder["content"] = None
+    start = time.perf_counter()
     try:
         round_results = await runner.run(max_rounds=1)
+        elapsed_seconds = time.perf_counter() - start
         action = round_results[0].actions[0]
         reason = ""
         params = getattr(action, "parameters", None) or {}
@@ -319,8 +326,13 @@ async def run_one_decision(
             success=bool(action.success),
             error=getattr(action, "error", None),
             finish_reason=holder.get("finish_reason"),
+            reasoning_tokens=holder.get("reasoning_tokens"),
+            reasoning_content=holder.get("reasoning_content"),
+            raw_content=holder.get("content"),
+            elapsed_seconds=elapsed_seconds,
         )
     except Exception as exc:
+        elapsed_seconds = time.perf_counter() - start
         return Decision(
             username=username,
             chosen_number=None,
@@ -329,16 +341,22 @@ async def run_one_decision(
             success=False,
             error=repr(exc),
             finish_reason=holder.get("finish_reason"),
+            reasoning_tokens=holder.get("reasoning_tokens"),
+            reasoning_content=holder.get("reasoning_content"),
+            raw_content=holder.get("content"),
+            elapsed_seconds=elapsed_seconds,
         )
 
 
 def results_csv_path(model: str) -> Path:
-    """Build the results CSV path for one model (results/{model}_persona_reasoning.csv).
+    """Build the results CSV path for one model (results/{model}_persona_reasoning_full.csv).
 
     The model name has "/" replaced by "_" so different models write to
-    different files instead of overwriting each other.
+    different files instead of overwriting each other. The filename carries
+    _full so these richer rows never overwrite the legacy
+    *_persona_reasoning.csv results.
     """
-    csv_name = f"{model.replace('/', '_')}_persona_reasoning.csv"
+    csv_name = f"{model.replace('/', '_')}_persona_reasoning_full.csv"
     return _REPO_ROOT / "results" / csv_name
 
 
@@ -346,7 +364,8 @@ def write_csv_header(model: str) -> None:
     """Write the results CSV header (truncating any prior file)."""
     with results_csv_path(model).open("w", encoding="utf-8", newline="") as fh:
         csv.writer(fh).writerow(
-            ["username", "model", "chosen_number", "reason", "succeeded", "finish_reason"]
+            ["username", "model", "chosen_number", "reason", "reasoning_tokens",
+             "finish_reason", "elapsed_seconds", "succeeded"]
         )
 
 
@@ -355,11 +374,38 @@ def append_csv_row(model: str, decision: Decision) -> None:
     succeeded = "true" if decision.success else "false"
     chosen = "" if decision.chosen_number is None else str(decision.chosen_number)
     finish = "" if decision.finish_reason is None else str(decision.finish_reason)
+    tokens = "" if decision.reasoning_tokens is None else str(decision.reasoning_tokens)
+    elapsed = f"{decision.elapsed_seconds:.3f}"
     with results_csv_path(model).open("a", encoding="utf-8", newline="") as fh:
         csv.writer(fh).writerow(
             [decision.username, model, chosen, decision.reason or "",
-             succeeded, finish]
+             tokens, finish, elapsed, succeeded]
         )
+
+
+def results_jsonl_path(model: str) -> Path:
+    """Build the results JSONL path for one model (results/{model}_persona_reasoning.jsonl)."""
+    jsonl_name = f"{model.replace('/', '_')}_persona_reasoning.jsonl"
+    return _REPO_ROOT / "results" / jsonl_name
+
+
+def append_jsonl_row(model: str, decision: Decision) -> None:
+    """Append one decision as a JSON object to the results JSONL file."""
+    row = {
+        "username": decision.username,
+        "model": model,
+        "chosen_number": decision.chosen_number,
+        "reason": decision.reason or "",
+        "reasoning_tokens": decision.reasoning_tokens,
+        "reasoning_content": decision.reasoning_content,
+        "finish_reason": decision.finish_reason,
+        "raw_content": decision.raw_content,
+        "elapsed_seconds": decision.elapsed_seconds,
+        "succeeded": decision.success,
+        "error": decision.error,
+    }
+    with results_jsonl_path(model).open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
 def running_counts(decisions: list[Decision]) -> str:
@@ -436,6 +482,12 @@ async def main() -> None:
         help="How many personas (usernames) to run, read from final_200_personas.csv.",
     )
     parser.add_argument(
+        "--skip",
+        type=int,
+        default=0,
+        help="How many leading personas (usernames) to skip before running.",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Print the reasoning_content field after each decision.",
@@ -450,7 +502,7 @@ async def main() -> None:
         print("API key not set")
         sys.exit(1)
 
-    usernames = load_usernames(args.personas)
+    usernames = load_usernames(args.personas + args.skip)[args.skip:]
     total = len(usernames)
 
     llm_client = LLMClient(build_llm_config(model, args.base_url, api_key))
@@ -467,6 +519,7 @@ async def main() -> None:
         )
         decisions.append(decision)
         append_csv_row(model, decision)
+        append_jsonl_row(model, decision)
         if decision.success:
             print(
                 f"  [{username} {index}/{total}] chosen={decision.chosen_number}",
