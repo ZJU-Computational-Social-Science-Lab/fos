@@ -55,6 +55,7 @@ Functions:
     main()                          - run all decisions and write the results.
 """
 
+import argparse
 import csv
 import json
 import os
@@ -199,7 +200,7 @@ def post_decision(model: str, messages: list[dict], api_key: str) -> tuple[dict,
         method="POST",
     )
     start = time.perf_counter()
-    with urllib.request.urlopen(request) as response:
+    with urllib.request.urlopen(request, timeout=180) as response:
         payload = response.read().decode("utf-8")
     elapsed = time.perf_counter() - start
     return json.loads(payload), elapsed
@@ -388,6 +389,19 @@ def print_stats(model: str, records: list[DecisionRecord]) -> None:
 
 def main() -> None:
     """Run all decisions for both models, write results, print stats."""
+    parser = argparse.ArgumentParser(
+        description="Re-run the 11-20 game prompts on OpenRouter models without "
+        "the SECTION 5 block."
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="Run only this model (e.g. openai/gpt-5.6-luna). "
+        "Omit to run all target models.",
+    )
+    args = parser.parse_args()
+
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
     if not api_key:
         print("OPENROUTER_API_KEY not set")
@@ -400,7 +414,14 @@ def main() -> None:
     results_dir = _REPO_ROOT / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    for model in _TARGET_MODELS:
+    models: tuple[str, ...] = _TARGET_MODELS
+    if args.model is not None:
+        if args.model not in _TARGET_MODELS:
+            print(f"unknown model {args.model!r}; expected one of {_TARGET_MODELS}")
+            sys.exit(1)
+        models = (args.model,)
+
+    for model in models:
         model_entries = [entry for entry in entries if entry["model"] == model]
         records: list[DecisionRecord] = []
         for index, entry in enumerate(model_entries, start=1):
