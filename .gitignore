@@ -99,3 +99,11 @@ scripts/generate_paper_figures.py
 
 # Experiment checkpoints (large, regenerable)
 runs/checkpoints/
+
+# Large generated data + results (keep out of git)
+personas/
+extracted_users/
+reddit_data/
+*.zst
+*.csv
+persona_pipeline.log
