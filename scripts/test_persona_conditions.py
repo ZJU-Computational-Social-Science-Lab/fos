@@ -1,17 +1,18 @@
 """
-Run the 11-20 Money Request Game once per persona under prompt condition 1 or 2
-on one of three models, saving every decision immediately to
+Run the 11-20 Money Request Game once per persona under prompt condition 0
+(orig), 1, or 2 on one of three models, saving every decision immediately to
 results/{model}_cond{condition}.jsonl and results/{model}_cond{condition}.csv
 so a crash never loses finished records.
 
 What it does:
 - Read the first --personas usernames from final_200_personas.csv and load each
   persona's text from personas/{username}.txt.
-- Build the full 5-section prompt manually as ONE user message. The two
-  conditions differ only in Section 1 (full persona text vs "You are
-  {username}."), Section 2 (plain question vs reason instruction added), and
-  Section 5 (amount-only JSON vs reason+amount JSON). Sections 3 and 4 are
-  identical for both conditions.
+- Build the full 5-section prompt manually as ONE user message. The conditions
+  differ only in Section 1 (full persona text vs "You are {username}."),
+  Section 2 (plain question vs reason instruction added), and Section 5
+  (amount-only JSON vs reason+amount JSON). Condition 0 (orig) reuses
+  condition 1's Section 1 and Section 5 with condition 2's Section 2.
+  Sections 3 and 4 are identical for all conditions.
 - Send it to deepseek-v4-flash (api.deepseek.com, DEEPSEEK_API_KEY),
   anthropic/claude-sonnet-5, or openai/gpt-5.6-luna (openrouter.ai,
   OPENROUTER_API_KEY) at temperature 0.0 with NO token limit.
@@ -20,6 +21,8 @@ What it does:
   finish_reason, raw content, elapsed seconds, succeeded (amount in 11..20),
   error.
 - Append each record to the JSONL and CSV files right away (CSV header once).
+- With --dry-run, print the full prompt for all three conditions (orig, 1, 2)
+  for the first persona and exit without any API call or file write.
 - Print per-record progress (username i/N amount=.. rt=.. ..s, flush=True) and
   a final summary (reason-present count, chosen-number distribution,
   reasoning-token min/max/mean, error count).
@@ -34,6 +37,8 @@ Functions (each documented at its def):
     results_jsonl_path, results_csv_path - output file paths.
     ensure_csv_header, append_jsonl_record, append_csv_record - incremental save.
     print_stats                     - final summary for the run.
+    parse_condition                 - turn --condition value into a number.
+    print_dry_run                   - print the three prompts, no API calls.
     main()                          - CLI entry point.
 """
 
@@ -89,21 +94,40 @@ _CSV_COLUMNS = [
     if key not in ("reasoning_content", "raw_content", "error")
 ]
 
-# The 11-20 game text shared by both conditions (condition 2 appends the reason
-# instruction after this).
+# The 11-20 game text shared by all conditions (condition 1 uses it plain;
+# conditions 0 and 2 append the reason instruction after it).
 _GAME_TEXT = (
     "You and another player are playing a game in which each player requests an amount of money. "
     "The amount must be (an integer) between 11 and 20 shekels. Each player will receive the amount he requests. "
     "A player will receive an additional amount of 20 shekels if he asks for exactly one shekel less than the other player.\n\n"
     "What amount of money would you request?"
 )
-# The reason instruction appended to the game text only in condition 2.
+# The reason instruction appended to the game text in conditions 0 (orig) and 2.
 _REASON_INSTRUCTION = (
     "\nWhat amount of money would you request? Think as the person you are -- at the strategic level you just identified.\n"
     "What amount of money would you request? (must be an integer between 11 and 20)\n\n"
     "Respond with ONLY JSON containing two fields, in this order:\n"
     '{"reason": "explain what kind of thinker you are based on your data, what you expect the other player to do, and why you chose this number", '
     '"amount": <number>}'
+)
+
+# Section 1 (persona embedding) variants: conditions 0 (orig) and 1 embed the
+# full persona file text; condition 2 only names the persona.
+_SECTION1_FULL_PERSONA = "=== EMBODY THIS PERSON ===\n{persona_text}"
+_SECTION1_NAME_ONLY = "=== EMBODY THIS PERSON ===\nYou are {username}."
+
+# Section 5 (JSON output requirement) variants: conditions 0 (orig) and 1 ask
+# for amount-only JSON; condition 2 also asks for a reason.
+_SECTION5_AMOUNT_ONLY = (
+    "## Your Response\n"
+    "Choose a number from 11 to 20.\n"
+    'Respond with ONLY JSON: {"amount": <number>}\n\n'
+    "No markdown. No explanation. Only JSON."
+)
+_SECTION5_WITH_REASON = (
+    "## Your Response\n"
+    "Choose a number from 11 to 20.\n"
+    'Respond with ONLY JSON: {"reason": <text>, "amount": <number>}'
 )
 
 
@@ -165,17 +189,17 @@ def load_persona_text(path: Path) -> str:
 
 
 def build_section_1(condition: int, username: str, persona_text: str) -> str:
-    """Section 1 (persona embedding); cond 2 names only, cond 1 embeds the file."""
+    """Section 1 (persona embedding); conds 0/1 embed the file, cond 2 names only."""
     if condition == 2:
-        return f"=== EMBODY THIS PERSON ===\nYou are {username}."
-    return f"=== EMBODY THIS PERSON ===\n{persona_text}"
+        return _SECTION1_NAME_ONLY.format(username=username)
+    return _SECTION1_FULL_PERSONA.format(persona_text=persona_text)
 
 
 def build_section_2(condition: int) -> str:
-    """Section 2 (game scenario); cond 2 appends the reason instruction."""
-    if condition == 2:
-        return _GAME_TEXT + _REASON_INSTRUCTION
-    return _GAME_TEXT
+    """Section 2 (game scenario); cond 1 plain, conds 0/2 append the reason instruction."""
+    if condition == 1:
+        return _GAME_TEXT
+    return _GAME_TEXT + _REASON_INSTRUCTION
 
 
 def build_section_3() -> str:
@@ -189,19 +213,10 @@ def build_section_4() -> str:
 
 
 def build_section_5(condition: int) -> str:
-    """Section 5 (JSON output requirement); cond 2 wants reason+amount JSON."""
+    """Section 5 (JSON output); cond 2 asks reason+amount, conds 0/1 amount-only."""
     if condition == 2:
-        return (
-            "## Your Response\n"
-            "Choose a number from 11 to 20.\n"
-            'Respond with ONLY JSON: {"reason": <text>, "amount": <number>}'
-        )
-    return (
-        "## Your Response\n"
-        "Choose a number from 11 to 20.\n"
-        'Respond with ONLY JSON: {"amount": <number>}\n\n'
-        "No markdown. No explanation. Only JSON."
-    )
+        return _SECTION5_WITH_REASON
+    return _SECTION5_AMOUNT_ONLY
 
 
 def build_prompt(condition: int, username: str, persona_text: str) -> str:
@@ -217,6 +232,32 @@ def build_prompt(condition: int, username: str, persona_text: str) -> str:
         "=== SECTION 5: JSON OUTPUT REQUIREMENT ===\n"
         f"{build_section_5(condition)}"
     )
+
+
+def parse_condition(value: str) -> int:
+    """Turn a --condition value ("0", "1", "2", or "orig") into a number."""
+    if value == "orig":
+        return 0
+    return int(value)
+
+
+def print_dry_run(usernames: list[str], personas_dir: Path) -> None:
+    """Print the first persona's full prompt under conditions 0 (orig), 1, and 2.
+
+    Used by --dry-run: shows exactly what would be sent to the API without
+    calling it or writing any files. Exits 0 afterward.
+    """
+    first = usernames[0]
+    persona_path = personas_dir / f"{first}.txt"
+    if not persona_path.exists():
+        print(f"missing persona file {persona_path.name}")
+        sys.exit(1)
+    persona_text = load_persona_text(persona_path)
+    for condition in (0, 1, 2):
+        label = " (orig)" if condition == 0 else ""
+        print(f"=========== CONDITION {condition}{label} ===========")
+        print(build_prompt(condition, first, persona_text))
+        print()
 
 
 def endpoint_for(model: str) -> tuple[str, str]:
@@ -406,26 +447,29 @@ def print_stats(records: list[DecisionRecord]) -> None:
 
 
 def main() -> None:
-    """Run all decisions, save each result right away, print progress and stats."""
+    """Run all decisions, save each result right away, print progress and stats.
+
+    With --dry-run, print the three prompts for the first persona and exit 0.
+    """
     parser = argparse.ArgumentParser(
         description=(
             "Run the 11-20 Money Request Game for personas under prompt "
-            "condition 1 or 2 on one model."
+            "condition 0 (orig), 1, or 2 on one model. Use --dry-run to print "
+            "the prompts for all three conditions without calling any API."
         )
     )
     parser.add_argument(
         "--model",
-        required=True,
+        default="deepseek-v4-flash",
         choices=list(_MODEL_ENDPOINTS),
         help="Model to query: deepseek-v4-flash, anthropic/claude-sonnet-5, "
-        "or openai/gpt-5.6-luna.",
+        "or openai/gpt-5.6-luna (default: deepseek-v4-flash).",
     )
     parser.add_argument(
         "--condition",
-        required=True,
-        choices=["1", "2"],
-        help="Prompt condition: 1 (no reason instruction) or 2 (with reason "
-        "instruction).",
+        choices=["0", "1", "2", "orig"],
+        help="Prompt condition: 0 or orig, 1 (no reason instruction), or 2 "
+        "(with reason instruction). Ignored with --dry-run.",
     )
     parser.add_argument(
         "--personas",
@@ -434,15 +478,19 @@ def main() -> None:
         help="How many personas (usernames) to run, read from "
         "final_200_personas.csv (default: 20).",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the full prompt for all three conditions (orig, 1, 2) "
+        "for the first persona, then exit 0. No API calls, no file writes.",
+    )
     args = parser.parse_args()
 
-    condition = int(args.condition)
+    if args.condition is None and not args.dry_run:
+        parser.error("--condition is required unless --dry-run is used")
+
+    condition = parse_condition(args.condition) if args.condition is not None else 0
     model = args.model
-    api_key = api_key_for(model)
-    if not api_key:
-        _, env_var = endpoint_for(model)
-        print(f"{env_var} not set")
-        sys.exit(1)
 
     personas_csv = _REPO_ROOT / "final_200_personas.csv"
     personas_dir = _REPO_ROOT / "personas"
@@ -454,6 +502,20 @@ def main() -> None:
         sys.exit(1)
 
     usernames = load_usernames(personas_csv, args.personas)
+    if not usernames:
+        print("No usernames found in final_200_personas.csv")
+        sys.exit(1)
+
+    if args.dry_run:
+        print_dry_run(usernames, personas_dir)
+        sys.exit(0)
+
+    api_key = api_key_for(model)
+    if not api_key:
+        _, env_var = endpoint_for(model)
+        print(f"{env_var} not set")
+        sys.exit(1)
+
     total = len(usernames)
 
     jsonl_path = results_jsonl_path(model, condition)
