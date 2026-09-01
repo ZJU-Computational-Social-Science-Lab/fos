@@ -6,12 +6,14 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.egg-info/
 venv/
 .venv/
-*.egg-info/
 dist/
 build/
 .eggs/
+.coverage
+htmlcov/
 
 # Environment
 .env
@@ -19,7 +21,7 @@ build/
 .env.*.local
 !.env.example.local
 
-# IDE
+# IDE / editors
 .vscode/
 .idea/
 *.swp
@@ -33,12 +35,8 @@ Thumbs.db
 
 # Testing
 .pytest_cache/
-.coverage
-htmlcov/
+.ruff_cache/
 test_results/
-!test_results/BASELINE.md
-!test_results/BUG_LOG.md
-!test_results/TEST_INVENTORY.md
 
 # Frontend
 frontend/node_modules/
@@ -53,17 +51,30 @@ frontend/e2e/collected-results/
 !frontend/e2e/collected-results/.gitkeep
 frontend/e2e/test-results/
 
-# Local Claude config
+# Local AI agent config (never commit local agent state)
 .claude/
+/.pi/
 
-# Database
-fos.db
-fos.db-shm
-fos.db-wal
-runs/
+# Databases
+fos.db*
+data/experiment_state.db*
 chroma_db/
+
+# Experiment outputs (large, regenerable — do not commit)
+/runs
+/artifacts
+/results
+/extracted_users
+/personas
+reddit_data/
+
+# Temporary / scratch
 tmp/
 uploads/*/*
+/*.csv
+*.zst
+*.mp4
+coverage.json
 
 # Internal planning and investigation docs
 .planning/
@@ -71,40 +82,17 @@ docs/plans/
 MIGRATION.md
 *.progress
 
-# Large media files
-*.mp4
-
 # Traffic logs
 *.jsonl
 
 # Scratch scripts
 _write_scene.py
-
-# Local dev scripts
-*.cmd
-
-# Local OpenCode config
-opencode.json
-/src/fos.egg-info
-src/fos.egg-info/SOURCES.txt
-run_fos.sh
-/.pi
-/artifacts
 scripts/generate_paper_figures.py
-/extracted_users
-/persona_samples
-/personas
-*.csv
-*.csv
 
-# Experiment checkpoints (large, regenerable)
-runs/checkpoints/
+# Local dev / machine-specific files
+*.cmd
+run_fos.sh
+opencode.json
 
-# Large generated data + results (keep out of git)
-personas/
-extracted_users/
-reddit_data/
-*.zst
-*.csv
-persona_pipeline.log
-/data
+# Python package build artifacts (scoped to the src package)
+/src/fos.egg-info/
