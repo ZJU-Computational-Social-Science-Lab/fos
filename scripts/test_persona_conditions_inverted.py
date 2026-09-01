@@ -1,6 +1,6 @@
 """
 Run the inverted 11-20 Money Request Game once per persona under prompt
-condition 0 (orig), 1, or 2 on one of three models, saving every decision
+condition 0 (orig), 1, 2, or 3 on one of three models, saving every decision
 immediately to results/{model}_cond{condition}_inverted.jsonl and
 results/{model}_cond{condition}_inverted.csv so a crash never loses finished records.
 
@@ -16,6 +16,9 @@ What it does:
   Section 2 (plain question vs reason instruction added), and Section 5
   (amount-only JSON vs reason+amount JSON). Condition 0 (orig) reuses
   condition 1's Section 1 and Section 5 with condition 2's Section 2.
+  Condition 3 is the full-persona + reason variant: full persona text in
+  Section 1, the reason instruction appended in Section 2, and reason+amount
+  JSON in Section 5 (same as condition 2 but with the full persona).
   Sections 3 and 4 are identical for all conditions.
 - Send it to deepseek-v4-flash (api.deepseek.com, DEEPSEEK_API_KEY),
   anthropic/claude-sonnet-5, or openai/gpt-5.6-luna (openrouter.ai,
@@ -25,7 +28,7 @@ What it does:
   finish_reason, raw content, elapsed seconds, succeeded (amount in 11..20),
   error.
 - Append each record to the JSONL and CSV files right away (CSV header once).
-- With --dry-run, print the full prompt for all three conditions (orig, 1, 2)
+- With --dry-run, print the full prompt for all four conditions (orig, 1, 2, 3)
   for the first persona and exit without any API call or file write.
 - Print per-record progress (username i/N amount=.. rt=.. ..s, flush=True) and
   a final summary (reason-present count, chosen-number distribution,
@@ -193,14 +196,14 @@ def load_persona_text(path: Path) -> str:
 
 
 def build_section_1(condition: int, username: str, persona_text: str) -> str:
-    """Section 1 (persona embedding); conds 0/1 embed the file, cond 2 names only."""
+    """Section 1 (persona embedding); conds 0/1/3 embed the file, cond 2 names only."""
     if condition == 2:
         return _SECTION1_NAME_ONLY.format(username=username)
     return _SECTION1_FULL_PERSONA.format(persona_text=persona_text)
 
 
 def build_section_2(condition: int) -> str:
-    """Section 2 (game scenario); cond 1 plain, conds 0/2 append the reason instruction."""
+    """Section 2 (game scenario); cond 1 plain, conds 0/2/3 append the reason instruction."""
     if condition == 1:
         return _GAME_TEXT
     return _GAME_TEXT + _REASON_INSTRUCTION
@@ -217,8 +220,8 @@ def build_section_4() -> str:
 
 
 def build_section_5(condition: int) -> str:
-    """Section 5 (JSON output); cond 2 asks reason+amount, conds 0/1 amount-only."""
-    if condition == 2:
+    """Section 5 (JSON output); conds 2/3 ask reason+amount, conds 0/1 amount-only."""
+    if condition in (2, 3):
         return _SECTION5_WITH_REASON
     return _SECTION5_AMOUNT_ONLY
 
@@ -239,14 +242,14 @@ def build_prompt(condition: int, username: str, persona_text: str) -> str:
 
 
 def parse_condition(value: str) -> int:
-    """Turn a --condition value ("0", "1", "2", or "orig") into a number."""
+    """Turn a --condition value ("0", "1", "2", "3", or "orig") into a number."""
     if value == "orig":
         return 0
     return int(value)
 
 
 def print_dry_run(usernames: list[str], personas_dir: Path) -> None:
-    """Print the first persona's full prompt under conditions 0 (orig), 1, and 2.
+    """Print the first persona's full prompt under conditions 0 (orig), 1, 2, and 3.
 
     Used by --dry-run: shows exactly what would be sent to the API without
     calling it or writing any files. Exits 0 afterward.
@@ -257,8 +260,10 @@ def print_dry_run(usernames: list[str], personas_dir: Path) -> None:
         print(f"missing persona file {persona_path.name}")
         sys.exit(1)
     persona_text = load_persona_text(persona_path)
-    for condition in (0, 1, 2):
+    for condition in (0, 1, 2, 3):
         label = " (orig)" if condition == 0 else ""
+        if condition == 3:
+            label = " (full persona + reason)"
         print(f"=========== CONDITION {condition}{label} ===========")
         print(build_prompt(condition, first, persona_text))
         print()
@@ -453,16 +458,16 @@ def print_stats(records: list[DecisionRecord]) -> None:
 def main() -> None:
     """Run all decisions, save each result right away, print progress and stats.
 
-    With --dry-run, print the three prompts for the first persona and exit 0.
+    With --dry-run, print the four prompts for the first persona and exit 0.
     """
     parser = argparse.ArgumentParser(
         description=(
             "Run the inverted 11-20 Money Request Game for personas under "
-            "prompt condition 0 (orig), 1, or 2 on one model. In the inverted "
-            "game each player receives 31 shekels minus the amount he requests "
-            "and the 20-shekel bonus goes to whoever asks for exactly one "
-            "shekel more than the other player; the range stays 11-20. Use "
-            "--dry-run to print the prompts for all three conditions without "
+            "prompt condition 0 (orig), 1, 2, or 3 on one model. In the "
+            "inverted game each player receives 31 shekels minus the amount he "
+            "requests and the 20-shekel bonus goes to whoever asks for exactly "
+            "one shekel more than the other player; the range stays 11-20. Use "
+            "--dry-run to print the prompts for all four conditions without "
             "calling any API."
         )
     )
@@ -475,9 +480,10 @@ def main() -> None:
     )
     parser.add_argument(
         "--condition",
-        choices=["0", "1", "2", "orig"],
-        help="Prompt condition: 0 or orig, 1 (no reason instruction), or 2 "
-        "(with reason instruction). Ignored with --dry-run.",
+        choices=["0", "1", "2", "3", "orig"],
+        help="Prompt condition: 0 or orig, 1 (no reason instruction), 2 "
+        "(with reason instruction), or 3 (full persona + reason output). "
+        "Ignored with --dry-run.",
     )
     parser.add_argument(
         "--personas",
@@ -496,7 +502,7 @@ def main() -> None:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Print the full prompt for all three conditions (orig, 1, 2) "
+        help="Print the full prompt for all four conditions (orig, 1, 2, 3) "
         "for the first persona, then exit 0. No API calls, no file writes.",
     )
     args = parser.parse_args()
