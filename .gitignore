@@ -107,3 +107,4 @@ reddit_data/
 *.zst
 *.csv
 persona_pipeline.log
+/data
