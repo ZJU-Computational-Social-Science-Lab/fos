@@ -1573,6 +1573,8 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
                                     scene_config?: { scenario_id?: string; scenarioId?: string };
                                   } | null
                                 )?.scene_config?.scenarioId;
+                              // Public Goods Game uses ResourceConfig with known keys
+                              if (scenarioId === 'public_goods') return null;
                               const scenarioData = scenarioId
                                 ? scenarioDataCache[scenarioId]
                                 : null;
@@ -1934,7 +1936,7 @@ export const ExperimentDesignPanel: React.FC<ExperimentDesignPanelProps> = ({
 
           {showPreview ? (
             <div
-              className="absolute inset-0 backdrop-blur-sm z-10 flex flex-col"
+              className="fixed inset-0 backdrop-blur-sm z-[150] flex flex-col"
               style={{ background: "var(--ss-surface)" }}
             >
               <div

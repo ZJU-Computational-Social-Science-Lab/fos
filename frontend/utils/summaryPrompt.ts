@@ -17,6 +17,13 @@ export type SummaryPromptInput = {
   metrics: { name: string; series: Series[] }[];
 };
 
+export type ComparisonPromptInput = {
+  title: string;
+  language: 'en' | 'zh';
+  groupA: { name: string; metrics: { name: string; series: Series[] }[] };
+  groupB: { name: string; metrics: { name: string; series: Series[] }[] };
+};
+
 const ENGLISH_INSTRUCTION =
   'You are a research analyst. Write a concise, publication-quality analysis in English of the following multi-agent simulation results. Identify the most significant behavioral patterns and any notable or unexpected outcomes. Use an academic tone suitable for a paper. Return only the analysis text as plain prose. Do not wrap the response in JSON, a markdown code block, or any other format.';
 
@@ -82,4 +89,25 @@ function validateSeriesHaveValues(metricName: string, series: Series[]): void {
 
 function formatAggregatePoint(point: MetricAggregatePoint): string {
   return `- Round ${point.round}: mean ${point.mean}, min ${point.min}, max ${point.max}`;
+}
+
+const COMPARE_ENGLISH_INSTRUCTION =
+  'You are a research analyst comparing two experimental groups (A and B) from a multi-agent simulation. Write a concise, publication-quality comparison analysis in English. Focus on:\n'
+  + '1. Which metrics show the largest divergence between the two groups\n'
+  + '2. Whether the differences are consistent across rounds or change over time\n'
+  + '3. Any unexpected patterns or notable deviations\n'
+  + 'Use an academic tone. Return only the analysis text as plain prose. Do not wrap in JSON, markdown, or any other format.';
+
+const COMPARE_CHINESE_INSTRUCTION =
+  '你是一名研究分析员，正在比较多智能体仿真中两组实验组（A 和 B）的结果。请用中文撰写一段简洁、可用于论文发表的对比分析。重点包括：\n'
+  + '1. 哪些指标在两组之间差异最大\n'
+  + '2. 这些差异在不同轮次之间是否一致，或者随时间变化\n'
+  + '3. 是否有任何意外模式或值得注意的偏差\n'
+  + '使用适合论文的学术语气。请仅返回纯文本分析内容，不要包裹在 JSON、Markdown 代码块或任何其他格式中。';
+
+export function buildComparisonPrompt(input: ComparisonPromptInput): string {
+  const instruction = input.language === 'en' ? COMPARE_ENGLISH_INSTRUCTION : COMPARE_CHINESE_INSTRUCTION;
+  const groupABlock = `Group A (${input.groupA.name}):\n${input.groupA.metrics.map((m) => buildMetricBlock(m.name, m.series)).join('\n')}`;
+  const groupBBlock = `Group B (${input.groupB.name}):\n${input.groupB.metrics.map((m) => buildMetricBlock(m.name, m.series)).join('\n')}`;
+  return `${instruction}\n\nSimulation: ${input.title}\n\n${groupABlock}\n\n${groupBBlock}`;
 }

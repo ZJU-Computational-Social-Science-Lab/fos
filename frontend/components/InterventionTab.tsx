@@ -66,7 +66,7 @@ export const InterventionTab: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-hidden">
-        {activeView === "host-control" ? <HostPanel /> : <ExperimentDesignPanel />}
+        {activeView === "host-control" ? <HostPanel /> : <ExperimentDesignPanel onClose={() => setActiveView("host-control")} />}
       </div>
     </div>
   );
