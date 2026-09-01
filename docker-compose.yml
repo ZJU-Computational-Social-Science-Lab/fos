@@ -49,11 +49,10 @@ services:
       FOS_BACKEND_PORT: "${FOS_BACKEND_PORT:-8000}"
       # SECURITY: FOS_JWT_SIGNING_KEY must be set in .env — never use the default in production
       FOS_JWT_SIGNING_KEY: "${FOS_JWT_SIGNING_KEY:?FOS_JWT_SIGNING_KEY must be set in .env}"
-      FOS_BACKEND_ROOT_PATH: "${FOS_BACKEND_ROOT_PATH:-/}"
       FOS_APP_BASE_URL: "${FOS_APP_BASE_URL:-http://0.0.0.0:8090}"
-      FOS_FRONTEND_DIST_PATH: "${FOS_FRONTEND_DIST_PATH:-/app/frontend/dist}"
-      FOS_UPLOAD_DIR: "${FOS_UPLOAD_DIR:-/app/uploads}"
-      UPLOAD_DIR: "${UPLOAD_DIR:-/app/uploads}"
+      FOS_FRONTEND_DIST_PATH: /app/frontend/dist
+      FOS_UPLOAD_DIR: /app/uploads
+      UPLOAD_DIR: /app/uploads
       ADMIN_EMAIL: "${ADMIN_EMAIL:?ADMIN_EMAIL must be set in .env}"
       ADMIN_USERNAME: "${ADMIN_USERNAME:?ADMIN_USERNAME must be set in .env}"
       ADMIN_PASSWORD: "${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set in .env}"

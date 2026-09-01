@@ -82,7 +82,12 @@ export const createSimulationSlice: StateCreator<
   },
 
   // Actions
-  setSimulation: (sim) => set({ currentSimulation: sim }),
+  setSimulation: (sim) => set({
+    currentSimulation: sim,
+    resultsSummary: null,
+    isGeneratingResultsSummary: false,
+    resultsSummaryError: null,
+  }),
 
   loadSimulations: async () => {
     try {
@@ -147,6 +152,10 @@ export const createSimulationSlice: StateCreator<
       if (graph && graph.root != null) {
         const nodes = mapGraphToNodes(graph);
 
+        let savedId: string | null = null;
+        try { savedId = localStorage.getItem('fos_selectedNodeId'); } catch { /* noop */ }
+        const savedNodeExists = savedId && nodes.some((n) => n.id === savedId);
+
         const runningId = Array.isArray(graph.running) && graph.running.length > 0 ? graph.running[0] : null;
         const frontierId = Array.isArray(graph.frontier) && graph.frontier.length > 0 ? graph.frontier[0] : null;
         const deepestLeaf = nodes.reduce<{ id: string | null; depth: number }>((acc, n) => {
@@ -157,7 +166,9 @@ export const createSimulationSlice: StateCreator<
           return acc;
         }, { id: null, depth: -Infinity });
 
-        const selectedId = runningId != null
+        const selectedId = savedNodeExists
+          ? savedId!
+          : runningId != null
           ? String(runningId)
           : frontierId != null
           ? String(frontierId)
