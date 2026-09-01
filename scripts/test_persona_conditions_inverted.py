@@ -1,8 +1,8 @@
 """
 Run the inverted 11-20 Money Request Game once per persona under prompt
 condition 0 (orig), 1, or 2 on one of three models, saving every decision
-immediately to results/{model}_cond{condition}.jsonl and
-results/{model}_cond{condition}.csv so a crash never loses finished records.
+immediately to results/{model}_cond{condition}_inverted.jsonl and
+results/{model}_cond{condition}_inverted.csv so a crash never loses finished records.
 
 In this inverted variant each player receives 31 shekels minus the amount he
 requests, and the extra 20 shekels go to whoever asks for exactly one shekel

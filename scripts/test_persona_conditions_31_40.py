@@ -1,8 +1,8 @@
 """
 Run the 31-40 Money Request Game once per persona under prompt condition 0
 (orig), 1, or 2 on one of three models, saving every decision immediately to
-results/{model}_cond{condition}.jsonl and results/{model}_cond{condition}.csv
-so a crash never loses finished records.
+results/{model}_cond{condition}_31-40.jsonl and
+results/{model}_cond{condition}_31-40.csv so a crash never loses finished records.
 
 What it does:
 - Read --personas usernames from final_200_personas.csv starting at the
