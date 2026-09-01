@@ -236,3 +236,11 @@ npm run dev
 ### 开发说明
 
 详见 [AGENTS.md](./AGENTS.md) 了解项目架构和编码规范。
+
+## Data policy — experiment outputs
+
+`runs/`, `artifacts/`, `results/`, `extracted_users/`, `personas/`, and
+experiment state databases (e.g. `data/experiment_state.db*`) are
+git-ignored and must never be committed. Curated snapshots live in the
+private repo `justinmiller1104/fos-data`; machine backups via
+`~/work/crew/shared/scripts/fos-backup.sh`.
