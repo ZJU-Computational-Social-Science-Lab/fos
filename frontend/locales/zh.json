@@ -2430,9 +2430,9 @@
       }
     },
     "analyseTab": {
-      "compareDiff": "对比差异",
+      "compareDiff": "组间差异",
       "overview": "概览",
-      "results": "结果"
+      "results": "组内差异"
     },
     "event": {
       "addFailed": "添加事件失败",
