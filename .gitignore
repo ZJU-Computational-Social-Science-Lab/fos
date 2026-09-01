@@ -66,6 +66,7 @@ chroma_db/
 /results
 /extracted_users
 /personas
+/persona_samples
 reddit_data/
 
 # Temporary / scratch
