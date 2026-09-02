@@ -208,3 +208,35 @@ def test_game_die_roll_metadata_has_six_report_actions():
         "report_5",
         "report_6",
     ]
+
+
+def test_neutral_tournament_prompt_contains_game_text_and_stakes():
+    """The neutral-tournament prompt must describe the die roll, the $10
+    stake, the top-third bonus, the JSON fields, the persona, and the roll."""
+    prompt = test_die_roll.build_prompt("neutral_tournament", "u", "PERSONA", 4)
+    assert "Roll the die" in prompt, "prompt did not open with the die-roll task"
+    assert "$10" in prompt, "prompt did not state the $10-per-point stake"
+    assert "top third" in prompt, "prompt did not mention the top-third bonus"
+    assert "reported_number" in prompt, "prompt did not ask for reported_number"
+    assert "reason" in prompt, "prompt did not ask for a reason"
+    assert "Only you see this" in prompt, "prompt did not mark the roll as private"
+    assert "PERSONA" in prompt, "prompt did not embed the persona text"
+    assert "4" in prompt, "prompt did not reveal the true roll"
+
+
+def test_neutral_tournament_prompt_is_not_moralizing():
+    """The neutral-tournament prompt must not moralize about honesty and must
+    not say the experimenter reads the reason or mark PRIVATE INFORMATION."""
+    prompt = test_die_roll.build_prompt("neutral_tournament", "u", "PERSONA", 4)
+    lowered = prompt.lower()
+    for phrase in (
+        "honest",
+        "self-image",
+        "no explanation",
+        "do not explain",
+        "experimenter reads",
+    ):
+        assert phrase not in lowered, f"prompt contains forbidden phrase: {phrase}"
+    assert "PRIVATE INFORMATION" not in prompt, (
+        "prompt exposes the PRIVATE INFORMATION marker"
+    )
