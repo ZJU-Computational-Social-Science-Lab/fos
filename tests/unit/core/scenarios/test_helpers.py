@@ -65,3 +65,9 @@ class TestGetResourceName:
         params = {"resource_name": "Custom"}
         result = get_resource_name(params)
         assert result == "Tokens"
+
+    def test_space_only_resource_name_uses_tokens(self):
+        """Space-only input should fall back to Tokens."""
+        params = {"resource_name": "   "}
+        result = get_resource_name(params)
+        assert result == "Tokens"
