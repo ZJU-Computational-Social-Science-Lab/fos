@@ -35,6 +35,13 @@ def get_resource_name(scenario_params: Dict[str, Any]) -> str:
         Resource name string (e.g., "Tokens", "Money", "Carbon Credits")
     """
     resource_name = scenario_params.get("resource_name", "Tokens")
+    if isinstance(resource_name, str):
+        resource_name = resource_name.strip()
+    if not resource_name:
+        return "Tokens"
     if resource_name == "Custom":
-        return scenario_params.get("resource_name_custom", "Tokens")
+        custom_name = scenario_params.get("resource_name_custom", "Tokens")
+        if isinstance(custom_name, str):
+            custom_name = custom_name.strip()
+        return custom_name or "Tokens"
     return resource_name
