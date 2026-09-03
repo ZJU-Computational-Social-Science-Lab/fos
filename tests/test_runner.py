@@ -9,7 +9,7 @@ voting all happen inside FOS. All tests use an in-memory SQLite database and
 redirect result/checkpoint files to pytest tmp dirs.
 
 Tests:
-    test_init_is_idempotent                      — seeding twice keeps 126 rows
+    test_init_is_idempotent                      — seeding twice keeps one row per CSV run
     test_status_on_empty_db                      — status works before tables exist
     test_verify_detects_missing_file             — verify reports a missing result file
     test_resume_determinism                      — placement identical across subprocesses
@@ -24,6 +24,7 @@ Tests:
     test_kill_mid_round_and_resume               — interrupt between rounds resumes
 """
 
+import csv
 import json
 import os
 import sqlite3
@@ -120,15 +121,21 @@ def _read_result(run_id):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _matrix_row_count():
+    """How many runs the run-matrix CSV defines (what seeding must produce)."""
+    with store.RUN_MATRIX_PATH.open(encoding="utf-8") as handle:
+        return sum(1 for _ in csv.DictReader(handle))
+
+
 # ── Part 1 tests (kept) ─────────────────────────────────────────────────────
 
 
 def test_init_is_idempotent(db):
-    """Initialising and seeding twice must keep 126 rows, not 252."""
+    """Initialising and seeding twice must keep one row per CSV run, not two."""
     store.init_db(db)
     store.seed_from_csv(db)
     count = db.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
-    assert count == 126
+    assert count == _matrix_row_count()
 
 
 def test_status_on_empty_db():
@@ -136,7 +143,7 @@ def test_status_on_empty_db():
     conn = sqlite3.connect(":memory:")
     try:
         summary = commands.status(conn)
-        assert summary["total"] == 126
+        assert summary["total"] == _matrix_row_count()
         assert summary["complete"] == 0
         assert summary["empty_pct"] == 0.0
         assert summary["max_empty_run"] is None
@@ -144,11 +151,35 @@ def test_status_on_empty_db():
         conn.close()
 
 
-def test_verify_detects_missing_file(db):
-    """A run marked complete with no result file on disk must be reported."""
-    store.mark_complete("run_079", "runs/results/run_079.json", db)
+def test_verify_detects_missing_file(db, paths):
+    """A run marked complete with no result file on disk must be reported.
+
+    Self-contained: the paths fixture redirects the results dir to a pytest
+    tmp dir, so this never depends on the repository's own runs/results/.
+    Every run except run_079 gets a valid result artifact; run_079 is marked
+    complete without one, and verify must report it as the single missing run.
+    """
+    results_dir = store.RESULTS_DIR
+    results_dir.mkdir(parents=True, exist_ok=True)
+    for run in store.list_runs(conn=db):
+        if run["run_id"] == "run_079":
+            continue  # deliberately left without a result artifact
+        payload = {
+            "run_id": run["run_id"],
+            "schema_version": 1,
+            "config_id": run["config_id"],
+            "proposal_id": run["proposal_id"],
+            "population_id": run["population_id"],
+            "agents": [],
+            "deliberation": [],
+        }
+        (results_dir / f"{run['run_id']}.json").write_text(
+            json.dumps(payload), encoding="utf-8"
+        )
+    store.mark_complete("run_079", str(results_dir / "run_079.json"), db)
     report = commands.verify_runs(db)
-    assert "run_079" in report["missing"]
+    assert report["missing"] == ["run_079"]
+    assert report["verified"] == report["total"] - 1
 
 
 # ── Phase 4 Step 2 tests ────────────────────────────────────────────────────
@@ -352,20 +383,22 @@ def test_empty_response_gate(db, paths, monkeypatch):
     """A run with >5% empty LLM responses must be marked failed with no
     result file, and the empty counts must be stored in the database.
 
-    The fake returns empty text for the first 400 calls — exactly run 1's
+    The fake returns empty text for the first 394 calls — exactly run 1's
     calls (rounds 1-3 have one main call per agent; round 4 votes once).
+    6 confederate round-4 votes are intercepted (no chat call) since
+    1dbde1c, so run 1 makes 394 calls, not 400.
     A broken implementation that wrote results regardless of the empty rate
     would leave a result file on disk.
     """
-    fake = FakeLLMClient(empty_first_n_calls=400)
+    fake = FakeLLMClient(empty_first_n_calls=394)
     monkeypatch.setattr(client_module, "_agent_client", lambda agent_config=None: fake)
     commands.run(run_id="run_079", conn=db)
 
     row = store.get_run("run_079", conn=db)
     assert row["status"] == "failed"
     assert "empty" in row["last_error"].lower()
-    assert row["empty_response_count"] == 400
-    assert row["total_llm_calls"] == 400
+    assert row["empty_response_count"] == 394
+    assert row["total_llm_calls"] == 394
     assert not (store.RESULTS_DIR / "run_079.json").exists()
 
 
