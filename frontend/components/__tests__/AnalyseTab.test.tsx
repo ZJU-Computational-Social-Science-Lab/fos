@@ -24,8 +24,8 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("../ComparisonView", () => ({
-  ComparisonView: () => <div>Compare Diff Panel</div>,
+vi.mock("../results/MetricComparisonView", () => ({
+  MetricComparisonView: () => <div>Compare Diff Panel</div>,
 }));
 
 describe("AnalyseTab", () => {
