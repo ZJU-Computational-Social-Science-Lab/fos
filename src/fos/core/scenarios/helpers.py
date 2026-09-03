@@ -7,7 +7,17 @@ from scenario parameters, handling custom naming and descriptions.
 Contains: get_action_config, get_resource_name
 """
 
+import unicodedata
 from typing import Dict, Any
+
+
+def _clean_label(value: str) -> str:
+    """Remove invisible format characters and surrounding whitespace."""
+    return "".join(
+        character
+        for character in value
+        if unicodedata.category(character) != "Cf"
+    ).strip()
 
 
 def get_action_config(scenario_params: Dict[str, Any], action_number: int) -> Dict[str, str]:
@@ -35,6 +45,13 @@ def get_resource_name(scenario_params: Dict[str, Any]) -> str:
         Resource name string (e.g., "Tokens", "Money", "Carbon Credits")
     """
     resource_name = scenario_params.get("resource_name", "Tokens")
+    if isinstance(resource_name, str):
+        resource_name = _clean_label(resource_name)
+    if not resource_name:
+        return "Tokens"
     if resource_name == "Custom":
-        return scenario_params.get("resource_name_custom", "Tokens")
+        custom_name = scenario_params.get("resource_name_custom", "Tokens")
+        if isinstance(custom_name, str):
+            custom_name = _clean_label(custom_name)
+        return custom_name or "Tokens"
     return resource_name
