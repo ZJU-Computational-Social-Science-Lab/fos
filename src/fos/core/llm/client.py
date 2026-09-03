@@ -18,10 +18,15 @@ Environment variables:
     LLM_MAX_RETRIES: Maximum retry attempts (default: 2)
     LLM_RETRY_BACKOFF_S: Initial retry backoff in seconds (default: 1.0)
     LLM_MAX_CONCURRENT_PER_CLIENT: Max concurrent requests (default: 8)
+    FOS_LLM_LOG: Traffic-log path override; "off" (any casing) disables it;
+        empty/unset means default to $FOS_DATA_DIR/llm_traffic.jsonl
+        (or ~/work/fos-data/llm_traffic.jsonl when FOS_DATA_DIR is unset too)
+    FOS_DATA_DIR: Data-repo directory holding the default traffic log
 """
 
 import os
 import json
+import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutTimeout
 from copy import deepcopy
@@ -38,10 +43,41 @@ from .validation import validate_media_url
 from .providers import _MockModel, _import_openai, _import_gemini, _import_ollama
 
 
+logger = logging.getLogger(__name__)
+
+
 # Lazy-loaded provider modules
 _openai = None
 _gemini = None
 _ollama = None
+
+
+def _default_llm_traffic_log_path() -> str:
+    """Default traffic-log path: the data repo, never the working directory.
+
+    Uses $FOS_DATA_DIR when set, otherwise ~/work/fos-data (the local data
+    repo). The returned path is absolute so the log can never land in a
+    source checkout or the current working directory by accident.
+    """
+    data_dir = os.environ.get("FOS_DATA_DIR") or os.path.expanduser("~/work/fos-data")
+    return os.path.join(data_dir, "llm_traffic.jsonl")
+
+
+def _append_traffic_log(log_path: str, record: dict) -> None:
+    """Append one traffic-log line, creating parent dirs first.
+
+    Failures (unwritable path, missing parents, disk errors) are logged as
+    warnings instead of being swallowed, so a misconfigured log location is
+    visible; callers keep working either way.
+    """
+    try:
+        parent = os.path.dirname(log_path)
+        if parent:
+            os.makedirs(parent, exist_ok=True)
+        with open(log_path, "a", encoding="utf-8") as log_file:
+            log_file.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except Exception as err:
+        logger.warning("Failed to write LLM traffic log to %s: %s", log_path, err)
 
 
 def _get_openai():
@@ -270,9 +306,17 @@ class LLMClient:
         _log_path = None
         _raw_log = {}
         try:
-            _log_env = os.environ.get("FOS_LLM_LOG", "llm_traffic.jsonl")
-            if _log_env.lower() != "off":
-                _log_path = _log_env or "llm_traffic.jsonl"
+            _log_env = os.environ.get("FOS_LLM_LOG")
+            if _log_env is not None and _log_env.lower() == "off":
+                # FOS_LLM_LOG=off (any casing) disables traffic logging.
+                _log_path = None
+            elif _log_env:
+                # An explicit FOS_LLM_LOG path wins as-is.
+                _log_path = _log_env
+            else:
+                # Unset or empty: default under the data repo (never cwd).
+                _log_path = _default_llm_traffic_log_path()
+            if _log_path is not None:
                 _prompt_chars = sum(len(str(m.get("content", ""))) for m in messages)
                 _raw_log = {
                     "ts": time.time(),
@@ -381,14 +425,10 @@ class LLMClient:
                 raise ValueError(T("Unknown LLM dialect: {dialect}", dialect=self.provider.dialect))
         except Exception as _llm_err:
             # -- LLM traffic log: error --
-            try:
-                if _log_path is not None:
-                    _raw_log["raw_result"] = None
-                    _raw_log["error"] = str(_llm_err)
-                    with open(_log_path, "a") as _lf:
-                        _lf.write(json.dumps(_raw_log, ensure_ascii=False) + "\n")
-            except Exception:
-                pass
+            if _log_path is not None:
+                _raw_log["raw_result"] = None
+                _raw_log["error"] = str(_llm_err)
+                _append_traffic_log(_log_path, _raw_log)
             raise
         _elapsed = _time2.perf_counter() - _llm_start
 
@@ -403,14 +443,10 @@ class LLMClient:
                          seconds=_elapsed, response=resp_meta)
 
         # -- LLM traffic log: capture raw result (before harmony stripping) --
-        try:
-            if _log_path is not None:
-                _raw_log["raw_result"] = str(result) if result is not None else ""
-                _raw_log["error"] = None
-                with open(_log_path, "a") as _lf:
-                    _lf.write(json.dumps(_raw_log, ensure_ascii=False) + "\n")
-        except Exception:
-            pass
+        if _log_path is not None:
+            _raw_log["raw_result"] = str(result) if result is not None else ""
+            _raw_log["error"] = None
+            _append_traffic_log(_log_path, _raw_log)
         # -- end log write --
 
         # Layer 2: strip any thinking/reasoning tokens that leaked through

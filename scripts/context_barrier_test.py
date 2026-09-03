@@ -63,7 +63,12 @@ from fos.core.llm_config import LLMConfig
 from fos.core.simtree import SimTree
 
 PROFILES_PATH = _REPO_ROOT / "artifacts" / "Seed_8_Full" / "profiles_seed8.json"
-OUTPUT_DIR = _REPO_ROOT / "artifacts" / "context_barrier_test"
+# Outputs (results + LLM traffic log) go under the local data repo, honoring
+# FOS_DATA_DIR when set — never into the fos source checkout.
+_DATA_BASE = Path(
+    os.environ.get("FOS_DATA_DIR") or os.path.expanduser("~/work/fos-data")
+)
+OUTPUT_DIR = _DATA_BASE / "artifacts" / "context_barrier_test"
 
 NUM_AGENTS = 30
 TURNS = 4  # 3 deliberation rounds + 1 voting round

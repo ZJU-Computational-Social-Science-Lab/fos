@@ -7,7 +7,7 @@ This is a direct API re-run: it talks to DeepSeek with urllib.request and does
 not use the ExperimentRunner or FOS prompt builders at all.
 
 What this does, in plain terms:
-- Read llm_traffic.jsonl (in the repo root) line by line and keep the entries
+- Read llm_traffic.jsonl (in the local data repo) line by line and keep the entries
   whose model is "deepseek-v4-flash" and whose message content contains the
   phrase "two fields" (these are the 11-20 reasoning prompts; exactly 20 of
   them), in the order they appear in the file.
@@ -74,7 +74,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_TRAFFIC_PATH = _REPO_ROOT / "llm_traffic.jsonl"
+# Traffic logs now live in the local data repo (the default FOS_LLM_LOG
+# location), honoring FOS_DATA_DIR when set; results still go to the repo root.
+_DATA_DIR = Path(
+    os.environ.get("FOS_DATA_DIR") or os.path.expanduser("~/work/fos-data")
+)
+_TRAFFIC_PATH = _DATA_DIR / "llm_traffic.jsonl"
 _API_URL = "https://api.deepseek.com/chat/completions"
 _SECTION_5_MARKER = "=== SECTION 5"
 _TWO_FIELDS_PHRASE = "two fields"
