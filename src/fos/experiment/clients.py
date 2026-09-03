@@ -19,6 +19,8 @@ import itertools
 import os
 from typing import Any
 
+from fos.i18n import T
+
 _seq_counter = itertools.count()
 
 # Router model-name mapping (FOS name -> GGUF name) and model-to-port routing,
@@ -84,9 +86,12 @@ def _verify_resident_model(base_url: str, expected_router_name: str) -> str:
         _resident_cache[base_url] = resident
     if resident and expected_router_name.lower() not in resident.lower():
         raise RuntimeError(
-            f"Resident model mismatch on {base_url}: "
-            f"expected router name '{expected_router_name}' not found in "
-            f"resident model id '{resident}'"
+            T(
+                "error.clients.resident_model_mismatch",
+                base_url=base_url,
+                expected_router_name=expected_router_name,
+                resident=resident,
+            )
         )
     return resident
 
@@ -243,7 +248,7 @@ def _build_clients(run_agents: list[dict[str, Any]]) -> tuple[dict[str, Any], Tr
     """
     default = _agent_client(run_agents[0] if run_agents else None)
     if default is None:
-        raise RuntimeError("FOS_EXPERIMENT_LLM is not set — no LLM client available")
+        raise RuntimeError(T("error.clients.no_llm_client"))
     from fos.core.llm.client import LLMClient
 
     if isinstance(default, LLMClient):
