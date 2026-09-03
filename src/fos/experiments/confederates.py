@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from fos.i18n import T
+
 
 @dataclass(frozen=True)
 class ConfederateSpec:
@@ -153,7 +155,7 @@ def assign_confederates(
     total = n_yes + n_no
     if total > len(agent_ids):
         raise ValueError(
-            f"Cannot sample {total} confederates from {len(agent_ids)} agents"
+            T("error.confederates.sample_too_large", total=total, count=len(agent_ids))
         )
 
     chosen = rng.sample(agent_ids, total)
@@ -182,7 +184,7 @@ def confederate_vote_action(spec: ConfederateSpec) -> str:
         return "vote_yes"
     elif spec.stance == "no":
         return "vote_no"
-    raise ValueError(f"Unknown confederate stance: {spec.stance!r}")
+    raise ValueError(T("error.confederates.unknown_stance", stance=repr(spec.stance)))
 
 
 # ── Speech ────────────────────────────────────────────────────────────────────
@@ -357,14 +359,20 @@ def assert_confederate_votes(
         recorded = votes.get(spec.agent_id)
         if recorded is None:
             raise RuntimeError(
-                f"Confederate {spec.agent_id} (stance={spec.stance}) has no recorded vote. "
-                f"Vote interception failed — run is invalid."
+                T(
+                    "error.confederates.no_recorded_vote",
+                    agent_id=spec.agent_id,
+                    stance=spec.stance,
+                )
             )
         if recorded != spec.stance:
             raise RuntimeError(
-                f"Confederate {spec.agent_id}: recorded vote is {recorded!r} "
-                f"but assigned stance is {spec.stance!r}. "
-                f"Vote interception failed — run is invalid."
+                T(
+                    "error.confederates.vote_mismatch",
+                    agent_id=spec.agent_id,
+                    recorded=repr(recorded),
+                    stance=repr(spec.stance),
+                )
             )
 
 

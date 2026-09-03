@@ -28,6 +28,7 @@ from typing import Any
 
 from fos.experiment import store
 from fos.experiments import confederates as conf
+from fos.i18n import T
 
 SCHEMA_VERSION = "2.0"
 DELIBERATION_ROUNDS = 3          # rounds 1-3 debate; round 4 votes
@@ -202,13 +203,12 @@ def _validate_gates(
                 mismatches += 1
     if mismatches:
         raise RuntimeError(
-            f"attribution gate failed: {mismatches} speak-action prompts "
-            f"do not contain their agent's bio (positional attribution broken)"
+            T("error.results.attribution_gate_failed", mismatches=mismatches)
         )
 
     if problems:
         raise RuntimeError(
-            f"neighbour-context gate failed for agents with degree > 2: {problems[:10]}"
+            T("error.results.neighbour_context_gate_failed", problems=problems[:10])
         )
     conf.assert_confederate_votes(conf_specs, {"votes": votes})
 

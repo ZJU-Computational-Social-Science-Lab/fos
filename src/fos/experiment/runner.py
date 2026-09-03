@@ -58,6 +58,7 @@ from fos.experiment.scene_builder import (
     placement_from_json,
     placement_to_json,
 )
+from fos.i18n import T
 from fos.proposals import load_proposals
 
 REPO_ROOT = store.REPO_ROOT
@@ -186,23 +187,26 @@ def _execute_one_run(run_id: str, conn: sqlite3.Connection | None = None) -> Non
         import requests as _requests
         _mm_url = os.environ.get("FOS_MODEL_MANAGER_URL")
         if not _mm_url:
-            raise RuntimeError(
-                "FOS_MODEL_MANAGER_URL is not set. "
-                "Set it to http://127.0.0.1:8081 in .env before running experiments."
-            )
+            raise RuntimeError(T("error.runner.manager_url_not_set"))
         try:
             _resp = _requests.get(f"{_mm_url.rstrip('/')}/status", timeout=5)
             if _resp.status_code != 200:
                 raise RuntimeError(
-                    f"Model manager at {_mm_url} returned HTTP {_resp.status_code} on /status"
+                    T(
+                        "error.runner.manager_status_http",
+                        mm_url=_mm_url,
+                        status_code=_resp.status_code,
+                    )
                 )
         except _requests.RequestException as exc:
-            raise RuntimeError(f"Model manager at {_mm_url} is not reachable: {exc}")
+            raise RuntimeError(
+                T("error.runner.manager_unreachable", mm_url=_mm_url, error=exc)
+            )
 
     store.mark_running(run_id, conn)
 
     if run_row is None:
-        raise ValueError(f"Unknown run {run_id}")
+        raise ValueError(T("error.runner.unknown_run", run_id=run_id))
     matrix = _matrix_row(run_id)
     if baseline.is_baseline(run_row["config_id"]):
         config = baseline.baseline_config()
@@ -351,7 +355,7 @@ def _matrix_row(run_id: str) -> dict[str, str]:
         for row in csv.DictReader(handle):
             if row["run_id"] == run_id:
                 return row
-    raise ValueError(f"run_id {run_id} not in run matrix")
+    raise ValueError(T("error.runner.run_id_not_in_matrix", run_id=run_id))
 
 
 def _load_population(population_id: str) -> list[dict[str, Any]]:
@@ -360,13 +364,19 @@ def _load_population(population_id: str) -> list[dict[str, Any]]:
     data = json.loads(path.read_text(encoding="utf-8"))
     stored = data.pop("sha256", None)
     if stored is None:
-        raise ValueError(f"population {population_id} has no sha256 field")
+        raise ValueError(
+            T("error.runner.population_no_sha256", population_id=population_id)
+        )
     payload = json.dumps(data, sort_keys=True, ensure_ascii=False)
     recomputed = hashlib.sha256(payload.encode("utf-8")).hexdigest()
     if stored != recomputed:
         raise ValueError(
-            f"population {population_id} sha256 mismatch: "
-            f"stored {stored}, recomputed {recomputed}"
+            T(
+                "error.runner.population_sha256_mismatch",
+                population_id=population_id,
+                stored=stored,
+                recomputed=recomputed,
+            )
         )
     return data["agents"]
 
@@ -376,7 +386,7 @@ def _proposal_statement(proposal_id: str) -> str:
     for proposal in load_proposals():
         if proposal.id == proposal_id:
             return proposal.statement
-    raise ValueError(f"unknown proposal id {proposal_id}")
+    raise ValueError(T("error.runner.unknown_proposal_id", proposal_id=proposal_id))
 
 
 # ── Checkpoints ──────────────────────────────────────────────────────────────
