@@ -10,11 +10,13 @@ Contains: GAME_11_20
 
 from typing import Dict, Any
 
+from ...i18n import T
+
 GAME_11_20: Dict[str, Any] = {
     "id": "game_11_20",
     "name": "The 11-20 Money Request Game",
     "category": "game_theory",
-    "description": "You and another player are playing a game in which each player requests an amount of money. The amount must be (an integer) between 11 and 20 shekels. Each player will receive the amount he requests. A player will receive an additional amount of 20 shekels if he asks for exactly one shekel less than the other player.",
+    "description": T("scenario_templates.game_11_20.description"),
     "grouping_mode": "pairwise",
     "payoff_type": "matrix",
     "interaction_mode": "simultaneous",
@@ -129,15 +131,15 @@ GAME_11_20: Dict[str, Any] = {
     },
     "parameters": [],
     "actions": [
-        {"id": "request_11", "name": "Request 11", "description": "Request 11 shekels"},
-        {"id": "request_12", "name": "Request 12", "description": "Request 12 shekels"},
-        {"id": "request_13", "name": "Request 13", "description": "Request 13 shekels"},
-        {"id": "request_14", "name": "Request 14", "description": "Request 14 shekels"},
-        {"id": "request_15", "name": "Request 15", "description": "Request 15 shekels"},
-        {"id": "request_16", "name": "Request 16", "description": "Request 16 shekels"},
-        {"id": "request_17", "name": "Request 17", "description": "Request 17 shekels"},
-        {"id": "request_18", "name": "Request 18", "description": "Request 18 shekels"},
-        {"id": "request_19", "name": "Request 19", "description": "Request 19 shekels"},
-        {"id": "request_20", "name": "Request 20", "description": "Request 20 shekels"},
+        {"id": "request_11", "name": "Request 11", "description": T("scenario_templates.game_11_20.actions.request_11.description")},
+        {"id": "request_12", "name": "Request 12", "description": T("scenario_templates.game_11_20.actions.request_12.description")},
+        {"id": "request_13", "name": "Request 13", "description": T("scenario_templates.game_11_20.actions.request_13.description")},
+        {"id": "request_14", "name": "Request 14", "description": T("scenario_templates.game_11_20.actions.request_14.description")},
+        {"id": "request_15", "name": "Request 15", "description": T("scenario_templates.game_11_20.actions.request_15.description")},
+        {"id": "request_16", "name": "Request 16", "description": T("scenario_templates.game_11_20.actions.request_16.description")},
+        {"id": "request_17", "name": "Request 17", "description": T("scenario_templates.game_11_20.actions.request_17.description")},
+        {"id": "request_18", "name": "Request 18", "description": T("scenario_templates.game_11_20.actions.request_18.description")},
+        {"id": "request_19", "name": "Request 19", "description": T("scenario_templates.game_11_20.actions.request_19.description")},
+        {"id": "request_20", "name": "Request 20", "description": T("scenario_templates.game_11_20.actions.request_20.description")},
     ],
 }

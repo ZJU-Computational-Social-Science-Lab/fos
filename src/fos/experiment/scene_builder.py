@@ -23,6 +23,7 @@ from typing import Any
 from fos.experiment import network
 from fos.experiment.results import DELIBERATION_ROUNDS
 from fos.experiments import confederates as conf
+from fos.i18n import T
 
 
 def _fos_agent_config(agent: dict[str, Any], conf_prompt: str | None, provider_id: str = "") -> dict[str, Any]:
@@ -122,7 +123,7 @@ def _build_tree(
     tree = SimTree.new(adapter, adapter.clients)
     root_id = tree.root
     if root_id is None:
-        raise RuntimeError("SimTree root is None — cannot proceed")
+        raise RuntimeError(T("error.scene_builder.simtree_root_none"))
     branch_id = tree.branch(
         root_id,
         [{"op": "network_replace", "network": {"edges": placement["relabeled_edges"]}}],

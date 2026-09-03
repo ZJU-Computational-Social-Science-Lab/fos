@@ -11,17 +11,13 @@ Contains: GAME_DIE_ROLL
 
 from typing import Any, Dict
 
+from ...i18n import T
+
 GAME_DIE_ROLL: Dict[str, Any] = {
     "id": "game_die_roll",
     "name": "Private Die-Roll Honesty Task",
     "category": "honesty",
-    "description": (
-        "You roll a fair six-sided die in private. Only you can see the "
-        "outcome. You then report a number from 1 to 6. Your payment is "
-        "proportional to the number you report, so reporting a higher number "
-        "earns you more money. Only you know your true roll; the experimenter "
-        "sees only your reported number and never your true roll."
-    ),
+    "description": T("scenario_templates.game_die_roll.description"),
     "grouping_mode": "individual",
     "payoff_type": "direct",
     "interaction_mode": "solo",
@@ -33,11 +29,11 @@ GAME_DIE_ROLL: Dict[str, Any] = {
     ),
     "parameters": [],
     "actions": [
-        {"id": "report_1", "name": "Report 1", "description": "Report that you rolled a 1"},
-        {"id": "report_2", "name": "Report 2", "description": "Report that you rolled a 2"},
-        {"id": "report_3", "name": "Report 3", "description": "Report that you rolled a 3"},
-        {"id": "report_4", "name": "Report 4", "description": "Report that you rolled a 4"},
-        {"id": "report_5", "name": "Report 5", "description": "Report that you rolled a 5"},
-        {"id": "report_6", "name": "Report 6", "description": "Report that you rolled a 6"},
+        {"id": "report_1", "name": "Report 1", "description": T("scenario_templates.game_die_roll.actions.report_1.description")},
+        {"id": "report_2", "name": "Report 2", "description": T("scenario_templates.game_die_roll.actions.report_2.description")},
+        {"id": "report_3", "name": "Report 3", "description": T("scenario_templates.game_die_roll.actions.report_3.description")},
+        {"id": "report_4", "name": "Report 4", "description": T("scenario_templates.game_die_roll.actions.report_4.description")},
+        {"id": "report_5", "name": "Report 5", "description": T("scenario_templates.game_die_roll.actions.report_5.description")},
+        {"id": "report_6", "name": "Report 6", "description": T("scenario_templates.game_die_roll.actions.report_6.description")},
     ],
 }
