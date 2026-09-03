@@ -159,8 +159,18 @@ class TrackedClient:
         self.round_calls[round_idx] = self.calls[self._round_start:]
 
     def preload_rounds(self, round_calls: dict[int, list[dict[str, Any]]]) -> None:
-        """Restore previously completed rounds' calls (resume path)."""
-        self.round_calls.update(round_calls)
+        """Restore previously completed rounds' calls (resume path).
+
+        JSON checkpoint round-trips dict keys to strings; every consumer keys
+        round_calls by int round number, so normalize here at the boundary.
+        """
+        normalized: dict[int, list[dict[str, Any]]] = {}
+        for key, value in (round_calls or {}).items():
+            try:
+                normalized[int(key)] = value
+            except (TypeError, ValueError):
+                normalized[key] = value  # type: ignore[index]
+        self.round_calls.update(normalized)
 
 
 

@@ -456,7 +456,7 @@ def test_kill_mid_round_and_resume(db, paths, monkeypatch):
     The fake requests an interrupt on call 201 (the first call of round 2),
     so round 1 and round 2 complete (400 calls) before the run is left
     'running' with a round-2 checkpoint. A fresh fake resumes from round 3:
-    exactly 300 more calls (200 round-3 + 100 round-4), never re-running
+    exactly 294 more calls (200 round-3 + 94 round-4), never re-running
     rounds 1-2, and the result contains a full 100-agent round-1.
     """
     fake = FakeLLMClient(interrupt_on_call=201)
@@ -476,7 +476,7 @@ def test_kill_mid_round_and_resume(db, paths, monkeypatch):
     commands.run(limit=1, conn=db)  # attempt 2: resumes and completes
 
     assert store.get_run("run_079", conn=db)["status"] == "complete"
-    assert fresh.call_count == 300  # rounds 3-4 only, no re-run of rounds 1-2
+    assert fresh.call_count == 294  # rounds 3-4 only (200 round-3 + 94 round-4; 6 confederate round-4 votes intercepted)
     result = _read_result("run_079")
     round1 = [d for d in result["deliberation"] if d["round"] == 1]
     assert len(round1) == 100  # round 1 survived from the checkpoint
