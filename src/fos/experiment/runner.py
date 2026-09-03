@@ -40,7 +40,7 @@ import traceback
 from typing import Any
 
 from fos.experiment import baseline, network, store
-from fos.experiment.clients import TrackedClient, _build_clients
+from fos.experiment.clients import TrackedClient, _build_clients, _llm_enabled
 from fos.experiment.results import (
     EMPTY_RATE_LIMIT,
     TOTAL_ROUNDS,
@@ -178,21 +178,26 @@ def _execute_one_run(run_id: str, conn: sqlite3.Connection | None = None) -> Non
     run_row = store.get_run(run_id, conn)
 
     # ── Startup assertion: model manager must be reachable ──────────
-    import requests as _requests
-    _mm_url = os.environ.get("FOS_MODEL_MANAGER_URL")
-    if not _mm_url:
-        raise RuntimeError(
-            "FOS_MODEL_MANAGER_URL is not set. "
-            "Set it to http://127.0.0.1:8081 in .env before running experiments."
-        )
-    try:
-        _resp = _requests.get(f"{_mm_url.rstrip('/')}/status", timeout=5)
-        if _resp.status_code != 200:
+    # Real runs (FOS_EXPERIMENT_LLM=1) reach the model manager for model
+    # preload and resident-model verification, so the manager must be up.
+    # Deterministic test runs inject a fake client and never make a network
+    # call, so they must not require a live manager on 127.0.0.1:8081.
+    if _llm_enabled():
+        import requests as _requests
+        _mm_url = os.environ.get("FOS_MODEL_MANAGER_URL")
+        if not _mm_url:
             raise RuntimeError(
-                f"Model manager at {_mm_url} returned HTTP {_resp.status_code} on /status"
+                "FOS_MODEL_MANAGER_URL is not set. "
+                "Set it to http://127.0.0.1:8081 in .env before running experiments."
             )
-    except _requests.RequestException as exc:
-        raise RuntimeError(f"Model manager at {_mm_url} is not reachable: {exc}")
+        try:
+            _resp = _requests.get(f"{_mm_url.rstrip('/')}/status", timeout=5)
+            if _resp.status_code != 200:
+                raise RuntimeError(
+                    f"Model manager at {_mm_url} returned HTTP {_resp.status_code} on /status"
+                )
+        except _requests.RequestException as exc:
+            raise RuntimeError(f"Model manager at {_mm_url} is not reachable: {exc}")
 
     store.mark_running(run_id, conn)
 
