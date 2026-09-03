@@ -1224,6 +1224,18 @@ def main() -> None:
 
     output_dir = Path(args.output_dir)
 
+    # Keep the per-run LLM traffic log under the local data repo (artifacts/<run-name>/)
+    # unless the caller already exported FOS_LLM_LOG explicitly.
+    os.environ.setdefault(
+        "FOS_LLM_LOG",
+        str(
+            Path(os.environ.get("FOS_DATA_DIR") or os.path.expanduser("~/work/fos-data"))
+            / "artifacts"
+            / output_dir.name
+            / "llm_traffic.jsonl"
+        ),
+    )
+
     # Select proposals
     all_props = default_proposals()
     proposal_map = {
