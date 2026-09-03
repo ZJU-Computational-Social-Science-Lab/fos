@@ -244,3 +244,9 @@ experiment state databases (e.g. `data/experiment_state.db*`) are
 git-ignored and must never be committed. Curated snapshots live in the
 private repo `justinmiller1104/fos-data`; machine backups via
 `~/work/crew/shared/scripts/fos-backup.sh`.
+
+LLM traffic logs (`llm_traffic.jsonl`) default to the local data repo —
+`$FOS_DATA_DIR/llm_traffic.jsonl`, falling back to
+`~/work/fos-data/llm_traffic.jsonl` — and are never written into (or
+committed to) the fos source repo. `FOS_LLM_LOG` overrides the path
+(any casing of `off` disables traffic logging).
