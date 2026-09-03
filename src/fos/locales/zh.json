@@ -15,6 +15,46 @@
       "ghostscript_not_available": "Ghostscript不可用，无法渲染PDF",
       "ghostscript_no_pages": "Ghostscript未渲染任何PDF页面",
       "tesseract_not_available": "Tesseract不可用"
+    },
+    "proposals": {
+      "schema_version_mismatch": "应为 schema_version 1.0.0，实际为 {schema_version}",
+      "proposal_count_mismatch": "预期包含 7 个提案，实际为 {count}",
+      "ids_order_mismatch": "提案 ID 必须按顺序与 PROPOSAL_IDS 一致。实际为：{ids}",
+      "duplicate_ids": "存在重复的提案 ID：{ids}",
+      "empty_statement": "提案 {proposal_id} 的陈述内容为空",
+      "invalid_domain": "提案 {proposal_id}：无效的领域 '{domain}'",
+      "invalid_statement_type": "提案 {proposal_id}：无效的陈述类型 '{statement_type}'",
+      "word_count_mismatch": "提案 {proposal_id}：word_count {word_count} 与计算得出的 {computed_word_count} 不一致",
+      "pilot_excl_share_mismatch": "提案 {proposal_id}：存储的 pilot_yes_share_excl_abstain 值 {stored_excl} 与重新计算的 {recomputed_excl} 不一致",
+      "pilot_incl_share_mismatch": "提案 {proposal_id}：存储的 pilot_yes_share_incl_abstain 值 {stored_incl} 与重新计算的 {recomputed_incl} 不一致",
+      "unknown_proposal_id": "未知的提案 id '{proposal_id}'。有效 id：{valid_ids}"
+    },
+    "clients": {
+      "resident_model_mismatch": "位于 {base_url} 的常驻模型不匹配：在常驻模型 id '{resident}' 中找不到预期的路由名称 '{expected_router_name}'",
+      "no_llm_client": "未设置 FOS_EXPERIMENT_LLM — 没有可用的 LLM 客户端"
+    },
+    "results": {
+      "attribution_gate_failed": "归因检查失败：{mismatches} 条发言动作提示未包含对应智能体的简介（位置归因失效）",
+      "neighbour_context_gate_failed": "对度大于 2 的智能体进行邻居上下文检查失败：{problems}"
+    },
+    "runner": {
+      "manager_url_not_set": "未设置 FOS_MODEL_MANAGER_URL。运行实验前请在 .env 中将其设置为 http://127.0.0.1:8081。",
+      "manager_status_http": "位于 {mm_url} 的模型管理器在 /status 返回了 HTTP {status_code}",
+      "manager_unreachable": "位于 {mm_url} 的模型管理器无法访问：{error}",
+      "unknown_run": "未知的运行 {run_id}",
+      "run_id_not_in_matrix": "运行矩阵中不存在 run_id {run_id}",
+      "population_no_sha256": "人群 {population_id} 没有 sha256 字段",
+      "population_sha256_mismatch": "人群 {population_id} 的 sha256 不匹配：存储值 {stored}，重新计算值 {recomputed}",
+      "unknown_proposal_id": "未知的提案 id {proposal_id}"
+    },
+    "scene_builder": {
+      "simtree_root_none": "SimTree 根节点为 None — 无法继续"
+    },
+    "confederates": {
+      "sample_too_large": "无法从 {count} 个智能体中抽取 {total} 个同盟者",
+      "unknown_stance": "未知的同盟者立场：{stance}",
+      "no_recorded_vote": "同盟者 {agent_id}（立场={stance}）没有记录投票。投票拦截失败 — 该次运行无效。",
+      "vote_mismatch": "同盟者 {agent_id}：记录投票为 {recorded}，但指定立场为 {stance}。投票拦截失败 — 该次运行无效。"
     }
   },
   "agent": {
@@ -1269,6 +1309,64 @@
         "rest": {
           "name": "休息",
           "description": "智能体在家或其他地点休息"
+        }
+      }
+    },
+    "game_11_20": {
+      "description": "你和另一名玩家在玩一个游戏：每名玩家请求一笔金额。金额必须是介于 11 到 20 谢克尔之间的整数。每名玩家将获得其所请求的金额。如果某名玩家请求的金额恰好比另一名玩家少 1 谢克尔，他将额外获得 20 谢克尔。",
+      "actions": {
+        "request_11": {
+          "description": "请求 11 谢克尔"
+        },
+        "request_12": {
+          "description": "请求 12 谢克尔"
+        },
+        "request_13": {
+          "description": "请求 13 谢克尔"
+        },
+        "request_14": {
+          "description": "请求 14 谢克尔"
+        },
+        "request_15": {
+          "description": "请求 15 谢克尔"
+        },
+        "request_16": {
+          "description": "请求 16 谢克尔"
+        },
+        "request_17": {
+          "description": "请求 17 谢克尔"
+        },
+        "request_18": {
+          "description": "请求 18 谢克尔"
+        },
+        "request_19": {
+          "description": "请求 19 谢克尔"
+        },
+        "request_20": {
+          "description": "请求 20 谢克尔"
+        }
+      }
+    },
+    "game_die_roll": {
+      "description": "你私下掷一个公平的六面骰子，只有你能看到结果。然后你报告一个 1 到 6 之间的数字。你的报酬与所报告的数字成正比，因此报告更高的数字能让你赚更多的钱。只有你知道真实的点数；实验者只能看到你报告的数字，永远看不到你的真实点数。",
+      "actions": {
+        "report_1": {
+          "description": "报告你掷出了 1"
+        },
+        "report_2": {
+          "description": "报告你掷出了 2"
+        },
+        "report_3": {
+          "description": "报告你掷出了 3"
+        },
+        "report_4": {
+          "description": "报告你掷出了 4"
+        },
+        "report_5": {
+          "description": "报告你掷出了 5"
+        },
+        "report_6": {
+          "description": "报告你掷出了 6"
         }
       }
     }

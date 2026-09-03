@@ -15,6 +15,46 @@
       "ghostscript_not_available": "Ghostscript is not available for PDF rendering",
       "ghostscript_no_pages": "Ghostscript did not render any PDF pages",
       "tesseract_not_available": "Tesseract is not available"
+    },
+    "proposals": {
+      "schema_version_mismatch": "Expected schema_version 1.0.0, got {schema_version}",
+      "proposal_count_mismatch": "Expected 7 proposals, got {count}",
+      "ids_order_mismatch": "Proposal IDs must match PROPOSAL_IDS in order. Got: {ids}",
+      "duplicate_ids": "Duplicate proposal IDs: {ids}",
+      "empty_statement": "Proposal {proposal_id} has empty statement",
+      "invalid_domain": "Proposal {proposal_id}: invalid domain '{domain}'",
+      "invalid_statement_type": "Proposal {proposal_id}: invalid statement_type '{statement_type}'",
+      "word_count_mismatch": "Proposal {proposal_id}: word_count {word_count} doesn't match computed {computed_word_count}",
+      "pilot_excl_share_mismatch": "Proposal {proposal_id}: stored pilot_yes_share_excl_abstain {stored_excl} differs from recomputed {recomputed_excl}",
+      "pilot_incl_share_mismatch": "Proposal {proposal_id}: stored pilot_yes_share_incl_abstain {stored_incl} differs from recomputed {recomputed_incl}",
+      "unknown_proposal_id": "Unknown proposal id '{proposal_id}'. Valid ids: {valid_ids}"
+    },
+    "clients": {
+      "resident_model_mismatch": "Resident model mismatch on {base_url}: expected router name '{expected_router_name}' not found in resident model id '{resident}'",
+      "no_llm_client": "FOS_EXPERIMENT_LLM is not set — no LLM client available"
+    },
+    "results": {
+      "attribution_gate_failed": "attribution gate failed: {mismatches} speak-action prompts do not contain their agent's bio (positional attribution broken)",
+      "neighbour_context_gate_failed": "neighbour-context gate failed for agents with degree > 2: {problems}"
+    },
+    "runner": {
+      "manager_url_not_set": "FOS_MODEL_MANAGER_URL is not set. Set it to http://127.0.0.1:8081 in .env before running experiments.",
+      "manager_status_http": "Model manager at {mm_url} returned HTTP {status_code} on /status",
+      "manager_unreachable": "Model manager at {mm_url} is not reachable: {error}",
+      "unknown_run": "Unknown run {run_id}",
+      "run_id_not_in_matrix": "run_id {run_id} not in run matrix",
+      "population_no_sha256": "population {population_id} has no sha256 field",
+      "population_sha256_mismatch": "population {population_id} sha256 mismatch: stored {stored}, recomputed {recomputed}",
+      "unknown_proposal_id": "unknown proposal id {proposal_id}"
+    },
+    "scene_builder": {
+      "simtree_root_none": "SimTree root is None — cannot proceed"
+    },
+    "confederates": {
+      "sample_too_large": "Cannot sample {total} confederates from {count} agents",
+      "unknown_stance": "Unknown confederate stance: {stance}",
+      "no_recorded_vote": "Confederate {agent_id} (stance={stance}) has no recorded vote. Vote interception failed — run is invalid.",
+      "vote_mismatch": "Confederate {agent_id}: recorded vote is {recorded} but assigned stance is {stance}. Vote interception failed — run is invalid."
     }
   },
   "agent": {
@@ -1269,6 +1309,64 @@
         "rest": {
           "name": "Rest",
           "description": "Agent rests at home or other location"
+        }
+      }
+    },
+    "game_11_20": {
+      "description": "You and another player are playing a game in which each player requests an amount of money. The amount must be (an integer) between 11 and 20 shekels. Each player will receive the amount he requests. A player will receive an additional amount of 20 shekels if he asks for exactly one shekel less than the other player.",
+      "actions": {
+        "request_11": {
+          "description": "Request 11 shekels"
+        },
+        "request_12": {
+          "description": "Request 12 shekels"
+        },
+        "request_13": {
+          "description": "Request 13 shekels"
+        },
+        "request_14": {
+          "description": "Request 14 shekels"
+        },
+        "request_15": {
+          "description": "Request 15 shekels"
+        },
+        "request_16": {
+          "description": "Request 16 shekels"
+        },
+        "request_17": {
+          "description": "Request 17 shekels"
+        },
+        "request_18": {
+          "description": "Request 18 shekels"
+        },
+        "request_19": {
+          "description": "Request 19 shekels"
+        },
+        "request_20": {
+          "description": "Request 20 shekels"
+        }
+      }
+    },
+    "game_die_roll": {
+      "description": "You roll a fair six-sided die in private. Only you can see the outcome. You then report a number from 1 to 6. Your payment is proportional to the number you report, so reporting a higher number earns you more money. Only you know your true roll; the experimenter sees only your reported number and never your true roll.",
+      "actions": {
+        "report_1": {
+          "description": "Report that you rolled a 1"
+        },
+        "report_2": {
+          "description": "Report that you rolled a 2"
+        },
+        "report_3": {
+          "description": "Report that you rolled a 3"
+        },
+        "report_4": {
+          "description": "Report that you rolled a 4"
+        },
+        "report_5": {
+          "description": "Report that you rolled a 5"
+        },
+        "report_6": {
+          "description": "Report that you rolled a 6"
         }
       }
     }

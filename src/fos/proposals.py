@@ -9,6 +9,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from fos.i18n import T
+
 
 @dataclass(frozen=True)
 class Proposal:
@@ -69,36 +71,54 @@ def load_proposals(path=None) -> list[Proposal]:
 
     # Validate schema_version
     if data.get("schema_version") != "1.0.0":
-        raise ValueError(f"Expected schema_version 1.0.0, got {data.get('schema_version')}")
+        raise ValueError(
+            T("error.proposals.schema_version_mismatch", schema_version=data.get("schema_version"))
+        )
 
     proposals_data = data.get("proposals", [])
     if len(proposals_data) != 7:
-        raise ValueError(f"Expected 7 proposals, got {len(proposals_data)}")
+        raise ValueError(T("error.proposals.proposal_count_mismatch", count=len(proposals_data)))
 
     ids = [p["id"] for p in proposals_data]
     if ids != list(PROPOSAL_IDS):
-        raise ValueError(f"Proposal IDs must match PROPOSAL_IDS in order. Got: {ids}")
+        raise ValueError(T("error.proposals.ids_order_mismatch", ids=ids))
 
     if len(set(ids)) != 7:
-        raise ValueError(f"Duplicate proposal IDs: {ids}")
+        raise ValueError(T("error.proposals.duplicate_ids", ids=ids))
 
     proposals = []
     for p in proposals_data:
         if not p.get("statement", "").strip():
-            raise ValueError(f"Proposal {p.get('id')} has empty statement")
+            raise ValueError(T("error.proposals.empty_statement", proposal_id=p.get("id")))
         if p.get("domain") not in VALID_DOMAINS:
-            raise ValueError(f"Proposal {p.get('id')}: invalid domain '{p.get('domain')}'")
+            raise ValueError(
+                T(
+                    "error.proposals.invalid_domain",
+                    proposal_id=p.get("id"),
+                    domain=p.get("domain"),
+                )
+            )
 
         statement_type = p.get("statement_type")
         if statement_type not in VALID_STATEMENT_TYPES:
-            raise ValueError(f"Proposal {p.get('id')}: invalid statement_type '{statement_type}'")
+            raise ValueError(
+                T(
+                    "error.proposals.invalid_statement_type",
+                    proposal_id=p.get("id"),
+                    statement_type=statement_type,
+                )
+            )
 
         word_count = p.get("word_count")
         computed_word_count = len(p["statement"].split())
         if word_count != computed_word_count:
             raise ValueError(
-                f"Proposal {p.get('id')}: word_count {word_count} doesn't match "
-                f"computed {computed_word_count}"
+                T(
+                    "error.proposals.word_count_mismatch",
+                    proposal_id=p.get("id"),
+                    word_count=word_count,
+                    computed_word_count=computed_word_count,
+                )
             )
 
         proposal = Proposal(
@@ -130,8 +150,12 @@ def load_proposals(path=None) -> list[Proposal]:
                 stored_excl = proposal.pilot_yes_share_excl_abstain
                 if stored_excl is not None and abs(stored_excl - recomputed_excl) > 0.005:
                     raise ValueError(
-                        f"Proposal {proposal.id}: stored pilot_yes_share_excl_abstain "
-                        f"{stored_excl} differs from recomputed {recomputed_excl}"
+                        T(
+                            "error.proposals.pilot_excl_share_mismatch",
+                            proposal_id=proposal.id,
+                            stored_excl=stored_excl,
+                            recomputed_excl=recomputed_excl,
+                        )
                     )
 
             if abstain is not None and yes + no + abstain > 0:
@@ -139,8 +163,12 @@ def load_proposals(path=None) -> list[Proposal]:
                 stored_incl = proposal.pilot_yes_share_incl_abstain
                 if stored_incl is not None and abs(stored_incl - recomputed_incl) > 0.005:
                     raise ValueError(
-                        f"Proposal {proposal.id}: stored pilot_yes_share_incl_abstain "
-                        f"{stored_incl} differs from recomputed {recomputed_incl}"
+                        T(
+                            "error.proposals.pilot_incl_share_mismatch",
+                            proposal_id=proposal.id,
+                            stored_incl=stored_incl,
+                            recomputed_incl=recomputed_incl,
+                        )
                     )
 
         proposals.append(proposal)
@@ -154,4 +182,10 @@ def get_proposal(id: str) -> Proposal:
     for p in proposals:
         if p.id == id:
             return p
-    raise KeyError(f"Unknown proposal id '{id}'. Valid ids: {', '.join(PROPOSAL_IDS)}")
+    raise KeyError(
+        T(
+            "error.proposals.unknown_proposal_id",
+            proposal_id=id,
+            valid_ids=", ".join(PROPOSAL_IDS),
+        )
+    )
