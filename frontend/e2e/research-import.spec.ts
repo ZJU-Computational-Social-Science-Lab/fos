@@ -191,7 +191,9 @@ test('research import from scanned PDF reconstructs a preset-backed public goods
   await expect(page.getByTestId('research-page-preview').first()).toContainText(/public goods|shared public account/i);
   await expect(page.getByTestId('research-semantic-schema')).toContainText(/research goal|研究目标/i);
   await expect(
-    page.getByTestId('builder-mode-recommended').getByRole('button'),
+    page.getByTestId('builder-mode-recommended').getByRole('button', {
+      name: /map into a preset scenario|映射到一个预设场景/i,
+    }),
   ).toHaveAttribute('aria-pressed', 'true');
 
   await page.getByTestId('research-background-draft').fill(
@@ -344,6 +346,7 @@ test('research builder clear draft resets the persisted custom draft', async ({ 
   });
 
   await openResearchBuilder(page, locale);
+  await selectDeterministicRecognition(page, locale);
   await page.getByTestId('research-source-text').fill('Temporary text for clearing.');
   await page.getByTestId('research-analyze-button').click();
   await waitForAnalysisToPopulate(page);
