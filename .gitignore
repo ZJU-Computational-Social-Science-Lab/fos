@@ -68,6 +68,8 @@ chroma_db/
 /personas
 /persona_samples
 reddit_data/
+/multi_model_results.json
+/multi_model_table.txt
 
 # Temporary / scratch
 tmp/
