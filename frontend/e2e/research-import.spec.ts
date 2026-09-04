@@ -202,9 +202,21 @@ test('research import from scanned PDF reconstructs a preset-backed public goods
   await page.getByTestId('research-continue-button').click();
 
   await page.waitForURL(/\/simulations\/create\/preset/, { timeout: 60_000 });
-  await expect(page.getByRole('textbox', {
-    name: /scenario description|场景描述/i,
-  })).toHaveValue(/Reviewed public goods reconstruction/, { timeout: 30_000 });
+
+  // The preset page is code-split and mounts asynchronously after the URL changes.
+  // While its chunk loads, the outgoing research page stays mounted and its
+  // background-draft textarea is a false match for the 场景描述/scenario-description
+  // name regex in zh (its zh placeholder contains 场景描述). Anchor on the preset
+  // wizard's own step-2 field (id="scenario-description", Step2StarterTemplate) so
+  // the assertion AND the following back-click always run against the wizard — never
+  // against the stale research page's header "Back" button (which navigates to
+  // /simulations/create, not back to /simulations/create/custom).
+  const presetScenarioDescription = page.locator('#scenario-description');
+  await expect(presetScenarioDescription).toBeVisible({ timeout: 30_000 });
+  await expect(presetScenarioDescription).toHaveValue(
+    /Reviewed public goods reconstruction/,
+    { timeout: 30_000 },
+  );
 
   await page.getByRole('button', { name: /back|返回/i }).first().click();
   await page.waitForURL(/\/simulations\/create\/custom/, { timeout: 60_000 });
