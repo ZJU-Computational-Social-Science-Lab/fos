@@ -55,6 +55,10 @@
       "unknown_stance": "Unknown confederate stance: {stance}",
       "no_recorded_vote": "Confederate {agent_id} (stance={stance}) has no recorded vote. Vote interception failed — run is invalid.",
       "vote_mismatch": "Confederate {agent_id}: recorded vote is {recorded} but assigned stance is {stance}. Vote interception failed — run is invalid."
+    },
+    "randomization": {
+      "unsupported_distribution": "Unsupported randomization distribution: {distribution}",
+      "unsupported_expected": "expected must be one of: {supported}"
     }
   },
   "agent": {
