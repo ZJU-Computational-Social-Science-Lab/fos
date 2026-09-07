@@ -18,7 +18,8 @@ What each function does:
                                          eleven-field persona dict, or None.
     generate_personas(...)             - Draw n personas through chat_fn,
                                          returning (personas, skipped).
-    render_demographics_block(persona) - The eleven "field: value" lines.
+    render_demographics_block(persona) - The "field: value" lines for the
+                                         fields one persona actually has.
     render_extended_block(persona)     - Demographics plus any behavioral
                                          measures with their notes.
     check_persona_diversity(personas)  - How varied a batch of personas is.
@@ -227,18 +228,39 @@ def generate_personas(
 
 
 def render_demographics_block(persona: dict[str, Any]) -> str:
-    """Return the eleven "field: value" lines of one persona, in order."""
-    return "\n".join(f"{field}: {persona[field]}" for field in PERSONA_FIELDS)
+    """Return one "field: value" line per field the persona dict actually has.
+
+    Missing fields are skipped instead of raising KeyError, so a partial
+    persona (say age, city and occupation only) still renders cleanly: the
+    canonical PERSONA_FIELDS it carries come first in canonical order, then
+    any extra scalar keys it holds. Behavioral measures are nested dicts and
+    belong to the extended block, so they never appear here. A persona that
+    carries none of the canonical fields renders an empty string; the caller
+    decides what an empty block means.
+    """
+    if not any(field in persona for field in PERSONA_FIELDS):
+        return ""
+    lines = [
+        f"{field}: {persona[field]}" for field in PERSONA_FIELDS if field in persona
+    ]
+    lines.extend(
+        f"{field}: {value}"
+        for field, value in persona.items()
+        if field not in PERSONA_FIELDS and not isinstance(value, dict)
+    )
+    return "\n".join(lines)
 
 
 def render_extended_block(persona: dict[str, Any]) -> str:
     """Render one persona with its behavioral measures, if any are present.
 
-    The demographics block always comes first. Every measure the persona
-    carries becomes a "name: score (P<pct> percentile)" line with an
-    immediately following "<note: ...>" line explaining the scale; measures
-    the persona lacks are skipped silently, so a persona with no measures
-    renders exactly the demographics block.
+    The demographics block always comes first (it skips missing demographic
+    fields the same way render_demographics_block does, so a partial persona
+    never crashes here). Every measure the persona carries becomes a
+    "name: score (P<pct> percentile)" line with an immediately following
+    "<note: ...>" line explaining the scale; measures the persona lacks are
+    skipped silently, so a persona with no measures renders exactly the
+    demographics block.
     """
     lines = render_demographics_block(persona).splitlines()
     for name in BEHAVIORAL_MEASURES:
