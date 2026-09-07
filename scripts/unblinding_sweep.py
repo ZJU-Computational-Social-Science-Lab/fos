@@ -323,11 +323,18 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--persona-depth",
-        choices=("none", "demographics", "extended"),
+        choices=(
+            "none",
+            "demographics",
+            "tightwad",
+            "time_preference",
+            "risk_preference",
+        ),
         default="none",
         help="how deep the persona block goes: 'none' runs the plain price "
-        "sweep, 'demographics' and 'extended' run the persona sweep "
-        "(default: %(default)s)",
+        "sweep, while 'demographics', 'tightwad', 'time_preference' and "
+        "'risk_preference' run the persona sweep at that tier (11, 12, 14 "
+        "or 16 covariates pinned; default: %(default)s)",
     )
     parser.add_argument(
         "--personas-dir",
