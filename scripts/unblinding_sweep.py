@@ -14,6 +14,9 @@ What each function does:
                                     results, write the manifest.
     _parse_args(argv)             - Turn command-line flags into a settings
                                     object (see the flag help text).
+    expand_depths(spec)           - Expand a --persona-depth value ("all",
+                                    one tier, or a comma list) into the list
+                                    of tiers to run.
     _scope_for(blinding)          - Turn "blinded"/"unblinded"/"both" into the
                                     list of blinding runs to do.
     _safe_model_name(model)       - Make a model id safe to use in a file name.
@@ -91,6 +94,48 @@ _HEALTH_POLL_SECONDS = 5
 # A chat function: message list and temperature in, raw model text out.
 ChatFn = Callable[[list[dict[str, str]], float], str]
 
+# The five persona depth tiers, in study order (none is the plain sweep).
+PERSONA_TIERS = (
+    "none",
+    "demographics",
+    "tightwad",
+    "time_preference",
+    "risk_preference",
+)
+
+
+def expand_depths(spec: str) -> list[str]:
+    """Turn a --persona-depth value into the list of tiers it names.
+
+    "all" expands to the five tiers in study order; a single tier returns
+    [that tier]; a comma list returns its members in the order given. Any
+    name that is not one of the five tiers raises ValueError, so a typo in
+    a comma list is caught before any run starts.
+    """
+    if spec == "all":
+        return list(PERSONA_TIERS)
+    names = [piece.strip() for piece in spec.split(",") if piece.strip()]
+    if not names:
+        raise ValueError(f"empty --persona-depth value {spec!r}")
+    for name in names:
+        if name not in PERSONA_TIERS:
+            raise ValueError(
+                f"unknown persona depth {name!r} (choose from "
+                f"{', '.join(PERSONA_TIERS)})"
+            )
+    return names
+
+
+def _persona_depth_type(text: str) -> str:
+    """Argparse type hook: keep the raw text, but reject unknown tiers.
+
+    Single tiers keep coming out of the parser as strings (the pre-existing
+    behavior) while "all" and comma lists are validated here, so an invalid
+    member of a comma list fails at parse time with exit code 2.
+    """
+    expand_depths(text)
+    return text
+
 
 class UnreachableError(RuntimeError):
     """Raised when the chat server or the model manager cannot be reached."""
@@ -105,7 +150,10 @@ def main(argv: list[str] | None = None) -> int:
     results under the --out directory, and writes a JSON run manifest. When
     --persona-depth is not "none" and --personas-dir is given, the sweep is
     the persona sweep: one temperature-0.0 survey per (product x price level
-    x persona) with the persona block rendered into the prompt.
+    x persona) with the persona block rendered into the prompt. A
+    --persona-depth of "all" or a comma list of tiers runs every named tier
+    in one invocation; the per-tier files then carry a "_depth<name>"
+    suffix and the manifest lists every depth run under "depths".
     """
     args = _parse_args(argv)
     started = datetime.now(timezone.utc).isoformat()
@@ -125,17 +173,17 @@ def main(argv: list[str] | None = None) -> int:
     if not products:
         print("error: the products file lists no products", file=sys.stderr)
         return 1
-    persona_mode = args.persona_depth != "none"
-    if persona_mode and not args.personas_dir:
+    depths = expand_depths(args.persona_depth)
+    any_persona_mode = any(depth != "none" for depth in depths)
+    if any_persona_mode and not args.personas_dir:
         print(
             "error: --persona-depth needs --personas-dir with one JSONL "
             "persona file per product",
             file=sys.stderr,
         )
         return 1
-    design = _build_design(levels, scope, args.seed, covariates, args.persona_depth)
     personas_by_product: dict[str, dict[str, Any]] = {}
-    if persona_mode:
+    if any_persona_mode:
         personas_by_product = _load_personas_by_product(
             args.personas_dir, products, args.personas_per_product
         )
@@ -194,76 +242,114 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
 
-    multi = len(scope) > 1
-    for blinding in scope:
-        if persona_mode:
-            records, skipped_empty = run_persona_sweep(
-                design,
-                personas_by_product,
-                args.model,
-                chat_fn,
-                blinding=blinding,
-                persona_depth=args.persona_depth,
-                seed=args.seed,
-            )
-            if skipped_empty:
-                print(
-                    f"note: skipped {skipped_empty} empty persona(s)",
-                    file=sys.stderr,
+    multi_depth = len(depths) > 1
+    multi_blinding = len(scope) > 1
+    depth_runs: list[dict[str, Any]] = []
+    for depth in depths:
+        persona_mode = depth != "none"
+        design = _build_design(levels, scope, args.seed, covariates, depth)
+        for blinding in scope:
+            if persona_mode:
+                records, skipped_empty = run_persona_sweep(
+                    design,
+                    personas_by_product,
+                    args.model,
+                    chat_fn,
+                    blinding=blinding,
+                    persona_depth=depth,
+                    seed=args.seed,
                 )
-        else:
-            records = run_sweep(
-                design,
-                products,
-                args.model,
-                chat_fn,
-                draws=draws,
-                blinding=blinding,
-                seed=args.seed,
-            )
-        base = out_dir / f"{safe_model}_{blinding}"
-        _write_records(base, records)
-        print(f"wrote {base}.jsonl and {base}.csv ({len(records)} records)")
-        _print_demand_table(records, levels, blinding)
-        if args.diagnose:
-            diagnostic_file = (
-                out_dir / f"{safe_model}_{blinding}_diagnostic.jsonl"
-                if multi
-                else out_dir / f"{safe_model}_diagnostic.jsonl"
-            )
-            _run_diagnostic(
-                design,
-                products,
-                covariates,
-                chat_fn,
-                draws,
-                blinding,
-                args.seed,
-                diagnostic_file,
+                if skipped_empty:
+                    print(
+                        f"note: skipped {skipped_empty} empty persona(s)",
+                        file=sys.stderr,
+                    )
+            else:
+                records = run_sweep(
+                    design,
+                    products,
+                    args.model,
+                    chat_fn,
+                    draws=draws,
+                    blinding=blinding,
+                    seed=args.seed,
+                )
+            suffix = f"_depth{depth}" if multi_depth else ""
+            base = out_dir / f"{safe_model}_{blinding}{suffix}"
+            _write_records(base, records)
+            print(f"wrote {base}.jsonl and {base}.csv ({len(records)} records)")
+            _print_demand_table(records, levels, blinding)
+            if args.diagnose:
+                diagnostic_file = _diagnostic_path(
+                    out_dir, safe_model, blinding, suffix, multi_blinding
+                )
+                _run_diagnostic(
+                    design,
+                    products,
+                    covariates,
+                    chat_fn,
+                    draws,
+                    blinding,
+                    args.seed,
+                    diagnostic_file,
+                )
+            depth_runs.append(
+                {
+                    "depth": depth,
+                    "blinding": blinding,
+                    "design": design.to_json(),
+                    "records": len(records),
+                    "files": [f"{base}.jsonl", f"{base}.csv"],
+                }
             )
     finished = datetime.now(timezone.utc).isoformat()
     # A single-condition run keeps the flat manifest layout; only a
     # multi-condition run gets blinding_scope + per-condition designs.
     manifest_blinding: str | list[str] = scope[0] if len(scope) == 1 else scope
+    manifest_design = _build_design(levels, scope, args.seed, covariates, depths[0])
+    extra: dict[str, Any] = {
+        "levels": levels,
+        "temperature": args.temperature,
+        "seed": args.seed,
+        "argv": list(sys.argv),
+        "started": started,
+        "finished": finished,
+    }
+    if multi_depth:
+        extra["depths"] = depth_runs
     write_manifest(
         out_dir / "manifest.json",
-        design,
+        manifest_design,
         args.model,
         draws,
         manifest_blinding,
         products,
         args.base_url,
-        extra={
-            "levels": levels,
-            "temperature": args.temperature,
-            "seed": args.seed,
-            "argv": list(sys.argv),
-            "started": started,
-            "finished": finished,
-        },
+        extra=extra,
     )
     print(f"wrote {out_dir / 'manifest.json'}")
     return 0
+
+
+def _diagnostic_path(
+    out_dir: Path,
+    safe_model: str,
+    blinding: str,
+    suffix: str,
+    multi_blinding: bool,
+) -> Path:
+    """Pick the diagnostic file name for one (depth, blinding) run.
+
+    A depth suffix (multi-depth invocations) is carried into the file name
+    so one depth's diagnostic never overwrites another's. Without a suffix
+    the historical layout stays: a multi-condition run names the file per
+    blinding, a single-condition run keeps the flat model name.
+    """
+    if suffix:
+        return out_dir / f"{safe_model}_{blinding}{suffix}_diagnostic.jsonl"
+    if multi_blinding:
+        return out_dir / f"{safe_model}_{blinding}_diagnostic.jsonl"
+    return out_dir / f"{safe_model}_diagnostic.jsonl"
 
 
 def _parse_args(argv: list[str] | None) -> argparse.Namespace:
@@ -323,18 +409,14 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--persona-depth",
-        choices=(
-            "none",
-            "demographics",
-            "tightwad",
-            "time_preference",
-            "risk_preference",
-        ),
+        type=_persona_depth_type,
         default="none",
         help="how deep the persona block goes: 'none' runs the plain price "
         "sweep, while 'demographics', 'tightwad', 'time_preference' and "
         "'risk_preference' run the persona sweep at that tier (11, 12, 14 "
-        "or 16 covariates pinned; default: %(default)s)",
+        "or 16 covariates pinned). 'all' or a comma list such as "
+        "'demographics,tightwad' runs every named tier in one invocation "
+        "(default: %(default)s)",
     )
     parser.add_argument(
         "--personas-dir",
