@@ -1,32 +1,28 @@
 """
-Two-step persona generation for the Gui & Toubia (2025) unblinding study
-(Web Appendix D).
+Persona generation for the Gui & Toubia (2025) unblinding study (Web
+Appendix D), plus audit reports checking a batch against the paper's
+coherence rules and against approximate US census marginals.
 
-Step A draws one person per chat call: a single LLM completion fills every
-blank of an eleven-field demographic template (plus a price blank, left
-empty on purpose so no price assumption sneaks into a persona). Step B is a
-second LLM pass that reads that rendered profile (see the sibling task's
-persona_depth kit). This module owns step A plus the audit reports used to
-check a generated batch against the paper's coherence rules and against
-approximate US census marginals. It never talks to a network; a chat
-function is injected by the caller.
+A persona is generated ONCE at the deepest tier: one joint LLM completion
+fills the 11 demographic fields AND the five behavioral measures
+(tightwad/spendthrift, discount rate, present bias, risk aversion, loss
+aversion), plus a price blank left empty on purpose so no price assumption
+sneaks into a persona. The five-tier depth axis only truncates the
+RENDERING of that same dict: none/demographics/tightwad/time_preference/
+risk_preference render 0/11/12/14/16 fields. This module never talks to a
+network; a chat function is injected by the caller.
 
 What each function does:
-    build_persona_elicitation_prompt() - The step-A prompt: one joint
-                                         completion of every field blank.
-    parse_persona(raw)                 - Read a model answer into an
-                                         eleven-field persona dict, or None.
-    generate_personas(...)             - Draw n personas through chat_fn,
-                                         returning (personas, skipped).
-    render_demographics_block(persona) - The "field: value" lines for the
-                                         fields one persona actually has.
-    render_extended_block(persona)     - Demographics plus any behavioral
-                                         measures with their notes.
+    build_persona_elicitation_prompt()  - Max-depth prompt (joint completion).
+    parse_persona(raw)  - Read an answer into an 11-field persona, or None.
+    generate_personas(...)  - Draw n personas via chat_fn; (personas, skipped).
+    render_persona_fields(persona, depth)  - One tier's fields of a persona.
+    render_demographics_block(persona)  - The demographics-tier fields.
+    render_extended_block(persona)  - Demographics plus every measure.
     check_persona_diversity(personas)  - How varied a batch of personas is.
     check_persona_coherence(personas)  - How many paper rules a batch breaks.
-    compare_to_census(personas, ...)   - Gap between a batch and US census
-                                         marginals, for reporting only.
-    load_census_marginals(path)        - Read the bundled census marginals.
+    compare_to_census(personas, ...)  - Gap between a batch and US census.
+    load_census_marginals(path)  - Read the bundled census marginals file.
 """
 
 from __future__ import annotations
@@ -38,6 +34,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from fos.experiments.sweep_kit import _SPECIAL_TOKEN, _strip_channel_wrappers
+from fos.i18n import T
 
 # The eleven demographic fields of the paper's persona profile, in the order
 # the prompt template and every renderer must use them.
@@ -55,8 +52,15 @@ PERSONA_FIELDS = [
     "home_ownership",
 ]
 
-# The three behavioral measures the extended persona block can carry.
-BEHAVIORAL_MEASURES = ["tightwad_spendthrift", "discount_rate", "present_bias"]
+# The five behavioral measures a max-depth persona carries, in the order the
+# prompt template and every renderer must use them.
+BEHAVIORAL_MEASURES = [
+    "tightwad_spendthrift",
+    "discount_rate",
+    "present_bias",
+    "risk_aversion",
+    "loss_aversion",
+]
 
 # Fields whose value must be a whole number once "$", commas and spaces are
 # removed; every other field is kept as the text the model wrote.
@@ -86,6 +90,24 @@ _MEASURE_NOTES = {
         "<note: present_bias measures favoring the sooner reward; higher "
         "scores mean more present bias, less patience>"
     ),
+    "risk_aversion": (
+        "<note: risk_aversion runs from risk-seeking to risk-averse; higher "
+        "scores mean the person is more risk-averse, less willing to gamble>"
+    ),
+    "loss_aversion": (
+        "<note: loss_aversion measures how much more a loss hurts than an "
+        "equal gain; higher scores mean more loss-averse, less willing to "
+        "take symmetric bets>"
+    ),
+}
+
+# How many behavioral measures each persona depth tier renders after the
+# eleven demographic fields. Tiers nest strictly; "none" renders nothing.
+_DEPTH_MEASURE_COUNTS = {
+    "demographics": 0,
+    "tightwad": 1,
+    "time_preference": 3,
+    "risk_preference": 5,
 }
 
 # Words that mark an occupation as retired, matched on word boundaries so
@@ -107,18 +129,22 @@ _CENSUS_DEFAULT = (
 
 
 def build_persona_elicitation_prompt(category: str, product: str) -> str:
-    """Return the step-A prompt that asks for one complete persona.
+    """Return the max-depth step-A prompt that asks for one complete persona.
 
     The model is told the product category and product, then handed a
-    template with every field followed by its blank placeholder, in
-    PERSONA_FIELDS order. The template ends with the price blank written as
-    the paper's literal "[a number with up to 2 decimal points]" so the model
+    template naming every field a max-depth persona carries: the eleven
+    demographic fields in PERSONA_FIELDS order, then the five behavioral
+    measures in BEHAVIORAL_MEASURES order, each next to its blank
+    placeholder. The template ends with the price blank written as the
+    paper's literal "[a number with up to 2 decimal points]" so the model
     fills a price too, even though the price is not stored in the persona.
-    All blanks are completed in ONE joint completion.
+    Every blank is completed in ONE joint completion.
     """
-    field_lines = "\n".join(
-        f"{field}: {blank}" for field, blank in _FIELD_BLANKS.items()
-    )
+    demographic_lines = [f"{field}: {_FIELD_BLANKS[field]}" for field in PERSONA_FIELDS]
+    measure_lines = [
+        f"{field}: {_MEASURE_BLANKS[field]}" for field in BEHAVIORAL_MEASURES
+    ]
+    field_lines = "\n".join([*demographic_lines, *measure_lines])
     return (
         f"Please consider the following product category: {category}.\n"
         "Suppose you are in a grocery store, and you see the following "
@@ -145,6 +171,18 @@ _FIELD_BLANKS = {
     "number_of_children": "[a whole number]",
     "state": "[two-letter US code]",
     "home_ownership": "[own/rent]",
+}
+
+# The blank placeholder text shown next to each behavioral measure in the
+# max-depth prompt template, keyed by BEHAVIORAL_MEASURES name. Every blank
+# asks for the score plus its percentile, the two values the renderers
+# report, so a filled-in template already reads like a rendered block.
+_MEASURE_BLANKS = {
+    "tightwad_spendthrift": "[score and percentile, e.g. 40 (P40 percentile)]",
+    "discount_rate": "[yearly rate and percentile, e.g. 6.5 (P60 percentile)]",
+    "present_bias": "[score and percentile, e.g. 40 (P40 percentile)]",
+    "risk_aversion": "[score and percentile, e.g. 40 (P40 percentile)]",
+    "loss_aversion": "[score and percentile, e.g. 40 (P40 percentile)]",
 }
 
 
@@ -227,19 +265,29 @@ def generate_personas(
     return personas, skipped
 
 
-def render_demographics_block(persona: dict[str, Any]) -> str:
-    """Return one "field: value" line per field the persona dict actually has.
+def render_persona_fields(persona: dict[str, Any], depth: str) -> str:
+    """Render the fields one persona depth tier shows, "field: value" lines.
 
-    Missing fields are skipped instead of raising KeyError, so a partial
-    persona (say age, city and occupation only) still renders cleanly: the
-    canonical PERSONA_FIELDS it carries come first in canonical order, then
-    any extra scalar keys it holds. Behavioral measures are nested dicts and
-    belong to the extended block, so they never appear here. A persona that
-    carries none of the canonical fields renders an empty string; the caller
-    decides what an empty block means.
+    Depth-truncating renderer of the five-tier design: the SAME fully
+    populated persona dict at a shallower tier shows a strict subset of the
+    fields a deeper tier shows. "none" renders nothing; every other tier
+    renders the canonical demographic fields the persona carries (in
+    PERSONA_FIELDS order, plus extra scalar keys such as city) then that
+    tier's behavioral measures (in BEHAVIORAL_MEASURES order up to the tier's
+    cutoff), each as a "name: score (P<pct> percentile)" line with a
+    "<note: ...>" line underneath. Missing keys are skipped, never KeyError
+    (the TASK-1456 tolerance); an unknown depth raises ValueError.
     """
-    if not any(field in persona for field in PERSONA_FIELDS):
+    if depth == "none":
         return ""
+    if depth not in _DEPTH_MEASURE_COUNTS:
+        raise ValueError(
+            T(
+                "error.personas.unsupported_depth",
+                depth=repr(depth),
+                supported=", ".join(["none", *_DEPTH_MEASURE_COUNTS]),
+            )
+        )
     lines = [
         f"{field}: {persona[field]}" for field in PERSONA_FIELDS if field in persona
     ]
@@ -248,22 +296,7 @@ def render_demographics_block(persona: dict[str, Any]) -> str:
         for field, value in persona.items()
         if field not in PERSONA_FIELDS and not isinstance(value, dict)
     )
-    return "\n".join(lines)
-
-
-def render_extended_block(persona: dict[str, Any]) -> str:
-    """Render one persona with its behavioral measures, if any are present.
-
-    The demographics block always comes first (it skips missing demographic
-    fields the same way render_demographics_block does, so a partial persona
-    never crashes here). Every measure the persona carries becomes a
-    "name: score (P<pct> percentile)" line with an immediately following
-    "<note: ...>" line explaining the scale; measures the persona lacks are
-    skipped silently, so a persona with no measures renders exactly the
-    demographics block.
-    """
-    lines = render_demographics_block(persona).splitlines()
-    for name in BEHAVIORAL_MEASURES:
+    for name in BEHAVIORAL_MEASURES[: _DEPTH_MEASURE_COUNTS[depth]]:
         measure = persona.get(name)
         if not isinstance(measure, dict):
             continue
@@ -276,6 +309,29 @@ def render_extended_block(persona: dict[str, Any]) -> str:
         )
         lines.append(_MEASURE_NOTES[name])
     return "\n".join(lines)
+
+
+def render_demographics_block(persona: dict[str, Any]) -> str:
+    """Return one "field: value" line per field the demographics tier shows.
+
+    A thin wrapper over render_persona_fields at the "demographics" tier, so
+    callers that name that tier directly (partial personas included) keep the
+    exact same rendering. A persona with none of the canonical fields
+    renders an empty string, as before.
+    """
+    if not any(field in persona for field in PERSONA_FIELDS):
+        return ""
+    return render_persona_fields(persona, "demographics")
+
+
+def render_extended_block(persona: dict[str, Any]) -> str:
+    """Render one persona at max depth: demographics plus every measure.
+
+    A thin wrapper over render_persona_fields at the "risk_preference" tier.
+    Measures the persona lacks are skipped silently, so a persona with no
+    measures renders exactly its demographics block.
+    """
+    return render_persona_fields(persona, "risk_preference")
 
 
 def _canonical_key(persona: dict[str, Any]) -> tuple[tuple[str, Any], ...]:
