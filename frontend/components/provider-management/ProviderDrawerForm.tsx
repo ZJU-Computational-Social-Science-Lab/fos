@@ -125,7 +125,11 @@ export function ProviderDrawerForm({
                 ) : null}
 
                 {providerPickerStep === "compatible" ? (
-                  <div className="provider-type-picker__menu" role="listbox" aria-label="OpenAI-compatible providers">
+                  <div
+                    className="provider-type-picker__menu"
+                    role="listbox"
+                    aria-label={t("settings.providers.providerForm.openaiCompatibleProviders")}
+                  >
                     {COMPATIBLE_PROVIDERS.map((compatibleProvider) => (
                       <button
                         key={compatibleProvider}
