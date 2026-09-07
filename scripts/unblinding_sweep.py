@@ -19,6 +19,9 @@ What each function does:
     _safe_model_name(model)       - Make a model id safe to use in a file name.
     _parse_levels(text)           - Read a comma list of price percentages.
     _parse_covariates(text)       - Read a comma list of covariate kinds.
+    _load_personas_by_product(...) - Read one JSONL persona file per product
+                                     into the run_persona_sweep shape.
+    _normalize_name(text)          - Fold a product name into a file-safe key.
     _load_products(path)          - Read the products file (either shape).
     _resolve_products_path(value) - Find the products file, also relative to
                                     the repository root.
@@ -45,6 +48,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 import sys
 import time
 import urllib.request
@@ -58,10 +62,14 @@ _SRC_DIR = _REPO_ROOT / "src"
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
-from fos.experiments.randomization import RandomizationDesign  # noqa: E402
+from fos.experiments.randomization import (  # noqa: E402
+    RandomizationDesign,
+    covariate_count_for_depth,
+)
 from fos.experiments.sweep_kit import (  # noqa: E402
     aggregate_demand,
     run_diagnostic,
+    run_persona_sweep,
     run_sweep,
     summarize_confounding,
     write_manifest,
@@ -73,6 +81,9 @@ DEFAULT_PRODUCTS = "data/configs/unblinding_products.json"
 DEFAULT_OUT = "results/unblinding"
 DEFAULT_BASE_URL = "http://127.0.0.1:8080"
 COVARIATE_KINDS = ("last_price", "competing_price", "expiry_days")
+
+# Persona-mode defaults (paper step B: one survey per embodied customer).
+DEFAULT_PERSONAS_PER_PRODUCT = 500
 
 # How long to sleep between health polls while a model loads.
 _HEALTH_POLL_SECONDS = 5
@@ -91,7 +102,10 @@ def main(argv: list[str] | None = None) -> int:
     Parses the flags, checks the server is reachable (exit code 2 with a
     clear message when it is not), runs the demand sweep for every requested
     blinding condition, optionally runs the confounding diagnostic, saves all
-    results under the --out directory, and writes a JSON run manifest.
+    results under the --out directory, and writes a JSON run manifest. When
+    --persona-depth is not "none" and --personas-dir is given, the sweep is
+    the persona sweep: one temperature-0.0 survey per (product x price level
+    x persona) with the persona block rendered into the prompt.
     """
     args = _parse_args(argv)
     started = datetime.now(timezone.utc).isoformat()
@@ -111,7 +125,27 @@ def main(argv: list[str] | None = None) -> int:
     if not products:
         print("error: the products file lists no products", file=sys.stderr)
         return 1
-    design = _build_design(levels, scope, args.seed, covariates)
+    persona_mode = args.persona_depth != "none"
+    if persona_mode and not args.personas_dir:
+        print(
+            "error: --persona-depth needs --personas-dir with one JSONL "
+            "persona file per product",
+            file=sys.stderr,
+        )
+        return 1
+    design = _build_design(levels, scope, args.seed, covariates, args.persona_depth)
+    personas_by_product: dict[str, dict[str, Any]] = {}
+    if persona_mode:
+        personas_by_product = _load_personas_by_product(
+            args.personas_dir, products, args.personas_per_product
+        )
+        if not personas_by_product:
+            print(
+                f"error: no persona file matched any product under "
+                f"{args.personas_dir!r}",
+                file=sys.stderr,
+            )
+            return 1
     safe_model = _safe_model_name(args.model)
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -162,15 +196,31 @@ def main(argv: list[str] | None = None) -> int:
 
     multi = len(scope) > 1
     for blinding in scope:
-        records = run_sweep(
-            design,
-            products,
-            args.model,
-            chat_fn,
-            draws=draws,
-            blinding=blinding,
-            seed=args.seed,
-        )
+        if persona_mode:
+            records, skipped_empty = run_persona_sweep(
+                design,
+                personas_by_product,
+                args.model,
+                chat_fn,
+                blinding=blinding,
+                persona_depth=args.persona_depth,
+                seed=args.seed,
+            )
+            if skipped_empty:
+                print(
+                    f"note: skipped {skipped_empty} empty persona(s)",
+                    file=sys.stderr,
+                )
+        else:
+            records = run_sweep(
+                design,
+                products,
+                args.model,
+                chat_fn,
+                draws=draws,
+                blinding=blinding,
+                seed=args.seed,
+            )
         base = out_dir / f"{safe_model}_{blinding}"
         _write_records(base, records)
         print(f"wrote {base}.jsonl and {base}.csv ({len(records)} records)")
@@ -192,12 +242,15 @@ def main(argv: list[str] | None = None) -> int:
                 diagnostic_file,
             )
     finished = datetime.now(timezone.utc).isoformat()
+    # A single-condition run keeps the flat manifest layout; only a
+    # multi-condition run gets blinding_scope + per-condition designs.
+    manifest_blinding: str | list[str] = scope[0] if len(scope) == 1 else scope
     write_manifest(
         out_dir / "manifest.json",
         design,
         args.model,
         draws,
-        scope,
+        manifest_blinding,
         products,
         args.base_url,
         extra={
@@ -269,6 +322,26 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="comma list of covariate kinds to probe",
     )
     parser.add_argument(
+        "--persona-depth",
+        choices=("none", "demographics", "extended"),
+        default="none",
+        help="how deep the persona block goes: 'none' runs the plain price "
+        "sweep, 'demographics' and 'extended' run the persona sweep "
+        "(default: %(default)s)",
+    )
+    parser.add_argument(
+        "--personas-dir",
+        default="",
+        help="directory holding one JSONL persona file per product "
+        "(needed when --persona-depth is not 'none')",
+    )
+    parser.add_argument(
+        "--personas-per-product",
+        type=int,
+        default=DEFAULT_PERSONAS_PER_PRODUCT,
+        help="personas to keep per product in persona mode (default: %(default)s)",
+    )
+    parser.add_argument(
         "--smoke",
         action="store_true",
         help="plumbing check: one product, one draw",
@@ -307,6 +380,57 @@ def _parse_covariates(text: str) -> list[str]:
     return [piece.strip() for piece in text.split(",") if piece.strip()]
 
 
+def _normalize_name(text: str) -> str:
+    """Fold a product name into a file-safe matching key.
+
+    Everything that is not a letter or digit becomes an underscore and the
+    whole name is lowercased, so "Coca-Cola Soda Pop, 12 fl oz" and its
+    persona file name "coca_cola_soda_pop_12_fl_oz..." normalize alike.
+    """
+    return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
+
+
+def _load_personas_by_product(
+    personas_dir: str, products: list[dict[str, Any]], per_product: int
+) -> dict[str, dict[str, Any]]:
+    """Read one JSONL persona file per product into the sweep shape.
+
+    Each product's personas live in a *.jsonl file inside personas_dir whose
+    stem normalizes to the product name (see _normalize_name). Every non-empty
+    line of that file is one persona dict, capped at per_product personas per
+    product. Returns the run_persona_sweep map {product: {"category",
+    "regular_price", "personas"}}; a product whose file is missing is simply
+    left out, so a personas directory covering only part of the product list
+    still produces a run over the covered products.
+    """
+    pool_dir = Path(personas_dir)
+    files_by_stem = {
+        _normalize_name(path.stem): path for path in pool_dir.glob("*.jsonl")
+    }
+    by_product: dict[str, dict[str, Any]] = {}
+    for product in products:
+        match = files_by_stem.get(_normalize_name(product["product"]))
+        if match is None:
+            continue
+        personas: list[dict[str, Any]] = []
+        with match.open(encoding="utf-8") as handle:
+            for line in handle:
+                if not line.strip():
+                    continue
+                parsed = json.loads(line)
+                if isinstance(parsed, dict):
+                    personas.append(parsed)
+                if len(personas) >= per_product:
+                    break
+        if personas:
+            by_product[product["product"]] = {
+                "category": product["category"],
+                "regular_price": product["regular_price"],
+                "personas": personas,
+            }
+    return by_product
+
+
 def _load_products(path: Path) -> list[dict[str, Any]]:
     """Read the products file, accepting either a bare list or an object.
 
@@ -340,8 +464,14 @@ def _build_design(
     scope: list[str],
     seed: int | None,
     covariates: list[str],
+    persona_depth: str = "none",
 ) -> RandomizationDesign:
-    """Build the price randomization design the sweep runs on."""
+    """Build the price randomization design the sweep runs on.
+
+    When persona mode is on (persona_depth is not "none") the design carries
+    that depth and the covariate count its prompt pins, so stored records and
+    manifests describe the run honestly.
+    """
     blinding = scope[0] if len(scope) == 1 else "unblinded"
     return RandomizationDesign(
         variable="price",
@@ -354,6 +484,8 @@ def _build_design(
         blinding=blinding,
         seed=seed,
         covariates_specified=list(covariates),
+        persona_depth=persona_depth,
+        covariate_count=covariate_count_for_depth(persona_depth),
     )
 
 

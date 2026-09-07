@@ -58,7 +58,8 @@
     },
     "randomization": {
       "unsupported_distribution": "Unsupported randomization distribution: {distribution}",
-      "unsupported_expected": "expected must be one of: {supported}"
+      "unsupported_expected": "expected must be one of: {supported}",
+      "unsupported_persona_depth": "Unsupported persona depth: {depth}; choose one of: {supported}"
     },
     "sweep_kit": {
       "unsupported_fillin_kind": "Unsupported covariate fill-in kind: {kind}"
