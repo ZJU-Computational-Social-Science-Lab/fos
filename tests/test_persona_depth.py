@@ -1,10 +1,12 @@
-# RED-phase tests for the persona_depth experiment axis and three audit-trail
-# fixes on the Gui & Toubia (2025) unblinding kit. Nothing here exists yet,
-# so every test FAILS today. Locked in:
+# Contract tests for the persona_depth experiment axis and three audit-trail
+# fixes on the Gui & Toubia (2025) unblinding kit. The persona axis has FIVE
+# depth tiers (design change: it used to stop at three, "extended"): none,
+# demographics, tightwad, time_preference, risk_preference. Locked in:
 #   1. RandomizationDesign gains persona_depth ("none"|"demographics"|
-#      "extended", anything else raises ValueError) and covariate_count int,
-#      both round-tripped through to_json/from_json; a "none" depth leaves
-#      render_unblinding unchanged.
+#      "tightwad"|"time_preference"|"risk_preference", anything else — the
+#      superseded "extended" included — raises ValueError) and covariate_count
+#      int, both round-tripped through to_json/from_json; a "none" depth
+#      leaves render_unblinding unchanged.
 #   2. run_sweep records fix the design-blinding bug (the stored design JSON
 #      carries the blinding the run actually used, both directions) and add
 #      persona_depth, covariate_count, the exact system/user prompts sent and
@@ -18,11 +20,13 @@
 #      user prompt contains the rendered persona fields. CONTRACT CHOICE
 #      (mine): it returns (records, skipped_empty) where skipped_empty counts
 #      empty-dict personas that got no chat call.
-#   6. covariate_count_for_depth maps none->0, demographics->11, extended->14
-#      (11 demographics + 3 behavioral); canonical home randomization.py.
+#   6. covariate_count_for_depth maps none->0, demographics->11, tightwad->12,
+#      time_preference->14, risk_preference->16 (11 demographics plus the
+#      behavioral measures that tier adds); canonical home randomization.py.
 #   7. scripts/unblinding_sweep.py accepts --persona-depth {none,demographics,
-#      extended} (default none), --personas-dir, --personas-per-product
-#      (default 500); importing the script stays socket-free.
+#      tightwad,time_preference,risk_preference} (default none), --personas-dir,
+#      --personas-per-product (default 500); importing the script stays
+#      socket-free.
 #
 # The two new functions (run_persona_sweep, covariate_count_for_depth) are
 # reached through their module objects so each test fails on its own instead
@@ -114,17 +118,25 @@ class TestRandomizationDesignPersonaDepth:
         )
         assert design.persona_depth == "none"
         assert design.covariate_count == 0 and isinstance(design.covariate_count, int)
-        extended = _price_design(persona_depth="extended", covariate_count=14)
-        assert isinstance(extended.covariate_count, int)
-        assert extended.covariate_count == 14
+        deep = _price_design(persona_depth="risk_preference", covariate_count=16)
+        assert isinstance(deep.covariate_count, int)
+        assert deep.covariate_count == 16
 
     def test_design_accepts_every_valid_persona_depth(self):
-        for depth in ("none", "demographics", "extended"):
+        for depth in (
+            "none",
+            "demographics",
+            "tightwad",
+            "time_preference",
+            "risk_preference",
+        ):
             assert _price_design(persona_depth=depth).persona_depth == depth
 
     def test_design_rejects_an_unknown_persona_depth(self):
-        with pytest.raises(ValueError):
-            _price_design(persona_depth="occluded")
+        # "extended" was the superseded third tier; it must no longer parse.
+        for depth in ("extended", "deep", "occluded"):
+            with pytest.raises(ValueError):
+                _price_design(persona_depth=depth)
 
     def test_to_json_and_from_json_round_trip_persona_depth_and_count(self):
         design = _price_design(persona_depth="demographics", covariate_count=11, seed=5)
@@ -193,11 +205,14 @@ class TestRunSweepPersonaDepth:
             assert record["design"]["blinding"] == "unblinded"
 
     def test_run_sweep_records_stamp_persona_depth_and_its_covariate_count(self):
-        # The record must carry the depth actually used (default "none" too).
+        # The record must carry the depth actually used (default "none" too),
+        # with the covariate count of the new five-tier map.
         for kwargs, depth, count in (
             ({}, "none", 0),
             ({"persona_depth": "demographics"}, "demographics", 11),
-            ({"persona_depth": "extended"}, "extended", 14),
+            ({"persona_depth": "tightwad"}, "tightwad", 12),
+            ({"persona_depth": "time_preference"}, "time_preference", 14),
+            ({"persona_depth": "risk_preference"}, "risk_preference", 16),
         ):
             chat = _FakeChat()
             records = self._run(_price_design(), chat, draws=2, **kwargs)
@@ -318,14 +333,20 @@ class TestRunDiagnosticProductCategory:
 
 class TestCovariateCountForDepth:
     def test_covariate_count_for_depth_maps_each_valid_depth_to_its_count(self):
-        # 11 demographics covariates, extended adds 3 behavioral ones (14).
+        # 11 demographics covariates, then one/two measures per deeper tier:
+        # tightwad adds 1 (12), time_preference adds 2 more (14), and
+        # risk_preference adds the last two behavioral measures (16).
         assert randomization_mod.covariate_count_for_depth("none") == 0
         assert randomization_mod.covariate_count_for_depth("demographics") == 11
-        assert randomization_mod.covariate_count_for_depth("extended") == 14
+        assert randomization_mod.covariate_count_for_depth("tightwad") == 12
+        assert randomization_mod.covariate_count_for_depth("time_preference") == 14
+        assert randomization_mod.covariate_count_for_depth("risk_preference") == 16
 
     def test_covariate_count_for_depth_rejects_an_unknown_depth(self):
-        with pytest.raises(ValueError):
-            randomization_mod.covariate_count_for_depth("mystery")
+        # "extended" was the superseded third tier; it must no longer map.
+        for depth in ("mystery", "deep", "extended"):
+            with pytest.raises(ValueError):
+                randomization_mod.covariate_count_for_depth(depth)
 
 
 # 6. run_persona_sweep
@@ -399,22 +420,34 @@ class TestRunPersonaSweep:
             assert persona["occupation"] in user
 
     def test_run_persona_sweep_records_carry_persona_index_and_depth_metadata(self):
-        design = _price_design()
-        chat = _FakeChat()
-        records, _skipped = self._run(design, chat, persona_depth="extended")
-        per_product = {}
-        for record in records:
-            per_product.setdefault(record["product"], []).append(record)
-        cola = _products()[0]["product"]
-        chips = _products()[1]["product"]
-        for record in per_product[cola]:
-            assert record["persona"] == _ALICE
-            assert record["persona_index"] == 0
-        by_index = {r["persona_index"]: r["persona"] for r in per_product[chips]}
-        assert by_index == {0: _BOB, 1: _ALICE}
-        assert all(r["persona_depth"] == "extended" for r in records)
-        assert all(isinstance(r["covariate_count"], int) for r in records)
-        assert all(r["covariate_count"] == 14 for r in records)
+        # Every non-none tier is accepted end-to-end and stamps each record
+        # with the depth used and the covariate count its field set pins
+        # (records track the new five-tier map). Partial personas (three
+        # fields, no measures) must keep rendering at every tier too.
+        for depth, count in (
+            ("demographics", 11),
+            ("tightwad", 12),
+            ("time_preference", 14),
+            ("risk_preference", 16),
+        ):
+            design = _price_design()
+            chat = _FakeChat()
+            records, _skipped = self._run(design, chat, persona_depth=depth)
+            per_product = {}
+            for record in records:
+                per_product.setdefault(record["product"], []).append(record)
+            cola = _products()[0]["product"]
+            chips = _products()[1]["product"]
+            for record in per_product[cola]:
+                assert record["persona"] == _ALICE
+                assert record["persona_index"] == 0
+            by_index = {
+                r["persona_index"]: r["persona"] for r in per_product[chips]
+            }
+            assert by_index == {0: _BOB, 1: _ALICE}
+            assert all(r["persona_depth"] == depth for r in records)
+            assert all(isinstance(r["covariate_count"], int) for r in records)
+            assert all(r["covariate_count"] == count for r in records)
 
     def test_run_persona_sweep_fixes_the_design_blinding_like_run_sweep(self):
         design = _price_design(blinding="unblinded")
@@ -494,29 +527,39 @@ class TestUnblindingSweepPersonaFlags:
 
     def test_parser_accepts_the_persona_flags_with_values_and_defaults(self):
         module = _load_sweep_script()
-        args = module._parse_args(
-            [
-                "--model",
-                "qwen3-8b",
-                "--persona-depth",
-                "demographics",
-                "--personas-dir",
-                "personas/2026-09",
-                "--personas-per-product",
-                "100",
-            ]
-        )
-        assert args.persona_depth == "demographics"
-        assert args.personas_dir == "personas/2026-09"
-        assert args.personas_per_product == 100
+        # Every one of the five depth tiers parses (default "none" included).
+        for depth in (
+            "none",
+            "demographics",
+            "tightwad",
+            "time_preference",
+            "risk_preference",
+        ):
+            args = module._parse_args(
+                [
+                    "--model",
+                    "qwen3-8b",
+                    "--persona-depth",
+                    depth,
+                    "--personas-dir",
+                    "personas/2026-09",
+                    "--personas-per-product",
+                    "100",
+                ]
+            )
+            assert args.persona_depth == depth
+            assert args.personas_dir == "personas/2026-09"
+            assert args.personas_per_product == 100
         defaults = module._parse_args(["--model", "qwen3-8b"])
         assert defaults.persona_depth == "none"
         assert defaults.personas_per_product == 500
 
     def test_parser_rejects_an_unknown_persona_depth_value(self):
         module = _load_sweep_script()
-        with pytest.raises(SystemExit):
-            module._parse_args(["--model", "x", "--persona-depth", "bananas"])
+        # "extended" was the superseded third tier; the CLI must reject it too.
+        for depth in ("bananas", "deep", "extended"):
+            with pytest.raises(SystemExit):
+                module._parse_args(["--model", "x", "--persona-depth", depth])
 
     def test_importing_the_script_with_persona_flags_never_opens_a_socket(self):
         def _forbid_socket(*_args, **_kwargs):
