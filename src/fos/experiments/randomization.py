@@ -22,6 +22,9 @@ Gui & Toubia (2025) comparison. It holds:
 - check_non_response: does the outcome ignore the treatment entirely?
 - count_specified_covariates: heuristic count of key: value persona pairs.
 - lint_covariate_count: warn/flag tiers for too many specified covariates.
+- covariate_count_for_depth: map a persona depth ("none", "demographics",
+  "extended") onto how many covariates that depth pins in the prompt.
+- COVARIATE_COUNT_FOR_DEPTH: the module-level table behind that mapping.
 """
 
 from __future__ import annotations
@@ -51,6 +54,12 @@ _STEP_JUMP_RATIO = 3.0
 _MILD_RHO = 0.2
 _SEVERE_RHO = 0.5
 
+# How many covariates each persona depth pins in the survey prompt (paper
+# Fig. 5 tiers): "none" adds no persona block at all, "demographics" pins the
+# 11 demographic fields, and "extended" adds the 3 behavioral measures on top
+# (14 in total).
+COVARIATE_COUNT_FOR_DEPTH = {"none": 0, "demographics": 11, "extended": 14}
+
 
 @dataclass(frozen=True)
 class RandomizationDesign:
@@ -68,6 +77,11 @@ class RandomizationDesign:
         seed: optional design-level seed, kept as metadata for storage.
         blind_to_randomization: True when the subject never sees the design.
         covariates_specified: persona covariates the prompt pins down.
+        persona_depth: how deep the persona block goes: "none" (no block),
+            "demographics" (11 demographic fields) or "extended" (those plus
+            the 3 behavioral measures). Anything else raises ValueError.
+        covariate_count: how many covariates the chosen depth pins (0, 11 or
+            14), kept as explicit metadata so stored records self-describe.
     """
 
     variable: str
@@ -81,6 +95,25 @@ class RandomizationDesign:
     seed: int | None = None
     blind_to_randomization: bool = True
     covariates_specified: list[str] = field(default_factory=list)
+    persona_depth: str = "none"
+    covariate_count: int = 0
+
+    def __post_init__(self) -> None:
+        """Reject an unknown persona depth at construction time.
+
+        Only "none", "demographics" and "extended" are legal values; a typo
+        such as "occluded" must fail loudly instead of silently producing a
+        run that never renders a persona block. The error text goes through
+        T() so it stays localizable like every other error here.
+        """
+        if self.persona_depth not in COVARIATE_COUNT_FOR_DEPTH:
+            raise ValueError(
+                T(
+                    "error.randomization.unsupported_persona_depth",
+                    depth=repr(self.persona_depth),
+                    supported=", ".join(sorted(COVARIATE_COUNT_FOR_DEPTH)),
+                )
+            )
 
     def sample(self, rng: random.Random) -> float:
         """Draw one treatment value inside the support.
@@ -143,6 +176,8 @@ class RandomizationDesign:
             "seed": self.seed,
             "blind_to_randomization": self.blind_to_randomization,
             "covariates_specified": list(self.covariates_specified),
+            "persona_depth": self.persona_depth,
+            "covariate_count": self.covariate_count,
         }
 
     @classmethod
@@ -154,6 +189,25 @@ class RandomizationDesign:
         """
         known = {item.name for item in fields(cls)}
         return cls(**{key: value for key, value in data.items() if key in known})
+
+
+def covariate_count_for_depth(depth: str) -> int:
+    """Return how many covariates one persona depth pins in the prompt.
+
+    "none" pins nothing (0), "demographics" pins the 11 demographic fields,
+    and "extended" adds the 3 behavioral measures on top (14). An unknown
+    depth raises ValueError so a typo never silently runs with the wrong
+    covariate budget.
+    """
+    if depth not in COVARIATE_COUNT_FOR_DEPTH:
+        raise ValueError(
+            T(
+                "error.randomization.unsupported_persona_depth",
+                depth=repr(depth),
+                supported=", ".join(sorted(COVARIATE_COUNT_FOR_DEPTH)),
+            )
+        )
+    return COVARIATE_COUNT_FOR_DEPTH[depth]
 
 
 # ── Spearman correlation with a bootstrap CI ────────────────────────────────

@@ -40,6 +40,10 @@ What each function does:
     run_sweep(...)                         - Runs the full demand sweep
                                              (products x levels x draws) under
                                              one blinding condition.
+    run_persona_sweep(...)                 - Persona sweep: one chat call per
+                                             (product x level x persona) at
+                                             temperature 0.0, rendering the
+                                             persona block into the prompt.
     run_diagnostic(...)                    - Runs the confounding diagnostic
                                              (products x levels x covariate
                                              kinds x draws) under one blinding
@@ -53,19 +57,33 @@ What each function does:
 
 from __future__ import annotations
 
+import hashlib
 import json
 import random
 import re
 import time
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from fos.experiments.randomization import RandomizationDesign, check_confounding
+from fos.experiments.randomization import (
+    RandomizationDesign,
+    check_confounding,
+    covariate_count_for_depth,
+)
 from fos.i18n import T
 
 # The paper fixes temperature at 1.0 and draws each response independently.
 _TEMPERATURE = 1.0
+
+# Paper step B: persona sweeps fix temperature at 0.0 on every call, because
+# the heterogeneity must come from the personas, not from sampling noise.
+_PERSONA_TEMPERATURE = 0.0
+
+# Separator between the system and user prompt halves when hashing them; the
+# record's prompt_sha256 is sha256(system + this + user).
+_PROMPT_SEPARATOR = "\x1e"
 
 # Prompt text of one number, one blank: the customer fill task stays identical
 # in the blinded and unblinded conditions; only the surrounding paragraph varies.
@@ -312,14 +330,26 @@ def build_record(
     parsed: bool | None,
     elapsed_seconds: float,
     seed: int | None,
+    *,
+    persona_depth: str = "none",
+    covariate_count: int = 0,
+    system_prompt: str = "",
+    user_prompt: str = "",
 ) -> dict[str, Any]:
     """Build one self-describing record for a single chat call.
 
     The record always carries the design (as JSON), the treatment value, the
     blinding condition, model, product and category, the model's raw answer,
     its parsed purchase decision, the wall-clock seconds the call took, the
-    seed, and whether the call succeeded (that is, whether the answer parsed).
-    A clean "not purchase" therefore succeeds; an unparsed answer does not.
+    seed, and whether the call succeeded (that is, whether the answer
+    parsed). A clean "not purchase" therefore succeeds; an unparsed answer
+    does not.
+
+    The optional persona and prompt fields complete the audit trail: the
+    persona depth used, how many covariates that depth pins, the exact system
+    and user prompts sent to the chat function, and prompt_sha256 (the sha256
+    hex digest of system + "\x1e" + user) so a stored record can later be
+    proven to match the prompts that produced it.
     """
     return {
         "design": design.to_json(),
@@ -333,6 +363,13 @@ def build_record(
         "elapsed_seconds": elapsed_seconds,
         "succeeded": parsed is not None,
         "seed": seed,
+        "persona_depth": persona_depth,
+        "covariate_count": covariate_count,
+        "system_prompt": system_prompt,
+        "user_prompt": user_prompt,
+        "prompt_sha256": hashlib.sha256(
+            (system_prompt + _PROMPT_SEPARATOR + user_prompt).encode("utf-8")
+        ).hexdigest(),
     }
 
 
@@ -344,6 +381,7 @@ def run_sweep(
     draws: int = 1,
     blinding: str | None = None,
     seed: int | None = None,
+    persona_depth: str = "none",
 ) -> list[dict[str, Any]]:
     """Run the demand sweep: one chat call per product, level and draw.
 
@@ -354,8 +392,17 @@ def run_sweep(
     design draws fresh values from the seeded internal generator. Each call
     becomes one build_record row whose treatment value stays inside the
     design's support.
+
+    The stored design inside every record is the design with blinding set to
+    the condition this run actually used (the run-level blinding wins over
+    the design's own), so a "blinded" run can never leave an "unblinded"
+    design behind in its own records. persona_depth names how deep the
+    persona block of the study goes; its covariate_count is stamped on every
+    record alongside the exact system and user prompts sent.
     """
     mode = design.blinding if blinding is None else blinding
+    stored_design = replace(design, blinding=mode)
+    covariate_count = covariate_count_for_depth(persona_depth)
     system = _system_prompt(design, mode)
     rng = _seeded_rng(design, seed)
     levels = design.grid()
@@ -381,7 +428,7 @@ def run_sweep(
                 elapsed = time.monotonic() - started
                 records.append(
                     build_record(
-                        design,
+                        stored_design,
                         mode,
                         model,
                         product["product"],
@@ -391,9 +438,136 @@ def run_sweep(
                         parse_purchase(raw),
                         elapsed,
                         seed,
+                        persona_depth=persona_depth,
+                        covariate_count=covariate_count,
+                        system_prompt=system,
+                        user_prompt=user,
                     )
                 )
     return records
+
+
+def _persona_renderer(persona_depth: str) -> Callable[[dict[str, Any]], str] | None:
+    """Return the sibling personas module's renderer for one persona depth.
+
+    The import is deliberately deferred to call time: the sibling module
+    src/fos/experiments/personas.py lands on main separately, so importing it
+    at module import time would make sweep_kit unimportable in the meantime.
+    A "none" depth needs no renderer and never touches the module; the
+    demographics and extended depths return that module's block renderers.
+    """
+    if persona_depth == "none":
+        return None
+    from fos.experiments import personas  # noqa: PLC0415 - deferred sibling import
+
+    if persona_depth == "demographics":
+        return personas.render_demographics_block
+    return personas.render_extended_block
+
+
+def _persona_user_prompt(
+    category: str,
+    product: str,
+    price: float,
+    renderer: Callable[[dict[str, Any]], str] | None,
+    persona: dict[str, Any],
+) -> str:
+    """Return the purchase survey with the persona block rendered in front.
+
+    The rendered block names the embodied customer (age, city, occupation and
+    the rest of the persona fields); the survey itself stays byte-identical
+    to the plain sweep's so only the persona text differs. A depth with no
+    block (or a renderer that produces nothing) returns the plain survey.
+    """
+    survey = build_purchase_user_prompt(category, product, price)
+    if renderer is None:
+        return survey
+    block = renderer(persona)
+    if not block:
+        return survey
+    return f"EMBODY THIS PERSON:\n{block}\n\n{survey}"
+
+
+def run_persona_sweep(
+    design: RandomizationDesign,
+    personas_by_product: dict[str, dict[str, Any]],
+    model: str,
+    chat_fn: ChatFn,
+    blinding: str | None = None,
+    persona_depth: str = "none",
+    seed: int | None = None,
+) -> tuple[list[dict[str, Any]], int]:
+    """Run the persona demand sweep: one chat call per product, level, persona.
+
+    personas_by_product maps a product name to {"category", "personas"} (and
+    optionally "regular_price"): each embodied persona is a dict whose fields
+    are rendered into the user prompt by the sibling personas module (see
+    _persona_renderer). Every call runs at temperature 0.0 (paper step B: the
+    heterogeneity comes from the personas, not from sampling).
+
+    Returns (records, skipped_empty): one record per (product x level x
+    persona) call and the count of empty-dict personas that were skipped
+    without a chat call. Records carry the standard sweep keys plus the
+    persona dict, its 0-based index inside the product's persona list, the
+    persona depth and its covariate count; the stored design carries the
+    blinding this run actually used (the same fix as run_sweep).
+    """
+    mode = design.blinding if blinding is None else blinding
+    stored_design = replace(design, blinding=mode)
+    covariate_count = covariate_count_for_depth(persona_depth)
+    renderer = _persona_renderer(persona_depth)
+    system = _system_prompt(design, mode)
+    rng = _seeded_rng(design, seed)
+    levels = design.grid()
+    records: list[dict[str, Any]] = []
+    skipped_empty = 0
+    for product_name, info in personas_by_product.items():
+        category = info["category"]
+        regular_price = info.get("regular_price")
+        for persona_index, persona in enumerate(info["personas"]):
+            if not persona:
+                skipped_empty += 1
+                continue
+            for level in levels:
+                value = (
+                    level
+                    if design.distribution == "grid"
+                    else rng.uniform(design.min_value, design.max_value)
+                )
+                if regular_price is not None:
+                    price = _price_for_level(regular_price, value)
+                else:
+                    price = value
+                user = _persona_user_prompt(
+                    category, product_name, price, renderer, persona
+                )
+                messages = [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ]
+                started = time.monotonic()
+                raw = chat_fn(messages, _PERSONA_TEMPERATURE)
+                elapsed = time.monotonic() - started
+                record = build_record(
+                    stored_design,
+                    mode,
+                    model,
+                    product_name,
+                    category,
+                    value,
+                    raw,
+                    parse_purchase(raw),
+                    elapsed,
+                    seed,
+                    persona_depth=persona_depth,
+                    covariate_count=covariate_count,
+                    system_prompt=system,
+                    user_prompt=user,
+                )
+                record["persona"] = persona
+                record["persona_index"] = persona_index
+                records.append(record)
+    return records, skipped_empty
 
 
 def run_diagnostic(
@@ -410,9 +584,11 @@ def run_diagnostic(
     For each product, level and covariate kind the model gets draws chat calls
     that ask it to fill in that one covariate given the current price. Every
     successfully parsed answer becomes a flat record {design.variable: level,
-    kind: filled number} — the exact shape randomization.check_confounding
-    consumes. Answers that do not parse to a number are dropped, because a
-    missing value cannot be correlated with the treatment.
+    kind: filled number} plus the product and category being probed — the
+    shape randomization.check_confounding consumes (its numeric keys), with
+    the product columns kept so within-product correlation stays possible.
+    Answers that do not parse to a number are dropped, because a missing
+    value cannot be correlated with the treatment.
     """
     mode = design.blinding if blinding is None else blinding
     system = _system_prompt(design, mode)
@@ -439,23 +615,40 @@ def run_diagnostic(
                     raw = chat_fn(messages, _TEMPERATURE)
                     filled = parse_fillin_number(raw)
                     if filled is not None:
-                        records.append({design.variable: value, kind: filled})
+                        records.append(
+                            {
+                                design.variable: value,
+                                kind: filled,
+                                "product": product["product"],
+                                "category": product["category"],
+                            }
+                        )
     return records
 
 
 def summarize_confounding(
     records: list[dict[str, Any]], design: RandomizationDesign
 ) -> dict[str, dict[str, float | str]]:
-    """Summarize confounding for every covariate kind present in the records.
+    """Summarize confounding for every numeric covariate kind in the records.
 
     Each record must hold the treatment under design.variable and one or more
-    covariate keys. Kinds are inferred as every record key other than the
-    design variable. Each kind is correlated with the treatment through
-    randomization.check_confounding, so the report carries rho, its bootstrap
-    confidence interval, and the ok/mild/severe flag — never a p-value.
+    numeric covariate keys. Kinds are inferred as every numeric record key
+    other than the design variable — non-numeric context columns (product,
+    category, and the like) are ignored because a string column cannot be
+    rank-correlated with the treatment. Each kind is correlated with the
+    treatment through randomization.check_confounding, so the report carries
+    rho, its bootstrap confidence interval, and the ok/mild/severe flag —
+    never a p-value.
     """
     kinds = sorted(
-        {key for record in records for key in record if key != design.variable}
+        {
+            key
+            for record in records
+            for key, value in record.items()
+            if key != design.variable
+            and isinstance(value, (int, float))
+            and not isinstance(value, bool)
+        }
     )
     summary: dict[str, dict[str, float | str]] = {}
     for kind in kinds:
@@ -469,26 +662,47 @@ def write_manifest(
     design: RandomizationDesign,
     model: str,
     draws: int,
-    blinding: str,
+    blinding: str | list[str],
     products: list[dict[str, Any]],
     base_url: str,
     extra: dict[str, Any] | None = None,
 ) -> Path:
     """Write a JSON run manifest describing one sweep, then return its path.
 
-    The manifest stores the design JSON, the run metadata, an ISO-8601
-    written-at timestamp, and any extra keys merged at the top level. It never
-    shells out (no git SHA, no network) so it works offline and in tests.
+    A single-condition run stores the design JSON and the blinding string. A
+    multi-condition run (blinding as a list, as the CLI passes for "both")
+    stores blinding_scope and one design per condition under "designs", each
+    entry's blinding matching its key — a "both" run can no longer leave one
+    unblinded design describing both conditions. Both layouts keep the run
+    metadata, an ISO-8601 written-at timestamp, and any extra keys merged at
+    the top level. It never shells out (no git SHA, no network) so it works
+    offline and in tests.
     """
-    payload: dict[str, Any] = {
-        "design": design.to_json(),
-        "model": model,
-        "draws": draws,
-        "blinding": blinding,
-        "products": products,
-        "base_url": base_url,
-        "written_at": datetime.now(timezone.utc).isoformat(),
-    }
+    written_at = datetime.now(timezone.utc).isoformat()
+    if isinstance(blinding, str):
+        payload: dict[str, Any] = {
+            "design": design.to_json(),
+            "model": model,
+            "draws": draws,
+            "blinding": blinding,
+            "products": products,
+            "base_url": base_url,
+            "written_at": written_at,
+        }
+    else:
+        scope = list(blinding)
+        payload = {
+            "blinding_scope": scope,
+            "designs": {
+                condition: replace(design, blinding=condition).to_json()
+                for condition in scope
+            },
+            "model": model,
+            "draws": draws,
+            "products": products,
+            "base_url": base_url,
+            "written_at": written_at,
+        }
     if extra:
         payload.update(extra)
     target = Path(path)
