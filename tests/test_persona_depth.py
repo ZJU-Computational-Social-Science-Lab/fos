@@ -59,7 +59,7 @@ def _price_design(**overrides):
         min_value=0.0,
         max_value=200.0,
         unit="% of regular price",
-        distribution="grid",
+        distribution=overrides.pop("distribution", "grid"),
         grid_points=3,
         **overrides,
     )
