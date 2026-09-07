@@ -27,6 +27,9 @@ What each function does:
                                              else.
     parse_fillin_number(text)              - Reads a "$8.26"-style answer as a
                                              float, or None for garbage.
+    _strip_channel_wrappers(text)          - Removes the llama-server
+                                             reasoning-channel marker that some
+                                             models wrap around their answer.
     aggregate_demand(records, levels)      - Turns sweep records into one
                                              {level, p_buy, n} bucket per price
                                              level, sorted low to high.
@@ -107,6 +110,28 @@ ChatFn = Callable[[list[dict[str, str]], float], str]
 
 # A fill-in number is decimal digits with one optional fractional part.
 _NUMBER = re.compile(r"\d+(?:\.\d+)?")
+
+# google/gemma-4-26b-a4b (llama-server) can wrap its answer in a
+# reasoning-channel marker: the recorded form is an opening "<|channel>", the
+# model's internal text, then a closing "<channel|>" right before the real
+# answer (for example "<|channel>thought\n<channel|>purchase"). The second
+# branch is the symmetric form with the pipe on the other side. Both are
+# stripped (non-greedy, crossing newlines) so the parsers only ever see the
+# answer text itself.
+_CHANNEL_WRAPPER = re.compile(
+    r"<\|channel>.*?<channel\|>|<\|channel\|>.*?<\|channel>", re.DOTALL
+)
+
+
+def _strip_channel_wrappers(text: str) -> str:
+    """Remove any llama-server reasoning-channel marker from an answer.
+
+    The wrapper is the channel open/close pair with whatever the model wrote
+    between them; the answer ("purchase", "not purchase", a number) comes
+    after the closing marker and is left untouched. Text with no marker comes
+    back unchanged.
+    """
+    return _CHANNEL_WRAPPER.sub("", text)
 
 
 def _probe_intro(category: str, product: str) -> str:
@@ -194,11 +219,18 @@ def parse_purchase(text: str) -> bool | None:
     The comparison is case-insensitive and tolerates surrounding whitespace,
     quotes and sentence punctuation. Anything richer than a bare
     "purchase"/"not purchase" (for example "I would purchase it") is not a
-    parseable answer and yields None.
+    parseable answer and yields None. A llama-server reasoning-channel wrapper
+    ("<|channel>...<channel|>") around the answer is stripped first.
     """
     if not isinstance(text, str):
         return None
-    cleaned = text.strip().strip(" \t\"'.,;:!?()[]{}").strip().lower()
+    cleaned = (
+        _strip_channel_wrappers(text)
+        .strip()
+        .strip(" \t\"'.,;:!?()[]{}")
+        .strip()
+        .lower()
+    )
     if cleaned == "purchase":
         return True
     if cleaned == "not purchase":
@@ -209,13 +241,14 @@ def parse_purchase(text: str) -> bool | None:
 def parse_fillin_number(text: str) -> float | None:
     """Read a "$8.26"-style fill-in answer as a float.
 
-    A leading dollar sign and surrounding whitespace are tolerated. Anything
-    that is not plain decimal digits (with one optional fractional part) is
-    not a number and yields None.
+    A leading dollar sign and surrounding whitespace are tolerated. A
+    llama-server reasoning-channel wrapper ("<|channel>...<channel|>") is
+    stripped first. Anything that is not plain decimal digits (with one
+    optional fractional part) is not a number and yields None.
     """
     if not isinstance(text, str):
         return None
-    cleaned = text.strip()
+    cleaned = _strip_channel_wrappers(text).strip()
     if cleaned.startswith("$"):
         cleaned = cleaned[1:].strip()
     if not _NUMBER.fullmatch(cleaned):
