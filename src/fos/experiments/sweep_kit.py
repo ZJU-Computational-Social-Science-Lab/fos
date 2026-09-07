@@ -21,12 +21,14 @@ What each function does:
                                              the model to fill in a covariate
                                              (past price, competing price, or
                                              expiry days) at a given price.
-    parse_purchase(text)                   - Reads the model's answer: True for
-                                             "purchase", False for
-                                             "not purchase", None for anything
-                                             else.
+    parse_purchase(text)                   - Reads the model's one-line answer:
+                                             True for "purchase"/"yes", False
+                                             for "not purchase"/"no", None
+                                             otherwise.
     parse_fillin_number(text)              - Reads a "$8.26"-style answer as a
                                              float, or None for garbage.
+    _first_answer_line(text)              - First line of an answer after
+                                             wrapper/token stripping.
     _strip_channel_wrappers(text)          - Removes the llama-server
                                              reasoning-channel marker that some
                                              models wrap around their answer.
@@ -108,9 +110,6 @@ _COVARIATE_PROBES = {
 # returns the model's raw text answer. Runners never open a network connection.
 ChatFn = Callable[[list[dict[str, str]], float], str]
 
-# A fill-in number is decimal digits with one optional fractional part.
-_NUMBER = re.compile(r"\d+(?:\.\d+)?")
-
 # google/gemma-4-26b-a4b (llama-server) can wrap its answer in a
 # reasoning-channel marker: the recorded form is an opening "<|channel>", the
 # model's internal text, then a closing "<channel|>" right before the real
@@ -122,6 +121,13 @@ _CHANNEL_WRAPPER = re.compile(
     r"<\|channel>.*?<channel\|>|<\|channel\|>.*?<\|channel>", re.DOTALL
 )
 
+# A chat-template token a model may keep emitting after it has answered, for
+# example "purchase<|im_end|>\n<|im_start|>system\nYou," (meta/muse-glimmer):
+# the answer comes first, the leaked template text after it is junk. Every
+# <|...|> span is removed before the answer line is read. This runs AFTER the
+# channel-wrapper strip above, whose own markers must stay intact to pair up.
+_SPECIAL_TOKEN = re.compile(r"<\|[^>]*\|>")
+
 
 def _strip_channel_wrappers(text: str) -> str:
     """Remove any llama-server reasoning-channel marker from an answer.
@@ -132,6 +138,23 @@ def _strip_channel_wrappers(text: str) -> str:
     back unchanged.
     """
     return _CHANNEL_WRAPPER.sub("", text)
+
+
+# Junk allowed in front of the real answer on its line: whitespace, quotes,
+# brackets, sentence punctuation and a stray dollar sign (for fill-in numbers).
+_LEADING_JUNK = " \t\"'$.,;:!?()[]{}"
+
+
+def _first_answer_line(text: str) -> str:
+    """Return the lowercased first line of an answer, template junk removed.
+
+    The channel wrapper is stripped first (the answer follows it), then every
+    <|...|> chat-template token (the answer precedes them); only the first
+    line is kept and lowercased, so leaked template turns or explanations
+    written after the answer are dropped.
+    """
+    cleaned = _SPECIAL_TOKEN.sub("", _strip_channel_wrappers(text))
+    return cleaned.strip().split("\n", 1)[0].strip().lower()
 
 
 def _probe_intro(category: str, product: str) -> str:
@@ -214,26 +237,26 @@ def build_covariate_fillin_prompt(
 
 
 def parse_purchase(text: str) -> bool | None:
-    """Read a purchase answer: True, False, or None when it is not one.
+    """Read a one-line purchase answer: True, False, or None for anything else.
 
-    The comparison is case-insensitive and tolerates surrounding whitespace,
-    quotes and sentence punctuation. Anything richer than a bare
-    "purchase"/"not purchase" (for example "I would purchase it") is not a
-    parseable answer and yields None. A llama-server reasoning-channel wrapper
-    ("<|channel>...<channel|>") around the answer is stripped first.
+    The very first word of the first line decides, case-insensitively:
+    "purchase"/"yes" mean True, "not purchase"/"no" mean False, quotes and
+    punctuation tolerated. Only the first word counts — prose that goes on
+    after it ("Purchase decision is a personal choice") is None. Llama-server
+    wrappers and chat-template tokens are removed first.
     """
     if not isinstance(text, str):
         return None
-    cleaned = (
-        _strip_channel_wrappers(text)
-        .strip()
-        .strip(" \t\"'.,;:!?()[]{}")
-        .strip()
-        .lower()
-    )
-    if cleaned == "purchase":
+    body = _first_answer_line(text).lstrip(_LEADING_JUNK)
+    if not body:
+        return None
+    if re.match(r"not\s+purchase(?=[^a-z0-9]*$)", body):
+        return False
+    if re.match(r"purchase(?=[^a-z0-9]*$)", body):
         return True
-    if cleaned == "not purchase":
+    if re.match(r"yes(?=[^a-z0-9]*$)", body):
+        return True
+    if re.match(r"no(?=[^a-z0-9]*$)", body):
         return False
     return None
 
@@ -241,19 +264,21 @@ def parse_purchase(text: str) -> bool | None:
 def parse_fillin_number(text: str) -> float | None:
     """Read a "$8.26"-style fill-in answer as a float.
 
-    A leading dollar sign and surrounding whitespace are tolerated. A
-    llama-server reasoning-channel wrapper ("<|channel>...<channel|>") is
-    stripped first. Anything that is not plain decimal digits (with one
-    optional fractional part) is not a number and yields None.
+    The number must be the first thing on the first line; a leading dollar
+    sign, whitespace, quotes and punctuation are tolerated. Text that starts
+    with letters ("about 5 dollars") or a malformed number ("8.2.6") is not
+    a number and yields None. Llama-server wrappers and chat-template tokens
+    are removed first.
     """
     if not isinstance(text, str):
         return None
-    cleaned = _strip_channel_wrappers(text).strip()
-    if cleaned.startswith("$"):
-        cleaned = cleaned[1:].strip()
-    if not _NUMBER.fullmatch(cleaned):
+    body = _first_answer_line(text).lstrip(_LEADING_JUNK)
+    if not body:
         return None
-    return float(cleaned)
+    match = re.match(r"(\d+(?:\.\d+)?)(?=[^a-z0-9]*$)", body)
+    if match is None:
+        return None
+    return float(match.group(1))
 
 
 def aggregate_demand(
@@ -261,11 +286,10 @@ def aggregate_demand(
 ) -> list[dict[str, Any]]:
     """Bucket sweep records into one demand point per treatment level.
 
-    Each record must be the output of build_record (it carries
-    "treatment_value" and "parsed_purchase"). Records whose answer did not
-    parse are ignored entirely; among the parsed records n is the count and
-    p_buy is the share that chose to purchase. The levels argument may arrive
-    unsorted; the returned buckets are sorted by level ascending.
+    Each record must carry "treatment_value" and "parsed_purchase". Records
+    whose answer did not parse are ignored; among the parsed records n is the
+    count and p_buy the share that chose to purchase. The levels argument may
+    arrive unsorted; returned buckets are sorted by level ascending.
     """
     buckets: list[dict[str, Any]] = []
     for level in sorted(levels):
