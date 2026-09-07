@@ -164,8 +164,9 @@ class TestGeneratePersonasBatchFlags:
         with pytest.raises(SystemExit) as excinfo:
             module.main(["--help"])
         assert excinfo.value.code == 0
+        help_text = capsys.readouterr().out
         for option in ("--products-file", "--min-personas", "--timeout"):
-            assert option in capsys.readouterr().out, f"missing option {option}"
+            assert option in help_text, f"missing option {option}"
 
     def test_parser_reads_the_new_flags_with_sane_defaults(self):
         module = _load_script(GENERATE_SCRIPT, "generate_personas")
@@ -344,9 +345,10 @@ class TestPilotModelScript:
         with pytest.raises(SystemExit) as excinfo:
             module.main(["--help"])
         assert excinfo.value.code == 0
+        help_text = capsys.readouterr().out
         for option in ("--model", "--base-url", "--out", "--depth1-calls",
                        "--depth5-calls", "--persona-gen-calls", "--timeout", "--seed"):
-            assert option in capsys.readouterr().out, f"missing option {option}"
+            assert option in help_text, f"missing option {option}"
 
     def test_parser_requires_model_and_applies_the_documented_defaults(self):
         module = _load_script(PILOT_SCRIPT, "pilot_model")
