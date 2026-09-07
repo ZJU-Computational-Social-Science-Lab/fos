@@ -448,21 +448,26 @@ def run_sweep(
 
 
 def _persona_renderer(persona_depth: str) -> Callable[[dict[str, Any]], str] | None:
-    """Return the sibling personas module's renderer for one persona depth.
+    """Return a renderer that shows one persona depth tier's fields.
 
     The import is deliberately deferred to call time: the sibling module
     src/fos/experiments/personas.py lands on main separately, so importing it
     at module import time would make sweep_kit unimportable in the meantime.
-    A "none" depth needs no renderer and never touches the module; the
-    demographics and extended depths return that module's block renderers.
+    A "none" depth needs no renderer and never touches the module; every
+    other tier returns a closure over that module's depth-truncating
+    render_persona_fields at the requested depth, so the same renderer serves
+    all five tiers. An unknown depth never reaches this function:
+    run_persona_sweep validates it first through covariate_count_for_depth.
     """
     if persona_depth == "none":
         return None
+
     from fos.experiments import personas  # noqa: PLC0415 - deferred sibling import
 
-    if persona_depth == "demographics":
-        return personas.render_demographics_block
-    return personas.render_extended_block
+    def render(persona: dict[str, Any]) -> str:
+        return personas.render_persona_fields(persona, persona_depth)
+
+    return render
 
 
 def _persona_user_prompt(

@@ -23,7 +23,8 @@ Gui & Toubia (2025) comparison. It holds:
 - count_specified_covariates: heuristic count of key: value persona pairs.
 - lint_covariate_count: warn/flag tiers for too many specified covariates.
 - covariate_count_for_depth: map a persona depth ("none", "demographics",
-  "extended") onto how many covariates that depth pins in the prompt.
+  "tightwad", "time_preference", "risk_preference") onto how many
+  covariates that depth pins in the prompt.
 - COVARIATE_COUNT_FOR_DEPTH: the module-level table behind that mapping.
 """
 
@@ -56,9 +57,16 @@ _SEVERE_RHO = 0.5
 
 # How many covariates each persona depth pins in the survey prompt (paper
 # Fig. 5 tiers): "none" adds no persona block at all, "demographics" pins the
-# 11 demographic fields, and "extended" adds the 3 behavioral measures on top
-# (14 in total).
-COVARIATE_COUNT_FOR_DEPTH = {"none": 0, "demographics": 11, "extended": 14}
+# 11 demographic fields, and each deeper tier adds its behavioral measures on
+# top: "tightwad" 1 (12), "time_preference" 3 (14), "risk_preference" all
+# five (16). The tiers nest strictly, so a deeper tier always pins more.
+COVARIATE_COUNT_FOR_DEPTH = {
+    "none": 0,
+    "demographics": 11,
+    "tightwad": 12,
+    "time_preference": 14,
+    "risk_preference": 16,
+}
 
 
 @dataclass(frozen=True)
@@ -78,10 +86,13 @@ class RandomizationDesign:
         blind_to_randomization: True when the subject never sees the design.
         covariates_specified: persona covariates the prompt pins down.
         persona_depth: how deep the persona block goes: "none" (no block),
-            "demographics" (11 demographic fields) or "extended" (those plus
-            the 3 behavioral measures). Anything else raises ValueError.
-        covariate_count: how many covariates the chosen depth pins (0, 11 or
-            14), kept as explicit metadata so stored records self-describe.
+            "demographics" (the 11 demographic fields), "tightwad" (those
+            plus tightwad_spendthrift), "time_preference" (plus the discount
+            rate and present-bias measures) or "risk_preference" (all five
+            behavioral measures). Anything else raises ValueError.
+        covariate_count: how many covariates the chosen depth pins (0, 11,
+            12, 14 or 16), kept as explicit metadata so stored records
+            self-describe.
     """
 
     variable: str
@@ -101,10 +112,11 @@ class RandomizationDesign:
     def __post_init__(self) -> None:
         """Reject an unknown persona depth at construction time.
 
-        Only "none", "demographics" and "extended" are legal values; a typo
-        such as "occluded" must fail loudly instead of silently producing a
-        run that never renders a persona block. The error text goes through
-        T() so it stays localizable like every other error here.
+        Only "none", "demographics", "tightwad", "time_preference" and
+        "risk_preference" are legal values; a typo such as "occluded" (or
+        the superseded "extended") must fail loudly instead of silently
+        producing a run that never renders a persona block. The error text
+        goes through T() so it stays localizable like every other error here.
         """
         if self.persona_depth not in COVARIATE_COUNT_FOR_DEPTH:
             raise ValueError(
@@ -195,9 +207,10 @@ def covariate_count_for_depth(depth: str) -> int:
     """Return how many covariates one persona depth pins in the prompt.
 
     "none" pins nothing (0), "demographics" pins the 11 demographic fields,
-    and "extended" adds the 3 behavioral measures on top (14). An unknown
-    depth raises ValueError so a typo never silently runs with the wrong
-    covariate budget.
+    "tightwad" adds one behavioral measure (12), "time_preference" adds
+    three (14) and "risk_preference" all five (16) -- the tiers nest
+    strictly. An unknown depth raises ValueError so a typo never silently
+    runs with the wrong covariate budget.
     """
     if depth not in COVARIATE_COUNT_FOR_DEPTH:
         raise ValueError(
