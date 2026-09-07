@@ -30,8 +30,8 @@ What each function does:
                                     calls; one retry, "" on final failure.
     _probe(url, timeout)          - Check a server answers; error text or None.
     _switch_model(...)            - Ask the manager to load a model on a port.
-    _wait_until_healthy(...)      - Poll the health endpoint until it passes.
-    _is_healthy_status(body)      - Does a health body mean "healthy"?
+    wait_for_healthy(...)         - Poll a health endpoint until it is 200,
+                                    optionally requiring a real outage first.
     _write_records(base, records) - Save records to base.jsonl and base.csv.
     _csv_cell(value)              - Make one record value CSV-safe.
     _print_demand_table(...)      - Print the level / n / p_buy demand curve.
@@ -74,8 +74,7 @@ DEFAULT_OUT = "results/unblinding"
 DEFAULT_BASE_URL = "http://127.0.0.1:8080"
 COVARIATE_KINDS = ("last_price", "competing_price", "expiry_days")
 
-# After asking the manager to load a model, wait this long for it to be ready.
-_HEALTH_WAIT_SECONDS = 300
+# How long to sleep between health polls while a model loads.
 _HEALTH_POLL_SECONDS = 5
 
 # A chat function: message list and temperature in, raw model text out.
@@ -120,20 +119,43 @@ def main(argv: list[str] | None = None) -> int:
         args.base_url, args.model, args.max_tokens, args.timeout
     )
 
+    health_url = _health_endpoint(args.base_url)
     if args.manager_url:
         try:
             _switch_model(args.manager_url, args.model, args.manager_port, args.timeout)
-            _wait_until_healthy(args.base_url, args.timeout)
         except UnreachableError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
+        if not wait_for_healthy(
+            health_url,
+            args.health_timeout,
+            poll_s=_HEALTH_POLL_SECONDS,
+            require_downtime=True,
+        ):
+            print(
+                f"error: {health_url} did not report healthy within "
+                f"{args.health_timeout:g}s",
+                file=sys.stderr,
+            )
+            return 2
     else:
-        problem = _probe(_health_endpoint(args.base_url), args.timeout)
+        problem = _probe(health_url, args.timeout)
         if problem is not None:
             print(f"error: {problem}", file=sys.stderr)
             print(
                 f"error: nothing listening at {args.base_url} - start the model "
                 "server first or point --base-url at it",
+                file=sys.stderr,
+            )
+            return 2
+        if not wait_for_healthy(
+            health_url,
+            args.health_timeout,
+            poll_s=_HEALTH_POLL_SECONDS,
+        ):
+            print(
+                f"error: {health_url} did not report healthy within "
+                f"{args.health_timeout:g}s",
                 file=sys.stderr,
             )
             return 2
@@ -253,6 +275,13 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument("--max-tokens", type=int, default=16)
     parser.add_argument("--timeout", type=float, default=120.0)
+    parser.add_argument(
+        "--health-timeout",
+        type=float,
+        default=300.0,
+        help="seconds to wait for the chat server health endpoint to report "
+        "healthy (default: %(default)s)",
+    )
     return parser.parse_args(argv)
 
 
@@ -423,45 +452,40 @@ def _switch_model(manager_url: str, model: str, port: int, timeout: float) -> No
         )
 
 
-def _wait_until_healthy(base_url: str, timeout: float) -> None:
-    """Poll the chat server health endpoint until it reports healthy."""
-    url = _health_endpoint(base_url)
-    deadline = time.monotonic() + _HEALTH_WAIT_SECONDS
+def wait_for_healthy(
+    url: str,
+    timeout_s: float,
+    poll_s: float = _HEALTH_POLL_SECONDS,
+    transport: Callable[[str], Any] = urllib.request.urlopen,
+    require_downtime: bool = False,
+) -> bool:
+    """Poll a url until it reports healthy; return False when time runs out.
+
+    Each poll asks transport(url) and counts an HTTP 200 reply as healthy;
+    every other status (503 while a model loads, for instance), a refused
+    connection, or a timeout counts as not healthy yet. Pass
+    require_downtime=True right after asking the manager to switch models: a
+    200 is then accepted only after the endpoint has been seen NOT healthy at
+    least once, because the old server can keep answering 200 for a moment
+    after the switch while it is actually dying. Never raises on timeout.
+    """
+    deadline = time.monotonic() + timeout_s
+    seen_down = False
     while True:
         try:
-            _status, body = _get(url, timeout)
-            if _is_healthy_status(body):
-                print(f"model healthy at {url}")
-                return
+            response = transport(url)
+            healthy = getattr(response, "status", None) == 200
         except OSError:
-            pass
+            healthy = False
+        if healthy and (seen_down or not require_downtime):
+            print(f"model healthy at {url}")
+            return True
+        if not healthy:
+            seen_down = True
         if time.monotonic() >= deadline:
-            raise UnreachableError(
-                f"{url} did not report healthy within {_HEALTH_WAIT_SECONDS}s"
-            )
+            return False
         print(f"...waiting for {url} to report healthy", file=sys.stderr)
-        time.sleep(_HEALTH_POLL_SECONDS)
-
-
-def _is_healthy_status(body: str) -> bool:
-    """Decide whether a health endpoint body means the server is healthy.
-
-    Accepts {"status": true} (and string spellings such as "ok" or
-    "healthy") as well as a plain "healthy" reply.
-    """
-    text = body.strip().lower()
-    if "healthy" in text:
-        return True
-    try:
-        parsed = json.loads(body)
-    except json.JSONDecodeError:
-        return False
-    if not isinstance(parsed, dict):
-        return False
-    status = parsed.get("status")
-    if status is True:
-        return True
-    return isinstance(status, str) and status.lower() in ("ok", "healthy", "true")
+        time.sleep(poll_s)
 
 
 def _write_records(base: Path, records: list[dict[str, Any]]) -> None:
