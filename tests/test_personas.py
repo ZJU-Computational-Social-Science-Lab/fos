@@ -1,15 +1,17 @@
-# RED-phase tests for `fos.experiments.personas` — the two-step persona
-# generation kit of the Gui & Toubia (2025) unblinding study (Web Appendix D).
-# The module src/fos/experiments/personas.py and the CLI script
-# scripts/generate_personas.py do NOT exist yet, so every test targeting them
-# FAILS today — that is the RED phase of TDD. Tests for the bundled census
-# file data/configs/census_marginals_us_approx.json skip (pytest.skip) while
-# that file is missing, so RED stays about the missing module only.
+# Contract tests for `fos.experiments.personas`, the persona generation kit
+# of the Gui & Toubia (2025) unblinding study (Web Appendix D). Design
+# (task 1459): each persona is generated ONCE at max depth — one joint
+# completion fills the 11 demographic fields plus all 5 behavioral measures —
+# and the depth axis only truncates RENDERING of that same persona dict. The
+# tests for the bundled census file data/configs/census_marginals_us_approx.json
+# skip (pytest.skip) while that file is missing, so they stay independent of
+# the module state.
 #
 # Coverage per spec item (see the test classes below for the details):
 #   1. PERSONA_FIELDS — 11 paper fields in order.
 #   2. build_persona_elicitation_prompt() — Prompt-10: category+product,
-#      every field with a blank placeholder, the price blank as the literal
+#      every field with a blank placeholder — all 11 demographics and all 5
+#      behavioral measures — plus the price blank as the literal
 #      "[a number with up to 2 decimal points]", fields in order, one joint
 #      completion.
 #   3. parse_persona(raw) — the 11 keys, int casts, $/comma stripping,
@@ -17,9 +19,16 @@
 #   4. generate_personas(...) — exactly n chat_fn calls, (personas, skipped),
 #      deterministic per seed.
 #   5. render_demographics_block(persona) — 11 "Field: value" lines in order.
-#   6. BEHAVIORAL_MEASURES + render_extended_block(persona) — demographics
-#      plus "name: score (P<n> percentile)" and a <note: ...> per present
-#      measure; missing measures skipped silently.
+#   6. BEHAVIORAL_MEASURES — five measures (risk_aversion and loss_aversion
+#      joined the original three) — plus render_extended_block(persona): the
+#      demographics block followed by "name: score (P<n> percentile)" and a
+#      <note: ...> per present measure; missing measures skipped silently.
+#   6b. render_persona_fields(persona, depth) — the depth-truncation renderer:
+#      the SAME fully populated persona dict rendered at each of the five
+#      depth tiers ("none", "demographics", "tightwad", "time_preference",
+#      "risk_preference") shows exactly that tier's field set, the rendered
+#      field sets nest strictly, and partial persona dicts render without
+#      KeyError (the TASK-1456 behavior).
 #   7. check_persona_diversity(personas) — the five diversity stats.
 #   8. check_persona_coherence(personas) — violations/rates/examples over the
 #      five paper rules (names pinned below).
@@ -66,6 +75,34 @@ EXPECTED_FIELDS = [
     "state",
     "home_ownership",
 ]
+
+# The five behavioral measures (risk_aversion and loss_aversion joined the
+# original three in the five-tier depth design).
+EXPECTED_MEASURES = [
+    "tightwad_spendthrift",
+    "discount_rate",
+    "present_bias",
+    "risk_aversion",
+    "loss_aversion",
+]
+
+# The five persona depth tiers, shallowest first. Each tier's rendered field
+# set adds the tier's own fields on top of the tier below it.
+DEPTHS = ["none", "demographics", "tightwad", "time_preference", "risk_preference"]
+
+# The field names render_persona_fields must show per depth for a persona
+# that carries every field (11 demographics + 5 measures). The tiers are
+# strictly nested: demographics adds the 11 canonical fields to "none",
+# tightwad adds tightwad_spendthrift, time_preference adds discount_rate and
+# present_bias, risk_preference adds risk_aversion and loss_aversion.
+DEPTH_FIELD_SETS = {
+    "none": set(),
+    "demographics": set(EXPECTED_FIELDS),
+    "tightwad": set(EXPECTED_FIELDS) | {"tightwad_spendthrift"},
+    "time_preference": set(EXPECTED_FIELDS)
+    | {"tightwad_spendthrift", "discount_rate", "present_bias"},
+    "risk_preference": set(EXPECTED_FIELDS) | set(EXPECTED_MEASURES),
+}
 
 # One canned, fully-formed eleven-field answer the fake chat returns.
 _CANNED_RAW = "\n".join(
@@ -132,8 +169,12 @@ def _persona(**overrides):
     return base
 
 
-def _extended_persona(**overrides):
-    """A persona with all three behavioral measures, scores and percentiles."""
+def _full_persona(**overrides):
+    """A fully populated persona: 11 demographics plus all five measures.
+
+    This is the max-depth (risk_preference) persona the generator is supposed
+    to produce; the depth-truncation tests slice it at every tier.
+    """
     persona = _persona(
         age=60,
         occupation="retired professor",
@@ -146,6 +187,8 @@ def _extended_persona(**overrides):
             "tightwad_spendthrift": {"score": 42, "percentile": 18},
             "discount_rate": {"score": 6.2, "percentile": 71},
             "present_bias": {"score": 33, "percentile": 9},
+            "risk_aversion": {"score": 7.5, "percentile": 88},
+            "loss_aversion": {"score": 4.0, "percentile": 62},
         }
     )
     persona.update(overrides)
@@ -193,26 +236,35 @@ class TestBuildPersonaElicitationPrompt:
         assert "Soft Drinks - Carbonated" in prompt
         assert "Coca-Cola Soda Pop, 12 fl oz" in prompt
 
-    def test_prompt_mentions_every_one_of_the_eleven_fields(self):
+    def test_prompt_mentions_every_one_of_the_sixteen_fields(self):
+        # Max-depth generation: the 11 demographics AND all 5 measures appear.
+        all_fields = [
+            *_personas_module().PERSONA_FIELDS,
+            *_personas_module().BEHAVIORAL_MEASURES,
+        ]
         prompt = (
             _personas_module()
             .build_persona_elicitation_prompt("Snacks", "Lay's Classic Potato Chips")
             .lower()
         )
-        for field in _personas_module().PERSONA_FIELDS:
+        for field in all_fields:
             assert field in prompt, f"field {field!r} missing from the prompt"
 
     def test_prompt_leaves_the_price_blank_with_the_paper_literal(self):
         prompt = _personas_module().build_persona_elicitation_prompt("Snacks", "Chips")
         assert "[a number with up to 2 decimal points]" in prompt
 
-    def test_every_field_sits_next_to_a_blank_placeholder(self):
+    def test_every_demographic_and_behavioral_field_sits_next_to_a_blank(self):
+        all_fields = [
+            *_personas_module().PERSONA_FIELDS,
+            *_personas_module().BEHAVIORAL_MEASURES,
+        ]
         prompt = (
             _personas_module()
             .build_persona_elicitation_prompt("Snacks", "Chips")
             .lower()
         )
-        for field in _personas_module().PERSONA_FIELDS:
+        for field in all_fields:
             hits = [m.start() for m in re.finditer(re.escape(field), prompt)]
             assert hits, f"field {field!r} missing from the prompt"
             window = 25
@@ -232,6 +284,15 @@ class TestBuildPersonaElicitationPrompt:
             assert match, f"field {field!r} not named in the prompt"
             positions.append(match.start())
         assert positions == sorted(positions)
+        # The demographics all come before the first behavioral measure.
+        measure_positions = []
+        for field in _personas_module().BEHAVIORAL_MEASURES:
+            match = re.search(
+                rf"(?<![a-z0-9_]){re.escape(field)}(?![a-z0-9_])", prompt
+            )
+            assert match, f"measure {field!r} not named in the prompt"
+            measure_positions.append(match.start())
+        assert positions[-1] < min(measure_positions)
 
     def test_prompt_asks_for_the_fields_in_one_joint_completion(self):
         prompt = (
@@ -423,17 +484,18 @@ class TestRenderDemographicsBlock:
 
 
 class TestBehavioralMeasures:
-    def test_behavioral_measures_lists_the_three_paper_measures(self):
-        assert _personas_module().BEHAVIORAL_MEASURES == [
-            "tightwad_spendthrift",
-            "discount_rate",
-            "present_bias",
-        ]
+    def test_behavioral_measures_lists_the_five_paper_measures(self):
+        assert _personas_module().BEHAVIORAL_MEASURES == EXPECTED_MEASURES
+
+    def test_behavioral_measures_names_are_unique_strings(self):
+        measures = _personas_module().BEHAVIORAL_MEASURES
+        assert len(measures) == len(set(measures))
+        assert all(isinstance(name, str) and name for name in measures)
 
 
 class TestRenderExtendedBlock:
     def test_extended_block_opens_with_the_full_demographics_block(self):
-        persona = _extended_persona()
+        persona = _full_persona()
         extended = _personas_module().render_extended_block(persona)
         demographic = _personas_module().render_demographics_block(persona)
         assert extended.splitlines()[: len(demographic.splitlines())] == (
@@ -441,13 +503,15 @@ class TestRenderExtendedBlock:
         )
 
     def test_extended_block_reports_score_and_percentile_per_measure(self):
-        rendered = _personas_module().render_extended_block(_extended_persona())
+        rendered = _personas_module().render_extended_block(_full_persona())
         assert "tightwad_spendthrift: 42 (P18 percentile)" in rendered
         assert "discount_rate: 6.2 (P71 percentile)" in rendered
         assert "present_bias: 33 (P9 percentile)" in rendered
+        assert "risk_aversion: 7.5 (P88 percentile)" in rendered
+        assert "loss_aversion: 4.0 (P62 percentile)" in rendered
 
     def test_extended_block_notes_the_scale_direction_of_each_measure(self):
-        rendered = _personas_module().render_extended_block(_extended_persona())
+        rendered = _personas_module().render_extended_block(_full_persona())
         lines = rendered.splitlines()
         direction_words = ("higher", "lower", "more", "less")
         for name in _personas_module().BEHAVIORAL_MEASURES:
@@ -460,14 +524,17 @@ class TestRenderExtendedBlock:
             assert name in note, name
 
     def test_extended_block_skips_missing_measures_silently(self):
-        persona = _extended_persona()
+        persona = _full_persona()
         del persona["tightwad_spendthrift"]
         del persona["present_bias"]
+        del persona["risk_aversion"]
         rendered = _personas_module().render_extended_block(persona)
         assert "discount_rate: 6.2 (P71 percentile)" in rendered
+        assert "loss_aversion: 4.0 (P62 percentile)" in rendered
         assert "<note:" in rendered
         assert "tightwad_spendthrift" not in rendered
         assert "present_bias" not in rendered
+        assert "risk_aversion" not in rendered
 
     def test_extended_block_without_measures_is_just_the_demographics(self):
         persona = _persona()
@@ -476,6 +543,86 @@ class TestRenderExtendedBlock:
             extended.splitlines()
             == _personas_module().render_demographics_block(persona).splitlines()
         )
+
+
+# 6b. render_persona_fields(persona, depth) — depth-truncation rendering
+
+
+def _rendered_field_names(rendered: str) -> set[str]:
+    """Return the field names that head a "name: value" line in a block.
+
+    Notes (lines starting "<note:") and prose never count, so the result is
+    exactly the persona fields the renderer chose to show.
+    """
+    names: set[str] = set()
+    for line in rendered.splitlines():
+        name, separator, _ = line.partition(":")
+        name = name.strip()
+        if separator and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+            names.add(name)
+    return names
+
+
+class TestRenderPersonaFields:
+    """The depth-truncation renderer: one persona, five depth cut-points.
+
+    render_persona_fields(persona, depth) renders the SAME persona dict with
+    the fields of one depth tier: "none" renders nothing, and each deeper
+    tier adds that tier's fields, so the rendered field sets must nest
+    strictly (demographics < tightwad < time_preference < risk_preference).
+    Partial personas keep the TASK-1456 tolerance: missing keys are skipped,
+    never KeyError.
+    """
+
+    def test_none_depth_renders_no_fields(self):
+        rendered = _personas_module().render_persona_fields(_full_persona(), "none")
+        assert rendered == ""
+        assert _rendered_field_names(rendered) == set()
+
+    def test_each_depth_renders_exactly_its_own_field_set(self):
+        for depth, expected in DEPTH_FIELD_SETS.items():
+            rendered = _personas_module().render_persona_fields(_full_persona(), depth)
+            assert _rendered_field_names(rendered) == expected, depth
+
+    def test_rendered_field_sets_nest_strictly_across_the_five_depths(self):
+        sets = [
+            _rendered_field_names(
+                _personas_module().render_persona_fields(_full_persona(), depth)
+            )
+            for depth in DEPTHS
+        ]
+        for shallower, deeper in zip(sets, sets[1:]):
+            assert shallower < deeper, "rendered field sets must nest strictly"
+
+    def test_render_persona_fields_rejects_an_unknown_depth(self):
+        render = _personas_module().render_persona_fields
+        # "extended" was the superseded third tier; it must no longer render.
+        for depth in ("extended", "deep", "occluded"):
+            with pytest.raises(ValueError):
+                render(_full_persona(), depth)
+
+    def test_partial_persona_renders_without_keyerror_at_every_depth(self):
+        # TASK-1456 behavior: a dict missing most fields still renders the
+        # fields it carries — the canonical ones it has plus extra scalar keys
+        # such as city — and never raises KeyError, at any depth. Measures the
+        # persona lacks are skipped, so they can never appear either.
+        partial = {
+            "age": 35,
+            "occupation": "teacher",
+            "city": "Hangzhou",
+            "tightwad_spendthrift": {"score": 42, "percentile": 18},
+        }
+        for depth in DEPTHS:
+            rendered = _personas_module().render_persona_fields(partial, depth)
+            names = _rendered_field_names(rendered)
+            if depth == "none":
+                assert names == set()
+                continue
+            assert names >= {"age", "occupation", "city"}, depth
+            expected = {"age", "occupation", "city"}
+            if depth != "demographics":
+                expected.add("tightwad_spendthrift")
+            assert names == expected, depth
 
 
 # 7. check_persona_diversity()
