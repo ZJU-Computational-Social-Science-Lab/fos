@@ -59,6 +59,9 @@
     "randomization": {
       "unsupported_distribution": "不支持的随机化分布：{distribution}",
       "unsupported_expected": "预期方向必须是以下之一：{supported}"
+    },
+    "sweep_kit": {
+      "unsupported_fillin_kind": "不支持的协变量填空类型：{kind}"
     }
   },
   "agent": {
