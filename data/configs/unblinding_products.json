@@ -1,0 +1,55 @@
+{
+  "_comment": "plausible regular prices (USD), not scraped",
+  "products": [
+    {
+      "category": "Soft Drinks - Carbonated",
+      "product": "Coca-Cola Soda Pop, 12 fl oz, 12 Pack Cans",
+      "regular_price": 8.26
+    },
+    {
+      "category": "Juice Drinks",
+      "product": "Capri Sun Pacific Cooler, 6 fl oz, 30 Pouches",
+      "regular_price": 9.43
+    },
+    {
+      "category": "Snacks",
+      "product": "Lay's Classic Potato Chips, 8 oz Bag",
+      "regular_price": 4.99
+    },
+    {
+      "category": "Snacks",
+      "product": "Doritos Nacho Cheese Tortilla Chips, 11 oz Bag",
+      "regular_price": 4.79
+    },
+    {
+      "category": "Ice Cream",
+      "product": "Ben & Jerry's Chocolate Chip Cookie Dough, 1 Pint",
+      "regular_price": 4.99
+    },
+    {
+      "category": "Condiments",
+      "product": "Heinz Tomato Ketchup, 32 oz Bottle",
+      "regular_price": 3.98
+    },
+    {
+      "category": "Breakfast Cereal",
+      "product": "Cheerios Toasted Whole Grain Oat Cereal, 12 oz Box",
+      "regular_price": 4.29
+    },
+    {
+      "category": "Laundry Detergent",
+      "product": "Tide PODS Original Laundry Detergent Pacs, 32 Count",
+      "regular_price": 11.97
+    },
+    {
+      "category": "Paper Towels",
+      "product": "Bounty Select-a-Size Paper Towels, 6 Double Rolls",
+      "regular_price": 12.99
+    },
+    {
+      "category": "Personal Care",
+      "product": "Gillette Fusion5 ProGlide Razor Blade Refills, 8 Count",
+      "regular_price": 21.99
+    }
+  ]
+}
