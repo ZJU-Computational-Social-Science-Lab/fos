@@ -63,6 +63,9 @@
     },
     "sweep_kit": {
       "unsupported_fillin_kind": "不支持的协变量填空类型：{kind}"
+    },
+    "personas": {
+      "unsupported_depth": "不支持的画像深度：{depth}；请选择以下之一：{supported}"
     }
   },
   "agent": {
