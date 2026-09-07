@@ -355,7 +355,17 @@ class TestRunSweep:
             assert messages[0]["content"] == build_blinded_system_prompt()
         unblinded = _price_design(blinding="unblinded")
         chat2 = _FakeChat()
-        self._run(unblinded, chat2, draws=1, blinding="unblinded")
+        # One product (Coca-Cola) is enough to check the per-blinding system
+        # prompt and that the survey names the product. Sweeping a second
+        # product here would send Lay's surveys, which never mention
+        # "Coca-Cola" and so cannot satisfy the assertion below.
+        self._run(
+            unblinded,
+            chat2,
+            draws=1,
+            blinding="unblinded",
+            products=_products()[:1],
+        )
         for messages, _temperature in chat2.calls:
             assert messages[0]["content"] == build_unblinded_system_prompt(unblinded)
             assert messages[-1]["content"] and "Coca-Cola" in messages[-1]["content"]
