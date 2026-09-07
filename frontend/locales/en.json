@@ -497,7 +497,14 @@
       "workspaceHint": "Keep one trusted default model online, then add alternates for synthesis, long context, or benchmarking.",
       "type": {
         "openai": "OpenAI-compatible",
-        "gemini": "Gemini"
+        "gemini": "Gemini",
+        "other": "Other"
+      },
+      "compatibleProvider": {
+        "chatgpt": "ChatGPT",
+        "deepseek": "DeepSeek",
+        "minimax": "MiniMax",
+        "kimi": "Kimi"
       },
       "searchEngine": {
         "ddg": "DuckDuckGo",
