@@ -589,6 +589,7 @@
         "maxTokens": "最大令牌数",
         "newLlmTitle": "添加 LLM 配置",
         "openaiCompatibleAccessConfig": "OpenAI 兼容访问配置",
+        "openaiCompatibleProviders": "OpenAI 兼容服务商",
         "optional": "可选",
         "providerTypeRequired": "提供商类型为必填项",
         "responseFormat": "响应格式",

@@ -24,6 +24,7 @@ vi.mock("react-i18next", () => ({
           "settings.providers.compatibleProvider.kimi": "Kimi",
           "settings.providers.providerForm.newLlmTitle": "New LLM",
           "settings.providers.providerForm.openaiCompatibleAccessConfig": "OpenAI-compatible access",
+          "settings.providers.providerForm.openaiCompatibleProviders": "OpenAI-compatible providers",
           "settings.providers.providerForm.llmNameRequired": "LLM name",
           "settings.providers.providerForm.llmNamePlaceholder": "My LLM",
           "settings.providers.providerForm.providerTypeRequired": "Provider type",

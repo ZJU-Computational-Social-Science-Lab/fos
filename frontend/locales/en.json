@@ -589,6 +589,7 @@
         "maxTokens": "Max Tokens",
         "newLlmTitle": "Add LLM Configuration",
         "openaiCompatibleAccessConfig": "OpenAI-Compatible Access Config",
+        "openaiCompatibleProviders": "OpenAI-compatible providers",
         "optional": "Optional",
         "providerTypeRequired": "Provider type is required",
         "responseFormat": "Response Format",
