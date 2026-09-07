@@ -63,6 +63,9 @@
     },
     "sweep_kit": {
       "unsupported_fillin_kind": "Unsupported covariate fill-in kind: {kind}"
+    },
+    "personas": {
+      "unsupported_depth": "Unsupported persona depth: {depth}; choose one of: {supported}"
     }
   },
   "agent": {
