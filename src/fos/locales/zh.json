@@ -55,6 +55,10 @@
       "unknown_stance": "未知的同盟者立场：{stance}",
       "no_recorded_vote": "同盟者 {agent_id}（立场={stance}）没有记录投票。投票拦截失败 — 该次运行无效。",
       "vote_mismatch": "同盟者 {agent_id}：记录投票为 {recorded}，但指定立场为 {stance}。投票拦截失败 — 该次运行无效。"
+    },
+    "randomization": {
+      "unsupported_distribution": "不支持的随机化分布：{distribution}",
+      "unsupported_expected": "预期方向必须是以下之一：{supported}"
     }
   },
   "agent": {
