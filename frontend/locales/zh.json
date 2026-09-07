@@ -497,7 +497,14 @@
       "workspaceHint": "保持一个可信的默认模型在线，再按总结、长上下文或基准测试需求补充其它端点。",
       "type": {
         "openai": "OpenAI 兼容",
-        "gemini": "Gemini"
+        "gemini": "Gemini",
+        "other": "其他"
+      },
+      "compatibleProvider": {
+        "chatgpt": "ChatGPT",
+        "deepseek": "DeepSeek",
+        "minimax": "MiniMax",
+        "kimi": "Kimi"
       },
       "searchEngine": {
         "ddg": "DuckDuckGo",

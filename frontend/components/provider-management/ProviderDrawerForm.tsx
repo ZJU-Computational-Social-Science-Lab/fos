@@ -1,6 +1,6 @@
 ﻿// frontend/components/provider-management/ProviderDrawerForm.tsx
 import { useEffect, useState } from "react";
-import { Eye, EyeOff, X } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Provider } from "../../services/providers";
 import type { ProviderFormValues } from "./ProviderManagementPage";
@@ -15,6 +15,17 @@ type ProviderDrawerFormProps = {
   isSaving: boolean;
 };
 
+type ProviderPickerStep = "closed" | "type" | "compatible";
+
+const COMPATIBLE_PROVIDERS = ["chatgpt", "deepseek", "minimax", "kimi"] as const;
+
+const PROVIDER_LABEL_KEYS: Record<(typeof COMPATIBLE_PROVIDERS)[number], string> = {
+  chatgpt: "settings.providers.compatibleProvider.chatgpt",
+  deepseek: "settings.providers.compatibleProvider.deepseek",
+  minimax: "settings.providers.compatibleProvider.minimax",
+  kimi: "settings.providers.compatibleProvider.kimi",
+};
+
 export function ProviderDrawerForm({
   isOpen,
   mode,
@@ -27,15 +38,16 @@ export function ProviderDrawerForm({
   const { t } = useTranslation();
   const [values, setValues] = useState<ProviderFormValues>(initialValues);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [providerPickerStep, setProviderPickerStep] = useState<ProviderPickerStep>("closed");
 
   useEffect(() => {
     setValues(initialValues);
     setShowApiKey(false);
+    setProviderPickerStep("closed");
   }, [initialValues, isOpen]);
 
   if (!isOpen) return null;
 
-  const isGemini = values.provider === "gemini";
   const title =
     mode === "create"
       ? t("settings.providers.providerForm.newLlmTitle")
@@ -47,11 +59,7 @@ export function ProviderDrawerForm({
         <div className="provider-drawer__header">
           <div>
             <h2 className="provider-drawer__title">{title}</h2>
-            <p className="provider-drawer__subtitle">
-              {isGemini
-                ? t("settings.providers.providerForm.geminiAccessConfig")
-                : t("settings.providers.providerForm.openaiCompatibleAccessConfig")}
-            </p>
+            <p className="provider-drawer__subtitle">{t("settings.providers.providerForm.openaiCompatibleAccessConfig")}</p>
           </div>
           <button type="button" className="provider-drawer__close" onClick={onClose} aria-label={t("common.cancel")}>
             <X size={18} />
@@ -77,30 +85,76 @@ export function ProviderDrawerForm({
               />
             </label>
 
-            <label className="provider-field">
+            <div className="provider-field">
               <span className="provider-field__label">{t("settings.providers.providerForm.providerTypeRequired")}</span>
-              <select
-                className="provider-field__input"
-                value={values.provider}
-                onChange={(event) => setValues((current) => ({ ...current, provider: event.target.value as ProviderFormValues["provider"] }))}
-              >
-                <option value="openai-compatible">{t("settings.providers.type.openai")}</option>
-                <option value="gemini">{t("settings.providers.type.gemini")}</option>
-              </select>
-            </label>
+              <div className="provider-type-picker">
+                <button
+                  type="button"
+                  className="provider-field__input provider-type-picker__trigger"
+                  aria-label={t("settings.providers.providerForm.providerTypeRequired")}
+                  aria-expanded={providerPickerStep !== "closed"}
+                  onClick={() => setProviderPickerStep("type")}
+                >
+                  <span>
+                    {values.provider === "custom"
+                      ? t("settings.providers.type.other")
+                      : values.compatible_provider
+                        ? t(PROVIDER_LABEL_KEYS[values.compatible_provider])
+                        : t("settings.providers.type.openai")}
+                  </span>
+                  <ChevronDown size={16} aria-hidden="true" />
+                </button>
 
-            {!isGemini ? (
-              <label className="provider-field provider-field--full">
-                <span className="provider-field__label">{t("settings.providers.providerForm.baseUrlRequired")}</span>
-                <input
-                  className="provider-field__input"
-                  value={values.base_url}
-                  onChange={(event) => setValues((current) => ({ ...current, base_url: event.target.value }))}
-                  placeholder={t("settings.providers.providerForm.baseUrlPlaceholder")}
-                  required
-                />
-              </label>
-            ) : null}
+                {providerPickerStep === "type" ? (
+                  <div className="provider-type-picker__menu" role="listbox" aria-label={t("settings.providers.providerForm.providerTypeRequired")}>
+                    <button type="button" className="provider-type-picker__option" role="option" onClick={() => setProviderPickerStep("compatible")}>
+                      {t("settings.providers.type.openai")}
+                    </button>
+                    <button
+                      type="button"
+                      className="provider-type-picker__option"
+                      role="option"
+                      onClick={() => {
+                        setValues((current) => ({ ...current, provider: "custom", compatible_provider: "" }));
+                        setProviderPickerStep("closed");
+                      }}
+                    >
+                      {t("settings.providers.type.other")}
+                    </button>
+                  </div>
+                ) : null}
+
+                {providerPickerStep === "compatible" ? (
+                  <div className="provider-type-picker__menu" role="listbox" aria-label="OpenAI-compatible providers">
+                    {COMPATIBLE_PROVIDERS.map((compatibleProvider) => (
+                      <button
+                        key={compatibleProvider}
+                        type="button"
+                        className="provider-type-picker__option"
+                        role="option"
+                        onClick={() => {
+                          setValues((current) => ({ ...current, provider: "openai-compatible", compatible_provider: compatibleProvider }));
+                          setProviderPickerStep("closed");
+                        }}
+                      >
+                        {t(PROVIDER_LABEL_KEYS[compatibleProvider])}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <label className="provider-field provider-field--full">
+              <span className="provider-field__label">{t("settings.providers.providerForm.baseUrlRequired")}</span>
+              <input
+                className="provider-field__input"
+                value={values.base_url}
+                onChange={(event) => setValues((current) => ({ ...current, base_url: event.target.value }))}
+                placeholder={t("settings.providers.providerForm.baseUrlPlaceholder")}
+                required
+              />
+            </label>
 
             <label className="provider-field provider-field--full">
               <span className="provider-field__label">{t("settings.providers.providerForm.apiKeyRequired")}</span>
@@ -134,11 +188,7 @@ export function ProviderDrawerForm({
                 className="provider-field__input"
                 value={values.model}
                 onChange={(event) => setValues((current) => ({ ...current, model: event.target.value }))}
-                placeholder={
-                  isGemini
-                    ? t("settings.providers.providerForm.defaultModelPlaceholderGemini")
-                    : t("settings.providers.providerForm.defaultModelPlaceholderOpenai")
-                }
+                placeholder={t("settings.providers.providerForm.defaultModelPlaceholderOpenai")}
               />
             </label>
           </div>
