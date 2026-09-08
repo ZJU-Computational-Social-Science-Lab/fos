@@ -16,7 +16,8 @@ talks to a network; a chat function is injected by the caller.
 
 What each function does:
     build_persona_elicitation_prompt()  - Paper Prompt 10 verbatim (user text).
-    parse_persona(raw)  - Read an answer into an 11-field persona, or None.
+    parse_persona(raw)  - Read an answer (CSV completion or key-labelled
+                         lines) into an 11-field persona, or None.
     generate_personas(...)  - Draw n personas via chat_fn; (personas, skipped).
     render_persona_fields(persona, depth)  - One of the two depth levels'
                                              fields of a persona.
@@ -156,17 +157,36 @@ def build_persona_elicitation_prompt(category: str, product: str) -> str:
 def parse_persona(raw: str) -> dict[str, Any] | None:
     """Read a model answer into an eleven-field persona dict, or None.
 
-    The answer may carry a reasoning-channel wrapper or chat-template tokens
-    (both stripped first) and any number of prose lines before or after the
-    answer; only "field: value" lines for PERSONA_FIELDS count, and repeated
-    lines for one field are ignored. Whole-number fields are cast to
-    int after "$" and "," are removed. A reply that leaves any field missing,
-    empty, or not a whole number where one is expected is not a persona and
-    returns None.
+    Two answer shapes are accepted. First, the legacy "field: value" lines
+    for PERSONA_FIELDS (the pre-drift tooling format, pinned by the existing
+    TestParsePersona tests). Second, the Prompt 10 comma-separated
+    completion the prompt itself asks real models for: one line whose first
+    eleven comma-separated fields are the eleven demographics in
+    PERSONA_FIELDS order, with any later fields (store price, purchase
+    answer, junk) ignored. The answer may carry a reasoning-channel wrapper
+    or chat-template tokens (both stripped first) and any number of prose
+    lines before or after the answer; a whole-number field that is empty or
+    not a whole number after "$" and "," are removed makes the answer not
+    a persona. A reply that leaves any field missing or unparsable in both
+    shapes returns None.
     """
     if not isinstance(raw, str):
         return None
     cleaned = _SPECIAL_TOKEN.sub("", _strip_channel_wrappers(raw))
+    parsed = _parse_underscore_answer(cleaned)
+    if parsed is None:
+        parsed = _parse_csv_answer(cleaned)
+    return parsed
+
+
+def _parse_underscore_answer(cleaned: str) -> dict[str, Any] | None:
+    """Read a key-labelled "field: value" answer into a persona, or None.
+
+    Every PERSONA_FIELDS line must appear at most once with a non-empty
+    value; repeated lines for one field are ignored. Whole-number fields are
+    cast to int after "$" and "," are removed, and a field that cannot be
+    cast leaves the whole reply not a persona.
+    """
     parsed: dict[str, Any] = {}
     for line in cleaned.splitlines():
         name, separator, value = line.partition(":")
@@ -191,6 +211,49 @@ def parse_persona(raw: str) -> dict[str, Any] | None:
     if len(parsed) != len(PERSONA_FIELDS):
         return None
     return {field: parsed[field] for field in PERSONA_FIELDS}
+
+
+def _parse_csv_answer(cleaned: str) -> dict[str, Any] | None:
+    """Read the Prompt 10 comma-separated completion into a persona, or None.
+
+    Each line is tried in turn: the first line whose first eleven
+    comma-separated fields are the eleven demographics in PERSONA_FIELDS
+    order (trailing fields ignored) becomes the persona. A line that splits
+    into fewer than eleven fields, or whose whole-number fields do not cast,
+    is skipped, so prose around the answer never blocks the real completion.
+    """
+    for line in cleaned.splitlines():
+        fields = [field.strip() for field in line.split(",")]
+        if len(fields) < len(PERSONA_FIELDS):
+            continue
+        parsed = _parse_csv_fields(fields[: len(PERSONA_FIELDS)])
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _parse_csv_fields(fields: list[str]) -> dict[str, Any] | None:
+    """Map eleven comma-separated fields onto the persona dict, or None.
+
+    The fields are zipped onto PERSONA_FIELDS in order; a missing, empty or
+    still-unfilled ("[") value anywhere makes the whole line not a persona.
+    Whole-number fields are cast to int after "$" and "," are removed.
+    """
+    parsed: dict[str, Any] = {}
+    for name, value in zip(PERSONA_FIELDS, fields):
+        if not value or "[" in value:
+            return None
+        if name in _INT_FIELDS:
+            digits = value.translate(str.maketrans("", "", _NUMBER_JUNK)).strip()
+            if not digits:
+                return None
+            try:
+                parsed[name] = int(digits)
+            except ValueError:
+                return None
+        else:
+            parsed[name] = value
+    return parsed
 
 
 def generate_personas(
