@@ -94,22 +94,36 @@ _HEALTH_POLL_SECONDS = 5
 # A chat function: message list and temperature in, raw model text out.
 ChatFn = Callable[[list[dict[str, str]], float], str]
 
-# The two persona depth tiers, in study order (none is the plain sweep):
-# the paper's ladder has exactly the two levels {1, 2}.
+# The persona depth tiers, in study order (none is the plain sweep): the
+# paper's ladder starts with the two levels {1, 2} (none, demographics) and
+# is extended by the Appendix E measured-covariate stage depths stage2..
+# stage12 (Table E.1 order; stage1 is a Table E.1 stage, not a depth name).
 PERSONA_TIERS = (
     "none",
     "demographics",
+    "stage2",
+    "stage3",
+    "stage4",
+    "stage5",
+    "stage6",
+    "stage7",
+    "stage8",
+    "stage9",
+    "stage10",
+    "stage11",
+    "stage12",
 )
 
 
 def expand_depths(spec: str) -> list[str]:
     """Turn a --persona-depth value into the list of tiers it names.
 
-    "all" expands to the two paper tiers in study order; a single tier
-    returns [that tier]; a comma list returns its members in the order given.
-    Any name that is not one of the two tiers — the removed behavioural
-    tiers included — raises ValueError, so a typo in a comma list is caught
-    before any run starts.
+    "all" expands to the full ladder in study order (none, demographics,
+    then every Appendix E stage depth stage2..stage12); a single tier
+    returns [that tier]; a comma list returns its members in the order
+    given. Any name that is not one of the tiers - the removed
+    behavioural tiers included - raises ValueError, so a typo in a comma
+    list is caught before any run starts.
     """
     if spec == "all":
         return list(PERSONA_TIERS)
@@ -411,12 +425,13 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         type=_persona_depth_type,
         default="none",
         help="how deep the persona block goes: 'none' runs the plain price "
-        "sweep, while 'demographics' runs the persona sweep at that tier "
-        "(the 11 Appendix D fields pinned). The paper's depth ladder has "
-        "exactly these two levels; the model-invented behavioural tiers of "
-        "the old five-tier ladder are gone. 'all' or a comma list such as "
-        "'none,demographics' runs every named tier in one invocation "
-        "(default: %(default)s)",
+        "sweep, 'demographics' runs the persona sweep at that tier (the 11 "
+        "Appendix D fields pinned), and the Appendix E stage depths "
+        "'stage2'..'stage12' name the measured-covariate stages of Table E.1 "
+        "(stage1 is a Table E.1 stage, not a depth name). The model-invented "
+        "behavioural tiers of the old five-tier ladder are gone. 'all' or a "
+        "comma list such as 'none,stage3,demographics' runs every named tier "
+        "in one invocation (default: %(default)s)",
     )
     parser.add_argument(
         "--personas-dir",
