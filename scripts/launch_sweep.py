@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
-"""Sweep-leg machinery for the study's launch wrapper: legs, smoke, manifest.
+"""Sweep-leg machinery for the study's launch wrapper: legs, watchdog, smoke.
 
 The launch layer around the Gui & Toubia replication sweep is split into
-three scripts that never change what the study's existing tools do:
-launch_grid.py (flags, plan, run order), launch_support.py (model-manager
-calls and persona-pool generation/subsampling), and launch_sweep.py (this
-module: the concurrent (depth x blinding) sweep legs through the sweep
-tool's own helpers, the health watchdog, the run manifest, and the smoke
-pre-flight). Importing this module never opens a socket.
+scripts that never change what the study's existing tools do: launch_grid.py
+(flags, plan, run order), launch_support.py (model-manager calls and
+persona-pool generation/subsampling), launch_manifest.py (the run-level
+manifest and its resume merge), and launch_sweep.py (this module: the
+concurrent (depth x blinding) sweep legs through the sweep tool's own
+helpers, the health watchdog, and the smoke pre-flight). A leg's records
+are written only when the whole leg completes, so the unit of resume is
+the (depth x blinding) leg - launch_manifest reads finished legs back from
+their own files when a run is resumed. Importing this module never opens
+a socket.
 
 Function map: _leg_dir/_leg_is_done (output dir + resume check), _make_chat
 (counting chat wrapper with progress + abort), _run_one_leg/_save_leg_outputs
 (one leg: run the sweep, then write its records/manifest), _watchdog (abort
-the run when the chat server dies), _progress_line (live progress text),
-_write_run_manifest (the run-level manifest), and the smoke pre-flight
-_smoke with its helpers _smoke_direct_chat, _draw_smoke_persona,
-_run_smoke_purchase, _write_smoke_manifest, _report_smoke.
+the run when the chat server dies), _progress_line (live progress text), and
+the smoke pre-flight _smoke with its helpers _smoke_direct_chat,
+_draw_smoke_persona, _run_smoke_purchase, _write_smoke_manifest,
+_report_smoke.
 """
 
 from __future__ import annotations
@@ -291,47 +295,6 @@ def _progress_line(done: int, total: int, parsed: int, rate: float) -> str:
         f"{100.0 * parsed / max(done, 1):.1f}% so far, "
         f"ETA ~{remaining / max(rate, 1e-9) / 3600.0:.1f} h"
     )
-
-
-def _write_run_manifest(
-    settings: Settings,
-    plan: dict[str, Any],
-    products_path: Path,
-    run_dir: Path,
-    started: str,
-    finished: str,
-    leg_results: list[dict[str, Any]],
-    pool_summary: dict[str, Any] | None,
-) -> Path:
-    """Write the run-level manifest.json (the record of the whole launch)."""
-    ok = all(r.get("ok", False) for r in leg_results)
-    payload = {
-        "run_name": run_dir.name,
-        "profile": plan["profile"],
-        "model": settings.model,
-        "port": settings.port,
-        "base_url": settings.base_url,
-        "manager_url": settings.manager_url,
-        "commit_sha": _repo_sha(),
-        "products_file": str(products_path),
-        "levels": plan["levels"],
-        "draws": settings.draws,
-        "seed": settings.seed,
-        "k": plan["k"],
-        "pool_seed": settings.pool_seed,
-        "pool_overdraw": settings.pool_overdraw,
-        "planned_sweep_calls": plan["sweep_calls"],
-        "planned_pool_draws": plan["pool_draws"],
-        "started": started,
-        "finished": finished,
-        "ok": ok,
-        "legs": leg_results,
-        "pools": pool_summary,
-        "argv": list(sys.argv),
-    }
-    target = run_dir / "manifest.json"
-    target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    return target
 
 
 def _smoke(settings: Settings, products_path: Path, out: Path) -> int:
