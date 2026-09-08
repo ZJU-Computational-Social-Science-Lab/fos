@@ -7,20 +7,21 @@ runs them against an injected chat function (so tests never touch a network),
 and writes self-describing results. It contains no network code of its own.
 
 What each function does:
-    build_blinded_system_prompt()          - The Prompt-5 system prompt: the
-                                             model plays a customer and fills
-                                             in one blank.
+    build_blinded_system_prompt()          - The paper Prompt 2/10 system
+                                             line: the model plays a customer
+                                             and fills in the blanks.
     build_unblinded_system_prompt(design)  - The Prompt-6 system prompt: the
-                                             Prompt-5 task plus the design's
+                                             fill task plus the design's
                                              unblinding paragraph. For a
                                              blinded design it is exactly the
-                                             Prompt-5 prompt.
+                                             Prompt-2/10 prompt.
     build_purchase_user_prompt(...)        - The Prompt-2 purchase survey shown
                                              to the customer (buy or not buy).
     build_covariate_fillin_prompt(...)     - One Prompt 1/7/8 probe that asks
                                              the model to fill in a covariate
-                                             (past price, competing price, or
-                                             expiry days) at a given price.
+                                             (past price, competing price,
+                                             expiry days, or household income)
+                                             at a given price.
     parse_purchase(text)                   - Reads the model's one-line answer:
                                              True for "purchase"/"yes", False
                                              for "not purchase"/"no", None
@@ -90,11 +91,15 @@ _PERSONA_TEMPERATURE = 0.0
 # record's prompt_sha256 is sha256(system + this + user).
 _PROMPT_SEPARATOR = "\x1e"
 
-# Prompt text of one number, one blank: the customer fill task stays identical
-# in the blinded and unblinded conditions; only the surrounding paragraph varies.
+# The paper's verbatim Prompt 2 / Prompt 10 system line (RESULT-1474 §1):
+# the customer fills in the blanks and returns comma-separated values. The
+# blinded purchase condition uses exactly this line -- the Prompt-5
+# shortening ("fill in the blank ... without extra text") is drift and is
+# gone.
 _BLINDED_TASK = (
-    "You, AI, are a customer. Your task is to fill in the blank. "
-    "Return the completed information without extra text."
+    "You, AI, are a customer. Your task is to fill in the blanks. "
+    "Return the completed information in comma-separated values, without any "
+    "extra text."
 )
 
 # The survey that both conditions put in the user message (paper Prompt 2).
@@ -107,7 +112,12 @@ _PURCHASE_SURVEY = (
     "Return example: purchase"
 )
 
-# One fill-in-the-blank probe per covariate (paper Prompts 1, 7 and 8).
+# One fill-in-the-blank probe per covariate (paper Prompts 1, 7 and 8,
+# plus the income probe). Each probe keeps the paper's own sentence order
+# and wording: last_price (Prompt 1) asks for the past price first and
+# states the focal price after it, while competing_price (Prompt 7) and
+# expiry_days (Prompt 8) state the focal price first, and the income probe
+# asks for the total family income as a whole number.
 _COVARIATE_PROBES = {
     "last_price": (
         "The last time you purchased this product, it was priced at $ "
@@ -116,16 +126,21 @@ _COVARIATE_PROBES = {
         "Return example 1: 3.29"
     ),
     "competing_price": (
+        "The product is currently priced at: ${price:.2f}.\n"
         "The price of a similar competing product from a different brand is "
         "[a number with up to 2 decimal points].\n"
-        "The product is currently priced at: ${price:.2f}.\n"
         "Return example 1: 3.29"
     ),
     "expiry_days": (
-        "Suppose you purchase this product today. It will expire [a whole "
-        "number] days from now.\n"
         "The product is currently priced at: ${price:.2f}.\n"
+        "The expiration date of the product is [a whole "
+        "number] days from now.\n"
         "Return example 1: 10"
+    ),
+    "household_income": (
+        "The product is currently priced at: ${price:.2f}.\n"
+        "The total family income of the consumer is [a whole number].\n"
+        "Return example 1: 50000"
     ),
 }
 
@@ -236,7 +251,12 @@ def _system_prompt(design: RandomizationDesign, blinding: str) -> str:
 
 
 def build_blinded_system_prompt() -> str:
-    """Return the blinded (Prompt 5) system prompt: the customer fill task."""
+    """Return the blinded system prompt: the paper Prompt 2/10 line.
+
+    The customer fills in the blanks and returns comma-separated values,
+    without any extra text (RESULT-1474 §1, Prompt 2 / Prompt 10). The
+    Prompt-5 shortening used pre-fix is drift.
+    """
     return _BLINDED_TASK
 
 
@@ -244,9 +264,9 @@ def build_unblinded_system_prompt(design: RandomizationDesign) -> str:
     """Return the unblinded (Prompt 6) system prompt for this design.
 
     The design's unblinding paragraph (what is randomized, over what support,
-    that the subject is blind to it) is prepended to the Prompt-5 fill task.
-    A blinded design renders no paragraph, so the result is exactly the blinded
-    prompt and the two conditions share an identical user prompt.
+    that the subject is blind to it) is prepended to the Prompt-2/10 fill
+    task. A blinded design renders no paragraph, so the result is exactly the
+    blinded prompt and the two conditions share an identical user prompt.
     """
     paragraph = design.render_unblinding()
     if not paragraph:
@@ -268,9 +288,9 @@ def build_covariate_fillin_prompt(
 ) -> str:
     """Return the Prompt 1/7/8 probe that fills one covariate at one price.
 
-    kind must be one of "last_price", "competing_price" or "expiry_days";
-    anything else raises a ValueError so a typo never silently probes the
-    wrong covariate.
+    kind must be one of "last_price", "competing_price", "expiry_days" or
+    "household_income"; anything else raises a ValueError so a typo never
+    silently probes the wrong covariate.
     """
     if kind not in _COVARIATE_PROBES:
         raise ValueError(T("error.sweep_kit.unsupported_fillin_kind", kind=repr(kind)))

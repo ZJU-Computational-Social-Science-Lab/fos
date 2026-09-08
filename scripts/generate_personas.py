@@ -61,6 +61,7 @@ if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
 from fos.experiments.personas import (  # noqa: E402
+    PERSONA_SYSTEM,
     build_persona_elicitation_prompt,
     check_persona_coherence,
     check_persona_diversity,
@@ -395,12 +396,8 @@ def _generate_for_product(
     personas: list[dict[str, Any]] = []
     skipped = 0
     user_prompt = build_persona_elicitation_prompt(category, product)
-    system_prompt = (
-        "You are generating customer profiles for a market study. Reply with "
-        "only the completed field lines, one per line."
-    )
     messages = [
-        {"role": "system", "content": system_prompt},
+        {"role": "system", "content": PERSONA_SYSTEM},
         {"role": "user", "content": user_prompt},
     ]
     with (out / "personas.jsonl").open("a", encoding="utf-8") as handle:
