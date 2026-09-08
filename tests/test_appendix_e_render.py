@@ -144,6 +144,24 @@ def _measure_line_numbers(text: str) -> dict:
     }
 
 
+def _score_value_text(text: str) -> str:
+    """The measured score tokens of a render, for invalid-value scanning.
+
+    Only the value cell of each measure line is returned (the token right
+    before its " (NN percentile)" suffix). Display labels and verbatim
+    Prompt-12 note prose are skipped: "Financial Literacy" (the stage-6
+    header) and "general financial literacy" (the stage-6 note, pinned by
+    a sibling test) legitimately contain the substring "nan".
+    """
+    tokens = []
+    for line in text.splitlines():
+        if not line.rstrip().endswith("percentile)"):
+            continue
+        token = line.rsplit(" (", 1)[0].rsplit(": ", 1)[-1]
+        tokens.append(token)
+    return " ".join(tokens)
+
+
 # 1. Prompt-12 verbatim render grammar.
 class TestRenderPrompt12Format:
     def test_canonical_stage3_render_is_prompt12_verbatim(self, tmp_path):
@@ -223,7 +241,7 @@ class TestRenderPrompt12Format:
         the percentile equals panel.percentile(column, score)."""
         panel = fixture_panel(tmp_path)
         pattern = re.compile(
-            r"^(?:# |\- ) ([\w\-]+(?: [\w\-]+)*): ([0-9.]+) \(([0-9]+) "
+            r"^(?:# |\- )([\w\-]+(?: [\w\-]+)*): ([0-9.]+) \(([0-9]+) "
             r"percentile\)$"
         )
         for rid in (101, 102, 103, 104):
@@ -277,14 +295,19 @@ class TestRenderPrompt12Format:
         )
 
     def test_no_invalid_value_or_invented_number_ever_renders(self, tmp_path):
-        """Rendered text never contains a no-switch/overflow/out-of-scale
-        value, for any stage and every pool row."""
+        """No rendered score/percentile VALUE is a no-switch/overflow/
+        out-of-scale marker, for any stage and every pool row. Only the
+        score tokens of the value cells are scanned (see
+        _score_value_text): display labels and note prose are prose, and
+        "Financial Literacy" / "general financial literacy" are mandated
+        verbatim by the stage-6 pins."""
         panel = fixture_panel(tmp_path)
         for stage in range(1, 13):
             for rid in panel.stage_pool(stage):
                 text = _render(panel, rid, stage)
+                value_text = _score_value_text(text)
                 for forbidden in ("no switch", "nan", "inf", "1e+", "4503599627370495"):
-                    assert forbidden not in text, (
+                    assert forbidden not in value_text, (
                         f"stage {stage} row {rid} renders invalid token {forbidden!r}"
                     )
 
@@ -362,11 +385,23 @@ class TestRealTwinDataset:
         for stage, seed in draws:
             profile = panel.draw_profile(stage, seed=seed)
             text = render_stage_block(profile, stage)
+            # Scan the measured score tokens only (see _score_value_text):
+            # the stage-6 header/note prose ("Financial Literacy", "general
+            # financial literacy") is mandated verbatim and contains "nan".
+            value_text = _score_value_text(text)
             for forbidden in ("no switch", "nan", "inf", "1e+", "4503599627370495"):
-                assert forbidden not in text, (
+                assert forbidden not in value_text, (
                     f"stage {stage} seed {seed} renders invalid token {forbidden!r}"
                 )
-            demo_lines = [line for line in text.splitlines() if line.startswith("- ")]
+            # Count the 14 demographic bullets only: the demographics block is
+            # the render's first block, before the first blank-line separator.
+            # Later stages add their own "- " measure bullets (stage 3: +2,
+            # stage 12: +5) that must not be mistaken for demographics.
+            demo_lines = [
+                line
+                for line in text.split("\n\n", 1)[0].splitlines()
+                if line.startswith("- ")
+            ]
             assert len(demo_lines) == 14, (
                 f"stage {stage} seed {seed}: 14 demographic bullets required, "
                 f"got {len(demo_lines)}"
