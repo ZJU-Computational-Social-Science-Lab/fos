@@ -120,21 +120,32 @@ you launch from (git-ignored; the pilot backups copy `results/` to
   `demographics_unblinded/` — each leg's `<model>_<blinding>.jsonl/.csv`
   + its own `manifest.json` (design, prompts' sha, timestamps, pool-seed).
 
-## Crash / resume behaviour
+## Crash / resume behaviour (verified end-to-end, TASK-1522)
 
+- **The run is marked as started immediately**: the run-level `manifest.json`
+  is written (`state: "running"`) as soon as the run begins, so an
+  interrupted run is recognised and its true start time survives. Re-running
+  the exact same command WITHOUT `--resume` into a directory that already
+  holds a manifest, `pools.json`, or leg files is refused with exit 2
+  (pass `--resume`, pick a new `--run-name`, or delete the directory).
 - **Model load** is skipped on resume when the manager already serves the
   right model on the port.
 - **Persona pools** append every accepted persona as they are drawn, so a
-  killed pool phase keeps its progress; rerunning the same command tops up
-  any product that has fewer than K accepted personas. The pool phase is
-  skipped entirely once `pools.json` matches (K, seed, model, product count).
+  killed pool phase keeps its progress; rerunning tops up only the products
+  that have fewer than K accepted personas (never re-draws finished ones).
+  The pool phase is skipped entirely once `pools.json` matches (K, seed,
+  model, product count).
 - **Sweep legs** write their files only when a leg completes, so a crash
-  loses at most the in-flight legs. Rerun the exact same command with
-  `--resume`:
+  loses at most the in-flight legs (leg-granular resume, not per-call).
+  Rerun the exact same command with `--resume`:
   ```bash
   python3 scripts/launch_grid.py --profile R1 --run-name r1-20260908T2130 --resume
   ```
-  Completed legs are skipped; the failed/missing ones rerun.
+  Completed legs are skipped exactly once; the failed/missing ones rerun.
+  The FINAL `manifest.json` lists every planned leg exactly once, keeps the
+  earliest start, carries the pools summary forward, and records each
+  resume under `"resumed"` — resuming a fully completed run is a safe no-op
+  that never wipes the manifest.
 - **Watchdog:** if the chat server dies (see the pinning risk below) the
   run aborts within ~90 s instead of recording silent failures. Rerun with
   `--resume` after the cause is fixed.

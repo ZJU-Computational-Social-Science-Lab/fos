@@ -7,8 +7,9 @@ the plan in --dry-run, runs the <=4-call pre-flight in --smoke, and in a
 real run loads the model through the manager, builds the persona pools,
 then runs the (depth x blinding) sweep legs concurrently. All the machinery
 it drives lives in two sibling modules: launch_support.py (model manager +
-persona pools) and launch_sweep.py (sweep legs, watchdog, manifest, smoke).
-Both wrap the study's existing tools (scripts/generate_personas.py and
+persona pools), launch_sweep.py (sweep legs, watchdog, smoke) and
+launch_manifest.py (run-level manifest + resume merge). All wrap the
+study's existing tools (scripts/generate_personas.py and
 scripts/unblinding_sweep.py) without changing what either tool does.
 
 Profiles (from the measured pilot numbers in RESULT-1501):
@@ -68,6 +69,11 @@ from launch_support import (  # noqa: E402
     _resolve_products,
     _safe_model_name,
 )
+from launch_manifest import (  # noqa: E402
+    _load_run_manifest,
+    _run_dir_has_state,
+    _write_run_manifest,
+)
 from launch_sweep import (  # noqa: E402
     _leg_is_done,
     _make_chat,
@@ -75,7 +81,6 @@ from launch_sweep import (  # noqa: E402
     _run_one_leg,
     _smoke,
     _watchdog,
-    _write_run_manifest,
 )
 
 DEFAULT_PRODUCTS = "data/configs/unblinding_products.json"
@@ -380,12 +385,26 @@ def _run(
     products_path: Path,
     settings: Settings,
 ) -> int:
-    """Run the real launch: model load, pools, concurrent legs, manifest."""
+    """Run the real launch: model load, pools, concurrent legs, manifest.
+
+    The run-level manifest doubles as the started marker: the first
+    invocation writes it (state "running", no legs yet) as soon as the run
+    begins, so an interrupted run is recognised by the guard and its true
+    start time survives; a --resume invocation finishes with a final
+    manifest (state "complete") that merges its legs with the earlier
+    invocations' finished legs - read from the leg files - so every planned
+    leg appears exactly once (see launch_manifest).
+    """
     run_dir = settings.out / settings.run_name
-    if run_dir.exists() and (run_dir / "manifest.json").exists() and not args.resume:
+    prior = _load_run_manifest(run_dir) if run_dir.exists() else None
+    if (
+        prior is not None or (run_dir.exists() and _run_dir_has_state(run_dir))
+    ) and not args.resume:
         print(
-            f"error: run dir {run_dir} already has a manifest.json; pass "
-            f"--resume to continue it or choose a new --run-name",
+            f"error: run dir {run_dir} already holds a run "
+            "(manifest.json, pools.json, or leg files); pass --resume to "
+            "continue it, choose a new --run-name, or delete the directory "
+            "to start over",
             file=sys.stderr,
         )
         return 2
@@ -399,6 +418,8 @@ def _run(
         {"depth": leg["depth"], "blinding": leg["blinding"]} for leg in plan["legs"]
     ]
     pending = _pending_legs(args, run_dir, safe_model, targets)
+    if prior is not None:
+        log(f"resume: continuing a run started {prior.get('started') or '?'}")
     if len(pending) < len(targets):
         log(
             f"resume: {len(targets) - len(pending)}/{len(targets)} legs "
@@ -415,8 +436,30 @@ def _run(
             datetime.now().astimezone().isoformat(),
             [],
             None,
+            targets=targets,
+            safe_model=safe_model,
+            prior=prior,
+            resume_invocation=prior is not None,
+            state="complete",
         )
         return 0
+    if prior is None:
+        _write_run_manifest(
+            settings,
+            plan,
+            products_path,
+            run_dir,
+            started,
+            started,
+            [],
+            None,
+            targets=targets,
+            safe_model=safe_model,
+            prior=None,
+            resume_invocation=False,
+            state="running",
+        )
+        log(f"run marked started: {run_dir / 'manifest.json'}")
     _ensure_model(settings, log)
     pool_summary = None
     personas_by_product = None
@@ -441,6 +484,11 @@ def _run(
         datetime.now().astimezone().isoformat(),
         results,
         pool_summary,
+        targets=targets,
+        safe_model=safe_model,
+        prior=prior,
+        resume_invocation=prior is not None,
+        state="complete",
     )
     return _report_run(results, settings, run_dir, started_wall)
 
