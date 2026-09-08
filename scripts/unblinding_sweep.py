@@ -83,7 +83,7 @@ DEFAULT_LEVELS = "0,20,40,60,80,100,120,140,160,180,200"
 DEFAULT_PRODUCTS = "data/configs/unblinding_products.json"
 DEFAULT_OUT = "results/unblinding"
 DEFAULT_BASE_URL = "http://127.0.0.1:8080"
-COVARIATE_KINDS = ("last_price", "competing_price", "expiry_days")
+COVARIATE_KINDS = ("last_price", "competing_price", "expiry_days", "household_income")
 
 # Persona-mode defaults (paper step B: one survey per embodied customer).
 DEFAULT_PERSONAS_PER_PRODUCT = 500
@@ -94,23 +94,22 @@ _HEALTH_POLL_SECONDS = 5
 # A chat function: message list and temperature in, raw model text out.
 ChatFn = Callable[[list[dict[str, str]], float], str]
 
-# The five persona depth tiers, in study order (none is the plain sweep).
+# The two persona depth tiers, in study order (none is the plain sweep):
+# the paper's ladder has exactly the two levels {1, 2}.
 PERSONA_TIERS = (
     "none",
     "demographics",
-    "tightwad",
-    "time_preference",
-    "risk_preference",
 )
 
 
 def expand_depths(spec: str) -> list[str]:
     """Turn a --persona-depth value into the list of tiers it names.
 
-    "all" expands to the five tiers in study order; a single tier returns
-    [that tier]; a comma list returns its members in the order given. Any
-    name that is not one of the five tiers raises ValueError, so a typo in
-    a comma list is caught before any run starts.
+    "all" expands to the two paper tiers in study order; a single tier
+    returns [that tier]; a comma list returns its members in the order given.
+    Any name that is not one of the two tiers — the removed behavioural
+    tiers included — raises ValueError, so a typo in a comma list is caught
+    before any run starts.
     """
     if spec == "all":
         return list(PERSONA_TIERS)
@@ -371,7 +370,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="which blinding condition(s) to run (default: both)",
     )
     parser.add_argument(
-        "--draws", type=int, default=5, help="chat draws per product and level"
+        "--draws", type=int, default=50, help="chat draws per product and level"
     )
     parser.add_argument(
         "--products",
@@ -412,10 +411,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         type=_persona_depth_type,
         default="none",
         help="how deep the persona block goes: 'none' runs the plain price "
-        "sweep, while 'demographics', 'tightwad', 'time_preference' and "
-        "'risk_preference' run the persona sweep at that tier (11, 12, 14 "
-        "or 16 covariates pinned). 'all' or a comma list such as "
-        "'demographics,tightwad' runs every named tier in one invocation "
+        "sweep, while 'demographics' runs the persona sweep at that tier "
+        "(the 11 Appendix D fields pinned). The paper's depth ladder has "
+        "exactly these two levels; the model-invented behavioural tiers of "
+        "the old five-tier ladder are gone. 'all' or a comma list such as "
+        "'none,demographics' runs every named tier in one invocation "
         "(default: %(default)s)",
     )
     parser.add_argument(

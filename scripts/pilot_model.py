@@ -5,14 +5,17 @@ tasks before a long overnight run. It asks the model three kinds of questions
 through a local chat server, in this order:
 
   depth1      - The blinded buy/no-buy survey at eleven prices, from 0% to
-                200% of a fixed $5.00 reference price.
-  depth5      - The same survey, but with one fixed, fully populated persona
-                written above the question so the model shops as that person.
-  persona_gen - The full persona-elicitation template (eleven demographics
-                plus five behavioral measures) for the same product.
+                200% of the fixed reference price.
+  depth2      - The same survey, but with one fixed demographics persona
+                (the 11 Appendix D fields of the paper's depth level 2)
+                rendered above the question so the model shops as that
+                person.
+  persona_gen - The full persona-elicitation template (paper Prompt 10,
+                the 11 demographic fields) for the same product.
 
 Every answer is counted: buy/no-buy replies parse as purchase or not
-purchase, persona replies count only when all sixteen fields are filled in.
+purchase, persona replies count only when all eleven demographic fields are
+filled in.
 The script times every chat call and saves one JSON report per phase with the
 call count, the parse rate, latency in seconds (mean, median, p95) and the
 first twenty distinct raw answers, plus a short table on the terminal.
@@ -29,13 +32,13 @@ What each function does:
     _server_root(base)     - Normalize a server address for joining.
     _post_json(url, ...)   - POST one JSON object and return (status, body).
     _build_chat_fn(...)    - Build the chat function used during the run.
-    _run_all_phases(...)   - Run depth1, depth5, persona-gen in that order.
+    _run_all_phases(...)   - Run depth1, depth2, persona-gen in that order.
     _run_phase(...)        - Run one phase's chat calls and summarize them.
     _blinded_user(index)   - User prompt of the depth1 buy/no-buy survey.
     _persona_user(index)   - User prompt that embeds the fixed persona.
     _elicitation_user(...) - User prompt that asks for one complete persona.
     _is_purchase_answer()  - True when an answer says buy or not buy.
-    _is_full_persona(raw)  - True when all sixteen persona fields are filled.
+    _is_full_persona(raw)  - True when all eleven persona fields are filled.
     _price_at(level)       - Turn one price-grid level into dollars.
     _latency_stats(secs)   - Mean/median/p95 of a phase's per-call times.
     _build_report(...)     - Assemble the report payload from the phases.
@@ -65,8 +68,8 @@ if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
 from fos.experiments.personas import (  # noqa: E402
-    BEHAVIORAL_MEASURES,
     PERSONA_FIELDS,
+    PERSONA_SYSTEM,
     build_persona_elicitation_prompt,
     render_persona_fields,
 )
@@ -83,7 +86,7 @@ DEFAULT_BASE_URL = "http://127.0.0.1:8080"
 DEFAULT_OUT = "results/pilots"
 
 # The paper fixes temperature at 1.0; buy/no-buy replies only need a few
-# tokens, while the persona template needs room for all sixteen fields.
+# tokens, while the persona template needs room for all eleven fields.
 _TEMPERATURE = 1.0
 _DEPTH_MAX_TOKENS = 16
 _PERSONA_GEN_MAX_TOKENS = 128
@@ -103,9 +106,10 @@ PILOT_PRODUCT = {
     "regular_price": 5.0,
 }
 
-# A fixed, fully populated synthetic shopper: all eleven demographic fields
-# plus all five behavioral measures as {score, percentile} pairs. Every depth5
-# call embeds this same persona so model behavior is compared on equal ground.
+# A fixed synthetic shopper: all eleven demographic fields of the paper's
+# Appendix D depth level 2. Every depth2 call embeds this same persona so
+# model behavior is compared on equal ground. Model-invented behavioural
+# measures are gone with the drift fix.
 PILOT_PERSONA = {
     "age": 35,
     "gender": "female",
@@ -118,21 +122,15 @@ PILOT_PERSONA = {
     "number_of_children": 2,
     "state": "CA",
     "home_ownership": "own",
-    "tightwad_spendthrift": {"score": 42, "percentile": 18},
-    "discount_rate": {"score": 6.2, "percentile": 71},
-    "present_bias": {"score": 33, "percentile": 9},
-    "risk_aversion": {"score": 7.5, "percentile": 88},
-    "loss_aversion": {"score": 4.0, "percentile": 62},
 }
 
-# Every field a full persona carries, in one set for the sixteen-field check.
-_ALL_PERSONA_FIELD_NAMES = frozenset([*PERSONA_FIELDS, *BEHAVIORAL_MEASURES])
+# Every field a complete persona answer must name, in one set for the
+# eleven-field check (the Appendix D demographics of the two-level ladder).
+_ALL_PERSONA_FIELD_NAMES = frozenset(PERSONA_FIELDS)
 
-# System prompt of the persona-elicitation phase: field lines only, please.
-_PERSONA_GEN_SYSTEM = (
-    "You are generating customer profiles for a market study. Reply with "
-    "only the completed field lines, one per line."
-)
+# System prompt of the persona-elicitation phase: the paper's Prompt 2/10
+# customer line (the same line the purchase phases use).
+_PERSONA_GEN_SYSTEM = PERSONA_SYSTEM
 
 # A chat function: message list and token budget in, raw model text out.
 ChatFn = Callable[[list[dict[str, str]], int], str]
@@ -141,7 +139,7 @@ ChatFn = Callable[[list[dict[str, str]], int], str]
 def main(argv: list[str] | None = None) -> int:
     """Run the three pilot phases and write the report; return the exit code.
 
-    Parses the flags, builds the chat transport, runs the depth1, depth5 and
+    Parses the flags, builds the chat transport, runs the depth1, depth2 and
     persona-gen phases in that order, and saves a JSON report plus a readable
     summary table. When the transport raises (any exception from the chat
     function) an error note goes to stderr and the exit code is 2. Answers
@@ -193,10 +191,11 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="blinded buy/no-buy calls (default: %(default)s)",
     )
     parser.add_argument(
-        "--depth5-calls",
+        "--depth2-calls",
         type=int,
         default=20,
-        help="same survey with the fixed persona embedded (default: %(default)s)",
+        help="same survey with the fixed demographics persona embedded "
+        "(default: %(default)s)",
     )
     parser.add_argument(
         "--persona-gen-calls",
@@ -280,9 +279,10 @@ def _build_chat_fn(base_url: str, model: str, timeout: float) -> ChatFn:
 def _run_all_phases(chat_fn: ChatFn, args: argparse.Namespace) -> dict[str, Any]:
     """Run the three pilot phases in order; return one summary per phase.
 
-    Depth1 asks the blinded buy/no-buy survey, depth5 asks the same survey
-    with the fixed persona embedded, and persona-gen asks for one complete
-    persona. Every phase cycles the price grid from 0% on its own.
+    Depth1 asks the blinded buy/no-buy survey, depth2 asks the same survey
+    with the fixed demographics persona embedded, and persona-gen asks for
+    one complete persona. Every phase cycles the price grid from 0% on its
+    own.
     """
     blinded = build_blinded_system_prompt()
     return {
@@ -294,9 +294,9 @@ def _run_all_phases(chat_fn: ChatFn, args: argparse.Namespace) -> dict[str, Any]
             _blinded_user,
             _is_purchase_answer,
         ),
-        "depth5": _run_phase(
+        "depth2": _run_phase(
             chat_fn,
-            args.depth5_calls,
+            args.depth2_calls,
             _DEPTH_MAX_TOKENS,
             blinded,
             _persona_user,
@@ -368,7 +368,7 @@ def _persona_user(index: int) -> str:
     survey = build_purchase_user_prompt(
         PILOT_PRODUCT["category"], PILOT_PRODUCT["product"], price
     )
-    block = render_persona_fields(PILOT_PERSONA, "risk_preference")
+    block = render_persona_fields(PILOT_PERSONA, "demographics")
     return f"{block}\n\n{survey}"
 
 
@@ -385,12 +385,12 @@ def _is_purchase_answer(raw: str) -> bool:
 
 
 def _is_full_persona(raw: str) -> bool:
-    """True when the answer fills in all sixteen persona fields.
+    """True when the answer fills in all eleven persona fields.
 
-    A persona answer must name every demographic field and every behavioral
-    measure at the start of a "field: value" line and give it a real value;
-    blank placeholders such as "[a whole number]" do not count. Wrapper text
-    the chat server adds around the answer is stripped first.
+    A persona answer must name every demographic field at the start of a
+    "field: value" line and give it a real value; blank placeholders such as
+    "[a whole number]" do not count. Wrapper text the chat server adds
+    around the answer is stripped first.
     """
     if not isinstance(raw, str):
         return False
@@ -432,7 +432,7 @@ def _build_report(args: argparse.Namespace, phases: dict[str, Any]) -> dict[str,
         "base_url": args.base_url,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "depth1": phases["depth1"],
-        "depth5": phases["depth5"],
+        "depth2": phases["depth2"],
         "persona_gen": phases["persona_gen"],
     }
 
@@ -452,7 +452,7 @@ def _print_summary(report: dict[str, Any]) -> None:
     print(f"model: {report['model']}")
     print(f"base_url: {report['base_url']}")
     print("phase        calls  parse_rate  mean_s  median_s   p95_s")
-    for phase in ("depth1", "depth5", "persona_gen"):
+    for phase in ("depth1", "depth2", "persona_gen"):
         entry = report[phase]
         latency = entry["latency"]
         print(

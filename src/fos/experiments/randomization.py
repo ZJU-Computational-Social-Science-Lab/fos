@@ -22,9 +22,9 @@ Gui & Toubia (2025) comparison. It holds:
 - check_non_response: does the outcome ignore the treatment entirely?
 - count_specified_covariates: heuristic count of key: value persona pairs.
 - lint_covariate_count: warn/flag tiers for too many specified covariates.
-- covariate_count_for_depth: map a persona depth ("none", "demographics",
-  "tightwad", "time_preference", "risk_preference") onto how many
-  covariates that depth pins in the prompt.
+- covariate_count_for_depth: map a persona depth ("none" or "demographics")
+  onto how many covariates that depth pins in the prompt; the removed
+  behavioural tiers (tightwad/time_preference/risk_preference) raise.
 - COVARIATE_COUNT_FOR_DEPTH: the module-level table behind that mapping.
 """
 
@@ -55,17 +55,14 @@ _STEP_JUMP_RATIO = 3.0
 _MILD_RHO = 0.2
 _SEVERE_RHO = 0.5
 
-# How many covariates each persona depth pins in the survey prompt (paper
-# Fig. 5 tiers): "none" adds no persona block at all, "demographics" pins the
-# 11 demographic fields, and each deeper tier adds its behavioral measures on
-# top: "tightwad" 1 (12), "time_preference" 3 (14), "risk_preference" all
-# five (16). The tiers nest strictly, so a deeper tier always pins more.
+# How many covariates each persona depth pins in the survey prompt. The
+# paper's depth ladder has exactly the two levels {1, 2} (Gui & Toubia 2025
+# Appendix D): "none" adds no persona block at all and "demographics" pins
+# the 11 Appendix D demographic fields. The model-invented behavioural tiers
+# of the pre-drift five-tier ladder are gone, so no deeper count exists.
 COVARIATE_COUNT_FOR_DEPTH = {
     "none": 0,
     "demographics": 11,
-    "tightwad": 12,
-    "time_preference": 14,
-    "risk_preference": 16,
 }
 
 
@@ -85,14 +82,12 @@ class RandomizationDesign:
         seed: optional design-level seed, kept as metadata for storage.
         blind_to_randomization: True when the subject never sees the design.
         covariates_specified: persona covariates the prompt pins down.
-        persona_depth: how deep the persona block goes: "none" (no block),
-            "demographics" (the 11 demographic fields), "tightwad" (those
-            plus tightwad_spendthrift), "time_preference" (plus the discount
-            rate and present-bias measures) or "risk_preference" (all five
-            behavioral measures). Anything else raises ValueError.
-        covariate_count: how many covariates the chosen depth pins (0, 11,
-            12, 14 or 16), kept as explicit metadata so stored records
-            self-describe.
+        persona_depth: how deep the persona block goes: "none" (no block)
+            or "demographics" (the 11 demographic fields). The removed
+            behavioural tiers of the pre-drift ladder and any other name
+            raise ValueError.
+        covariate_count: how many covariates the chosen depth pins (0 or
+            11), kept as explicit metadata so stored records self-describe.
     """
 
     variable: str
@@ -112,11 +107,12 @@ class RandomizationDesign:
     def __post_init__(self) -> None:
         """Reject an unknown persona depth at construction time.
 
-        Only "none", "demographics", "tightwad", "time_preference" and
-        "risk_preference" are legal values; a typo such as "occluded" (or
-        the superseded "extended") must fail loudly instead of silently
-        producing a run that never renders a persona block. The error text
-        goes through T() so it stays localizable like every other error here.
+        Only "none" and "demographics" are legal values; a typo such as
+        "occluded", the superseded "extended", or the removed behavioural
+        tiers (tightwad/time_preference/risk_preference) must fail loudly
+        instead of silently producing a run that never renders a persona
+        block. The error text goes through T() so it stays localizable like
+        every other error here.
         """
         if self.persona_depth not in COVARIATE_COUNT_FOR_DEPTH:
             raise ValueError(
@@ -206,11 +202,11 @@ class RandomizationDesign:
 def covariate_count_for_depth(depth: str) -> int:
     """Return how many covariates one persona depth pins in the prompt.
 
-    "none" pins nothing (0), "demographics" pins the 11 demographic fields,
-    "tightwad" adds one behavioral measure (12), "time_preference" adds
-    three (14) and "risk_preference" all five (16) -- the tiers nest
-    strictly. An unknown depth raises ValueError so a typo never silently
-    runs with the wrong covariate budget.
+    "none" pins nothing (0) and "demographics" pins the 11 Appendix D
+    demographic fields (11) -- the paper's two-level ladder. The removed
+    behavioural tiers (tightwad/time_preference/risk_preference) and any
+    unknown depth raise ValueError so a typo never silently runs with the
+    wrong covariate budget.
     """
     if depth not in COVARIATE_COUNT_FOR_DEPTH:
         raise ValueError(
