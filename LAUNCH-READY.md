@@ -54,9 +54,10 @@ Consequences for the wrapper:
      --manager-port 8080 --blinding both --persona-depth none --draws 50 \
      --out results/unblinding/plain-only-2130 > /tmp/plain_only_2130.log 2>&1 &
    ```
-   (~44,000 calls ≈ 3.3 h batched, but only one process: ~7-8 h
-   sequential; run two of these on `:8080`+`:8082`? No — pin `:8080` only,
-   one process, ~8 h.) This drops the demographics comparison for tonight.
+   (~44,000 calls at ~0.65 s/call, single client = ~8 h sequential; for
+   a night fit use `--draws 10` instead = 8,800 calls ≈ 1.6 h, the
+   pilot's plain-tier suggestion). This drops the demographics comparison
+   for tonight.
 3. **Postpone the full R1** until the parser fix lands.
 
 ## One command (21:30, recommended profile R1, once the blocker is cleared)
