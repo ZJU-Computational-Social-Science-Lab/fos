@@ -1,14 +1,13 @@
 # LAUNCH-READY — Gui & Toubia replication sweep, 21:30 full-study run
 
-Status: **pre-flight done — ⚠️ ONE BLOCKER for the persona-pool phase (see
-below)**. The launch wrapper (`scripts/launch_grid.py` + `launch_support.py`
-+ `launch_sweep.py`) is ready and the smoke pre-flight proved the
-infrastructure: model load via the manager, sweep call parse (1/1) and
-file write-through all pass. The **persona-pool generation phase cannot
-produce pools as the tooling stands today** — the paper-verbatim persona
-prompt asks for comma-separated values but the persona parser only accepts
-an old underscore-key label shape. **The 21:30 run has NOT been started —
-decide below before starting it.**
+Status: **pre-flight done — ✅ persona-pool blocker RESOLVED (TASK-1521)**.
+The launch wrapper (`scripts/launch_grid.py` + `launch_support.py`
++ `launch_sweep.py`) is ready and the post-fix smoke pre-flight passed the
+full persona path: model load via the manager, the paper-CSV persona draw
+PARSED (pool sample written, `persona_parsed: true`), file write-through.
+`parse_persona` now accepts the Prompt 10 comma-separated completion as
+well as the old underscore-key label shape. **The 21:30 run has NOT been
+started — decide below before starting it.**
 
 ---
 
