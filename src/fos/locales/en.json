@@ -59,13 +59,20 @@
     "randomization": {
       "unsupported_distribution": "Unsupported randomization distribution: {distribution}",
       "unsupported_expected": "expected must be one of: {supported}",
-      "unsupported_persona_depth": "Unsupported persona depth: {depth}; choose one of: {supported}"
+      "unsupported_persona_depth": "Unsupported persona depth: {depth}; choose one of: {supported}",
+      "unsupported_stage": "Stage must be an integer 1..12, got {stage}"
     },
     "sweep_kit": {
       "unsupported_fillin_kind": "Unsupported covariate fill-in kind: {kind}"
     },
     "personas": {
       "unsupported_depth": "Unsupported persona depth: {depth}; choose one of: {supported}"
+    },
+    "twin_covariates": {
+      "unsupported_stage": "stage must be an integer 1..12, got {stage}",
+      "respondent_not_in_panel": "respondent {respondent_id} is not in the panel",
+      "empty_stage_pool": "stage {stage} has an empty pool",
+      "score_cell_missing": "{column} missing for respondent {respondent_id} in {wave_name}"
     }
   },
   "agent": {

@@ -22,10 +22,14 @@ Gui & Toubia (2025) comparison. It holds:
 - check_non_response: does the outcome ignore the treatment entirely?
 - count_specified_covariates: heuristic count of key: value persona pairs.
 - lint_covariate_count: warn/flag tiers for too many specified covariates.
-- covariate_count_for_depth: map a persona depth ("none" or "demographics")
-  onto how many covariates that depth pins in the prompt; the removed
-  behavioural tiers (tightwad/time_preference/risk_preference) raise.
+- covariate_count_for_depth: map a persona depth ("none", "demographics",
+  or an Appendix E stage depth "stage2".."stage12") onto how many
+  covariates that depth pins in the prompt; the removed behavioural tiers
+  (tightwad/time_preference/risk_preference), the non-depth "stage1", and
+  any other unknown name raise.
 - COVARIATE_COUNT_FOR_DEPTH: the module-level table behind that mapping.
+- STAGE_COVARIATE_COUNTS / stage_covariate_count: Table E.1's cumulative
+  covariate count per stage (1..12) - 14, 15, 17 ... 30.
 """
 
 from __future__ import annotations
@@ -55,14 +59,48 @@ _STEP_JUMP_RATIO = 3.0
 _MILD_RHO = 0.2
 _SEVERE_RHO = 0.5
 
+# Table E.1 of Gui & Toubia (2025): cumulative covariate count per stage of
+# the measured-covariate sensitivity analysis. Stage 1 is the 14 Prompt-12
+# demographics; each later stage adds one behavioural/psychological measure
+# chunk (the Big Five at stage 12), so the counts run 14, 15, 17 ... 30.
+STAGE_COVARIATE_COUNTS = {
+    1: 14,
+    2: 15,
+    3: 17,
+    4: 18,
+    5: 19,
+    6: 20,
+    7: 21,
+    8: 22,
+    9: 23,
+    10: 24,
+    11: 25,
+    12: 30,
+}
+
+
+def stage_covariate_count(stage: int) -> int:
+    """Return Table E.1's cumulative covariate count for one stage (1..12).
+
+    Stages outside 1..12 (0, 13, a string, None) raise ValueError instead of
+    guessing a budget.
+    """
+    if stage not in STAGE_COVARIATE_COUNTS:
+        raise ValueError(T("error.randomization.unsupported_stage", stage=repr(stage)))
+    return STAGE_COVARIATE_COUNTS[stage]
+
+
 # How many covariates each persona depth pins in the survey prompt. The
-# paper's depth ladder has exactly the two levels {1, 2} (Gui & Toubia 2025
+# paper's depth ladder keeps the two levels {1, 2} (Gui & Toubia 2025
 # Appendix D): "none" adds no persona block at all and "demographics" pins
-# the 11 Appendix D demographic fields. The model-invented behavioural tiers
-# of the pre-drift five-tier ladder are gone, so no deeper count exists.
+# the 11 Appendix D demographic fields. Appendix E extends the vocabulary
+# with the measured-covariate stage depths "stage2".."stage12" (Table E.1
+# cumulative counts 15..30); "stage1" is a Table E.1 stage, not a depth
+# name, so it stays out of the map and raises like any unknown name.
 COVARIATE_COUNT_FOR_DEPTH = {
     "none": 0,
     "demographics": 11,
+    **{f"stage{stage}": STAGE_COVARIATE_COUNTS[stage] for stage in range(2, 13)},
 }
 
 
@@ -82,12 +120,13 @@ class RandomizationDesign:
         seed: optional design-level seed, kept as metadata for storage.
         blind_to_randomization: True when the subject never sees the design.
         covariates_specified: persona covariates the prompt pins down.
-        persona_depth: how deep the persona block goes: "none" (no block)
-            or "demographics" (the 11 demographic fields). The removed
-            behavioural tiers of the pre-drift ladder and any other name
-            raise ValueError.
-        covariate_count: how many covariates the chosen depth pins (0 or
-            11), kept as explicit metadata so stored records self-describe.
+        persona_depth: how deep the persona block goes: "none" (no block),
+            "demographics" (the 11 demographic fields), or an Appendix E
+            stage depth "stage2".."stage12". The removed behavioural tiers
+            of the pre-drift ladder and any other name raise ValueError.
+        covariate_count: how many covariates the chosen depth pins (0, 11,
+            or a Table E.1 count 15..30), kept as explicit metadata so
+            stored records self-describe.
     """
 
     variable: str
@@ -107,12 +146,13 @@ class RandomizationDesign:
     def __post_init__(self) -> None:
         """Reject an unknown persona depth at construction time.
 
-        Only "none" and "demographics" are legal values; a typo such as
-        "occluded", the superseded "extended", or the removed behavioural
-        tiers (tightwad/time_preference/risk_preference) must fail loudly
-        instead of silently producing a run that never renders a persona
-        block. The error text goes through T() so it stays localizable like
-        every other error here.
+        Only "none", "demographics" and the Appendix E stage depths
+        "stage2".."stage12" are legal values; a typo such as "occluded", the
+        superseded "extended", the removed behavioural tiers
+        (tightwad/time_preference/risk_preference), or the non-depth
+        "stage1" must fail loudly instead of silently producing a run that
+        never renders a persona block. The error text goes through T() so it
+        stays localizable like every other error here.
         """
         if self.persona_depth not in COVARIATE_COUNT_FOR_DEPTH:
             raise ValueError(
@@ -202,11 +242,12 @@ class RandomizationDesign:
 def covariate_count_for_depth(depth: str) -> int:
     """Return how many covariates one persona depth pins in the prompt.
 
-    "none" pins nothing (0) and "demographics" pins the 11 Appendix D
-    demographic fields (11) -- the paper's two-level ladder. The removed
-    behavioural tiers (tightwad/time_preference/risk_preference) and any
-    unknown depth raise ValueError so a typo never silently runs with the
-    wrong covariate budget.
+    "none" pins nothing (0), "demographics" pins the 11 Appendix D
+    demographic fields (11), and the Appendix E stage depths "stage2"..
+    "stage12" pin Table E.1's cumulative counts (15..30). The removed
+    behavioural tiers (tightwad/time_preference/risk_preference), the
+    non-depth "stage1", and any unknown depth raise ValueError so a typo
+    never silently runs with the wrong covariate budget.
     """
     if depth not in COVARIATE_COUNT_FOR_DEPTH:
         raise ValueError(
