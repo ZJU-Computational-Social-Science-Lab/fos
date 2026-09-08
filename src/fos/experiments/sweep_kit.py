@@ -28,7 +28,12 @@ What each function does:
     parse_fillin_number(text)              - Reads a "$8.26"-style answer as a
                                              float, or None for garbage.
     _first_answer_line(text)              - First line of an answer after
-                                             wrapper/token stripping.
+                                             wrapper stripping, spans turned
+                                             into single spaces.
+    _first_line_has_token_span(text)      - True when a <|...|> span sits on
+                                             the answer's first line (tells
+                                             the parser a span made the word
+                                             boundary).
     _strip_channel_wrappers(text)          - Removes the llama-server
                                              reasoning-channel marker that some
                                              models wrap around their answer.
@@ -141,9 +146,14 @@ _CHANNEL_WRAPPER = re.compile(
 
 # A chat-template token a model may keep emitting after it has answered, for
 # example "purchase<|im_end|>\n<|im_start|>system\nYou," (meta/muse-glimmer):
-# the answer comes first, the leaked template text after it is junk. Every
-# <|...|> span is removed before the answer line is read. This runs AFTER the
-# channel-wrapper strip above, whose own markers must stay intact to pair up.
+# the answer comes first, the leaked template text after it is junk. The
+# answer-line cleaner below turns each <|...|> span into ONE SPACE (never
+# deletes it) so the words around the span never glue together
+# ("purchase<|message|>final" must stay readable as "purchase final"). This
+# runs AFTER the channel-wrapper strip above, whose own markers must stay
+# intact to pair up. Note: sibling modules (personas, pilot_model) import this
+# same pattern and delete spans outright for their own field-value parsing,
+# which is why only the cleaner here substitutes spaces.
 _SPECIAL_TOKEN = re.compile(r"<\|[^>]*\|>")
 
 
@@ -167,12 +177,26 @@ def _first_answer_line(text: str) -> str:
     """Return the lowercased first line of an answer, template junk removed.
 
     The channel wrapper is stripped first (the answer follows it), then every
-    <|...|> chat-template token (the answer precedes them); only the first
-    line is kept and lowercased, so leaked template turns or explanations
-    written after the answer are dropped.
+    <|...|> chat-template token (which the answer precedes) becomes one space
+    and runs of spaces collapse to one, so a span never glues the words
+    around it ("purchase<|message|>final" reads "purchase final", not
+    "purchasefinal"); only the first line is kept and lowercased, so leaked
+    template turns or explanations written after the answer are dropped.
     """
-    cleaned = _SPECIAL_TOKEN.sub("", _strip_channel_wrappers(text))
+    cleaned = _SPECIAL_TOKEN.sub(" ", _strip_channel_wrappers(text))
+    cleaned = re.sub(r" {2,}", " ", cleaned)
     return cleaned.strip().split("\n", 1)[0].strip().lower()
+
+
+def _first_line_has_token_span(text: str) -> bool:
+    """True when a <|...|> token sits on the answer's first line.
+
+    Mirrors _first_answer_line's wrapper strip and first-line split (without
+    the span-to-space substitution), so the parser can tell a span-made word
+    boundary from ordinary prose spacing on the answer line.
+    """
+    unwrapped = _strip_channel_wrappers(text).strip()
+    return _SPECIAL_TOKEN.search(unwrapped.split("\n", 1)[0]) is not None
 
 
 def _probe_intro(category: str, product: str) -> str:
@@ -257,16 +281,31 @@ def build_covariate_fillin_prompt(
 def parse_purchase(text: str) -> bool | None:
     """Read a one-line purchase answer: True, False, or None for anything else.
 
-    The very first word of the first line decides, case-insensitively:
-    "purchase"/"yes" mean True, "not purchase"/"no" mean False, quotes and
-    punctuation tolerated. Only the first word counts — prose that goes on
-    after it ("Purchase decision is a personal choice") is None. Llama-server
-    wrappers and chat-template tokens are removed first.
+    When the first line carries a chat-template span, the span boundary is
+    what separates the decision from whatever the model kept writing, so the
+    first word(s) of the line decide: "purchase"/"yes" mean True,
+    "not purchase"/"no" mean False, and prose after the span is ignored (a
+    real muse-glimmer record "not purchase<|im_end|>...Please consider..."
+    reads False, not None). Without a span the whole first line must be the
+    answer phrase — prose that merely starts with the word ("Purchase decision
+    is a personal choice") is None — case-insensitively, with quotes and
+    punctuation tolerated. Llama-server wrappers are removed first.
     """
     if not isinstance(text, str):
         return None
     body = _first_answer_line(text).lstrip(_LEADING_JUNK)
     if not body:
+        return None
+    if _first_line_has_token_span(text):
+        # A span split the answer open mid-word, so read only the first word.
+        if re.match(r"not\s+purchase(?=[^a-z0-9]|$)", body):
+            return False
+        if re.match(r"purchase(?=[^a-z0-9]|$)", body):
+            return True
+        if re.match(r"yes(?=[^a-z0-9]|$)", body):
+            return True
+        if re.match(r"no(?=[^a-z0-9]|$)", body):
+            return False
         return None
     if re.match(r"not\s+purchase(?=[^a-z0-9]*$)", body):
         return False
