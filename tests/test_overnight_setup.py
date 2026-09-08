@@ -133,8 +133,26 @@ class _RecordingChat:
 class TestExpandDepths:
 
     def test_all_single_tiers_and_comma_lists_expand_in_order(self):
+        """expand_depths("all") now expands to the 13-name ladder: none,
+        demographics, then stage2..stage12 (Appendix E); single tiers and
+        two-name comma lists still expand in order."""
         module = _load_script(SWEEP_SCRIPT, "unblinding_sweep")
-        assert module.expand_depths("all") == TIERS
+        expected = [
+            "none",
+            "demographics",
+            "stage2",
+            "stage3",
+            "stage4",
+            "stage5",
+            "stage6",
+            "stage7",
+            "stage8",
+            "stage9",
+            "stage10",
+            "stage11",
+            "stage12",
+        ]
+        assert module.expand_depths("all") == expected
         for tier in TIERS:
             assert module.expand_depths(tier) == [tier]
         assert module.expand_depths("none,demographics") == TIERS
