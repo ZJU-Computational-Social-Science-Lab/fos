@@ -30,6 +30,8 @@ What each function does:
     _short_products(...)       - Products whose pool is still below K.
     _generate_pools(...)       - Run the persona pool batch tool and top up
                                  any product that came up short.
+    _accepted_so_far(...)      - Accepted personas already on disk across
+                                 every product (a partial pool phase).
     _subsample_pools(...)      - Seed-subsample to exactly K per product
                                  and write the flat pool files.
     _pool_phase(...)           - Generate + subsample the pools (resumable).
@@ -334,6 +336,21 @@ def _top_up_product(
     return extra
 
 
+def _accepted_so_far(
+    products: list[dict[str, Any]], pools_work: Path
+) -> int:
+    """Total accepted personas already on disk across every product.
+
+    The number of persona lines already drawn into the product folders
+    under pools_work; used to tell a fresh pool phase (nothing on disk)
+    from a resumed one (an interrupted run kept its accepted draws).
+    """
+    return sum(
+        _count_accepted(pools_work / _product_folder(item["product"]))
+        for item in products
+    )
+
+
 def _generate_pools(
     settings: Settings,
     products: list[dict[str, Any]],
@@ -349,17 +366,27 @@ def _generate_pools(
     personas.jsonl immediately (a killed run keeps what it drew). The batch
     exits 3 when some product parsed fewer than --min-personas (= K here),
     so short products get single-product top-up rounds (append mode) until
-    every product holds >= K accepted personas. Returns the total number of
-    persona requests made across all rounds.
+    every product holds >= K accepted personas. When a partial pool already
+    exists on disk (a resumed run interrupted mid-generation), the full
+    batch is NOT re-drawn: only products still short of K get top-up
+    rounds, so no GPU calls are spent regenerating finished products.
+    Returns the total number of persona requests made in this invocation.
     """
     pools_work.mkdir(parents=True, exist_ok=True)
     per_product = math.ceil(k * settings.pool_overdraw)
-    log(f"persona pools: drawing {per_product} per product (min {k} accepted)...")
-    subprocess.run(
-        _generator_cmd(settings, products_path, pools_work, per_product, k),
-        text=True,
-    )
-    requested = len(products) * per_product
+    already = _accepted_so_far(products, pools_work)
+    if already:
+        log(
+            f"persona pools: {already} personas already drawn on disk "
+            f"(interrupted run) - topping up only the short products"
+        )
+    else:
+        log(f"persona pools: drawing {per_product} per product (min {k} accepted)...")
+        subprocess.run(
+            _generator_cmd(settings, products_path, pools_work, per_product, k),
+            text=True,
+        )
+    requested = 0 if already else len(products) * per_product
     for _round in range(4):
         short = _short_products(products, pools_work, k)
         if not short:
