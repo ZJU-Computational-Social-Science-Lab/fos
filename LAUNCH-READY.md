@@ -120,6 +120,39 @@ you launch from (git-ignored; the pilot backups copy `results/` to
   `demographics_unblinded/` — each leg's `<model>_<blinding>.jsonl/.csv`
   + its own `manifest.json` (design, prompts' sha, timestamps, pool-seed).
 
+## Stopping the run (graceful stop / hard stop — TASK-1525)
+
+The wrapper installs SIGINT and SIGTERM handlers while a real run is
+active. Stop at any time with **zero loss** by sending ONE signal; escalate
+with a second signal if you cannot wait for the current legs.
+
+- **How to stop** — from the run's console press `Ctrl-C` once, or from
+  another shell `kill -INT <wrapper-pid>` (equivalently `kill -TERM`). The
+  wrapper prints:
+  `graceful stop requested — finishing current leg(s), N calls remaining in
+  flight`, then lets every already-running leg finish (their records are
+  written at leg completion — **nothing is lost**), does not start any leg
+  that had not begun, and writes `manifest.json` with
+  `state: "stopped_gracefully"` plus each planned leg's completion status.
+  Exit code is 0 (clean operator-requested stop). A stop requested during
+  model load or pool generation lands at the next wrapper boundary (the
+  current model-load call or pool invocation completes first — pools keep
+  every accepted persona, so `--resume` later tops up only what is short).
+- **What a graceful stop costs** — the time the current legs still need to
+  finish (the printed N calls tell you). If that is too long, send a SECOND
+  signal: the wrapper hard-stops immediately — the shared abort fires and
+  every in-flight leg stops at its next call. Finished legs are kept;
+  unfinished legs are re-run by a later `--resume` (leg-granular resume,
+  TASK-1522). Exit code 1.
+- **`--force`** — launch with `--force` to make even the FIRST signal an
+  immediate hard stop (skip the graceful wait entirely).
+- **When it is safe** — always: graceful stops lose nothing by definition;
+  hard stops only lose the in-flight portion of legs that were still
+  running (never completed records), which `--resume` re-runs exactly once.
+- **After a stop**, resume with the same `--resume` command below — it
+  plans exactly the legs that never finished and the final manifest
+  reaches `state: "complete"`.
+
 ## Crash / resume behaviour (verified end-to-end, TASK-1522)
 
 - **The run is marked as started immediately**: the run-level `manifest.json`

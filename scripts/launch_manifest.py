@@ -11,15 +11,16 @@ the same run (a launch that was stopped and resumed):
     state "running" and no legs yet, so an interrupted run is recognised
     (the guard refuses a non-resume rerun into a directory that holds one)
     and the run's true start time survives every resume.
-  * A resumed invocation writes a FINAL manifest (state "complete") that
-    merges: every planned leg appears exactly once, in plan order - legs
-    finished in this invocation come from its results, legs finished in an
-    earlier invocation whose run-level manifest never recorded them are read
-    back from the leg's own files (_leg_done_result), and legs recorded as
-    ok in the earlier manifest are carried forward. The earliest start is
-    kept, each resume invocation is recorded under "resumed", and the pools
-    summary is carried forward when the pool phase was skipped. Resuming a
-    fully completed run therefore never wipes the manifest.
+  * A terminal write (state "complete", "stopped_gracefully" or "stopped"
+    for an operator stop, TASK-1525) merges: every planned leg appears
+    exactly once, in plan order - legs finished in this invocation come from
+    its results, legs finished in an earlier invocation whose run-level
+    manifest never recorded them are read back from the leg's own files
+    (_leg_done_result), and legs recorded as ok in the earlier manifest are
+    carried forward. The earliest start is kept, each resume invocation is
+    recorded under "resumed", and the pools summary is carried forward when
+    the pool phase was skipped. Resuming a fully completed run therefore
+    never wipes the manifest.
   * Legs are the unit of resume: a leg's records are written only when the
     whole leg completes (see launch_sweep), so "done" means its files and
     its own manifest exist (_leg_is_done), and a partial leg is re-run.
@@ -145,11 +146,12 @@ def _build_run_payload(
 ) -> dict[str, Any]:
     """Assemble one coherent run-manifest payload.
 
-    In the final "complete" state every planned (depth, blinding) leg
-    appears exactly once, in plan order: this invocation's result when the
-    leg ran now, else the earlier manifest's ok entry, else the leg's own
-    durable files, else a visible "never completed" failure entry - so a
-    resumed run has no duplicate and no missing leg entries. A "running"
+    In every terminal state ("complete", "stopped_gracefully" and "stopped"
+    for an operator stop) every planned (depth, blinding) leg appears
+    exactly once, in plan order: this invocation's result when the leg ran
+    now, else the earlier manifest's ok entry, else the leg's own durable
+    files, else a visible "never completed" failure entry - so a resumed or
+    stopped run has no duplicate and no missing leg entries. A "running"
     marker carries no legs yet. pools carries this invocation's summary or,
     when the pool phase was skipped (already complete), the earlier
     manifest's summary. started is the earliest start across invocations.
@@ -161,8 +163,9 @@ def _build_run_payload(
         if leg.get("ok")
     }
     this = {(r["depth"], r["blinding"]): r for r in leg_results}
+    terminal = state in ("complete", "stopped_gracefully", "stopped")
     merged_legs: list[dict[str, Any]] = []
-    if state == "complete":
+    if terminal:
         for target in targets:
             key = (target["depth"], target["blinding"])
             if key in this:
@@ -178,7 +181,7 @@ def _build_run_payload(
                 )
     pools = pool_summary if pool_summary is not None else (prior or {}).get("pools")
     resumed = list((prior or {}).get("resumed") or [])
-    if state == "complete" and resume_invocation:
+    if state in ("complete", "stopped_gracefully", "stopped") and resume_invocation:
         resumed.append(
             {
                 "at": finished,
@@ -188,7 +191,7 @@ def _build_run_payload(
         )
     ok = (
         all(leg.get("ok", False) for leg in merged_legs)
-        if state == "complete"
+        if state in ("complete", "stopped_gracefully", "stopped")
         else None
     )
     return {
