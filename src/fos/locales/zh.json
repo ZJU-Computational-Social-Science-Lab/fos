@@ -59,13 +59,20 @@
     "randomization": {
       "unsupported_distribution": "不支持的随机化分布：{distribution}",
       "unsupported_expected": "预期方向必须是以下之一：{supported}",
-      "unsupported_persona_depth": "不支持的画像深度：{depth}；请选择以下之一：{supported}"
+      "unsupported_persona_depth": "不支持的画像深度：{depth}；请选择以下之一：{supported}",
+      "unsupported_stage": "阶段必须是 1 到 12 的整数，实际为：{stage}"
     },
     "sweep_kit": {
       "unsupported_fillin_kind": "不支持的协变量填空类型：{kind}"
     },
     "personas": {
       "unsupported_depth": "不支持的画像深度：{depth}；请选择以下之一：{supported}"
+    },
+    "twin_covariates": {
+      "unsupported_stage": "阶段必须是 1 到 12 的整数，实际为：{stage}",
+      "respondent_not_in_panel": "受访者 {respondent_id} 不在面板中",
+      "empty_stage_pool": "阶段 {stage} 没有可用的受访者可供抽样",
+      "score_cell_missing": "受访者 {respondent_id} 的 {column} 在 {wave_name} 中缺失"
     }
   },
   "agent": {
