@@ -233,7 +233,10 @@ class TestPercentiles:
     def test_percentile_is_monotone_in_the_score(self, tmp_path):
         """A higher score never gets a lower percentile."""
         panel = fixture_panel(tmp_path)
-        values = [float(row["st"]) for row in FIXTURE_ROWS.values()]
+        # Sample the fixture's ST-TW values in score order: the fixture
+        # rows are keyed by respondent id (7, 12, 18, 24, 7, 12, 18, 12), so
+        # row order is not monotone and cannot test a monotone mapping.
+        values = sorted(float(row["st"]) for row in FIXTURE_ROWS.values())
         percentiles = [panel.percentile("score_ST-TW", v) for v in values]
         assert percentiles == sorted(percentiles), (
             f"percentiles must be monotone in score, got {percentiles}"
