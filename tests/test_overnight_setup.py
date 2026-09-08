@@ -1,12 +1,16 @@
 # Contract tests (RED phase) for three overnight-readiness changes to the
-# Gui & Toubia (2025) unblinding kit: many depth tiers / many products in one
-# unattended invocation, plus a standalone chat-server pilot.
+# Gui & Toubia (2025) unblinding kit: the two depth levels / many products in
+# one unattended invocation, plus a standalone chat-server pilot. After the
+# paper-fidelity drift fix (TASK-1483) the depth ladder holds exactly the two
+# paper levels {1, 2} (none, demographics); the behavioural tiers of the
+# pre-drift five-tier ladder (tightwad, time_preference, risk_preference)
+# are gone everywhere.
 #
-# 1. scripts/unblinding_sweep.py. expand_depths(spec) maps "all" -> the five
-#    tiers (none, demographics, tightwad, time_preference, risk_preference),
-#    one tier -> [tier], a comma list -> its members in order; unknown names
-#    raise ValueError. --persona-depth accepts "all", the five tiers AND
-#    comma lists, keeping the raw string typed (single tiers and the default
+# 1. scripts/unblinding_sweep.py. expand_depths(spec) maps "all" -> the two
+#    tiers (none, demographics), one tier -> [tier], a comma list -> its
+#    members in order; unknown names AND the removed behavioural tiers raise
+#    ValueError. --persona-depth accepts "all", the two tiers AND comma
+#    lists, keeping the raw string typed (single tiers and the default
 #    "none" stay strings - locked by test_persona_depth.py); an invalid tier
 #    inside a comma list is rejected at parse time.
 # 2. scripts/generate_personas.py batch mode + safety. --products-file reads
@@ -24,22 +28,22 @@
 #    skipped personas, never a crash.
 # 3. scripts/pilot_model.py (NEW file). main(argv=None) behind a __main__
 #    guard; flags --model (required), --base-url (http://127.0.0.1:8080),
-#    --out (results/pilots/<safe_model>/), --depth1-calls 20, --depth5-calls
+#    --out (results/pilots/<safe_model>/), --depth1-calls 20, --depth2-calls
 #    20, --persona-gen-calls 5, --timeout 120, --seed 42. Phases depth1,
-#    depth5, persona-gen in that order, each cycling the 11-level price grid
+#    depth2, persona-gen in that order, each cycling the 11-level price grid
 #    (0..200% step 20) from 0%: (a) build_purchase_user_prompt + blinded
-#    system prompt; (b) same survey but the user prompt embeds a FIXED fully
-#    populated synthetic persona (module.PILOT_PERSONA: 11 demographics +
-#    all 5 behavioral measures as {score, percentile} dicts) rendered via
-#    render_persona_fields(persona, "risk_preference"), product data from
+#    system prompt; (b) same survey but the user prompt embeds a FIXED
+#    synthetic demographics persona (module.PILOT_PERSONA: the 11 demographic
+#    fields, no invented behavioural measures) rendered via
+#    render_persona_fields(persona, "demographics"), product data from
 #    module.PILOT_PRODUCT; (c) build_persona_elicitation_prompt with
 #    max_tokens 128. Transport = chat_fn(messages, max_tokens), built only
 #    in main (socket-free import; injectable via module._build_chat_fn).
 #    Report {out}/pilot_report.json: {model, base_url, generated_at} +
-#    per-phase depth1/depth5/persona_gen, each {"calls", "parse_rate",
+#    per-phase depth1/depth2/persona_gen, each {"calls", "parse_rate",
 #    "latency": {"mean_s", "median_s", "p95_s"}, "distinct_raw": [...]
 #    capped at 20}; parse_rate = purchase answers parsed via parse_purchase,
-#    persona-gen answers carrying all 16 fields. Summary table printed; main
+#    persona-gen answers carrying all 11 fields. Summary table printed; main
 #    exits 0 even on all-garbage answers, exits 2 when the transport raises.
 import importlib.util
 import inspect
@@ -58,13 +62,17 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SWEEP_SCRIPT = REPO_ROOT / "scripts" / "unblinding_sweep.py"
 GENERATE_SCRIPT = REPO_ROOT / "scripts" / "generate_personas.py"
 PILOT_SCRIPT = REPO_ROOT / "scripts" / "pilot_model.py"
-TIERS = ["none", "demographics", "tightwad", "time_preference", "risk_preference"]
+TIERS = ["none", "demographics"]
 PRICE_GRID = list(range(0, 201, 20))  # the 11-level grid the pilot phases cycle
+# Two verbatim Table A.1 rows (TASK-1483 fixture): the pre-drift product
+# set's drifted SKUs (e.g. "Lay's Classic Potato Chips, 8 oz Bag" @ 4.99)
+# must not appear in any fixture here.
 PRODUCTS = [
     {"category": "Soft Drinks - Carbonated",
      "product": "Coca-Cola Soda Pop, 12 fl oz, 12 Pack Cans", "regular_price": 8.26},
-    {"category": "Snacks",
-     "product": "Lay's Classic Potato Chips, 8 oz Bag", "regular_price": 4.99},
+    {"category": "Snacks - Potato Chips",
+     "product": "Lay's Classic Potato Snack Chips, Party Size, 13 oz Bag",
+     "regular_price": 5.44},
 ]
 SAFE_PRODUCTS = [re.sub(r"[^0-9A-Za-z]+", "_", p["product"]) for p in PRODUCTS]
 CANNED_RAW = "\n".join([
@@ -77,14 +85,9 @@ CANNED_PERSONA = {
     "occupation": "teacher", "ethnicity": "white", "marital_status": "married",
     "household_size": 4, "number_of_children": 2, "state": "CA", "home_ownership": "own",
 }
-# The same answer plus all five behavioral measures: the all-16-fields reply.
-CANNED_16_RAW = CANNED_RAW + (
-    "\ntightwad_spendthrift: 42 (P18 percentile)"
-    "\ndiscount_rate: 6.2 (P71 percentile)"
-    "\npresent_bias: 33 (P9 percentile)"
-    "\nrisk_aversion: 7.5 (P88 percentile)"
-    "\nloss_aversion: 4.0 (P62 percentile)"
-)
+# The 11-field reply above is the persona answer the persona-gen phase
+# counts as parseable (the pre-drift "all 16 fields" reply that added five
+# model-invented behavioural measures is gone with the drift fix).
 
 def _load_script(path, name):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -109,7 +112,7 @@ def _products_file(tmp_path):
     return path
 
 def _persona_lines(path):
-    return [json.loads(l) for l in path.read_text().splitlines() if l.strip()]
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 class _ValidChat:
     """Chat that answers every call with one canned valid persona answer."""
@@ -134,12 +137,22 @@ class TestExpandDepths:
         assert module.expand_depths("all") == TIERS
         for tier in TIERS:
             assert module.expand_depths(tier) == [tier]
-        assert module.expand_depths("none,demographics") == TIERS[:2]
-        assert module.expand_depths("demographics,tightwad,time_preference") == TIERS[1:4]
+        assert module.expand_depths("none,demographics") == TIERS
+        assert module.expand_depths("demographics,none") == TIERS[::-1]
 
-    def test_an_unknown_name_anywhere_raises_value_error(self):
+    def test_an_unknown_or_removed_name_anywhere_raises_value_error(self):
         module = _load_script(SWEEP_SCRIPT, "unblinding_sweep")
-        for bad in ("bananas", "extended", "deep", "none,extended", "demographics,bananas"):
+        for bad in (
+            "bananas",
+            "extended",
+            "deep",
+            "none,extended",
+            "demographics,bananas",
+            "tightwad",
+            "time_preference",
+            "risk_preference",
+            "none,tightwad",
+        ):
             with pytest.raises(ValueError):
                 module.expand_depths(bad)
 
@@ -147,13 +160,18 @@ class TestUnblindingSweepAllDepthSpec:
 
     def test_parser_accepts_all_and_comma_lists_keeping_the_raw_text(self):
         module = _load_script(SWEEP_SCRIPT, "unblinding_sweep")
-        for spec in ("all", "none,demographics", "demographics,tightwad,time_preference"):
+        for spec in ("all", "none,demographics", "demographics,none"):
             args = module._parse_args(["--model", "qwen3-8b", "--persona-depth", spec])
             assert args.persona_depth == spec
 
-    def test_parser_rejects_an_invalid_tier_inside_a_comma_list(self):
+    def test_parser_rejects_an_invalid_or_removed_tier_inside_a_comma_list(self):
         module = _load_script(SWEEP_SCRIPT, "unblinding_sweep")
-        for bad in ("none,extended", "demographics,bananas"):
+        for bad in (
+            "none,extended",
+            "demographics,bananas",
+            "none,tightwad",
+            "demographics,risk_preference",
+        ):
             with pytest.raises(SystemExit):
                 module._parse_args(["--model", "qwen3-8b", "--persona-depth", bad])
 
@@ -210,7 +228,7 @@ class TestGeneratePersonasBatchRun:
         assert self._run(monkeypatch, module, tmp_path / "out", chat,
                          ["--n", "3"], tmp_path) == 3
         stderr = capsys.readouterr().err
-        short = [l for l in stderr.splitlines() if PRODUCTS[0]["product"] in l]
+        short = [line for line in stderr.splitlines() if PRODUCTS[0]["product"] in line]
         assert short and "0" in short[0] and "3" in short[0]
         assert PRODUCTS[1]["product"] not in stderr
 
@@ -226,7 +244,7 @@ class TestGeneratePersonasBatchRun:
         assert self._run(monkeypatch, module, tmp_path / "out", chat,
                          ["--n", "2"], tmp_path) == 3
         stderr = capsys.readouterr().err
-        short = [l for l in stderr.splitlines() if PRODUCTS[1]["product"] in l]
+        short = [line for line in stderr.splitlines() if PRODUCTS[1]["product"] in line]
         assert short and PRODUCTS[0]["product"] not in stderr
 
     def test_batch_mode_keeps_personas_written_before_a_mid_run_kill(self, tmp_path, monkeypatch):
@@ -347,7 +365,7 @@ class TestPilotModelScript:
         assert excinfo.value.code == 0
         help_text = capsys.readouterr().out
         for option in ("--model", "--base-url", "--out", "--depth1-calls",
-                       "--depth5-calls", "--persona-gen-calls", "--timeout", "--seed"):
+                       "--depth2-calls", "--persona-gen-calls", "--timeout", "--seed"):
             assert option in help_text, f"missing option {option}"
 
     def test_parser_requires_model_and_applies_the_documented_defaults(self):
@@ -356,16 +374,22 @@ class TestPilotModelScript:
             module._parse_args([])
         args = module._parse_args(["--model", "qwen3/8b"])
         assert args.base_url == "http://127.0.0.1:8080"
-        assert (args.depth1_calls, args.depth5_calls,
+        # The second phase is the demographics tier of the two-level ladder
+        # (depth 2), so the flag is --depth2-calls, never --depth5-calls.
+        depth2_calls = getattr(args, "depth2_calls", None)
+        assert depth2_calls == 20, "pilot parser must default --depth2-calls to 20"
+        assert (args.depth1_calls, depth2_calls,
                 args.persona_gen_calls, args.timeout, args.seed) == (20, 20, 5, 120, 42)
 
     def test_parser_reads_every_explicit_option(self):
         module = _load_script(PILOT_SCRIPT, "pilot_model")
         args = module._parse_args(
             ["--model", "qwen3-8b", "--base-url", "http://localhost:4321/v1",
-             "--out", "results/x", "--depth1-calls", "5", "--depth5-calls", "7",
+             "--out", "results/x", "--depth1-calls", "5", "--depth2-calls", "7",
              "--persona-gen-calls", "3", "--timeout", "9", "--seed", "1"])
-        assert (args.base_url, args.out, args.depth1_calls, args.depth5_calls,
+        depth2_calls = getattr(args, "depth2_calls", None)
+        assert depth2_calls == 7, "pilot parser must read --depth2-calls"
+        assert (args.base_url, args.out, args.depth1_calls, depth2_calls,
                 args.persona_gen_calls, args.timeout, args.seed) == (
             "http://localhost:4321/v1", "results/x", 5, 7, 3, 9, 1)
 
@@ -374,18 +398,17 @@ class TestPilotModelScript:
         _inject_chat(monkeypatch, module)
         monkeypatch.chdir(tmp_path)
         assert _run_main(module, ["--model", "qwen3/8b", "--depth1-calls", "1",
-                                  "--depth5-calls", "1", "--persona-gen-calls", "1"]) == 0
+                                  "--depth2-calls", "1", "--persona-gen-calls", "1"]) == 0
         assert (tmp_path / "results" / "pilots" / "qwen3_8b"
                 / "pilot_report.json").exists()
 
-    def test_the_pilot_exposes_fixed_product_and_full_persona_fixtures(self):
+    def test_the_pilot_exposes_fixed_product_and_demographics_persona_fixtures(self):
         module = _load_script(PILOT_SCRIPT, "pilot_model")
         assert set(module.PILOT_PRODUCT) >= {"category", "product", "regular_price"}
         persona = module.PILOT_PERSONA
-        assert set(persona) >= set(personas.PERSONA_FIELDS) | set(
-            personas.BEHAVIORAL_MEASURES)
-        for measure in personas.BEHAVIORAL_MEASURES:
-            assert {"score", "percentile"} <= set(persona[measure])
+        # The fixed persona is the demographics-tier persona: the 11
+        # demographic fields. Model-invented behavioural measures are gone.
+        assert set(persona) >= set(personas.PERSONA_FIELDS)
 
 class TestPilotDepthProtocol:
 
@@ -393,7 +416,7 @@ class TestPilotDepthProtocol:
         module = _load_script(PILOT_SCRIPT, "pilot_model")
         chat = _inject_chat(monkeypatch, module)
         rc = _run_main(module, _pilot_argv(tmp_path / "pilot", depth1_calls=3,
-                                           depth5_calls=2, persona_gen_calls=1))
+                                           depth2_calls=2, persona_gen_calls=1))
         return rc, module, chat
 
     def test_depth1_calls_cycle_the_blinded_survey_across_the_price_grid(self, tmp_path, monkeypatch):
@@ -411,7 +434,7 @@ class TestPilotDepthProtocol:
         module = _load_script(PILOT_SCRIPT, "pilot_model")
         chat = _inject_chat(monkeypatch, module)
         assert _run_main(module, _pilot_argv(tmp_path / "pilot", depth1_calls=25,
-                                             depth5_calls=1,
+                                             depth2_calls=1,
                                              persona_gen_calls=1)) == 0
         assert len(chat.calls) == 27
         product, blinded = module.PILOT_PRODUCT, build_blinded_system_prompt()
@@ -423,10 +446,22 @@ class TestPilotDepthProtocol:
             assert messages[1]["content"] == build_purchase_user_prompt(
                 product["category"], product["product"], price)
 
-    def test_depth5_calls_embed_the_fixed_full_persona_at_risk_preference(self, tmp_path, monkeypatch):
-        _rc, module, chat = self._structure_run(tmp_path, monkeypatch)
+    def test_depth2_calls_embed_the_fixed_demographics_persona(self, tmp_path, monkeypatch):
+        rc, module, chat = self._structure_run(tmp_path, monkeypatch)
+        assert rc == 0, "pilot main must exit 0 on a clean run"
         product = module.PILOT_PRODUCT
-        block = personas.render_persona_fields(module.PILOT_PERSONA, "risk_preference")
+        # The persona phase renders the fixed demographics persona. Either the
+        # depth renderer at the "demographics" tier or the demographics block
+        # renderer may back it; the block must be non-empty and measure-free.
+        render = getattr(personas, "render_persona_fields", None)
+        if render is not None:
+            block = render(module.PILOT_PERSONA, "demographics")
+        else:
+            block_render = getattr(personas, "render_demographics_block", None)
+            assert block_render is not None, (
+                "pilot persona phase needs a demographics renderer"
+            )
+            block = block_render(module.PILOT_PERSONA)
         assert block
         for index in range(3, 5):
             messages, _tokens = chat.calls[index]
@@ -439,7 +474,8 @@ class TestPilotDepthProtocol:
             assert block in user and survey in user and user != survey
 
     def test_persona_gen_calls_send_the_elicitation_prompt_with_max_tokens_128(self, tmp_path, monkeypatch):
-        _rc, module, chat = self._structure_run(tmp_path, monkeypatch)
+        rc, module, chat = self._structure_run(tmp_path, monkeypatch)
+        assert rc == 0, "pilot main must exit 0 on a clean run"
         product = module.PILOT_PRODUCT
         messages, max_tokens = chat.calls[-1]
         assert messages[1]["content"] == personas.build_persona_elicitation_prompt(
@@ -452,37 +488,41 @@ class TestPilotReport:
         counters = {}
         def responder(messages, max_tokens):
             user = messages[1]["content"]
-            if "Write the profile of a person" in user:
+            # persona-gen = the paper Prompt 10 consumer opener; depth2 =
+            # the embedded demographics block ("age: " line); the rest is
+            # the bare depth1 survey.
+            if "You are a consumer with the following characteristics:" in user:
                 phase = "persona_gen"
-            elif "risk_aversion:" in user:
-                phase = "depth5"
+            elif "age: " in user:
+                phase = "depth2"
             else:
                 phase = "depth1"
             counters[phase] = counters.get(phase, 0) + 1
             if phase == "persona_gen":
-                return CANNED_16_RAW if counters[phase] == 1 else "no profile"
-            if phase == "depth5":
+                return CANNED_RAW if counters[phase] == 1 else "no profile"
+            if phase == "depth2":
                 return "not purchase"
             return "purchase" if counters[phase] <= 2 else "nonsense"
         return responder
 
     def _run(self, tmp_path, monkeypatch, responder, **flags):
         module = _load_script(PILOT_SCRIPT, "pilot_model")
-        chat = _inject_chat(monkeypatch, module, _RecordingChat(responder))
+        _inject_chat(monkeypatch, module, _RecordingChat(responder))
         out = tmp_path / "pilot"
         return _run_main(module, _pilot_argv(out, **flags)), out / "pilot_report.json"
 
     def test_report_records_counts_parse_rates_latency_and_distinct_raw(self, tmp_path, monkeypatch, capsys):
         rc, report_path = self._run(
             tmp_path, monkeypatch, self._responder(), base_url="http://localhost:9000",
-            depth1_calls=4, depth5_calls=3, persona_gen_calls=2)
-        assert rc == 0
+            depth1_calls=4, depth2_calls=3, persona_gen_calls=2)
+        assert rc == 0, "pilot main must exit 0 on a clean run"
         report = json.loads(report_path.read_text())
         assert report["model"] == "qwen3-8b"
         assert report["base_url"] == "http://localhost:9000"
         assert isinstance(report["generated_at"], str) and report["generated_at"]
-        for phase in ("depth1", "depth5", "persona_gen"):
-            entry = report[phase]
+        for phase in ("depth1", "depth2", "persona_gen"):
+            entry = report.get(phase)
+            assert entry is not None, f"report must carry a {phase!r} phase entry"
             assert set(entry) >= {"calls", "parse_rate", "latency", "distinct_raw"}
             assert 0.0 <= entry["parse_rate"] <= 1.0
             assert set(entry["latency"]) == {"mean_s", "median_s", "p95_s"}
@@ -490,28 +530,28 @@ class TestPilotReport:
         assert report["depth1"]["calls"] == 4
         assert report["depth1"]["parse_rate"] == pytest.approx(0.5)
         assert set(report["depth1"]["distinct_raw"]) == {"purchase", "nonsense"}
-        assert report["depth5"]["calls"] == 3
-        assert report["depth5"]["parse_rate"] == pytest.approx(1.0)
+        assert report["depth2"]["calls"] == 3
+        assert report["depth2"]["parse_rate"] == pytest.approx(1.0)
         assert report["persona_gen"]["calls"] == 2
         assert report["persona_gen"]["parse_rate"] == pytest.approx(0.5)
         table = capsys.readouterr().out
-        for word in ("depth1", "depth5", "persona_gen", "parse_rate"):
+        for word in ("depth1", "depth2", "persona_gen", "parse_rate"):
             assert word in table, f"summary table must mention {word!r}"
 
     def test_distinct_raw_is_capped_at_twenty(self, tmp_path, monkeypatch):
         counters = {"depth1": 0}
         def responder(messages, max_tokens):
             user = messages[1]["content"]
-            if "Write the profile of a person" in user:
-                return CANNED_16_RAW
-            if "risk_aversion:" in user:
+            if "You are a consumer with the following characteristics:" in user:
+                return CANNED_RAW
+            if "age: " in user:
                 return "purchase"
             counters["depth1"] += 1
             return f"unique-answer-{counters['depth1']}"
         rc, report_path = self._run(
-            tmp_path, monkeypatch, responder, depth1_calls=25, depth5_calls=1,
+            tmp_path, monkeypatch, responder, depth1_calls=25, depth2_calls=1,
             persona_gen_calls=1)
-        assert rc == 0
+        assert rc == 0, "pilot main must exit 0 on a clean run"
         report = json.loads(report_path.read_text())
         assert report["depth1"]["calls"] == 25
         assert len(report["depth1"]["distinct_raw"]) == 20
@@ -519,11 +559,13 @@ class TestPilotReport:
     def test_pilot_exits_zero_even_when_every_answer_is_unparseable(self, tmp_path, monkeypatch):
         rc, report_path = self._run(
             tmp_path, monkeypatch, lambda m, t: "???",
-            depth1_calls=3, depth5_calls=3, persona_gen_calls=2)
-        assert rc == 0
+            depth1_calls=3, depth2_calls=3, persona_gen_calls=2)
+        assert rc == 0, "pilot main must exit 0 even on all-garbage answers"
         report = json.loads(report_path.read_text())
-        for phase in ("depth1", "depth5", "persona_gen"):
-            assert report[phase]["parse_rate"] == pytest.approx(0.0)
+        for phase in ("depth1", "depth2", "persona_gen"):
+            entry = report.get(phase)
+            assert entry is not None, f"report must carry a {phase!r} phase entry"
+            assert entry["parse_rate"] == pytest.approx(0.0)
 
     def test_pilot_exits_two_on_a_transport_level_failure(self, tmp_path,
                                                           monkeypatch, capsys):
