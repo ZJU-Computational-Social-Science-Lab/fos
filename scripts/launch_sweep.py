@@ -14,7 +14,9 @@ their own files when a run is resumed. Importing this module never opens
 a socket.
 
 Function map: _leg_dir/_leg_is_done (output dir + resume check), _make_chat
-(counting chat wrapper with progress + abort), _run_one_leg/_save_leg_outputs
+(counting chat wrapper with progress + abort; the abort carries a reason so
+a stopped leg records whether a hard operator stop or a dead chat server
+ended it - launch_stop.AbortSignal), _run_one_leg/_save_leg_outputs
 (one leg: run the sweep, then write its records/manifest), _watchdog (abort
 the run when the chat server dies), _progress_line (live progress text), and
 the smoke pre-flight _smoke with its helpers _smoke_direct_chat,
@@ -55,6 +57,7 @@ from launch_support import (  # noqa: E402
     _post_json,
     _repo_sha,
 )
+from launch_stop import AbortSignal, WATCHDOG_REASON  # noqa: E402
 
 HEALTH_POLL_SECONDS = 20.0
 HEALTH_MISSES_ABORT = 4
@@ -82,25 +85,24 @@ def _make_chat(
     settings: Settings,
     total_calls: int,
     progress: Callable[[int, int, int, float], None],
-) -> tuple[Callable[..., str], dict[str, int], threading.Event]:
+) -> tuple[Callable[..., str], dict[str, int], AbortSignal]:
     """Counting chat wrapper shared by all legs (progress + abort flag).
 
     state counts calls made and calls whose answer parsed; every
     progress_every-th call prints a live line; once abort is set every new
-    call raises so the legs stop immediately.
+    call raises so the legs stop immediately (dead chat server via the
+    watchdog, or an operator's hard stop - the AbortSignal carries the
+    reason the leg records).
     """
     state = {"done": 0, "parsed": 0}
-    abort = threading.Event()
+    abort = AbortSignal(WATCHDOG_REASON)
     lock = threading.Lock()
     started = time.monotonic()
     inner = _SWEEP.build_sweep_chat_fn(settings.base_url, settings.model, 16, 120.0)
 
     def chat_fn(messages: list[dict[str, str]], temperature: float) -> str:
         if abort.is_set():
-            raise RuntimeError(
-                "chat server lost; run aborted (check the "
-                "model manager and rerun with --resume)"
-            )
+            raise RuntimeError(abort.reason)
         raw = inner(messages, temperature)
         with lock:
             state["done"] += 1
@@ -250,7 +252,7 @@ def _save_leg_outputs(
 
 def _watchdog(
     settings: Settings,
-    abort: threading.Event,
+    abort: AbortSignal,
     done_event: threading.Event,
     log: Callable[[str], None],
 ) -> None:

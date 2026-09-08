@@ -24,10 +24,10 @@ come from the Twin-2K-500 panel, their renderer is not plumbed into the
 sweep kit). They are reserved for later stage-sensitivity runs.
 
 Function map: main (dispatch) -> _run (real launch) with helpers
-_pending_legs and _launch_legs; plan/ETA helpers _plan, _legs_from_depths,
-_eta_estimates, _build_run_name, _print_dry_run, _print_eta_block;
-flag handling _parse_args, _usage_error, _settings_from; utilities
-_start_thread and _make_log.
+_pending_legs, _launch_legs and _finalize_stopped (operator stop handling);
+plan/ETA helpers _plan, _legs_from_depths, _eta_estimates, _build_run_name,
+_print_dry_run, _print_eta_block; flag handling _parse_args, _usage_error,
+_settings_from; utilities _start_thread and _make_log.
 """
 
 from __future__ import annotations
@@ -81,6 +81,12 @@ from launch_sweep import (  # noqa: E402
     _run_one_leg,
     _smoke,
     _watchdog,
+)
+from launch_stop import (  # noqa: E402
+    StopFlag,
+    _drive_legs,
+    install_stop_handlers,
+    restore_stop_handlers,
 )
 
 DEFAULT_PRODUCTS = "data/configs/unblinding_products.json"
@@ -144,6 +150,13 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--run-name", default="")
     parser.add_argument("--seed", type=int, default=42, help="sweep design seed")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="make the FIRST stop signal an immediate hard stop instead of a "
+        "graceful one (skip the graceful finish; the second signal always "
+        "hard-stops)",
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--i-know-this-is-41h", action="store_true")
@@ -350,7 +363,13 @@ def _start_thread(target: Any, args: tuple) -> threading.Thread:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point: parse flags, then smoke, dry-run, or the full run."""
+    """Entry point: parse flags, then smoke, dry-run, or the full run.
+
+    Real runs install SIGINT/SIGTERM handlers that ask the shared stop flag
+    for a graceful stop (first signal) or a hard stop (second signal; or
+    --force makes even the first one hard). Handlers are restored before
+    returning so in-process callers are not left with changed handlers.
+    """
     args = _parse_args(argv)
     products_path = _resolve_products(args.products)
     if args.smoke:
@@ -373,9 +392,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         _print_dry_run(args, products, plan)
         return 0
-    return _run(
-        args, plan, products, products_path, _settings_from(args, _build_run_name(args))
-    )
+    stop = StopFlag(force_first=args.force)
+    previous = install_stop_handlers(stop)
+    try:
+        return _run(
+            args,
+            plan,
+            products,
+            products_path,
+            _settings_from(args, _build_run_name(args)),
+            stop=stop,
+        )
+    finally:
+        restore_stop_handlers(previous)
 
 
 def _run(
@@ -384,6 +413,7 @@ def _run(
     products: list[dict[str, Any]],
     products_path: Path,
     settings: Settings,
+    stop: StopFlag | None = None,
 ) -> int:
     """Run the real launch: model load, pools, concurrent legs, manifest.
 
@@ -394,7 +424,17 @@ def _run(
     manifest (state "complete") that merges its legs with the earlier
     invocations' finished legs - read from the leg files - so every planned
     leg appears exactly once (see launch_manifest).
+
+    The shared stop flag (SIGINT/SIGTERM, or the tests' stop object) is
+    honoured between phases and during the legs: a graceful stop before any
+    leg starts writes a stopped_gracefully manifest with no work done; a
+    graceful stop while legs run lets the in-flight legs finish before the
+    final stopped manifest is written (zero loss); a hard stop (second
+    signal or --force) aborts in-flight legs and leg-granular resume
+    applies (TASK-1522).
     """
+    if stop is None:
+        stop = StopFlag(force_first=getattr(args, "force", False))
     run_dir = settings.out / settings.run_name
     prior = _load_run_manifest(run_dir) if run_dir.exists() else None
     if (
@@ -443,6 +483,25 @@ def _run(
             state="complete",
         )
         return 0
+    # A stop that arrived before any model/pool/leg work: record it and stop.
+    if stop.level() != "running":
+        log(
+            f"{stop.level()} stop requested before the sweep started - "
+            "writing the stopped manifest and exiting cleanly"
+        )
+        return _finalize_stopped(
+            stop,
+            settings,
+            plan,
+            products_path,
+            run_dir,
+            started,
+            targets,
+            safe_model,
+            prior,
+            [],
+            None,
+        )
     if prior is None:
         _write_run_manifest(
             settings,
@@ -461,10 +520,38 @@ def _run(
         )
         log(f"run marked started: {run_dir / 'manifest.json'}")
     _ensure_model(settings, log)
+    if stop.level() != "running":  # stop requested during the model load
+        return _finalize_stopped(
+            stop,
+            settings,
+            plan,
+            products_path,
+            run_dir,
+            started,
+            targets,
+            safe_model,
+            prior,
+            [],
+            None,
+        )
     pool_summary = None
     personas_by_product = None
     if any(leg["depth"] != "none" for leg in pending):
         pool_summary = _pool_phase(settings, products, products_path, run_dir, k, log)
+        if stop.level() != "running":  # stop requested during pool generation
+            return _finalize_stopped(
+                stop,
+                settings,
+                plan,
+                products_path,
+                run_dir,
+                started,
+                targets,
+                safe_model,
+                prior,
+                [],
+                pool_summary,
+            )
         personas_by_product = _load_pool_personas(run_dir, products, k)
         if not personas_by_product:
             print(
@@ -472,9 +559,30 @@ def _run(
                 file=sys.stderr,
             )
             return 2
-    results = _launch_legs(
-        settings, plan, products, personas_by_product, run_dir, safe_model, pending
+    results, level = _launch_legs(
+        settings,
+        plan,
+        products,
+        personas_by_product,
+        run_dir,
+        safe_model,
+        pending,
+        stop,
     )
+    if level != "running":
+        return _finalize_stopped(
+            stop,
+            settings,
+            plan,
+            products_path,
+            run_dir,
+            started,
+            targets,
+            safe_model,
+            prior,
+            results,
+            pool_summary,
+        )
     _write_run_manifest(
         settings,
         plan,
@@ -513,8 +621,15 @@ def _launch_legs(
     run_dir: Path,
     safe_model: str,
     pending: list[dict[str, str]],
-) -> list[dict[str, Any]]:
-    """Start the pending legs concurrently and wait for every one of them."""
+    stop: StopFlag,
+) -> tuple[list[dict[str, Any]], str]:
+    """Start the pending legs concurrently and wait for every one of them.
+
+    Runs under the shared stop flag: a graceful stop lets the in-flight legs
+    finish (nothing is lost), a hard stop sets the chat abort so each leg
+    stops at its next call. Returns (results, final stop level) so the
+    caller can choose the run manifest's final state.
+    """
     pending_calls = sum(
         leg["calls"]
         for leg in plan["legs"]
@@ -532,8 +647,9 @@ def _launch_legs(
         f"launching {len(pending)} legs concurrently on {settings.base_url} "
         f"({pending_calls:,} calls planned)"
     )
-    threads = [
-        _start_thread(
+
+    def start_one(leg: dict[str, Any]) -> threading.Thread:
+        return _start_thread(
             _run_one_leg,
             (
                 settings,
@@ -547,16 +663,76 @@ def _launch_legs(
                 log,
             ),
         )
-        for leg in pending
-    ]
-    for thread in threads:
-        thread.join()
+
+    level = _drive_legs(
+        pending,
+        stop,
+        abort,
+        log,
+        start_one,
+        planned_calls=pending_calls,
+        calls_done=lambda: state["done"],
+    )
     done_event.set()
     log(
         f"finished: {state['done']:,} calls, "
         f"parse {100.0 * state['parsed'] / max(1, state['done']):.1f}%"
     )
-    return results
+    return results, level
+
+
+def _finalize_stopped(
+    stop: StopFlag,
+    settings: Settings,
+    plan: dict[str, Any],
+    products_path: Path,
+    run_dir: Path,
+    started: str,
+    targets: list[dict[str, str]],
+    safe_model: str,
+    prior: dict[str, Any] | None,
+    results: list[dict[str, Any]],
+    pool_summary: dict[str, Any] | None,
+) -> int:
+    """Write the final manifest for a stopped run and print the summary.
+
+    A graceful stop records state "stopped_gracefully" (per-leg completion
+    status merged like a completed run, so the operator sees exactly which
+    legs finished); a hard stop records state "stopped" and leg-granular
+    resume applies - rerun with --resume to finish the legs that did not
+    run. Returns the exit code: 0 for a graceful stop, 1 for a hard stop.
+    """
+    level = stop.level()
+    state = "stopped_gracefully" if level == "graceful" else "stopped"
+    _write_run_manifest(
+        settings,
+        plan,
+        products_path,
+        run_dir,
+        started,
+        datetime.now().astimezone().isoformat(),
+        results,
+        pool_summary,
+        targets=targets,
+        safe_model=safe_model,
+        prior=prior,
+        resume_invocation=prior is not None,
+        state=state,
+    )
+    if level == "graceful":
+        log(
+            f"run {settings.run_name} stopped gracefully "
+            f"({len(results)} leg result(s) recorded); "
+            "rerun with --resume --run-name "
+            f"{settings.run_name} to finish any legs that never started"
+        )
+        return 0
+    log(
+        f"run {settings.run_name} hard-stopped; in-flight legs aborted "
+        "(leg-granular resume applies, TASK-1522); rerun with --resume "
+        f"--run-name {settings.run_name} to finish the remaining legs"
+    )
+    return 1
 
 
 def _report_run(
