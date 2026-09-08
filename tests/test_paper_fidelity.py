@@ -347,10 +347,29 @@ class TestProbeSentenceOrder:
 # 7. Depth ladder: exactly the two paper levels (bare, demographics).
 class TestDepthLadderTwoLevels:
     def test_depth_budget_map_defines_exactly_the_two_paper_levels(self):
-        """Levels {1, 2}: none = bare/no persona, demographics = 11 fields."""
-        assert COVARIATE_COUNT_FOR_DEPTH == {"none": 0, "demographics": 11}, (
-            f"depth ladder must define exactly the two paper levels, got "
-            f"{COVARIATE_COUNT_FOR_DEPTH}")
+        """Levels {1, 2} stay none -> 0 / demographics -> 11; the map also
+        holds the Appendix E stage2..stage12 names (Table E.1 counts 15..30;
+        stage1 is a Table E.1 stage, not a depth name)."""
+        expected = {
+            "none": 0,
+            "demographics": 11,
+            "stage2": 15,
+            "stage3": 17,
+            "stage4": 18,
+            "stage5": 19,
+            "stage6": 20,
+            "stage7": 21,
+            "stage8": 22,
+            "stage9": 23,
+            "stage10": 24,
+            "stage11": 25,
+            "stage12": 30,
+        }
+        assert COVARIATE_COUNT_FOR_DEPTH == expected, (
+            f"depth map must keep none/demographics at 0/11 and add the "
+            f"Appendix E stage2..stage12 cumulative counts, got "
+            f"{COVARIATE_COUNT_FOR_DEPTH}"
+        )
     def test_removed_behavioural_tiers_are_no_longer_supported(self):
         """tightwad/time_preference/risk_preference must raise ValueError."""
         for depth in ("tightwad", "time_preference", "risk_preference"):
@@ -371,12 +390,29 @@ class TestDepthLadderTwoLevels:
             with pytest.raises(ValueError):
                 render({"age": 35}, depth)
     def test_cli_expands_all_to_only_the_two_paper_levels(self):
-        """--persona-depth all and PERSONA_TIERS stop at demographics."""
+        """--persona-depth all and PERSONA_TIERS hold the two paper levels
+        followed by the Appendix E stage2..stage12 ladder in order."""
         script = _load_script(SWEEP_SCRIPT_PATH, "unblinding_sweep")
-        assert script.PERSONA_TIERS == ("none", "demographics"), (
-            f"CLI tier list must hold exactly the two paper levels, got "
-            f"{script.PERSONA_TIERS}")
-        assert script.expand_depths("all") == ["none", "demographics"]
+        expected = (
+            "none",
+            "demographics",
+            "stage2",
+            "stage3",
+            "stage4",
+            "stage5",
+            "stage6",
+            "stage7",
+            "stage8",
+            "stage9",
+            "stage10",
+            "stage11",
+            "stage12",
+        )
+        assert script.PERSONA_TIERS == expected, (
+            f"CLI tier list must hold none/demographics followed by the "
+            f"Appendix E stage names in order, got {script.PERSONA_TIERS}"
+        )
+        assert script.expand_depths("all") == list(expected)
         for depth in ("tightwad", "time_preference", "risk_preference"):
             with pytest.raises(ValueError):
                 script.expand_depths(depth)
