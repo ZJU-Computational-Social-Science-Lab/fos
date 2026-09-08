@@ -1,12 +1,16 @@
-# RED-phase tests for `fos.experiments.sweep_kit` — the runnable layer of the
+# Contract tests for `fos.experiments.sweep_kit` — the runnable layer of the
 # Gui & Toubia (2025) unblinding comparison (design doc §2.2-2.8).
-# Specifies: blinded/unblinded system prompts (paper Prompts 5/6), the
-# Prompt-2 purchase survey, covariate fill-in probes (Prompt 1/7/8), tolerant
-# parsers, demand aggregation, self-describing records, the injected-chat
-# sweep/diagnostic runners, the confounding summary over
-# randomization.check_confounding, a JSON manifest writer, and the import-safe
-# CLI script scripts/unblinding_sweep.py. Every test FAILS right now because
-# the module and script do not exist yet — that is the RED phase of TDD.
+# Specifies: the blinded system prompt (the paper Prompt 2 / Prompt 10
+# system line VERBATIM — the Prompt-5 shortening is drift), the unblinded
+# system prompt (design paragraph + fill task), the Prompt-2 purchase
+# survey, covariate fill-in probes (paper Prompts 1/7/8 wording and order,
+# plus the income probe), tolerant parsers, demand aggregation,
+# self-describing records, the injected-chat sweep/diagnostic runners, the
+# confounding summary over randomization.check_confounding, a JSON manifest
+# writer, and the import-safe CLI script scripts/unblinding_sweep.py. The
+# paper-fidelity contract (tests/test_paper_fidelity.py, TASK-1483) is the
+# shared source of truth for the system line, probe wording and probe
+# sentence order pinned here (pre-GREEN re-spec, TASK-1487).
 
 import importlib.util
 import inspect
@@ -18,6 +22,7 @@ from pathlib import Path
 
 import pytest
 
+from fos.experiments import sweep_kit as sweep_kit_mod
 from fos.experiments.randomization import RandomizationDesign, check_confounding
 from fos.experiments.sweep_kit import (
     aggregate_demand,
@@ -36,6 +41,16 @@ from fos.experiments.sweep_kit import (
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = REPO_ROOT / "scripts" / "unblinding_sweep.py"
+
+# The paper's verbatim Prompt 2 / Prompt 10 system line (RESULT-1474 §1):
+# the customer fills in the blanks and returns comma-separated values. The
+# blinded purchase condition must use exactly this line, never the Prompt-5
+# shortening ("fill in the blank ... without extra text").
+PROMPT2_SYSTEM = (
+    "You, AI, are a customer. Your task is to fill in the blanks. "
+    "Return the completed information in comma-separated values, without any "
+    "extra text."
+)
 
 
 def _price_design(**overrides):
@@ -86,15 +101,22 @@ class _FakeChat:
         return self.answer
 
 
-# 1-2. System prompts (paper Prompt 5 / Prompt 6)
+# 1-2. System prompts (blinded = paper Prompt 2 system line; unblinded = Prompt 6)
 
 
 class TestSystemPrompts:
-    def test_blinded_system_prompt_is_the_customer_fillin_task(self):
+    def test_blinded_system_prompt_is_the_verbatim_prompt2_system(self):
+        # Pre-drift the blinded condition used the Prompt-5 shortening
+        # ("fill in the blank ... without extra text"); the paper-fidelity
+        # contract demands the full Prompt 2 / Prompt 10 system line.
         prompt = build_blinded_system_prompt()
+        assert prompt == PROMPT2_SYSTEM, (
+            f"blinded system prompt must equal paper Prompt 2's system line, "
+            f"got {prompt!r}"
+        )
         assert "customer" in prompt.lower()
-        assert "fill in the blank" in prompt.lower()
-        assert "without extra text" in prompt.lower()
+        assert "fill in the blanks" in prompt
+        assert "comma-separated values" in prompt
 
     def test_unblinded_prompt_composes_paragraph_and_fillin_task(self):
         design = _price_design(blinding="unblinded")
@@ -128,7 +150,7 @@ class TestBuildPurchaseUserPrompt:
         assert "$19.99" in prompt
 
 
-# 4. Covariate fill-in probes (paper Prompt 1 / 7 / 8)
+# 4. Covariate fill-in probes (paper Prompt 1 / 7 / 8, plus the income probe)
 
 
 class TestBuildCovariateFillinPrompt:
@@ -145,25 +167,66 @@ class TestBuildCovariateFillinPrompt:
         assert "last time you purchased" in prompt
         assert "[a number" in prompt
 
-    def test_competing_price_prompt_asks_for_a_competitors_price(self):
+    def test_competing_price_prompt_states_the_focal_price_first(self):
+        # Paper Prompt 7: the current-price sentence comes first, then the
+        # competing-product fill-in. The pre-drift probe reversed the order.
         prompt = build_covariate_fillin_prompt(
             "competing_price", "Snacks", "Lay's Chips", 4.50
         )
         assert "competing product" in prompt
         assert "[a number" in prompt
+        price_index = prompt.index("The product is currently priced at")
+        fill_index = prompt.index(
+            "The price of a similar competing product from a different brand is"
+        )
+        assert price_index < fill_index, (
+            "competing-price probe must state the focal price before the "
+            "competing-price fill-in (paper Prompt 7 order)"
+        )
 
-    def test_expiry_days_prompt_asks_for_a_number_of_days(self):
+    def test_expiry_days_probe_uses_the_paper_sentence_in_the_paper_order(self):
+        # Paper Prompt 8 wording and order, with no added premise sentence.
         prompt = build_covariate_fillin_prompt(
             "expiry_days", "Snacks", "Lay's Chips", 4.50
         )
-        assert "[a whole number]" in prompt
-        assert "days" in prompt
+        assert (
+            "The expiration date of the product is [a whole number] days from now."
+            in prompt
+        ), "expiry probe must use the paper's sentence verbatim (Prompt 8)"
+        price_index = prompt.index("The product is currently priced at")
+        expiry_index = prompt.index("The expiration date of the product is")
+        assert price_index < expiry_index, (
+            "expiry probe must state the focal price before the expiration "
+            "fill-in (paper Prompt 8 order)"
+        )
+        assert "Suppose you purchase this product today." not in prompt, (
+            "the invented 'Suppose you purchase this product today.' preamble "
+            "must be gone"
+        )
+        assert "It will expire" not in prompt, (
+            "the rephrased 'It will expire' fill-in must be gone"
+        )
 
     def test_unknown_kind_raises_value_error(self):
         with pytest.raises(ValueError):
             build_covariate_fillin_prompt(
-                "household_income", "Snacks", "Lay's Chips", 4.50
+                "brand_loyalty_score", "Snacks", "Lay's Chips", 4.50
             )
+
+    def test_an_income_kind_is_registered_and_names_total_family_income(self):
+        # The paper-fidelity contract (spec item 5): a diagnostic fill-in
+        # probe whose machine name mentions "income" must be registered in
+        # the kit and must ask for the total family income as a whole number.
+        probes = getattr(sweep_kit_mod, "_COVARIATE_PROBES", {})
+        kinds = [kind for kind in probes if "income" in kind.lower()]
+        assert kinds, "no income probe kind registered in the sweep kit"
+        prompt = build_covariate_fillin_prompt(kinds[0], "Snacks", "Lay's Chips", 4.50)
+        assert "total family income" in prompt.lower(), (
+            f"income probe {kinds[0]!r} must ask for the total family income"
+        )
+        assert "[a whole number]" in prompt, (
+            f"income probe {kinds[0]!r} must use a whole-number blank"
+        )
 
 
 # 5. parse_purchase()
