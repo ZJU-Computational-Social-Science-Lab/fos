@@ -178,7 +178,7 @@ export function ProviderManagementPage() {
       };
       const request = {
         name: payload.name.trim(),
-        provider: payload.provider === "custom" ? "custom" : "openai-compatible",
+        provider: "openai-compatible",
         model: payload.model.trim(),
         base_url: payload.base_url.trim(),
         api_key: payload.api_key.trim() || undefined,
