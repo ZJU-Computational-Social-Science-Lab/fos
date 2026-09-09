@@ -6,11 +6,18 @@ every call the run will make (persona-pool draws + the sweep legs), prints
 the plan in --dry-run, runs the <=4-call pre-flight in --smoke, and in a
 real run loads the model through the manager, builds the persona pools,
 then runs the (depth x blinding) sweep legs concurrently. All the machinery
-it drives lives in two sibling modules: launch_support.py (model manager +
-persona pools), launch_sweep.py (sweep legs, watchdog, smoke) and
+it drives lives in sibling modules: launch_support.py (model manager +
+persona pools), launch_sweep.py (sweep legs, watchdog, smoke),
+launch_cells.py (per-cell durable record writes + progress.json) and
 launch_manifest.py (run-level manifest + resume merge). All wrap the
 study's existing tools (scripts/generate_personas.py and
 scripts/unblinding_sweep.py) without changing what either tool does.
+
+Cell-granular durability (TASK-1533): a leg's records are appended and
+flushed per completed cell, so the leg's own jsonl is its resume state -
+on --resume a leg counts its durable cells and executes only the missing
+ones. The run-level progress.json reports cells done/total per leg while
+legs run.
 
 Profiles (from the measured pilot numbers in RESULT-1501):
     R1   (default) - K=100 personas/product, depths none+demographics,
@@ -75,6 +82,7 @@ from launch_manifest import (  # noqa: E402
     _write_run_manifest,
 )
 from launch_sweep import (  # noqa: E402
+    _leg_dir,
     _leg_is_done,
     _make_chat,
     _progress_line,
@@ -82,6 +90,7 @@ from launch_sweep import (  # noqa: E402
     _smoke,
     _watchdog,
 )
+from launch_cells import RunProgress, durable_cells, leg_jsonl  # noqa: E402
 from launch_stop import (  # noqa: E402
     StopFlag,
     _drive_legs,
@@ -428,10 +437,12 @@ def _run(
     The shared stop flag (SIGINT/SIGTERM, or the tests' stop object) is
     honoured between phases and during the legs: a graceful stop before any
     leg starts writes a stopped_gracefully manifest with no work done; a
-    graceful stop while legs run lets the in-flight legs finish before the
-    final stopped manifest is written (zero loss); a hard stop (second
-    signal or --force) aborts in-flight legs and leg-granular resume
-    applies (TASK-1522).
+    graceful stop while legs run stops each leg at its next cell boundary
+    (every completed cell is already durable on disk - cell-granular
+    checkpointing, TASK-1533 - so a later --resume executes only the
+    missing cells); a hard stop (second signal or --force) aborts in-flight
+    legs the same way. The run-level progress.json is written while legs
+    run.
     """
     if stop is None:
         stop = StopFlag(force_first=getattr(args, "force", False))
@@ -625,27 +636,51 @@ def _launch_legs(
 ) -> tuple[list[dict[str, Any]], str]:
     """Start the pending legs concurrently and wait for every one of them.
 
-    Runs under the shared stop flag: a graceful stop lets the in-flight legs
-    finish (nothing is lost), a hard stop sets the chat abort so each leg
-    stops at its next call. Returns (results, final stop level) so the
-    caller can choose the run manifest's final state.
+    Runs under the shared stop flag: a graceful stop lets every in-flight
+    leg pause at its next cell boundary (cell-granular durability, TASK-
+    1533: every completed cell is already on disk, so nothing is lost and a
+    later --resume executes only the missing cells), a hard stop sets the
+    chat abort so each leg stops immediately. The run's progress.json is
+    written while the legs run (seeded with the cells already durable on
+    disk when this is a resume) and finished when the sweep phase ends.
+    Returns (results, final stop level) so the caller can choose the run
+    manifest's final state.
     """
-    pending_calls = sum(
-        leg["calls"]
-        for leg in plan["legs"]
-        if not _leg_is_done(run_dir, safe_model, leg)
-    )
+    planned_by_key = {
+        (leg["depth"], leg["blinding"]): int(leg["calls"]) for leg in plan["legs"]
+    }
+    remaining_calls = 0
+    for leg in pending:
+        calls = planned_by_key.get((leg["depth"], leg["blinding"]), 0)
+        jsonl = leg_jsonl(_leg_dir(run_dir, leg), safe_model, leg["blinding"])
+        durable = durable_cells(jsonl)[0] if jsonl.exists() else 0
+        remaining_calls += max(0, calls - durable)
     chat_fn, state, abort = _make_chat(
         settings,
-        pending_calls,
+        remaining_calls,
         lambda d, t, p, r: log(_progress_line(d, t, p, r)),
+        stop=stop,
     )
+    progress = RunProgress(run_dir, plan["legs"], log)
+    # Seed every planned leg's done count so a resumed run's progress file
+    # starts where the last invocation stopped. A fully-complete leg needs no
+    # file scan (its done == planned); a pending leg's durable records file
+    # is scanned (0 when the leg never started).
+    for leg in plan["legs"]:
+        key = f"{leg['depth']}_{leg['blinding']}"
+        planned = int(leg.get("calls") or 0)
+        if _leg_is_done(run_dir, safe_model, leg):
+            progress.set_leg(key, done_at_start=planned)
+        else:
+            jsonl = leg_jsonl(_leg_dir(run_dir, leg), safe_model, leg["blinding"])
+            durable = durable_cells(jsonl)[0] if jsonl.exists() else 0
+            progress.set_leg(key, done_at_start=durable)
     done_event = threading.Event()
     _start_thread(_watchdog, (settings, abort, done_event, log))
     results: list[dict[str, Any]] = []
     log(
         f"launching {len(pending)} legs concurrently on {settings.base_url} "
-        f"({pending_calls:,} calls planned)"
+        f"({remaining_calls:,} calls remaining)"
     )
 
     def start_one(leg: dict[str, Any]) -> threading.Thread:
@@ -661,6 +696,7 @@ def _launch_legs(
                 leg,
                 results,
                 log,
+                progress,
             ),
         )
 
@@ -670,7 +706,7 @@ def _launch_legs(
         abort,
         log,
         start_one,
-        planned_calls=pending_calls,
+        planned_calls=remaining_calls,
         calls_done=lambda: state["done"],
     )
     done_event.set()
@@ -678,6 +714,7 @@ def _launch_legs(
         f"finished: {state['done']:,} calls, "
         f"parse {100.0 * state['parsed'] / max(1, state['done']):.1f}%"
     )
+    progress.finish()
     return results, level
 
 
@@ -698,9 +735,10 @@ def _finalize_stopped(
 
     A graceful stop records state "stopped_gracefully" (per-leg completion
     status merged like a completed run, so the operator sees exactly which
-    legs finished); a hard stop records state "stopped" and leg-granular
-    resume applies - rerun with --resume to finish the legs that did not
-    run. Returns the exit code: 0 for a graceful stop, 1 for a hard stop.
+    legs finished); a hard stop records state "stopped". Either way a leg
+    interrupted mid-run keeps every completed cell on disk (cell-granular
+    checkpointing), so rerun with --resume to execute only the missing
+    cells. Returns the exit code: 0 for a graceful stop, 1 for a hard stop.
     """
     level = stop.level()
     state = "stopped_gracefully" if level == "graceful" else "stopped"
@@ -724,13 +762,13 @@ def _finalize_stopped(
             f"run {settings.run_name} stopped gracefully "
             f"({len(results)} leg result(s) recorded); "
             "rerun with --resume --run-name "
-            f"{settings.run_name} to finish any legs that never started"
+            f"{settings.run_name} to finish any legs that did not complete"
         )
         return 0
     log(
-        f"run {settings.run_name} hard-stopped; in-flight legs aborted "
-        "(leg-granular resume applies, TASK-1522); rerun with --resume "
-        f"--run-name {settings.run_name} to finish the remaining legs"
+        f"run {settings.run_name} hard-stopped; in-flight legs aborted at a "
+        "cell boundary (completed cells are kept); rerun with --resume "
+        f"--run-name {settings.run_name} to finish the remaining cells"
     )
     return 1
 

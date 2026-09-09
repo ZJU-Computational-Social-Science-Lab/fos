@@ -5,28 +5,38 @@ The launch layer around the Gui & Toubia replication sweep is split into
 scripts that never change what the study's existing tools do: launch_grid.py
 (flags, plan, run order), launch_support.py (model-manager calls and
 persona-pool generation/subsampling), launch_manifest.py (the run-level
-manifest and its resume merge), and launch_sweep.py (this module: the
-concurrent (depth x blinding) sweep legs through the sweep tool's own
-helpers, the health watchdog, and the smoke pre-flight). A leg's records
-are written only when the whole leg completes, so the unit of resume is
-the (depth x blinding) leg - launch_manifest reads finished legs back from
-their own files when a run is resumed. Importing this module never opens
-a socket.
+manifest and its resume merge), launch_cells.py (per-cell durability:
+append+flush record writing, the resume planner, the progress.json
+writer) and launch_sweep.py (this module: the concurrent (depth x
+blinding) sweep legs through the sweep tool's own helpers, the health
+watchdog, and the smoke pre-flight).
+
+Cell-level durability (TASK-1533): a leg no longer buffers its records in
+memory until the leg finishes. Each completed chat call's record is
+appended to the leg's jsonl and flushed the moment it is produced, so a
+kill at any instant loses at most the ONE in-flight call. A leg's records
+file IS its resume state: on resume the leg counts the cells already
+durably on disk (launch_cells.durable_cells) and runs the sweep with
+skip_first set to that count, executing only the missing cells; the CSV
+and leg manifest are written only when the whole leg has completed.
+Importing this module never opens a socket.
 
 Function map: _leg_dir/_leg_is_done (output dir + resume check), _make_chat
-(counting chat wrapper with progress + abort; the abort carries a reason so
-a stopped leg records whether a hard operator stop or a dead chat server
-ended it - launch_stop.AbortSignal), _run_one_leg/_save_leg_outputs
-(one leg: run the sweep, then write its records/manifest), _watchdog (abort
-the run when the chat server dies), _progress_line (live progress text), and
-the smoke pre-flight _smoke with its helpers _smoke_direct_chat,
-_draw_smoke_persona, _run_smoke_purchase, _write_smoke_manifest,
-_report_smoke.
+(counting chat wrapper with progress, graceful stop and abort; the abort
+carries a reason so a stopped leg records whether a hard operator stop or
+a dead chat server ended it - launch_stop.AbortSignal), _run_one_leg
+(one leg: per-cell durable record writes, then finalize csv+manifest),
+_finalize_leg (csv + manifest + result summary, never rewrites the
+jsonl), _watchdog (abort the run when the chat server dies), _progress_line
+(live progress text), and the smoke pre-flight _smoke with its helpers
+_smoke_direct_chat, _draw_smoke_persona, _run_smoke_purchase,
+_write_smoke_manifest, _report_smoke.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import sys
 import threading
 import time
@@ -48,6 +58,12 @@ from fos.experiments.sweep_kit import (  # noqa: E402
     run_sweep,
     write_manifest,
 )
+from launch_cells import (  # noqa: E402
+    FSYNC_EVERY,
+    durable_cells,
+    scan_leg_jsonl,
+    write_leg_csv,
+)
 from launch_support import (  # noqa: E402
     Settings,
     _SWEEP,
@@ -57,10 +73,21 @@ from launch_support import (  # noqa: E402
     _post_json,
     _repo_sha,
 )
-from launch_stop import AbortSignal, WATCHDOG_REASON  # noqa: E402
+from launch_stop import AbortSignal, StopFlag, WATCHDOG_REASON  # noqa: E402
 
 HEALTH_POLL_SECONDS = 20.0
 HEALTH_MISSES_ABORT = 4
+
+# The reason a leg records when a GRACEFUL stop lands mid-leg: every cell
+# completed before the signal is already on disk (cell-granular durability),
+# so the leg can stop at its next cell boundary and a later --resume runs
+# only the missing cells (TASK-1533).
+GRACEFUL_CELL_REASON = (
+    "graceful stop requested; leg paused at the next cell boundary "
+    "(completed cells are durable - rerun with --resume to finish)"
+)
+
+GRACEFUL_STOP_LEVEL = "graceful"
 
 
 def _leg_dir(run_dir: Path, leg: dict[str, str]) -> Path:
@@ -85,14 +112,19 @@ def _make_chat(
     settings: Settings,
     total_calls: int,
     progress: Callable[[int, int, int, float], None],
+    stop: StopFlag | None = None,
 ) -> tuple[Callable[..., str], dict[str, int], AbortSignal]:
-    """Counting chat wrapper shared by all legs (progress + abort flag).
+    """Counting chat wrapper shared by all legs (progress + stop/abort).
 
     state counts calls made and calls whose answer parsed; every
-    progress_every-th call prints a live line; once abort is set every new
+    progress_every-th call prints a live line. Once abort is set every new
     call raises so the legs stop immediately (dead chat server via the
     watchdog, or an operator's hard stop - the AbortSignal carries the
-    reason the leg records).
+    reason the leg records). When a graceful stop level is reached (stop
+    flag, TASK-1533 cell durability) every new call also raises with the
+    graceful reason: every cell completed before the signal is already on
+    disk, so stopping the leg at its next cell boundary loses nothing and a
+    later --resume executes only the missing cells.
     """
     state = {"done": 0, "parsed": 0}
     abort = AbortSignal(WATCHDOG_REASON)
@@ -103,6 +135,8 @@ def _make_chat(
     def chat_fn(messages: list[dict[str, str]], temperature: float) -> str:
         if abort.is_set():
             raise RuntimeError(abort.reason)
+        if stop is not None and stop.level() == GRACEFUL_STOP_LEVEL:
+            raise RuntimeError(GRACEFUL_CELL_REASON)
         raw = inner(messages, temperature)
         with lock:
             state["done"] += 1
@@ -118,6 +152,17 @@ def _make_chat(
     return chat_fn, state, abort
 
 
+def _planned_leg_calls(plan: dict[str, Any], leg: dict[str, str]) -> int:
+    """The number of cells one leg is planned to execute (plan legs calls)."""
+    for planned in plan.get("legs") or []:
+        if (
+            planned.get("depth") == leg["depth"]
+            and planned.get("blinding") == leg["blinding"]
+        ):
+            return int(planned.get("calls") or 0)
+    return 0
+
+
 def _run_one_leg(
     settings: Settings,
     plan: dict[str, Any],
@@ -128,95 +173,179 @@ def _run_one_leg(
     leg: dict[str, str],
     results: list[dict[str, Any]],
     log: Callable[[str], None],
+    progress: Any | None = None,
 ) -> None:
     """Run one (depth x blinding) leg and record its outcome.
 
     The leg reuses the sweep tool's own helpers unchanged (same design,
-    prompts, record writer and manifest layout). Its output directory is
+    prompts, record layout). Its output directory is
     <run>/<depth>_<blinding>/ so legs never collide while they run
-    concurrently.
+    concurrently. Cell-granular durability (TASK-1533): each completed
+    cell's record is appended to the leg's jsonl and flushed the moment it
+    is produced (fsync every FSYNC_EVERY records and at leg end), and a
+    resumed leg skips the cells already durable on disk (skip_first) so
+    only missing cells execute. The CSV and leg manifest are written when
+    the whole leg completes - a leg interrupted mid-run keeps its finished
+    cells on disk and is continued by --resume.
     """
     leg_dir = _leg_dir(run_dir, leg)
     leg_dir.mkdir(parents=True, exist_ok=True)
+    safe_model = _SWEEP._safe_model_name(settings.model)
+    blinding = leg["blinding"]
+    base = leg_dir / f"{safe_model}_{blinding}"
+    jsonl_path = Path(f"{base}.jsonl")
+    leg_key = f"{leg['depth']}_{blinding}"
+    planned = _planned_leg_calls(plan, leg)
+    # Resume planner: how many cells are durably on disk already (repairs a
+    # torn tail in place). The records file IS the resume state.
+    durable, durable_parsed = durable_cells(jsonl_path)
+    if durable > planned:
+        results.append(
+            {
+                **leg,
+                "ok": False,
+                "error": (
+                    f"records file holds {durable} cells but this plan has "
+                    f"{planned}; the run configuration changed - use a new "
+                    "run-name or remove the leg directory"
+                ),
+            }
+        )
+        log(
+            f"leg {leg_key} FAILED: records file exceeds the plan ({durable} > {planned})"
+        )
+        return
+    if progress is not None:
+        progress.set_leg(leg_key, done_at_start=durable)
+    remaining = planned - durable
+    if remaining <= 0 and durable:
+        # Every cell is already durable (a crash after the last record but
+        # before the leg's csv/manifest): finalize without any chat calls.
+        log(f"leg {leg_key}: all {durable} cells already durable - finalizing")
+        _finalize_leg(
+            settings, plan, leg_dir, leg, base, products, run_dir.name, results, log
+        )
+        return
     design = _SWEEP._build_design(
         plan["levels"],
-        [leg["blinding"]],
+        [blinding],
         settings.seed,
         list(_SWEEP.COVARIATE_KINDS),
         leg["depth"],
     )
+    handle = jsonl_path.open("a", encoding="utf-8")
+    written = {"records": 0, "parsed": 0, "fsync": 0}
+
+    def record_sink(record: dict[str, Any]) -> None:
+        handle.write(json.dumps(record) + "\n")
+        written["records"] += 1
+        if record.get("succeeded"):
+            written["parsed"] += 1
+        handle.flush()
+        written["fsync"] += 1
+        if written["fsync"] % FSYNC_EVERY == 0:
+            os.fsync(handle.fileno())
+        if progress is not None:
+            progress.note(leg_key, succeeded=bool(record.get("succeeded")), force=False)
+
     try:
         if leg["depth"] == "none":
-            records = run_sweep(
+            run_sweep(
                 design,
                 products,
                 settings.model,
                 chat_fn,
                 draws=settings.draws,
-                blinding=leg["blinding"],
+                blinding=blinding,
                 seed=settings.seed,
                 persona_depth="none",
+                skip_first=durable,
+                on_record=record_sink,
             )
         else:
             if personas_by_product is None:
                 raise RuntimeError("persona leg without persona pools")
-            records, _skipped = run_persona_sweep(
+            _records, _skipped = run_persona_sweep(
                 design,
                 personas_by_product,
                 settings.model,
                 chat_fn,
-                blinding=leg["blinding"],
+                blinding=blinding,
                 persona_depth=leg["depth"],
                 seed=settings.seed,
+                skip_first=durable,
+                on_record=record_sink,
             )
     except Exception as exc:  # never swallow a leg failure
-        results.append({**leg, "ok": False, "error": f"{exc}"})
-        log(f"leg {leg['depth']}_{leg['blinding']} FAILED: {exc}")
+        handle.flush()
+        os.fsync(handle.fileno())
+        handle.close()
+        cells_on_disk = written["records"] + durable
+        results.append(
+            {
+                **leg,
+                "ok": False,
+                "error": f"{exc}",
+                "cells_durable": cells_on_disk,
+            }
+        )
+        log(f"leg {leg_key} FAILED: {exc} ({cells_on_disk} cells durable on disk)")
         return
-    if not records:
+    handle.flush()
+    os.fsync(handle.fileno())
+    handle.close()
+    if written["records"] + durable == 0:
         results.append({**leg, "ok": False, "error": "no records produced"})
-        log(f"leg {leg['depth']}_{leg['blinding']} produced no records")
+        log(f"leg {leg_key} produced no records")
         return
-    _save_leg_outputs(
-        settings,
-        plan,
-        leg_dir,
-        design,
-        leg,
-        records,
-        products,
-        run_dir.name,
-        results,
-        log,
+    _finalize_leg(
+        settings, plan, leg_dir, leg, base, products, run_dir.name, results, log
     )
 
 
-def _save_leg_outputs(
+def _finalize_leg(
     settings: Settings,
     plan: dict[str, Any],
     leg_dir: Path,
-    design: Any,
     leg: dict[str, str],
-    records: list[dict[str, Any]],
+    base: Path,
     products: list[dict[str, Any]],
     run_name: str,
     results: list[dict[str, Any]],
     log: Callable[[str], None],
 ) -> None:
-    """Write one completed leg's records, manifest and result summary."""
-    safe_model = _SWEEP._safe_model_name(settings.model)
-    base = leg_dir / f"{safe_model}_{leg['blinding']}"
-    _SWEEP._write_records(base, records)
+    """Write one COMPLETED leg's csv, manifest and result summary.
+
+    The jsonl was already written record-by-record (append-only, cell
+    durability); this only adds the derived csv and the leg manifest, then
+    appends the leg's result entry computed from the full jsonl on disk.
+    """
+    records, torn = scan_leg_jsonl(Path(f"{base}.jsonl"))
+    if not records or torn:
+        results.append(
+            {**leg, "ok": False, "error": f"leg records file torn/incomplete ({torn})"}
+        )
+        log(f"leg {leg['depth']}_{leg['blinding']} could not finalize (torn file)")
+        return
     parsed = sum(1 for record in records if record.get("succeeded"))
     mean_elapsed = sum(
         float(record.get("elapsed_seconds") or 0.0) for record in records
     ) / len(records)
+    blinding = leg["blinding"]
+    write_leg_csv(base, records)
+    design = _SWEEP._build_design(
+        plan["levels"],
+        [blinding],
+        settings.seed,
+        list(_SWEEP.COVARIATE_KINDS),
+        leg["depth"],
+    )
     write_manifest(
         leg_dir / "manifest.json",
         design,
         settings.model,
         settings.draws,
-        leg["blinding"],
+        blinding,
         products,
         settings.base_url,
         extra={

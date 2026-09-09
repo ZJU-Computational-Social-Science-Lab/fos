@@ -595,3 +595,294 @@ def test_pool_phase_skipped_entirely_when_pools_json_matches():
 
         assert commands == []
         assert summary == existing
+
+# ---------------------------------------------------------------------------
+# Cell-level resume (TASK-1533) --------------------------------------------
+#
+# TASK-1533 makes the sweep record path CELL-granular: each completed chat
+# call's record is appended to the leg's jsonl and flushed the moment it
+# finishes, so a leg's own records file IS its resume state. These tests
+# lock the offline contract:
+#   1. durable_cells(path) = the resume planner: it counts the cells already
+#      durably in the leg's records file (complete JSON lines) and repairs a
+#      torn trailing line (a kill mid-write) in place.
+#   2. run_sweep/run_persona_sweep accept skip_first (= cells already done,
+#      not re-executed) and on_record (each new record handed out the moment
+#      it is built), so a resumed leg executes exactly the missing cells.
+#   3. The wrapper's _run_one_leg continues a leg from a synthetic partial
+#      records file: the done cells are skipped, the missing cells run, and
+#      the completed leg files hold every planned cell exactly once.
+#   4. progress.json is written atomically with the durable cells seeded
+#      from disk, so progress is monotonic across a resume.
+import json as _json  # noqa: E402
+
+from fos.experiments.randomization import RandomizationDesign  # noqa: E402
+from fos.experiments.sweep_kit import run_persona_sweep, run_sweep  # noqa: E402
+
+from launch_cells import (  # noqa: E402
+    RunProgress,
+    cell_group_counts,
+    duplicate_cells,
+    durable_cells,
+    leg_jsonl,
+    scan_leg_jsonl,
+)
+
+
+def _plain_design(levels=None):
+    """A grid RandomizationDesign over the given levels (the launcher's)."""
+    levels = levels if levels is not None else [0.0, 100.0]
+    return RandomizationDesign(
+        variable="price",
+        label="the price of the product",
+        min_value=min(levels),
+        max_value=max(levels),
+        unit="% of regular price",
+        distribution="grid",
+        grid_points=len(levels),
+        blinding="blinded",
+        seed=7,
+        covariates_specified=[],
+        persona_depth="none",
+        covariate_count=0,
+    )
+
+
+_PLAIN_PRODUCTS = [
+    {"category": "Soft Drinks", "product": "Cola 12 oz", "regular_price": 1.99},
+    {"category": "Chips", "product": "Potato Chips", "regular_price": 2.99},
+]
+
+
+def _write_partial_plain_jsonl(jsonl: Path, levels, done_cells: int) -> None:
+    """A synthetic partial records file: the first done_cells cells of the
+    plain enumeration (product x level x draw), exactly as a killed run's
+    per-cell appends would leave them."""
+    draws = 2
+    lines = []
+    for product in _PLAIN_PRODUCTS:
+        for level in levels:
+            for draw in range(draws):
+                if len(lines) >= done_cells:
+                    break
+                lines.append(
+                    _json.dumps(
+                        {
+                            "product": product["product"],
+                            "treatment_value": level,
+                            "draw": draw,
+                            "succeeded": True,
+                        }
+                    )
+                )
+            if len(lines) >= done_cells:
+                break
+        if len(lines) >= done_cells:
+            break
+    jsonl.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+
+
+class _CountingChat:
+    """A fake chat_fn that counts calls and answers "purchase"."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+        self.messages: list = []
+
+    def __call__(self, messages, temperature):
+        self.calls += 1
+        self.messages.append(messages)
+        return "purchase"
+
+
+# --- 1. The resume planner (durable_cells) --------------------------------
+
+
+def test_cell_resume_planner_counts_only_complete_records():
+    """durable_cells counts exactly the completed cells in a leg records
+    file and repairs a torn trailing line (a kill mid-write) in place."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        jsonl = leg_jsonl(tmp_path, SAFE_MODEL, "blinded")
+        _write_partial_plain_jsonl(jsonl, [0.0, 100.0], done_cells=6)
+        # append a torn trailing line: {"product": "Cola ... (no closing)
+        with jsonl.open("a", encoding="utf-8") as handle:
+            handle.write('{"product": "Cola 12 oz", "treatment_value": 100.0, "dra')
+        durable, parsed = durable_cells(jsonl)
+        assert durable == 6
+        assert parsed == 6
+        records, torn = scan_leg_jsonl(jsonl)
+        assert len(records) == 6
+        assert torn == 0
+
+
+def test_cell_resume_planner_handles_empty_and_missing_files():
+    """The resume planner must treat a missing or empty records file (a
+    fresh leg, or a kill before the first flush) as zero cells done."""
+    with tempfile.TemporaryDirectory() as tmp:
+        missing = Path(tmp) / "missing.jsonl"
+        assert durable_cells(missing) == (0, 0)
+        empty = Path(tmp) / "empty.jsonl"
+        empty.write_text("", encoding="utf-8")
+        assert durable_cells(empty) == (0, 0)
+
+
+def test_run_sweep_skip_first_executes_exactly_the_missing_cells():
+    """run_sweed with skip_first executes exactly the cells after the done
+    prefix and on_record hands out each newly built record immediately."""
+    design = _plain_design([0.0, 100.0])
+    chat = _CountingChat()
+    emitted = []
+    records = run_sweep(
+        design,
+        _PLAIN_PRODUCTS,
+        "qwen3-8b",
+        chat,
+        draws=2,
+        blinding="blinded",
+        seed=7,
+        skip_first=4,  # 8 planned cells, 4 already done
+        on_record=lambda r: emitted.append(r),
+    )
+    assert chat.calls == 4  # only the missing cells executed
+    assert len(records) == 4
+    assert len(emitted) == 4
+    assert emitted == records
+    # exactly-once cell groups (2 products x 2 levels, 2 draws each)
+    counts = cell_group_counts(records, persona=False)
+    assert set(counts.values()) == {2}
+    assert duplicate_cells(records, persona=False, expected_per_group=2) == []
+
+
+def test_run_persona_sweep_skip_first_executes_only_missing_cells():
+    """run_persona_sweed's resume hook skips completed cells too (cells here
+    are product x persona x level)."""
+    design = _plain_design([0.0, 100.0])
+    personas_by_product = {
+        "Cola 12 oz": {
+            "category": "Soft Drinks",
+            "regular_price": 1.99,
+            "personas": [{"age": 30}, {"age": 40}],
+        }
+    }
+    chat = _CountingChat()
+    records, skipped_empty = run_persona_sweep(
+        design,
+        personas_by_product,
+        "qwen3-8b",
+        chat,
+        blinding="blinded",
+        persona_depth="demographics",
+        seed=7,
+        skip_first=2,  # 1 product x 2 personas x 2 levels = 4 cells; 2 done
+        on_record=lambda r: None,
+    )
+    assert skipped_empty == 0
+    assert chat.calls == 2
+    assert len(records) == 2
+    assert duplicate_cells(records, persona=True, expected_per_group=1) == []
+
+
+# --- 2. Wrapper-level: _run_one_leg continues a partial leg ----------------
+
+
+def test_wrapper_continues_partial_leg_skipping_exactly_done_cells():
+    """_run_one_leg on a leg whose jsonl already holds a partial prefix (no
+    manifest/csv) skips those cells, runs only the missing ones, and the
+    completed leg files contain every planned cell exactly once."""
+    from launch_sweep import _run_one_leg
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        settings = Settings(
+            model="vendor/model",
+            port=8080,
+            manager_url="http://127.0.0.1:9",
+            base_url="http://127.0.0.1:9",
+            out=tmp_path,
+            run_name="cell-resume-probe",
+            pool_seed=42,
+            pool_overdraw=1.2,
+            seed=7,
+            draws=2,
+            progress_every=10,
+            products_path="data/configs/unblinding_products.json",
+        )
+        run_dir = settings.out / settings.run_name
+        run_dir.mkdir(parents=True)
+        leg_dir = run_dir / "none_blinded"
+        leg_dir.mkdir(parents=True)
+        jsonl = leg_jsonl(leg_dir, SAFE_MODEL, "blinded")
+        # 8 planned cells (2 products x 2 levels x 2 draws); 5 already done.
+        _write_partial_plain_jsonl(jsonl, [0.0, 100.0], done_cells=5)
+        assert durable_cells(jsonl)[0] == 5
+        plan = {
+            "profile": "R1",
+            "k": 100,
+            "levels": [0.0, 100.0],
+            "depths": ["none"],
+            "legs": [{"depth": "none", "blinding": "blinded", "calls": 8}],
+            "sweep_calls": 8,
+            "pool_draws": 0,
+        }
+        leg = {"depth": "none", "blinding": "blinded"}
+        chat = _CountingChat()
+        log: list[str] = []
+        results: list[dict] = []
+        _run_one_leg(
+            settings,
+            plan,
+            _PLAIN_PRODUCTS,
+            None,
+            run_dir,
+            chat,
+            leg,
+            results,
+            log.append,
+        )
+        assert chat.calls == 3  # exactly the 3 missing cells
+        assert len(results) == 1 and results[0]["ok"] is True
+        assert results[0]["records"] == 8
+        records, torn = scan_leg_jsonl(jsonl)
+        assert len(records) == 8 and torn == 0
+        assert duplicate_cells(records, persona=False, expected_per_group=2) == []
+        assert (leg_dir / f"{SAFE_MODEL}_blinded.csv").exists()
+        assert (leg_dir / "manifest.json").exists()
+
+
+# --- 3. progress.json -------------------------------------------------------
+
+
+def test_progress_json_snapshot_fields_and_atomic_write():
+    """RunProgress seeds durable cells from disk (a resume starts where the
+    last run stopped) and progress.json is written atomically with the
+    required machine-parseable fields."""
+    with tempfile.TemporaryDirectory() as tmp:
+        run_dir = Path(tmp)
+        legs = [
+            {"depth": "none", "blinding": "blinded", "calls": 10},
+            {"depth": "none", "blinding": "unblinded", "calls": 10},
+        ]
+        log: list[str] = []
+        progress = RunProgress(run_dir, legs, log.append)
+        progress.set_leg("none_blinded", done_at_start=4)  # durable cells
+        progress.note("none_blinded", succeeded=True)  # one completed now
+        payload = progress.snapshot()
+        assert payload["cells_done"] == 5
+        assert payload["cells_total"] == 20
+        assert payload["per_leg"]["none_blinded"] == {"done": 5, "total": 10}
+        assert payload["per_leg"]["none_unblinded"] == {"done": 0, "total": 10}
+        for key in (
+            "cells_done",
+            "cells_total",
+            "per_leg",
+            "calls_per_sec_measured",
+            "eta_seconds",
+            "parse_rate_so_far",
+            "updated_at",
+        ):
+            assert key in payload
+        progress.finish()
+        written = _json.loads((run_dir / "progress.json").read_text(encoding="utf-8"))
+        assert written["cells_done"] == 5
+        assert written["cells_total"] == 20
