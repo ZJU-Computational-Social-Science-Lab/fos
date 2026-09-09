@@ -113,6 +113,8 @@ def _make_chat(
     total_calls: int,
     progress: Callable[[int, int, int, float], None],
     stop: StopFlag | None = None,
+    *,
+    grammar: str | None = None,
 ) -> tuple[Callable[..., str], dict[str, int], AbortSignal]:
     """Counting chat wrapper shared by all legs (progress + stop/abort).
 
@@ -124,13 +126,18 @@ def _make_chat(
     flag, TASK-1533 cell durability) every new call also raises with the
     graceful reason: every cell completed before the signal is already on
     disk, so stopping the leg at its next cell boundary loses nothing and a
-    later --resume executes only the missing cells.
+    later --resume executes only the missing cells. grammar, when given, is
+    sent on every request so the model can only answer the constrained
+    output (the 5-model queue's one-token purchase grammar); without it the
+    request is exactly the historical one.
     """
     state = {"done": 0, "parsed": 0}
     abort = AbortSignal(WATCHDOG_REASON)
     lock = threading.Lock()
     started = time.monotonic()
-    inner = _SWEEP.build_sweep_chat_fn(settings.base_url, settings.model, 16, 120.0)
+    inner = _SWEEP.build_sweep_chat_fn(
+        settings.base_url, settings.model, 16, 120.0, grammar=grammar
+    )
 
     def chat_fn(messages: list[dict[str, str]], temperature: float) -> str:
         if abort.is_set():
