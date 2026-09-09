@@ -441,6 +441,9 @@ def run_sweep(
     blinding: str | None = None,
     seed: int | None = None,
     persona_depth: str = "none",
+    *,
+    skip_first: int = 0,
+    on_record: Callable[[dict[str, Any]], None] | None = None,
 ) -> list[dict[str, Any]]:
     """Run the demand sweep: one chat call per product, level and draw.
 
@@ -458,6 +461,14 @@ def run_sweep(
     design behind in its own records. persona_depth names how deep the
     persona block of the study goes; its covariate_count is stamped on every
     record alongside the exact system and user prompts sent.
+
+    Cell-level resume hooks (the launch wrapper's per-cell durability):
+    skip_first skips that many already-completed leading cells (the cells a
+    resumed leg found durably in its own records file) without calling
+    chat_fn, and on_record, when given, is called with each newly built
+    record the instant it is produced so the caller can append it to disk
+    before the next cell starts. Both default to no-ops, so callers that do
+    not pass them see exactly the historical single-shot behavior.
     """
     mode = design.blinding if blinding is None else blinding
     stored_design = replace(design, blinding=mode)
@@ -466,9 +477,18 @@ def run_sweep(
     rng = _seeded_rng(design, seed)
     levels = design.grid()
     records: list[dict[str, Any]] = []
+    cell = 0
     for product in products:
         for level in levels:
             for _ in range(draws):
+                if cell < skip_first:  # cell already durably completed
+                    cell += 1
+                    # keep the uniform draw stream aligned with a fresh
+                    # same-seed run even when the cell itself is skipped
+                    if design.distribution == "uniform":
+                        rng.uniform(design.min_value, design.max_value)
+                    continue
+                cell += 1
                 value = (
                     level
                     if design.distribution == "grid"
@@ -485,24 +505,25 @@ def run_sweep(
                 started = time.monotonic()
                 raw = chat_fn(messages, _TEMPERATURE)
                 elapsed = time.monotonic() - started
-                records.append(
-                    build_record(
-                        stored_design,
-                        mode,
-                        model,
-                        product["product"],
-                        product["category"],
-                        value,
-                        raw,
-                        parse_purchase(raw),
-                        elapsed,
-                        seed,
-                        persona_depth=persona_depth,
-                        covariate_count=covariate_count,
-                        system_prompt=system,
-                        user_prompt=user,
-                    )
+                record = build_record(
+                    stored_design,
+                    mode,
+                    model,
+                    product["product"],
+                    product["category"],
+                    value,
+                    raw,
+                    parse_purchase(raw),
+                    elapsed,
+                    seed,
+                    persona_depth=persona_depth,
+                    covariate_count=covariate_count,
+                    system_prompt=system,
+                    user_prompt=user,
                 )
+                records.append(record)
+                if on_record is not None:
+                    on_record(record)
     return records
 
 
@@ -560,6 +581,9 @@ def run_persona_sweep(
     blinding: str | None = None,
     persona_depth: str = "none",
     seed: int | None = None,
+    *,
+    skip_first: int = 0,
+    on_record: Callable[[dict[str, Any]], None] | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     """Run the persona demand sweep: one chat call per product, level, persona.
 
@@ -575,6 +599,12 @@ def run_persona_sweep(
     persona dict, its 0-based index inside the product's persona list, the
     persona depth and its covariate count; the stored design carries the
     blinding this run actually used (the same fix as run_sweep).
+
+    Cell-level resume hooks (the launch wrapper's per-cell durability):
+    skip_first skips that many already-completed leading cells without
+    calling chat_fn, and on_record, when given, is called with each newly
+    built record the instant it is produced. Both default to no-ops, so
+    callers that do not pass them see the historical single-shot behavior.
     """
     mode = design.blinding if blinding is None else blinding
     stored_design = replace(design, blinding=mode)
@@ -585,6 +615,7 @@ def run_persona_sweep(
     levels = design.grid()
     records: list[dict[str, Any]] = []
     skipped_empty = 0
+    cell = 0
     for product_name, info in personas_by_product.items():
         category = info["category"]
         regular_price = info.get("regular_price")
@@ -593,6 +624,14 @@ def run_persona_sweep(
                 skipped_empty += 1
                 continue
             for level in levels:
+                if cell < skip_first:  # cell already durably completed
+                    cell += 1
+                    # keep the uniform draw stream aligned with a fresh
+                    # same-seed run even when the cell itself is skipped
+                    if design.distribution == "uniform":
+                        rng.uniform(design.min_value, design.max_value)
+                    continue
+                cell += 1
                 value = (
                     level
                     if design.distribution == "grid"
@@ -631,6 +670,8 @@ def run_persona_sweep(
                 record["persona"] = persona
                 record["persona_index"] = persona_index
                 records.append(record)
+                if on_record is not None:
+                    on_record(record)
     return records, skipped_empty
 
 

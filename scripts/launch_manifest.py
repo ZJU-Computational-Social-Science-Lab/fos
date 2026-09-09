@@ -21,9 +21,13 @@ the same run (a launch that was stopped and resumed):
     recorded under "resumed", and the pools summary is carried forward when
     the pool phase was skipped. Resuming a fully completed run therefore
     never wipes the manifest.
-  * Legs are the unit of resume: a leg's records are written only when the
-    whole leg completes (see launch_sweep), so "done" means its files and
-    its own manifest exist (_leg_is_done), and a partial leg is re-run.
+  * Legs merge exactly once per planned (depth x blinding) leg. Inside a
+    leg, records are now durable per cell (TASK-1533: launch_sweep appends
+    each completed cell to the leg's jsonl and flushes it immediately), so
+    "done" still means its files AND its own manifest exist (_leg_is_done)
+    - a partial records file without a manifest is NOT done, and a resumed
+    run continues the leg by skipping its durable cells rather than
+    re-running it from scratch.
 
 Function map:
     _run_dir_has_state(run_dir)  - Any durable sign of a launch attempt?
