@@ -33,6 +33,11 @@ Function map (plain language):
     write_atomic_json(path, payload) - tmp+rename file write.
     RunProgress                 - shared per-run progress.json tracker
                                   (thread safe).
+    results_csv_path(run_dir)   - The run's normalized results.csv path.
+    shown_price(regular, level) - The dollar price a level showed.
+    result_row(record, ...)     - One normalized row for one cell's record.
+    plain_draw_ids_for_records(...) - Per-group draw ordinals for plain-leg
+                                  records (stable across a resume).
 Every function is pure file/counter logic: importing this module never
 opens a socket or touches the GPU.
 """
@@ -348,3 +353,103 @@ def _csv_cell(value: Any) -> Any:
     if isinstance(value, (str, int, float, bool)):
         return value
     return json.dumps(value)
+
+
+# -------------------------------------------------------------------------
+# The run-wide normalized results.csv (R1-5MODEL queue)
+# -------------------------------------------------------------------------
+# The 5-model queue keeps ONE run directory for the whole queue and appends
+# one normalized row per executed cell to <run>/results.csv continuously
+# while legs run, so the operator can tail it live. The row columns are
+# fixed: model, product, price (the shown dollar price), condition_depth,
+# condition_blinding, draw_id, parsed and purchase. Rows are rebuilt from
+# the authoritative leg records files whenever an invocation starts, then
+# appended per executed cell, so the file always holds exactly one row per
+# durable cell (no duplicate or lost rows across a kill/restart).
+RESULT_CSV_COLUMNS = [
+    "model",
+    "product",
+    "price",
+    "condition_depth",
+    "condition_blinding",
+    "draw_id",
+    "parsed",
+    "purchase",
+]
+
+
+def results_csv_path(run_dir: Path) -> Path:
+    """The run directory's normalized results.csv path."""
+    return run_dir / "results.csv"
+
+
+def shown_price(regular_price: float | None, level: float) -> float:
+    """The dollar price a level showed, with the sweep kit's own rounding.
+
+    A level is a percent of the product's regular price (100 = the regular
+    price itself); the prompt that ran the cell showed round(regular *
+    level / 100, 2), so the row's price reproduces exactly that number.
+    A product with no regular price (legacy persona pools) was prompted
+    with the raw level instead (sweep_kit's fallback).
+    """
+    if regular_price is None:
+        return level
+    return round(regular_price * level / 100.0, 2)
+
+
+def result_row(
+    record: dict[str, Any],
+    *,
+    regular_prices: dict[str, float | None],
+    draw_id: int,
+) -> dict[str, Any]:
+    """One normalized results.csv row for one cell's record.
+
+    price is the shown dollar price for the record's (product, level),
+    parsed is whether the answer parsed, and purchase is the parsed True/
+    False decision (empty when the answer did not parse). draw_id comes
+    from the caller: the draw's ordinal for a plain cell, or the persona's
+    index in the shared pool for a persona cell.
+    """
+    product = record.get("product")
+    level = float(record.get("treatment_value") or 0.0)
+    purchase = record.get("parsed_purchase")
+    return {
+        "model": record.get("model"),
+        "product": product,
+        "price": shown_price(
+            regular_prices.get(product) if product is not None else None, level
+        ),
+        "condition_depth": record.get("persona_depth"),
+        "condition_blinding": record.get("blinding"),
+        "draw_id": draw_id,
+        "parsed": bool(record.get("succeeded")),
+        "purchase": "" if purchase is None else bool(purchase),
+    }
+
+
+def plain_draw_ids_for_records(
+    records: list[dict[str, Any]],
+) -> tuple[list[int], dict[tuple[Any, ...], int]]:
+    """Assign each plain-leg record its draw ordinal inside its cell group.
+
+    A plain (none) leg runs draws per (product x level x blinding) in
+    enumeration order, so the draw ordinal of a record is the count of the
+    records already seen for the same group. Returns the per-record draw
+    ids in file order plus the final per-group counts (so a caller that
+    keeps appending rows after a durable prefix can continue numbering the
+    missing draws where the durable ones stopped).
+    """
+    counts: dict[tuple[Any, ...], int] = {}
+    ids: list[int] = []
+    for record in records:
+        key = (
+            record.get("model"),
+            record.get("product"),
+            record.get("treatment_value"),
+            record.get("blinding"),
+        )
+        draw_id = counts.get(key, 0)
+        counts[key] = draw_id + 1
+        ids.append(draw_id)
+    return ids, counts

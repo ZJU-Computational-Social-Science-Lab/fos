@@ -17,6 +17,8 @@ What each function does:
                                  port.
     _load_model(manager_url, model, port) - POST /models/load; the reply
                                  only comes once the server is healthy.
+    _unload_model(manager_url, port) - POST /models/unload (stop the server
+                                 on a port after its legs finish).
     _ensure_model(settings, log) - Load the run's model unless it is already
                                  loaded and healthy.
     _repo_sha()                - The repository commit at launch time.
@@ -68,7 +70,11 @@ DEFAULT_LEVELS = "0,20,40,60,80,100,120,140,160,180,200"
 BLINDINGS = ("blinded", "unblinded")
 BASE_DEPTHS = ("none", "demographics")
 STAGE_DEPTHS = tuple(f"stage{i}" for i in range(2, 13))
-PROFILES = {"R1": 100, "FULL": 500}
+# Profile -> pool personas per product. R1-5MODEL is the 5-model stratified
+# queue (one invocation, five models back to back): its pool holds 100
+# personas per product and every model answers a deterministic 20-persona
+# slice of it (see launch_5model).
+PROFILES = {"R1": 100, "FULL": 500, "R1-5MODEL": 100}
 
 # Measured pilot numbers (RESULT-1501): nemotron Q8 per-call latency, the
 # persona-draw estimate, and the speedup of four concurrent clients on the
@@ -97,6 +103,9 @@ class Settings:
     draws: int
     progress_every: int
     products_path: str
+    # llama-server GBNF grammar sent on every purchase call (R1-5MODEL
+    # queue); None keeps the historical grammar-free request.
+    grammar: str | None = None
 
 
 def _load_unblinding_sweep() -> Any:
@@ -151,6 +160,24 @@ def _load_model(manager_url: str, model: str, port: int) -> None:
         status, body = _post_json(
             url, {"model": model, "port": port}, timeout=MODEL_LOAD_TIMEOUT
         )
+    except OSError as exc:
+        raise RuntimeError(f"cannot reach model manager {url}: {exc}") from exc
+    if status != 200:
+        raise RuntimeError(f"model manager {url} answered HTTP {status}: {body[:200]}")
+
+
+def _unload_model(manager_url: str, port: int) -> None:
+    """POST /models/unload so the queue can release a finished model.
+
+    The manager stops the llama-server on the port and replies when the
+    stop is done; the 5-model queue unloads each model before loading the
+    next one so only one model ever holds the GPU slot. Raises on any
+    failure so a broken unload surfaces instead of silently leaving the
+    next model without its slot.
+    """
+    url = f"{manager_url.rstrip('/')}/models/unload"
+    try:
+        status, body = _post_json(url, {"port": port}, timeout=MODEL_LOAD_TIMEOUT)
     except OSError as exc:
         raise RuntimeError(f"cannot reach model manager {url}: {exc}") from exc
     if status != 200:
@@ -336,9 +363,7 @@ def _top_up_product(
     return extra
 
 
-def _accepted_so_far(
-    products: list[dict[str, Any]], pools_work: Path
-) -> int:
+def _accepted_so_far(products: list[dict[str, Any]], pools_work: Path) -> int:
     """Total accepted personas already on disk across every product.
 
     The number of persona lines already drawn into the product folders
