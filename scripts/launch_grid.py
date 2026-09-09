@@ -97,6 +97,14 @@ from launch_stop import (  # noqa: E402
     install_stop_handlers,
     restore_stop_handlers,
 )
+from launch_5model import (  # noqa: E402
+    DEFAULT_POOLS_FROM,
+    QUEUE_GRAMMAR,
+    QUEUE_PROFILE,
+    build_queue_plan,
+    print_queue_dry_run,
+    run_queue,
+)
 
 DEFAULT_PRODUCTS = "data/configs/unblinding_products.json"
 DEFAULT_OUT = "results/unblinding"
@@ -169,6 +177,13 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--i-know-this-is-41h", action="store_true")
+    parser.add_argument(
+        "--pools-from",
+        default=DEFAULT_POOLS_FROM,
+        help="persona-pool directory to reuse for the R1-5MODEL queue "
+        "(default: the archived R1 run's pools; when the path is absent "
+        "the queue regenerates a deterministic pool-seed-42 pool)",
+    )
     parser.add_argument("--progress-every", type=int, default=PROGRESS_EVERY)
     return parser.parse_args(argv)
 
@@ -275,9 +290,16 @@ def _plan(args: argparse.Namespace, products: list[dict[str, Any]]) -> dict[str,
 
 
 def _build_run_name(args: argparse.Namespace) -> str:
-    """Default run name: profile, model stem and local time."""
+    """Default run name: profile, model stem and local time.
+
+    The R1-5MODEL queue has no single model to name itself after, so its
+    default run name is just the profile and the local time.
+    """
     if args.run_name:
         return args.run_name
+    if args.profile == QUEUE_PROFILE:
+        stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+        return f"{QUEUE_PROFILE}-{stamp}"
     stem = _safe_model_name(args.model).replace("nvidia_", "")
     stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
     return f"{args.profile}-{stem}-{stamp}"
@@ -347,7 +369,11 @@ def _print_dry_run(
 
 
 def _settings_from(args: argparse.Namespace, run_name: str) -> Settings:
-    """Map parsed flags onto the support module's settings object."""
+    """Map parsed flags onto the support module's settings object.
+
+    The R1-5MODEL queue stamps its one-token grammar on the settings so
+    every purchase call of every model is constrained the same way.
+    """
     return Settings(
         model=args.model,
         port=args.port,
@@ -361,6 +387,7 @@ def _settings_from(args: argparse.Namespace, run_name: str) -> Settings:
         draws=args.draws,
         progress_every=args.progress_every,
         products_path=args.products,
+        grammar=QUEUE_GRAMMAR if args.profile == QUEUE_PROFILE else None,
     )
 
 
@@ -381,6 +408,42 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = _parse_args(argv)
     products_path = _resolve_products(args.products)
+    if args.profile == QUEUE_PROFILE:
+        # The R1-5MODEL queue: five models in one invocation, stratified
+        # allocation, one-token grammar on every call (see launch_5model).
+        if args.smoke:
+            print(
+                "error: --smoke is not wired for the R1-5MODEL queue yet; "
+                "smoke the models individually with the R1 profile first",
+                file=sys.stderr,
+            )
+            return 2
+        products = _load_products(products_path)
+        if not products:
+            print("error: the products file lists no products", file=sys.stderr)
+            return 2
+        levels = [float(piece) for piece in args.levels.split(",") if piece.strip()]
+        if not levels:
+            _usage_error("error: no price levels parsed from --levels")
+        plan = build_queue_plan(len(products), len(levels), levels=levels)
+        if args.dry_run:
+            run_name = _build_run_name(args)
+            run_dir = Path(args.out) / run_name
+            print_queue_dry_run(args, products, plan, run_dir)
+            return 0
+        stop = StopFlag(force_first=args.force)
+        previous = install_stop_handlers(stop)
+        try:
+            return run_queue(
+                args,
+                plan,
+                products,
+                products_path,
+                _settings_from(args, _build_run_name(args)),
+                stop=stop,
+            )
+        finally:
+            restore_stop_handlers(previous)
     if args.smoke:
         return _smoke(
             _settings_from(args, args.run_name), products_path, Path(args.out)

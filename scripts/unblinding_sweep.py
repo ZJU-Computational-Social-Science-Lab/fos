@@ -623,14 +623,22 @@ def _get(url: str, timeout: float) -> tuple[int, str]:
 
 
 def build_sweep_chat_fn(
-    base_url: str, model: str, max_tokens: int, timeout: float
+    base_url: str,
+    model: str,
+    max_tokens: int,
+    timeout: float,
+    grammar: str | None = None,
 ) -> ChatFn:
     """Build the chat function the sweep kit calls during a run.
 
     The returned function posts one /v1/chat/completions request per call and
     retries once when the request fails or times out. On a final failure it
     logs the problem and returns "" so the sweep kit records the draw as
-    failed instead of the whole run crashing.
+    failed instead of the whole run crashing. When grammar is given, every
+    request carries llama-server's "grammar" field so the model can only
+    produce the constrained output (the 5-model queue's one-token purchase
+    grammar, R1-5MODEL); with no grammar the payload is byte-identical to
+    the pre-grammar request.
     """
 
     def chat_fn(messages: list[dict[str, str]], temperature: float) -> str:
@@ -641,6 +649,8 @@ def build_sweep_chat_fn(
             "temperature": temperature,
             "max_tokens": max_tokens,
         }
+        if grammar is not None:
+            payload["grammar"] = grammar
         last_error = ""
         for _attempt in range(2):
             try:
