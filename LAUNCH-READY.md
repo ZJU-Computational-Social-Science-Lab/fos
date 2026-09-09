@@ -120,40 +120,45 @@ you launch from (git-ignored; the pilot backups copy `results/` to
   `demographics_unblinded/` — each leg's `<model>_<blinding>.jsonl/.csv`
   + its own `manifest.json` (design, prompts' sha, timestamps, pool-seed).
 
-## Stopping the run (graceful stop / hard stop — TASK-1525)
+## Stopping the run (graceful stop / hard stop — TASK-1533, cell-granular)
 
 The wrapper installs SIGINT and SIGTERM handlers while a real run is
-active. Stop at any time with **zero loss** by sending ONE signal; escalate
-with a second signal if you cannot wait for the current legs.
+active. Because every completed cell is appended to the leg's jsonl and
+flushed the instant it finishes (cell-granular durability, TASK-1533), a
+stop at any time keeps every finished cell and loses at most the ONE
+in-flight call.
 
 - **How to stop** — from the run's console press `Ctrl-C` once, or from
   another shell `kill -INT <wrapper-pid>` (equivalently `kill -TERM`). The
-  wrapper prints:
-  `graceful stop requested — finishing current leg(s), N calls remaining in
-  flight`, then lets every already-running leg finish (their records are
-  written at leg completion — **nothing is lost**), does not start any leg
-  that had not begun, and writes `manifest.json` with
-  `state: "stopped_gracefully"` plus each planned leg's completion status.
-  Exit code is 0 (clean operator-requested stop). A stop requested during
-  model load or pool generation lands at the next wrapper boundary (the
-  current model-load call or pool invocation completes first — pools keep
-  every accepted persona, so `--resume` later tops up only what is short).
-- **What a graceful stop costs** — the time the current legs still need to
-  finish (the printed N calls tell you). If that is too long, send a SECOND
-  signal: the wrapper hard-stops immediately — the shared abort fires and
-  every in-flight leg stops at its next call. Finished legs are kept;
-  unfinished legs are re-run by a later `--resume` (leg-granular resume,
-  TASK-1522). Exit code 1.
+  wrapper prints `graceful stop requested — finishing current leg(s), N
+  calls remaining in flight`, then every running leg pauses at its NEXT
+  cell boundary (each finished cell is already durable on disk — nothing
+  is lost), does not start any leg that had not begun, and writes
+  `manifest.json` with `state: "stopped_gracefully"` plus each planned
+  leg's completion status. Exit code is 0 (clean operator-requested stop).
+  A stop requested during model load or pool generation lands at the next
+  wrapper boundary (the current model-load call or pool invocation
+  completes first — pools keep every accepted persona, so `--resume` later
+  tops up only what is short).
+- **Escalate** — send a SECOND signal (or launch with `--force`): the
+  wrapper hard-stops immediately — the shared abort fires and every
+  in-flight leg stops at its next cell. Finished cells are kept; a later
+  `--resume` executes only the cells that were never completed. Exit code 1.
 - **`--force`** — launch with `--force` to make even the FIRST signal an
   immediate hard stop (skip the graceful wait entirely).
-- **When it is safe** — always: graceful stops lose nothing by definition;
-  hard stops only lose the in-flight portion of legs that were still
-  running (never completed records), which `--resume` re-runs exactly once.
+- **When it is safe** — always: every completed cell is flushed to disk as
+  it finishes, so graceful AND hard stops (and even a SIGKILL) lose at most
+  the single in-flight call, which `--resume` re-runs exactly once.
+- **Progress file** — while legs run, `<run>/progress.json` is rewritten
+  (atomically) at most every ~5 s: `cells_done`, `cells_total`,
+  `per_leg: {done, total}`, `calls_per_sec_measured`, `eta_seconds`,
+  `parse_rate_so_far`, `updated_at`. On a resume the durable counts are
+  seeded from disk, so progress is monotonic across restarts.
 - **After a stop**, resume with the same `--resume` command below — it
-  plans exactly the legs that never finished and the final manifest
-  reaches `state: "complete"`.
+  plans exactly the legs that never finished and executes only the cells
+  that were never completed; the final manifest reaches `state: "complete"`.
 
-## Crash / resume behaviour (verified end-to-end, TASK-1522)
+## Crash / resume behaviour (verified end-to-end, TASK-1522/1533)
 
 - **The run is marked as started immediately**: the run-level `manifest.json`
   is written (`state: "running"`) as soon as the run begins, so an
@@ -168,17 +173,22 @@ with a second signal if you cannot wait for the current legs.
   that have fewer than K accepted personas (never re-draws finished ones).
   The pool phase is skipped entirely once `pools.json` matches (K, seed,
   model, product count).
-- **Sweep legs** write their files only when a leg completes, so a crash
-  loses at most the in-flight legs (leg-granular resume, not per-call).
-  Rerun the exact same command with `--resume`:
+- **Sweep legs are cell-granular (TASK-1533)**: each completed cell's
+  record is appended to `<run>/<depth>_<blinding>/<model>_<blinding>.jsonl`
+  and flushed the moment it finishes (fsync every 64 records and at leg
+  end/stop), so a crash at any instant loses at most the ONE in-flight
+  call. Rerun the exact same command with `--resume`:
   ```bash
   python3 scripts/launch_grid.py --profile R1 --run-name r1-20260908T2130 --resume
   ```
-  Completed legs are skipped exactly once; the failed/missing ones rerun.
-  The FINAL `manifest.json` lists every planned leg exactly once, keeps the
-  earliest start, carries the pools summary forward, and records each
-  resume under `"resumed"` — resuming a fully completed run is a safe no-op
-  that never wipes the manifest.
+  The resume planner counts the leg's own records file and skips exactly
+  the cells already durably done — no cell is executed twice and none is
+  skipped. Completed legs are skipped exactly once; the leg's csv/manifest
+  are written only when the whole leg has completed. The FINAL
+  `manifest.json` lists every planned leg exactly once, keeps the earliest
+  start, carries the pools summary forward, and records each resume under
+  `"resumed"` — resuming a fully completed run is a safe no-op that never
+  wipes the manifest.
 - **Watchdog:** if the chat server dies (see the pinning risk below) the
   run aborts within ~90 s instead of recording silent failures. Rerun with
   `--resume` after the cause is fixed.
