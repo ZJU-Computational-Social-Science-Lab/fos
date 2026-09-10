@@ -48,7 +48,14 @@ Plain-language function map:
                                     result.
     average_ab_p_buy(...)         - the A/B aggregate: the mean of the two
                                     label orders' p(buy) values.
-    make_scorer(...)              - pick one by mode name.
+    make_ab_scorer(...)           - the A/B executor: scores BOTH label
+                                    orders per prompt and merges them into
+                                    ONE result (averaged p(buy) plus both
+                                    raw per-order results under their
+                                    label_order stamps).
+    make_scorer(...)              - pick one by mode name (ab_orders=True
+                                    wraps candidate_scoring in the A/B
+                                    executor).
 """
 
 from __future__ import annotations
@@ -562,6 +569,73 @@ def make_candidate_scorer(
     return scorer
 
 
+def make_ab_scorer(
+    base_url: str,
+    model: str,
+    timeout: float = 120.0,
+    *,
+    post: PostFn = _post_json,
+) -> Callable[[list[dict[str, Any]]], dict[str, Any]]:
+    """Build the A/B executor: both label orders per prompt, ONE result.
+
+    For every prompt the executor runs the candidate scorer twice - once
+    per AB_LABEL_ORDERS order ("purchase" asked first, then the reversal)
+    - and merges the two passes into one result. The merged p(buy) is
+    average_ab_p_buy of the two orders (a label-position bias averages out
+    instead of skewing the cell); each order's raw result is kept under
+    its own label_order stamp in ab_results. A cell succeeds only when
+    BOTH order halves succeeded - a broken half fails the cell, so a
+    one-order average can never be stored silently.
+    """
+    order_scorers = [
+        make_candidate_scorer(base_url, model, timeout, post=post, label_order=order)
+        for order in AB_LABEL_ORDERS
+    ]
+
+    def scorer(messages: list[dict[str, Any]]) -> dict[str, Any]:
+        ab_results = [order_scorer(messages) for order_scorer in order_scorers]
+        succeeded = all(bool(result.get("succeeded")) for result in ab_results)
+        forward, reversed_ = ab_results[0], ab_results[1]
+        p_buy = p_nobuy = p_buy_normalized = None
+        if succeeded:
+            p_buy = average_ab_p_buy(
+                forward["p_buy_logprob"], reversed_["p_buy_logprob"]
+            )
+            p_nobuy = average_ab_p_buy(
+                forward["p_nobuy_logprob"], reversed_["p_nobuy_logprob"]
+            )
+            p_buy_normalized = average_ab_p_buy(
+                forward["p_buy_normalized"], reversed_["p_buy_normalized"]
+            )
+        raw = " || ".join(
+            str(result.get("raw_logprob_response") or "") for result in ab_results
+        )
+        return {
+            "logprob_mode": CANDIDATE_SCORING,
+            "ab_orders": True,
+            "p_buy_logprob": p_buy,
+            "p_nobuy_logprob": p_nobuy,
+            "branch_mass": (
+                p_buy + p_nobuy if p_buy is not None and p_nobuy is not None else None
+            ),
+            # Per-order raw logprob sums live inside ab_results; the merged
+            # cell stores no single-order measurement at the top level.
+            "top_logprobs": [],
+            "lp_buy_sum": None,
+            "lp_nobuy_sum": None,
+            "lp_buy_tokens": None,
+            "lp_nobuy_tokens": None,
+            "raw_logprob_response": _truncate(raw),
+            "neither_branch_in_top_k": False,
+            "raw_content": "",
+            "p_buy_normalized": p_buy_normalized,
+            "ab_results": ab_results,
+            "succeeded": succeeded,
+        }
+
+    return scorer
+
+
 def make_scorer(
     mode: str,
     base_url: str,
@@ -569,11 +643,26 @@ def make_scorer(
     timeout: float = 120.0,
     *,
     post: PostFn = _post_json,
+    ab_orders: bool = False,
 ) -> Callable[[list[dict[str, Any]]], dict[str, Any]]:
-    """Pick the scorer for one --logprob-mode; unknown modes refuse loudly."""
+    """Pick the scorer for one --logprob-mode; unknown modes refuse loudly.
+
+    With ab_orders=True (candidate_scoring only) the scorer becomes the
+    A/B executor: every prompt is scored with BOTH label orders and the
+    two halves are merged into one averaged result. first_token has no
+    A/B form, so that combination refuses loudly instead of silently
+    scoring one order.
+    """
     if mode == FIRST_TOKEN:
+        if ab_orders:
+            raise ValueError(
+                "ab_orders=True requires candidate_scoring "
+                f"(no A/B form for {FIRST_TOKEN!r})"
+            )
         return make_first_token_scorer(base_url, model, timeout, post=post)
     if mode == CANDIDATE_SCORING:
+        if ab_orders:
+            return make_ab_scorer(base_url, model, timeout, post=post)
         return make_candidate_scorer(base_url, model, timeout, post=post)
     raise ValueError(
         f"unknown logprob mode {mode!r} (choose from {', '.join(LOGP_MODES)})"
