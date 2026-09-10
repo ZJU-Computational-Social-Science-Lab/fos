@@ -277,6 +277,9 @@ def write_queue_manifest(
         "models": plan["models"],
         "grammar": settings.grammar,
         "logprob_mode": settings.logprob_mode,
+        # Whether this run plans the A/B label-order switch: recorded so a
+        # later --resume can refuse flags that disagree with the run.
+        "ab_orders": bool(plan.get("ab_orders")),
         "port": settings.port,
         "base_url": settings.base_url,
         "manager_url": settings.manager_url,
@@ -525,6 +528,23 @@ def run_queue(
             "(manifest.json, pools.json, or leg files); pass --resume to "
             "continue it, choose a new --run-name, or delete the directory "
             "to start over",
+            file=sys.stderr,
+        )
+        return 2
+    if (
+        args.resume
+        and prior is not None
+        and bool(prior.get("ab_orders")) != bool(plan.get("ab_orders"))
+    ):
+        # A resume whose A/B switch disagrees with the run's recorded
+        # manifest would silently mix single-order and A/B-merged cells;
+        # refuse before any model load or scoring call.
+        print(
+            f"error: run dir {run_dir} manifest records ab_orders="
+            f"{bool(prior.get('ab_orders'))} but this resume plans "
+            f"ab_orders={bool(plan.get('ab_orders'))} - refusing to mix "
+            "single-order and A/B-merged cells in one run; re-run with the "
+            "flags matching the original launch (--ab-labels)",
             file=sys.stderr,
         )
         return 2
