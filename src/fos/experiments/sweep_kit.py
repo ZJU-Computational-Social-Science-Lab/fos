@@ -50,6 +50,12 @@ What each function does:
                                              (product x level x persona) at
                                              temperature 0.0, rendering the
                                              persona block into the prompt.
+    run_logprob_sweep(...)                 - R1LP logprob sweep: one scoring
+                                             pass per (product x level x draw)
+                                             through an injected scorer.
+    run_logprob_persona_sweep(...)         - R1LP persona logprob sweep: one
+                                             scoring pass per (product x
+                                             level x persona).
     run_diagnostic(...)                    - Runs the confounding diagnostic
                                              (products x levels x covariate
                                              kinds x draws) under one blinding
@@ -394,6 +400,8 @@ def build_record(
     covariate_count: int = 0,
     system_prompt: str = "",
     user_prompt: str = "",
+    extra: dict[str, Any] | None = None,
+    succeeded: bool | None = None,
 ) -> dict[str, Any]:
     """Build one self-describing record for a single chat call.
 
@@ -409,8 +417,14 @@ def build_record(
     and user prompts sent to the chat function, and prompt_sha256 (the sha256
     hex digest of system + "\x1e" + user) so a stored record can later be
     proven to match the prompts that produced it.
+
+    The R1LP logprob runners use the keyword-only hooks: extra merges the
+    scorer's logprob fields into the record, and succeeded overrides the
+    parse-derived flag so a successful scoring call counts as a success even
+    though its parsed_purchase stays None. Both default to the historical
+    behaviour, so every existing caller's record is byte-identical.
     """
-    return {
+    record = {
         "design": design.to_json(),
         "treatment_value": treatment_value,
         "blinding": blinding,
@@ -430,6 +444,11 @@ def build_record(
             (system_prompt + _PROMPT_SEPARATOR + user_prompt).encode("utf-8")
         ).hexdigest(),
     }
+    if extra:
+        record.update(extra)
+    if succeeded is not None:
+        record["succeeded"] = succeeded
+    return record
 
 
 def run_sweep(
@@ -666,6 +685,186 @@ def run_persona_sweep(
                     covariate_count=covariate_count,
                     system_prompt=system,
                     user_prompt=user,
+                )
+                record["persona"] = persona
+                record["persona_index"] = persona_index
+                records.append(record)
+                if on_record is not None:
+                    on_record(record)
+    return records, skipped_empty
+
+
+# A logprob scorer injected by the caller (see scripts/logprob_scoring.py):
+# it takes the chat messages and returns that prompt's logprob fields.
+ScorerFn = Callable[[list[dict[str, str]]], dict[str, Any]]
+
+
+def run_logprob_sweep(
+    design: RandomizationDesign,
+    products: list[dict[str, Any]],
+    model: str,
+    scorer_fn: ScorerFn,
+    draws: int = 1,
+    blinding: str | None = None,
+    seed: int | None = None,
+    persona_depth: str = "none",
+    *,
+    skip_first: int = 0,
+    on_record: Callable[[dict[str, Any]], None] | None = None,
+) -> list[dict[str, Any]]:
+    """Run the R1LP logprob sweep: one scoring pass per (product x level x draw).
+
+    The exact same prompts, design and cell enumeration as run_sweep, but
+    each cell goes through an injected logprob scorer instead of a sampling
+    chat function: the scorer returns the model's own p(buy) fields, which
+    are merged into the record (see build_record's extra/succeeded hooks).
+    parsed_purchase therefore stays None and succeeded is the scoring
+    call's success, so the record schema extends today's rather than
+    replacing it.
+
+    skip_first and on_record keep the launch wrapper's cell-granular
+    durability contract: a resumed leg executes only the missing cells and
+    every new record is handed out the instant it is produced. draws
+    defaults to 1 - R1LP makes ONE scoring pass per prompt.
+    """
+    mode = design.blinding if blinding is None else blinding
+    stored_design = replace(design, blinding=mode)
+    covariate_count = covariate_count_for_depth(persona_depth)
+    system = _system_prompt(design, mode)
+    rng = _seeded_rng(design, seed)
+    levels = design.grid()
+    records: list[dict[str, Any]] = []
+    cell = 0
+    for product in products:
+        for level in levels:
+            for _ in range(draws):
+                if cell < skip_first:  # cell already durably completed
+                    cell += 1
+                    if design.distribution == "uniform":
+                        rng.uniform(design.min_value, design.max_value)
+                    continue
+                cell += 1
+                value = (
+                    level
+                    if design.distribution == "grid"
+                    else rng.uniform(design.min_value, design.max_value)
+                )
+                price = _price_for_level(product["regular_price"], value)
+                user = build_purchase_user_prompt(
+                    product["category"], product["product"], price
+                )
+                messages = [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ]
+                started = time.monotonic()
+                result = scorer_fn(messages)
+                elapsed = time.monotonic() - started
+                record = build_record(
+                    stored_design,
+                    mode,
+                    model,
+                    product["product"],
+                    product["category"],
+                    value,
+                    result.get("raw_content", ""),
+                    None,
+                    elapsed,
+                    seed,
+                    persona_depth=persona_depth,
+                    covariate_count=covariate_count,
+                    system_prompt=system,
+                    user_prompt=user,
+                    extra=result,
+                    succeeded=bool(result.get("succeeded")),
+                )
+                records.append(record)
+                if on_record is not None:
+                    on_record(record)
+    return records
+
+
+def run_logprob_persona_sweep(
+    design: RandomizationDesign,
+    personas_by_product: dict[str, dict[str, Any]],
+    model: str,
+    scorer_fn: ScorerFn,
+    blinding: str | None = None,
+    persona_depth: str = "none",
+    seed: int | None = None,
+    *,
+    skip_first: int = 0,
+    on_record: Callable[[dict[str, Any]], None] | None = None,
+) -> tuple[list[dict[str, Any]], int]:
+    """Run the R1LP persona logprob sweep: one scoring pass per persona cell.
+
+    The persona twin of run_logprob_sweep: the same persona block in the
+    prompt and the same (product x persona x level) enumeration as
+    run_persona_sweep, but each cell is scored once for its p(buy) instead
+    of sampled. Records carry persona and persona_index so the analysis can
+    average p(buy) over a model's personas. Returns (records,
+    skipped_empty) exactly like run_persona_sweep.
+    """
+    mode = design.blinding if blinding is None else blinding
+    stored_design = replace(design, blinding=mode)
+    covariate_count = covariate_count_for_depth(persona_depth)
+    renderer = _persona_renderer(persona_depth)
+    system = _system_prompt(design, mode)
+    rng = _seeded_rng(design, seed)
+    levels = design.grid()
+    records: list[dict[str, Any]] = []
+    skipped_empty = 0
+    cell = 0
+    for product_name, info in personas_by_product.items():
+        category = info["category"]
+        regular_price = info.get("regular_price")
+        for persona_index, persona in enumerate(info["personas"]):
+            if not persona:
+                skipped_empty += 1
+                continue
+            for level in levels:
+                if cell < skip_first:  # cell already durably completed
+                    cell += 1
+                    if design.distribution == "uniform":
+                        rng.uniform(design.min_value, design.max_value)
+                    continue
+                cell += 1
+                value = (
+                    level
+                    if design.distribution == "grid"
+                    else rng.uniform(design.min_value, design.max_value)
+                )
+                if regular_price is not None:
+                    price = _price_for_level(regular_price, value)
+                else:
+                    price = value
+                user = _persona_user_prompt(
+                    category, product_name, price, renderer, persona
+                )
+                messages = [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ]
+                started = time.monotonic()
+                result = scorer_fn(messages)
+                elapsed = time.monotonic() - started
+                record = build_record(
+                    stored_design,
+                    mode,
+                    model,
+                    product_name,
+                    category,
+                    value,
+                    result.get("raw_content", ""),
+                    None,
+                    elapsed,
+                    seed,
+                    persona_depth=persona_depth,
+                    covariate_count=covariate_count,
+                    system_prompt=system,
+                    user_prompt=user,
+                    extra=result,
+                    succeeded=bool(result.get("succeeded")),
                 )
                 record["persona"] = persona
                 record["persona_index"] = persona_index
