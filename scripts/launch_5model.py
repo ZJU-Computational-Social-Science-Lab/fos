@@ -91,7 +91,12 @@ from launch_support import (  # noqa: E402
     _safe_model_name,
     _unload_model,
 )
-from launch_sweep import _make_chat, _progress_line, _watchdog  # noqa: E402
+from launch_sweep import (  # noqa: E402
+    _make_chat,
+    _make_logprob_scorer,
+    _progress_line,
+    _watchdog,
+)
 
 
 def _make_log() -> Callable[[str], None]:
@@ -268,9 +273,10 @@ def write_queue_manifest(
     ok = all(leg.get("ok", False) for leg in merged_legs) if terminal else None
     payload = {
         "run_name": run_dir.name,
-        "profile": QUEUE_PROFILE,
+        "profile": plan.get("profile", QUEUE_PROFILE),
         "models": plan["models"],
         "grammar": settings.grammar,
+        "logprob_mode": settings.logprob_mode,
         "port": settings.port,
         "base_url": settings.base_url,
         "manager_url": settings.manager_url,
@@ -297,9 +303,13 @@ def write_queue_manifest(
     return target
 
 
-def _start_thread(target: Callable[..., Any], args: tuple) -> threading.Thread:
-    """Start one daemon thread running target(*args) and return it."""
-    thread = threading.Thread(target=target, args=args, daemon=True)
+def _start_thread(
+    target: Callable[..., Any], args: tuple, kwargs: dict[str, Any] | None = None
+) -> threading.Thread:
+    """Start one daemon thread running target(*args, **kwargs) and return it."""
+    thread = threading.Thread(
+        target=target, args=args, kwargs=kwargs or {}, daemon=True
+    )
     thread.start()
     return thread
 
@@ -330,13 +340,25 @@ def _run_model_phase(
     for target in model_targets:
         planned = int(target.get("calls") or 0)
         remaining_calls += max(0, planned - _durable_calls(run_dir, target))
-    chat_fn, state, abort = _make_chat(
-        model_settings,
-        remaining_calls,
-        lambda d, t, p, r: log(_progress_line(d, t, p, r)),
-        stop=stop,
-        grammar=model_settings.grammar,
-    )
+    scorer_fn = None
+    chat_fn = None
+    if model_settings.logprob_mode:
+        # R1LP: one scoring pass per prompt, no grammar and no sampling;
+        # the wrapper still enforces the stop/abort and progress contract.
+        scorer_fn, state, abort = _make_logprob_scorer(
+            model_settings,
+            remaining_calls,
+            lambda d, t, p, r: log(_progress_line(d, t, p, r)),
+            stop=stop,
+        )
+    else:
+        chat_fn, state, abort = _make_chat(
+            model_settings,
+            remaining_calls,
+            lambda d, t, p, r: log(_progress_line(d, t, p, r)),
+            stop=stop,
+            grammar=model_settings.grammar,
+        )
     done_event = threading.Event()
     _start_thread(_watchdog, (model_settings, abort, done_event, log))
     log(
@@ -362,6 +384,7 @@ def _run_model_phase(
                 progress,
                 results_csv,
             ),
+            {"scorer_fn": scorer_fn},
         )
 
     level = _drive_legs(
@@ -486,9 +509,11 @@ def run_queue(
     """
     if stop is None:
         stop = StopFlag(force_first=getattr(args, "force", False))
-    # The queue fixes the stratified allocation: 10 plain draws and 20
-    # personas per model per cell (see build_queue_plan).
-    settings = replace(settings, draws=int(plan["draws"]), grammar=QUEUE_GRAMMAR)
+    # The queue fixes the stratified allocation: R1LP makes one scoring pass
+    # per prompt, R1-5MODEL makes 10 plain draws; grammar is only sent by the
+    # sampling queue (R1LP is grammar-free by design).
+    grammar = None if settings.logprob_mode else QUEUE_GRAMMAR
+    settings = replace(settings, draws=int(plan["draws"]), grammar=grammar)
     run_dir = settings.out / settings.run_name
     prior = _load_run_manifest(run_dir) if run_dir.exists() else None
     if (

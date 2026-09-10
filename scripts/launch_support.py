@@ -73,8 +73,10 @@ STAGE_DEPTHS = tuple(f"stage{i}" for i in range(2, 13))
 # Profile -> pool personas per product. R1-5MODEL is the 5-model stratified
 # queue (one invocation, five models back to back): its pool holds 100
 # personas per product and every model answers a deterministic 20-persona
-# slice of it (see launch_5model).
-PROFILES = {"R1": 100, "FULL": 500, "R1-5MODEL": 100}
+# slice of it (see launch_5model). R1LP is the logprob twin of that queue:
+# same five models and stratification, but one scoring pass per prompt with
+# no grammar (see logprob_scoring / LOGPROB-DESIGN.md).
+PROFILES = {"R1": 100, "FULL": 500, "R1-5MODEL": 100, "R1LP": 100}
 
 # Measured pilot numbers (RESULT-1501): nemotron Q8 per-call latency, the
 # persona-draw estimate, and the speedup of four concurrent clients on the
@@ -104,8 +106,12 @@ class Settings:
     progress_every: int
     products_path: str
     # llama-server GBNF grammar sent on every purchase call (R1-5MODEL
-    # queue); None keeps the historical grammar-free request.
+    # queue); None keeps the historical grammar-free request (and is what
+    # the R1LP logprob profile always uses).
     grammar: str | None = None
+    # R1LP logprob scoring mechanism ("first_token" or
+    # "candidate_scoring"); None is the historical sampling path.
+    logprob_mode: str | None = None
 
 
 def _load_unblinding_sweep() -> Any:

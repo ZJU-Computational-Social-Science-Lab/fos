@@ -74,6 +74,7 @@ from launch_support import (  # noqa: E402
     _repo_sha,
 )
 from launch_stop import AbortSignal, StopFlag, WATCHDOG_REASON  # noqa: E402
+from logprob_scoring import make_scorer  # noqa: E402
 
 HEALTH_POLL_SECONDS = 20.0
 HEALTH_MISSES_ABORT = 4
@@ -157,6 +158,48 @@ def _make_chat(
         return raw
 
     return chat_fn, state, abort
+
+
+def _make_logprob_scorer(
+    settings: Settings,
+    total_calls: int,
+    progress: Callable[[int, int, int, float], None],
+    stop: StopFlag | None = None,
+) -> tuple[Callable[..., dict[str, Any]], dict[str, int], AbortSignal]:
+    """Counting R1LP scorer wrapper shared by all legs of one model.
+
+    The logprob twin of _make_chat: it builds the scorer for the run's
+    --logprob-mode and wraps it with the same cell-boundary stop checks
+    (a graceful stop raises at the next prompt, a hard stop or dead-server
+    abort does the same) and the same progress/counting state, so the
+    queue's watchdog and stop driver treat logprob legs exactly like
+    sampling legs. The scorer's result is returned unchanged; the wrapper
+    only counts whether the scoring call succeeded.
+    """
+    state = {"done": 0, "parsed": 0}
+    abort = AbortSignal(WATCHDOG_REASON)
+    lock = threading.Lock()
+    started = time.monotonic()
+    inner = make_scorer(settings.logprob_mode or "first_token", settings.base_url, settings.model)
+
+    def scorer_fn(messages: list[dict[str, str]]) -> dict[str, Any]:
+        if abort.is_set():
+            raise RuntimeError(abort.reason)
+        if stop is not None and stop.level() == GRACEFUL_STOP_LEVEL:
+            raise RuntimeError(GRACEFUL_CELL_REASON)
+        result = inner(messages)
+        with lock:
+            state["done"] += 1
+            if result.get("succeeded"):
+                state["parsed"] += 1
+            done, parsed = state["done"], state["parsed"]
+        if done % settings.progress_every == 0:
+            progress(
+                done, total_calls, parsed, done / max(1e-9, time.monotonic() - started)
+            )
+        return result
+
+    return scorer_fn, state, abort
 
 
 def _planned_leg_calls(plan: dict[str, Any], leg: dict[str, str]) -> int:

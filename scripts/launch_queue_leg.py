@@ -40,6 +40,8 @@ for _dir in (_SCRIPT_DIR, _REPO_ROOT / "src"):
         sys.path.insert(0, str(_dir))
 
 from fos.experiments.sweep_kit import (  # noqa: E402
+    run_logprob_persona_sweep,
+    run_logprob_sweep,
     run_persona_sweep,
     run_sweep,
     write_manifest,
@@ -132,6 +134,7 @@ def _finalize_queue_leg(
             else None,
             "pool_seed": settings.pool_seed,
             "grammar": settings.grammar,
+            "logprob_mode": settings.logprob_mode,
             "commit_sha": _repo_sha(),
         },
     )
@@ -169,6 +172,8 @@ def run_queue_leg(
     log: Callable[[str], None],
     progress: QueueProgress | None,
     results_csv: QueueResultsCsv | None,
+    *,
+    scorer_fn: Callable[..., dict[str, Any]] | None = None,
 ) -> None:
     """Run one (model x depth x blinding) leg and record its outcome.
 
@@ -179,6 +184,11 @@ def run_queue_leg(
     (skip_first), and each completed cell also appends its normalized row
     to the run's results.csv. The records.csv and the leg manifest are
     written only when the whole leg completes.
+
+    When settings.logprob_mode is set (R1LP), the leg scores each prompt
+    once through scorer_fn instead of sampling draws through chat_fn; the
+    cell enumeration, durability and resume semantics are unchanged (one
+    cell = one prompt).
     """
     leg_dir = queue_leg_dir(run_dir, target)
     leg_dir.mkdir(parents=True, exist_ok=True)
@@ -245,7 +255,35 @@ def run_queue_leg(
             results_csv.append(record, target=target)
 
     try:
-        if target["depth"] == "none":
+        if settings.logprob_mode:
+            if scorer_fn is None:
+                raise RuntimeError("logprob mode without a scorer function")
+            if target["depth"] == "none":
+                run_logprob_sweep(
+                    design,
+                    products,
+                    settings.model,
+                    scorer_fn,
+                    draws=settings.draws,
+                    blinding=target["blinding"],
+                    seed=settings.seed,
+                    persona_depth="none",
+                    skip_first=durable,
+                    on_record=record_sink,
+                )
+            else:
+                run_logprob_persona_sweep(
+                    design,
+                    personas_by_model or {},
+                    settings.model,
+                    scorer_fn,
+                    blinding=target["blinding"],
+                    persona_depth="demographics",
+                    seed=settings.seed,
+                    skip_first=durable,
+                    on_record=record_sink,
+                )
+        elif target["depth"] == "none":
             run_sweep(
                 design,
                 products,

@@ -49,6 +49,10 @@ from launch_support import BASE_DEPTHS, BLINDINGS, _safe_model_name  # noqa: E40
 
 # The queue's run-level profile name and its fixed design numbers.
 QUEUE_PROFILE = "R1-5MODEL"
+# The logprob twin of the queue (TASK-1545): same five models and
+# stratification, but ONE scoring pass per prompt and no grammar.
+LOGP_PROFILE = "R1LP"
+LOGP_NONE_DRAWS = 1
 # Manager registry ids, in the run order the user confirmed (RESULT-1536
 # CHECK 5): the queue loads and runs them back to back, then unloads each.
 MODEL_QUEUE = (
@@ -122,12 +126,12 @@ def slice_persona_map(
 
 
 def _model_meta(
-    model_index: int, product_count: int, level_count: int
+    model_index: int, product_count: int, level_count: int, none_draws: int
 ) -> dict[str, Any]:
     """The plan's summary of one model: its calls and persona slice."""
     model = MODEL_QUEUE[model_index]
     safe = _safe_model_name(model)
-    none_calls = 2 * product_count * level_count * NONE_LEG_DRAWS
+    none_calls = 2 * product_count * level_count * none_draws
     persona_calls = 2 * product_count * PERSONAS_PER_MODEL * level_count
     start, stop = persona_slice(model_index)
     return {
@@ -149,26 +153,29 @@ def build_queue_plan(
     levels: list[float] | None = None,
     seed: int = 42,
     pool_seed: int = 42,
+    none_draws: int = NONE_LEG_DRAWS,
+    profile: str = QUEUE_PROFILE,
 ) -> dict[str, Any]:
     """The whole queue plan: 20 legs, per-model and total call counts.
 
     legs holds the 20 (model x depth x blinding) targets in queue order:
     for each model, none_blinded, none_unblinded, demographics_blinded,
-    demographics_unblinded. none legs carry 40 x levels x 10 calls each,
-    demographics legs 40 x 20 x levels each; per model that is 8,800 +
-    17,600 = 26,400 calls and the five models together 132,000 (identical
-    to the single-model R1 total).
+    demographics_unblinded. none legs carry 40 x levels x none_draws calls
+    each, demographics legs 40 x 20 x levels each; per model that is the
+    R1LP 880 + 17,600 = 18,480 (none_draws=1) or the R1-5MODEL 8,800 +
+    17,600 = 26,400 (none_draws=10) calls, and the five models together
+    92,400 or 132,000 respectively.
     """
     levels = list(levels) if levels is not None else []
     targets: list[dict[str, Any]] = []
     models: list[dict[str, Any]] = []
     for index in range(len(MODEL_QUEUE)):
-        meta = _model_meta(index, product_count, level_count)
+        meta = _model_meta(index, product_count, level_count, none_draws)
         models.append(meta)
         for depth in BASE_DEPTHS:
             for blinding in BLINDINGS:
                 calls = (
-                    product_count * level_count * NONE_LEG_DRAWS
+                    product_count * level_count * none_draws
                     if depth == "none"
                     else product_count * PERSONAS_PER_MODEL * level_count
                 )
@@ -183,18 +190,44 @@ def build_queue_plan(
                     }
                 )
     return {
-        "profile": QUEUE_PROFILE,
+        "profile": profile,
         "models": models,
         "legs": targets,
         "sweep_calls": sum(int(leg["calls"]) for leg in targets),
         "levels": levels,
         "k": POOL_PERSONAS_PER_PRODUCT,
-        "draws": NONE_LEG_DRAWS,
+        "draws": none_draws,
         "per_model_personas": PERSONAS_PER_MODEL,
         "seed": seed,
         "pool_seed": pool_seed,
         "pool_draws": 0,  # pools are reused (no persona draws) by default
     }
+
+
+def build_logprob_plan(
+    product_count: int,
+    level_count: int,
+    *,
+    levels: list[float] | None = None,
+    seed: int = 42,
+    pool_seed: int = 42,
+) -> dict[str, Any]:
+    """The R1LP plan: the queue with ONE scoring pass per prompt.
+
+    Identical stratification to R1-5MODEL (five models, 20-persona slices,
+    bare legs) but none_draws=1, so per model the call count is
+    40 x 11 x 2 = 880 bare + 20 x 40 x 11 x 2 = 17,600 persona scoring
+    passes = 18,480, and the five models together 92,400.
+    """
+    return build_queue_plan(
+        product_count,
+        level_count,
+        levels=levels,
+        seed=seed,
+        pool_seed=pool_seed,
+        none_draws=LOGP_NONE_DRAWS,
+        profile=LOGP_PROFILE,
+    )
 
 
 def queue_leg_dir(run_dir: Path, target: dict[str, Any]) -> Path:
@@ -265,10 +298,15 @@ def print_queue_dry_run(
     products: list[dict[str, Any]],
     plan: dict[str, Any],
     run_dir: Path,
+    *,
+    logprob_mode: str | None = None,
 ) -> None:
-    """Print the whole 5-model queue plan and its ETA, then exit."""
+    """Print the whole queue plan (sampling or R1LP logprob) and exit."""
+    profile = plan.get("profile", QUEUE_PROFILE)
+    draws = int(plan.get("draws", NONE_LEG_DRAWS))
+    per_model = int(plan["sweep_calls"] / len(plan["models"]))
     source = _resolve_pools_from(getattr(args, "pools_from", ""))
-    print(f"{QUEUE_PROFILE} launch plan (dry run)")
+    print(f"{profile} launch plan (dry run)")
     print(
         f"  queue         {len(plan['models'])} models, one invocation "
         f"(manager {args.manager_url})"
@@ -278,11 +316,16 @@ def print_queue_dry_run(
         print(
             f"    [{meta['model_index']}] {meta['model']:<36} "
             f"pool personas {start}-{stop - 1} ({meta['personas_per_product']} "
-            f"per product), {NONE_LEG_DRAWS} plain draws/cell"
+            f"per product), {draws} plain draws/cell"
         )
-    print(
-        f"  grammar       {QUEUE_GRAMMAR!r} on every purchase call, every model and leg"
-    )
+    if logprob_mode:
+        print(
+            f"  grammar       none (no constrained decoding; logprob mode {logprob_mode})"
+        )
+    else:
+        print(
+            f"  grammar       {QUEUE_GRAMMAR!r} on every purchase call, every model and leg"
+        )
     print(
         f"  products      {len(products)} from "
         f"{Path(args.products).name if Path(args.products).exists() else args.products}"
@@ -313,8 +356,13 @@ def print_queue_dry_run(
     print(
         f"  queue calls   {plan['sweep_calls']:,} total "
         f"({len(plan['models'])} models x "
-        f"{int(plan['sweep_calls'] / len(plan['models'])):,})"
+        f"{per_model:,})"
     )
+    if logprob_mode:
+        print(
+            f"  prompts       {per_model:,} scoring prompts per model "
+            f"({plan['sweep_calls']:,} total, mode {logprob_mode})"
+        )
     print(
         f"  outputs       {run_dir}/  (per-model leg dirs, results.csv "
         "appended continuously, progress.json, manifest.json)"

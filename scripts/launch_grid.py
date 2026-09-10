@@ -105,6 +105,7 @@ from launch_5model import (  # noqa: E402
     print_queue_dry_run,
     run_queue,
 )
+from launch_queue import LOGP_PROFILE, build_logprob_plan  # noqa: E402
 
 DEFAULT_PRODUCTS = "data/configs/unblinding_products.json"
 DEFAULT_OUT = "results/unblinding"
@@ -176,6 +177,13 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--smoke", action="store_true")
+    parser.add_argument(
+        "--logprob-mode",
+        choices=("first_token", "candidate_scoring"),
+        default="first_token",
+        help="R1LP logprob scoring: first_token (default, one call per "
+        "prompt) or candidate_scoring (two teacher-forced calls per prompt)",
+    )
     parser.add_argument("--i-know-this-is-41h", action="store_true")
     parser.add_argument(
         "--pools-from",
@@ -297,9 +305,9 @@ def _build_run_name(args: argparse.Namespace) -> str:
     """
     if args.run_name:
         return args.run_name
-    if args.profile == QUEUE_PROFILE:
+    if args.profile in (QUEUE_PROFILE, LOGP_PROFILE):
         stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
-        return f"{QUEUE_PROFILE}-{stamp}"
+        return f"{args.profile}-{stamp}"
     stem = _safe_model_name(args.model).replace("nvidia_", "")
     stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
     return f"{args.profile}-{stem}-{stamp}"
@@ -372,8 +380,11 @@ def _settings_from(args: argparse.Namespace, run_name: str) -> Settings:
     """Map parsed flags onto the support module's settings object.
 
     The R1-5MODEL queue stamps its one-token grammar on the settings so
-    every purchase call of every model is constrained the same way.
+    every purchase call of every model is constrained the same way. R1LP is
+    the opposite: it sets logprob_mode and leaves the grammar None (no
+    constrained decoding).
     """
+    is_logprob = args.profile == LOGP_PROFILE
     return Settings(
         model=args.model,
         port=args.port,
@@ -388,6 +399,7 @@ def _settings_from(args: argparse.Namespace, run_name: str) -> Settings:
         progress_every=args.progress_every,
         products_path=args.products,
         grammar=QUEUE_GRAMMAR if args.profile == QUEUE_PROFILE else None,
+        logprob_mode=args.logprob_mode if is_logprob else None,
     )
 
 
@@ -408,13 +420,15 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = _parse_args(argv)
     products_path = _resolve_products(args.products)
-    if args.profile == QUEUE_PROFILE:
-        # The R1-5MODEL queue: five models in one invocation, stratified
-        # allocation, one-token grammar on every call (see launch_5model).
+    if args.profile in (QUEUE_PROFILE, LOGP_PROFILE):
+        # The five-model queue (R1-5MODEL) and its logprob twin (R1LP):
+        # five models in one invocation, stratified allocation; R1-5MODEL
+        # constrains every call with the one-token grammar, R1LP scores
+        # logprobs instead (no grammar).
         if args.smoke:
             print(
-                "error: --smoke is not wired for the R1-5MODEL queue yet; "
-                "smoke the models individually with the R1 profile first",
+                f"error: --smoke is not wired for the {args.profile} queue "
+                "yet; smoke the models individually with the R1 profile first",
                 file=sys.stderr,
             )
             return 2
@@ -425,11 +439,18 @@ def main(argv: list[str] | None = None) -> int:
         levels = [float(piece) for piece in args.levels.split(",") if piece.strip()]
         if not levels:
             _usage_error("error: no price levels parsed from --levels")
-        plan = build_queue_plan(len(products), len(levels), levels=levels)
+        if args.profile == LOGP_PROFILE:
+            plan = build_logprob_plan(len(products), len(levels), levels=levels)
+            logprob_mode = args.logprob_mode
+        else:
+            plan = build_queue_plan(len(products), len(levels), levels=levels)
+            logprob_mode = None
         if args.dry_run:
             run_name = _build_run_name(args)
             run_dir = Path(args.out) / run_name
-            print_queue_dry_run(args, products, plan, run_dir)
+            print_queue_dry_run(
+                args, products, plan, run_dir, logprob_mode=logprob_mode
+            )
             return 0
         stop = StopFlag(force_first=args.force)
         previous = install_stop_handlers(stop)
