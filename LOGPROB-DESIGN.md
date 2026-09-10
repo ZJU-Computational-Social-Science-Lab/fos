@@ -32,7 +32,7 @@ The only differences:
 
 ## The two mechanisms (`--logprob-mode`)
 
-### `first_token` (default; 1 call/prompt)
+### `first_token` (secondary; 1 call/prompt)
 
 `POST /v1/chat/completions` with `max_tokens=1`, `temperature=1.0`,
 `logprobs=true`, `top_logprobs=20`. At the decision position the returned
@@ -48,7 +48,7 @@ top-logprobs are split by branch:
 
 The raw top-k list, `branch_mass` and the flag are stored on the record.
 
-### `candidate_scoring` (2 calls/prompt, teacher-forced)
+### `candidate_scoring` (default; 2 calls/prompt, teacher-forced)
 
 `POST /completions` with the chat-templated prompt **plus the candidate
 appended**, `n_predict=0`, `logprobs=true`, `n_probs=20`, `temperature=1.0`.
@@ -94,7 +94,20 @@ scoring call succeeded** (not whether a text answer parsed).
 
 `--dry-run` prints the 18,480-per-model / 92,400-total prompt counts. The
 candidate mechanism doubles the HTTP calls (two teacher-forced probes per
-prompt); `first_token` is the default and the cheaper one.
+prompt). **USER DIRECTIVE (binding): `candidate_scoring` is the default**
+mode; `first_token` stays selectable as the cheaper secondary via
+`--logprob-mode first_token`.
+
+## A/B label-order reversal (`--ab-labels`)
+
+USER DIRECTIVE (binding): the two labels can sit in either order in the
+prompt, and the order itself can bias the model. With `--ab-labels`, R1LP
+plans **both** orders per cell — `AB_LABEL_ORDERS = (("purchase", "not
+purchase"), ("not purchase", "purchase"))` in `scripts/logprob_scoring.py`
+— and aggregates the two p(buy) values by their plain mean
+(`average_ab_p_buy`; mean(0.8, 0.2) == 0.5). Every scorer result stamps
+the `label_order` it scored. Costs double: 36,960 per model, 184,800
+across the five models (`build_logprob_plan(..., ab_orders=True)`).
 
 ## Analysis
 
@@ -143,16 +156,20 @@ per model; it starts no run and touches no paused run directory.
 From the main checkout, where the archived pools live:
 
 ```
-python3 scripts/launch_grid.py --profile R1LP --logprob-mode first_token
+python3 scripts/launch_grid.py --profile R1LP
 ```
 
+- default scoring mode is `candidate_scoring` (USER DIRECTIVE); pass
+  `--logprob-mode first_token` for the cheaper single-call variant;
+- `--ab-labels` plans both label orders per cell (double the calls,
+  184,800 total; p(buy) aggregated by the mean of the two orders);
 - default run dir `results/unblinding/R1LP-<timestamp>/`;
 - add `--run-name <name>` for a fixed name;
 - resume after any stop/crash with the same command plus
   `--run-name <name> --resume` (completed (model, leg) pairs and durable
   cells are skipped; one cell = one prompt);
-- switch to `--logprob-mode candidate_scoring` for the teacher-forced
-  variant (double the HTTP calls);
+- switch to `--logprob-mode first_token` for the single-call variant
+  (half the HTTP calls of the candidate_scoring default);
 - `--dry-run` prints the 18,480/model and 92,400-total plan, offline;
 - `--smoke` is refused for the 5-model queues (smoke models individually
   with `--profile R1` first).

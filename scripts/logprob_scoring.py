@@ -10,13 +10,14 @@ the HTTP call is an injectable `post` function so every test can run fully
 offline against a fake transport.
 
 The two mechanisms (chosen with --logprob-mode):
-    first_token (default) - ONE call per prompt: POST /v1/chat/completions
+    first_token - ONE call per prompt: POST /v1/chat/completions
         with max_tokens=1, temperature=1.0, logprobs=true, top_logprobs=20.
         The top-logprobs at the decision position give p_buy (tokens that
         continue "purchase"), p_nobuy (tokens that start "not") and their
         sum branch_mass; a flag records when neither branch is in the top-k.
-    candidate_scoring - TWO calls per prompt (one per candidate): POST
-        /completions with the chat-templated prompt plus the candidate
+    candidate_scoring (default) - TWO calls per prompt (one per
+        candidate): POST /completions with the chat-templated prompt plus
+        the candidate
         appended, n_predict=0, logprobs=true, n_probs=20, temperature=1.0.
         The candidate's own token logprobs are summed (lp_sum), counted and
         length-normalized (lp_mean); a 2-way softmax turns the two
@@ -42,7 +43,11 @@ Plain-language function map:
     count_candidate_tokens(...)   - how many trailing tokens a candidate is.
     render_chat_template(...)     - a ChatML rendering of the chat messages.
     make_first_token_scorer(...)  - the first_token scorer.
-    make_candidate_scorer(...)    - the candidate_scoring scorer.
+    make_candidate_scorer(...)    - the candidate_scoring scorer; stamps
+                                    the label_order it scored on every
+                                    result.
+    average_ab_p_buy(...)         - the A/B aggregate: the mean of the two
+                                    label orders' p(buy) values.
     make_scorer(...)              - pick one by mode name.
 """
 
@@ -57,12 +62,22 @@ from typing import Any, Callable
 FIRST_TOKEN = "first_token"
 CANDIDATE_SCORING = "candidate_scoring"
 LOGP_MODES = (FIRST_TOKEN, CANDIDATE_SCORING)
-DEFAULT_LOGP_MODE = FIRST_TOKEN
+# USER DIRECTIVE (binding): the R1LP default scoring mode is the
+# full-string candidate comparison; first_token only via an explicit flag.
+DEFAULT_LOGP_MODE = CANDIDATE_SCORING
 TOP_LOGPROBS = 20
 N_PROBS = 20
 RAW_RESPONSE_LIMIT = 2048  # characters kept for the audit copy
 _PURCHASE_CANDIDATE = "purchase"
 _NOBUY_CANDIDATE = "not purchase"
+# The two A/B label orders (USER DIRECTIVE, binding): an A/B cell is
+# scored once with each order - "purchase" asked first, then the
+# reversal - so a label-position bias averages out of p(buy) instead of
+# skewing it.
+AB_LABEL_ORDERS = (
+    (_PURCHASE_CANDIDATE, _NOBUY_CANDIDATE),
+    (_NOBUY_CANDIDATE, _PURCHASE_CANDIDATE),
+)
 
 PostFn = Callable[[str, dict[str, Any], float], tuple[int, str]]
 
@@ -363,6 +378,15 @@ def candidate_softmax(lp_buy: float | None, lp_nobuy: float | None) -> dict[str,
     return {"p_buy": exp_buy / total, "p_nobuy": exp_nobuy / total}
 
 
+def average_ab_p_buy(forward_p_buy: float, reversed_p_buy: float) -> float:
+    """The A/B aggregate of the two label orders' p(buy): their plain mean.
+
+    Both orders ask the very same question, so neither answer is trusted
+    more than the other: they are averaged (mean(0.8, 0.2) == 0.5).
+    """
+    return (forward_p_buy + reversed_p_buy) / 2.0
+
+
 def count_candidate_tokens(candidate: str) -> int:
     """How many trailing tokens one candidate text is.
 
@@ -472,22 +496,26 @@ def make_candidate_scorer(
     timeout: float = 120.0,
     *,
     post: PostFn = _post_json,
+    label_order: tuple[str, str] | None = None,
 ) -> Callable[[list[dict[str, Any]]], dict[str, Any]]:
     """Build the teacher-forced two-calls-per-prompt candidate scorer.
 
-    Each call appends one candidate ("purchase" / "not purchase") to the
-    chat-templated prompt and reads the candidate's own token logprobs; a
-    softmax over the two sums gives p_buy/p_nobuy (and a length-normalized
-    variant). The raw responses are concatenated and truncated for audit.
+    Each call appends one candidate to the chat-templated prompt and reads
+    the candidate's own token logprobs; a softmax over the two sums gives
+    p_buy/p_nobuy (and a length-normalized variant). The candidate order
+    is `label_order` (default: the forward A/B order), and every result
+    stamps the `label_order` it actually scored. The raw responses are
+    concatenated and truncated for audit.
     """
     root = _server_root(base_url)
+    order = tuple(label_order) if label_order else AB_LABEL_ORDERS[0]
 
     def scorer(messages: list[dict[str, Any]]) -> dict[str, Any]:
         prompt = render_chat_template(messages)
         raw_parts: list[str] = []
         sums: dict[str, dict[str, Any]] = {}
         ok = True
-        for candidate in (_PURCHASE_CANDIDATE, _NOBUY_CANDIDATE):
+        for candidate in order:
             payload = _candidate_payload(model, prompt + candidate)
             try:
                 status, body = post(f"{root}/completions", payload, timeout)
@@ -515,6 +543,7 @@ def make_candidate_scorer(
         )
         return {
             "logprob_mode": CANDIDATE_SCORING,
+            "label_order": order,
             "p_buy_logprob": soft["p_buy"],
             "p_nobuy_logprob": soft["p_nobuy"],
             "branch_mass": branch_mass,
