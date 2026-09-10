@@ -74,7 +74,7 @@ from launch_support import (  # noqa: E402
     _repo_sha,
 )
 from launch_stop import AbortSignal, StopFlag, WATCHDOG_REASON  # noqa: E402
-from logprob_scoring import make_scorer  # noqa: E402
+from logprob_scoring import PostFn, make_scorer  # noqa: E402
 
 HEALTH_POLL_SECONDS = 20.0
 HEALTH_MISSES_ABORT = 4
@@ -165,6 +165,9 @@ def _make_logprob_scorer(
     total_calls: int,
     progress: Callable[[int, int, int, float], None],
     stop: StopFlag | None = None,
+    *,
+    ab_orders: bool = False,
+    post: PostFn | None = None,
 ) -> tuple[Callable[..., dict[str, Any]], dict[str, int], AbortSignal]:
     """Counting R1LP scorer wrapper shared by all legs of one model.
 
@@ -175,12 +178,32 @@ def _make_logprob_scorer(
     queue's watchdog and stop driver treat logprob legs exactly like
     sampling legs. The scorer's result is returned unchanged; the wrapper
     only counts whether the scoring call succeeded.
+
+    ab_orders=True (the R1LP A/B label-order switch) builds the both-
+    orders executor: every cell is scored with BOTH label orders and the
+    two halves are merged into ONE result (averaged p(buy), both raw
+    order values stamped). post=None uses the real HTTP transport; tests
+    inject a fake so no test ever opens a socket.
     """
     state = {"done": 0, "parsed": 0}
     abort = AbortSignal(WATCHDOG_REASON)
     lock = threading.Lock()
     started = time.monotonic()
-    inner = make_scorer(settings.logprob_mode or "first_token", settings.base_url, settings.model)
+    if post is None:
+        inner = make_scorer(
+            settings.logprob_mode or "first_token",
+            settings.base_url,
+            settings.model,
+            ab_orders=ab_orders,
+        )
+    else:
+        inner = make_scorer(
+            settings.logprob_mode or "first_token",
+            settings.base_url,
+            settings.model,
+            post=post,
+            ab_orders=ab_orders,
+        )
 
     def scorer_fn(messages: list[dict[str, str]]) -> dict[str, Any]:
         if abort.is_set():
