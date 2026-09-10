@@ -211,6 +211,7 @@ def build_logprob_plan(
     levels: list[float] | None = None,
     seed: int = 42,
     pool_seed: int = 42,
+    ab_orders: bool = False,
 ) -> dict[str, Any]:
     """The R1LP plan: the queue with ONE scoring pass per prompt.
 
@@ -218,8 +219,13 @@ def build_logprob_plan(
     bare legs) but none_draws=1, so per model the call count is
     40 x 11 x 2 = 880 bare + 20 x 40 x 11 x 2 = 17,600 persona scoring
     passes = 18,480, and the five models together 92,400.
+
+    With ab_orders=True (the A/B label-order switch, USER DIRECTIVE)
+    every cell is planned with BOTH label orders, so every count doubles:
+    36,960 per model, 184,800 total, and the plan is stamped
+    ab_orders=True. Without it the plan carries no ab_orders stamp.
     """
-    return build_queue_plan(
+    plan = build_queue_plan(
         product_count,
         level_count,
         levels=levels,
@@ -228,6 +234,30 @@ def build_logprob_plan(
         none_draws=LOGP_NONE_DRAWS,
         profile=LOGP_PROFILE,
     )
+    return _double_plan_for_ab(plan) if ab_orders else plan
+
+
+def _double_plan_for_ab(plan: dict[str, Any]) -> dict[str, Any]:
+    """The A/B copy of a plan: both label orders per cell, so 2x counts.
+
+    Every leg's scoring passes double (one pass per label order) and the
+    plan is stamped ab_orders=True; the input plan is never mutated.
+    """
+    return {
+        **plan,
+        "ab_orders": True,
+        "legs": [{**leg, "calls": 2 * int(leg["calls"])} for leg in plan["legs"]],
+        "models": [
+            {
+                **meta,
+                "none_calls": 2 * int(meta["none_calls"]),
+                "demographics_calls": 2 * int(meta["demographics_calls"]),
+                "total_calls": 2 * int(meta["total_calls"]),
+            }
+            for meta in plan["models"]
+        ],
+        "sweep_calls": 2 * int(plan["sweep_calls"]),
+    }
 
 
 def queue_leg_dir(run_dir: Path, target: dict[str, Any]) -> Path:
