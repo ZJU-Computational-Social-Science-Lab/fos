@@ -350,6 +350,7 @@ def _run_model_phase(
             remaining_calls,
             lambda d, t, p, r: log(_progress_line(d, t, p, r)),
             stop=stop,
+            ab_orders=bool(plan.get("ab_orders")),
         )
     else:
         chat_fn, state, abort = _make_chat(
