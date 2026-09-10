@@ -180,9 +180,18 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--logprob-mode",
         choices=("first_token", "candidate_scoring"),
-        default="first_token",
-        help="R1LP logprob scoring: first_token (default, one call per "
-        "prompt) or candidate_scoring (two teacher-forced calls per prompt)",
+        default="candidate_scoring",
+        help="R1LP logprob scoring: candidate_scoring (default, two "
+        "teacher-forced calls per prompt) or first_token (one call per "
+        "prompt)",
+    )
+    parser.add_argument(
+        "--ab-labels",
+        action="store_true",
+        help="R1LP A/B label-order reversal: plan every cell with BOTH "
+        "label orders (purchase|not purchase and the reversal) and "
+        "aggregate the two p(buy) values by their mean (doubles the "
+        "scoring calls)",
     )
     parser.add_argument("--i-know-this-is-41h", action="store_true")
     parser.add_argument(
@@ -440,7 +449,9 @@ def main(argv: list[str] | None = None) -> int:
         if not levels:
             _usage_error("error: no price levels parsed from --levels")
         if args.profile == LOGP_PROFILE:
-            plan = build_logprob_plan(len(products), len(levels), levels=levels)
+            plan = build_logprob_plan(
+                len(products), len(levels), levels=levels, ab_orders=args.ab_labels
+            )
             logprob_mode = args.logprob_mode
         else:
             plan = build_queue_plan(len(products), len(levels), levels=levels)
