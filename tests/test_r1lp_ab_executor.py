@@ -17,6 +17,10 @@
 #   (4) RESUME SAFETY: with ab_orders=True a resumed leg finishes ONLY the
 #       missing cells (both orders each); durable cells - both halves done -
 #       are never re-executed; exactly one merged record per cell on disk.
+#   (5) IMPOSSIBLE MODE REFUSED (TASK-1555, review F2 lock): first_token
+#       has no A/B form, so make_scorer("first_token", ..., ab_orders=True)
+#       must raise ValueError naming the conflict BEFORE any transport
+#       call - never silently score a single order.
 #
 # INTERFACE CHOICES where the current code is silent (minimal natural
 # extension of what exists, same style as the TASK-1550 wiring contract):
@@ -498,3 +502,35 @@ def test_leg_without_ab_keeps_the_single_order_record_unchanged(tmp_path):
         assert "ab_results" not in record, (
             "the default record must not grow A/B merge fields"
         )
+
+
+# ---------------------------------------------------------------------------
+# (5) TASK-1555, review F2 lock: first_token + ab_orders refuses loudly
+# ---------------------------------------------------------------------------
+
+
+def test_first_token_with_ab_orders_refuses_before_any_transport_call():
+    """first_token has no A/B form: make_scorer("first_token", ...,
+    ab_orders=True) must raise ValueError naming the conflict at scorer
+    build time, with the transport never invoked (no order silently
+    scored)."""
+    from logprob_scoring import make_scorer
+
+    post = _AbFakePost()
+    with pytest.raises(ValueError) as excinfo:
+        make_scorer(
+            "first_token",
+            "http://127.0.0.1:9",
+            "vendor/model",
+            post=post,
+            ab_orders=True,
+        )
+    message = str(excinfo.value)
+    assert "ab_orders" in message and "first_token" in message, (
+        "the refusal must name both the ab_orders switch and the "
+        f"first_token mode it cannot serve; got: {message!r}"
+    )
+    assert post.calls == [], (
+        "the refusal must fire at scorer build - no transport call may "
+        "happen for an impossible mode combination"
+    )
