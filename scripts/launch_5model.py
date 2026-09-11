@@ -281,6 +281,9 @@ def write_queue_manifest(
         # R1-YESNO; None = the historical "purchase"/"not purchase"), so
         # a later audit can never mistake the run for an R1 rerun.
         "response_format": settings.response_format,
+        # The first_token decision-scan window this run used (the
+        # request's max_tokens), so the request shape stays auditable.
+        "scan_tokens": settings.scan_tokens,
         # Whether this run plans the A/B label-order switch: recorded so a
         # later --resume can refuse flags that disagree with the run.
         "ab_orders": bool(plan.get("ab_orders")),
