@@ -88,7 +88,7 @@ LEG_FILE = "records.jsonl"
 # through model_top_k: the profile config lives HERE in the queue spec -
 # never as a model-name branch inside the scoring code. A model absent
 # from the map keeps the historical TOP_LOGPROBS coverage.
-MODEL_TOP_K_OVERRIDES: dict[str, int] = {"meta/muse-glimmer": 50}
+MODEL_TOP_K_OVERRIDES: dict[str, int] = {"meta/muse-glimmer": 100}
 # Per-model first_token control-SEQUENCE overrides (whole exact token
 # sequences consumed as one block, e.g. a fixed channel header),
 # resolved through model_control_sequences: the profile config lives
