@@ -12,7 +12,8 @@ the five models together make 132,000 - the same total as the single-model
 R1 run. This module is the pure specification of that queue: the model
 order, the stratification numbers, the persona partition, the per-leg call
 counts, where each leg lives on disk and how a --resume recognises a
-completed (model, leg). It imports no network code and writes no files.
+completed (model, leg), plus the per-model first_token top-k config. It
+opens no sockets and writes no files.
 
 What each function does (plain language):
     persona_slice(index)           - The pool index range [20i, 20i+20) of
@@ -23,6 +24,9 @@ What each function does (plain language):
                                      total call counts (26,400 x 5).
     queue_leg_dir / queue_leg_jsonl - Where one leg lives on disk.
     queue_leg_done(...)            - Is this (model, leg) already complete?
+    model_top_k(model)             - The model's first_token top-k: its
+                                     profile override, else the historical
+                                     20 (never a scoring-code branch).
     pending_queue_targets(...)     - The legs --resume still has to run.
     _durable_calls(...)            - Cells of one leg durably on disk.
     _regular_prices(products)      - Product name -> regular price map.
@@ -46,6 +50,7 @@ for _dir in (_SCRIPT_DIR, _SRC):
 
 from launch_cells import durable_cells  # noqa: E402
 from launch_support import BASE_DEPTHS, BLINDINGS, _safe_model_name  # noqa: E402
+from logprob_scoring import TOP_LOGPROBS  # noqa: E402
 
 # The queue's run-level profile name and its fixed design numbers.
 QUEUE_PROFILE = "R1-5MODEL"
@@ -79,6 +84,11 @@ PERSONAS_PER_MODEL = 20
 NONE_LEG_DRAWS = 10
 # A queue leg's durable records file (the resume state of the leg).
 LEG_FILE = "records.jsonl"
+# Per-model first_token top-k overrides (payload top_logprobs), resolved
+# through model_top_k: the profile config lives HERE in the queue spec -
+# never as a model-name branch inside the scoring code. A model absent
+# from the map keeps the historical TOP_LOGPROBS coverage.
+MODEL_TOP_K_OVERRIDES: dict[str, int] = {"meta/muse-glimmer": 50}
 # The archived R1 run's pools (40/40 products, seed 42) reused by default.
 DEFAULT_POOLS_FROM = (
     "results/unblinding/R1-nemotron-cascade-2-30b-a3b-20260909T004614/pools"
@@ -265,6 +275,19 @@ def _double_plan_for_ab(plan: dict[str, Any]) -> dict[str, Any]:
         ],
         "sweep_calls": 2 * int(plan["sweep_calls"]),
     }
+
+
+def model_top_k(model: str) -> int:
+    """The first_token request's top-k for one model: override or 20.
+
+    The per-model override map (MODEL_TOP_K_OVERRIDES) is queue-profile
+    config: a model whose useful answer candidates only appear in a wider
+    candidate list gets a bigger k, every other model (known or unknown)
+    keeps the historical TOP_LOGPROBS coverage. The resolved value is
+    stamped on each leg's manifest and applied on every first_token
+    request, so the records always say which coverage they hold.
+    """
+    return MODEL_TOP_K_OVERRIDES.get(model, TOP_LOGPROBS)
 
 
 def queue_leg_dir(run_dir: Path, target: dict[str, Any]) -> Path:
