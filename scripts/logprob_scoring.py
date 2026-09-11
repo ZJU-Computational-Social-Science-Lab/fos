@@ -35,12 +35,16 @@ top_logprobs/probs) and always keeps a truncated raw response for audit.
 
 Plain-language function map:
     purchase_branch_mass(...)     - p_buy / p_nobuy / branch_mass from a
-                                    top-logprobs list.
+                                    top-logprobs list (fold forms decide
+                                    which token spellings count).
     parse_first_token_response()  - the decision position and top-logprobs
                                     out of one /v1/chat/completions reply
                                     (control/channel chosen tokens are
-                                    skipped; the first substantive answer
-                                    position is measured).
+                                    skipped, whole control SEQUENCES are
+                                    consumed as one block; the first
+                                    substantive answer position is
+                                    measured and flagged when its yes/no
+                                    coverage is low).
     parse_candidate_response()    - per-token logprobs out of one
                                     /completions reply (all variants).
     sum_candidate_logprobs(...)   - lp_sum / lp_tokens / lp_mean for the
@@ -70,7 +74,7 @@ import json
 import math
 import re
 import urllib.request
-from typing import Any, Callable
+from typing import Any, Callable, Sequence
 
 FIRST_TOKEN = "first_token"
 CANDIDATE_SCORING = "candidate_scoring"
@@ -80,6 +84,18 @@ LOGP_MODES = (FIRST_TOKEN, CANDIDATE_SCORING)
 DEFAULT_LOGP_MODE = CANDIDATE_SCORING
 TOP_LOGPROBS = 20
 N_PROBS = 20
+# The low-coverage threshold for the first_token decision position: a
+# combined yes/no branch mass STRICTLY BELOW this fraction of probability
+# is flagged `low_branch_mass` in the parse and on every durable record,
+# so a diffuse answer is never read like a sharp one. Configurable per
+# scorer call; exactly-at-threshold counts as covered.
+BRANCH_MASS_THRESHOLD = 0.6
+# The visibility floor for fold-form candidates: a top-k entry whose
+# probability is below one in a million is sampler noise, not an answer
+# spelling, so it neither folds into a branch nor shows up in the
+# matched-form lists (the audit trail only records forms that could
+# matter).
+FOLD_PROBABILITY_FLOOR = 1e-6
 RAW_RESPONSE_LIMIT = 2048  # characters kept for the audit copy
 _PURCHASE_CANDIDATE = "purchase"
 _NOBUY_CANDIDATE = "not purchase"
@@ -216,11 +232,8 @@ DEFAULT_LABELS = ("purchase", "not purchase")
 def _label_heads(labels: tuple[str, str]) -> tuple[str, str]:
     """The exact first word of each label, lower-cased and junk-free.
 
-    A token matches a branch only when its cleaned text equals this head
-    word (or continues it at a word boundary for multi-word labels like
-    "not purchase", whose head word is "not"). Prefix look-alikes
-    ("none" vs "no", "yesterday" vs "yes") are different words and
-    never match. A label with no readable word at all matches nothing.
+    The default fold list is built from these head words. A label with
+    no readable word at all derives an empty list and folds nothing.
     """
     positive, negative = labels
     clean = lambda text: re.sub(r"^[^0-9a-z]+", "", text.strip().lower())  # noqa: E731
@@ -232,49 +245,70 @@ def _label_heads(labels: tuple[str, str]) -> tuple[str, str]:
     return head(positive), head(negative)
 
 
-def _branch_of(
-    token: str | None, labels: tuple[str, str] = DEFAULT_LABELS
-) -> str | None:
-    """Which decision branch a token text belongs to: 'buy', 'nobuy' or None.
+def _default_fold_forms(labels: tuple[str, str]) -> dict[str, list[str]]:
+    """The CONSERVATIVE default fold list for a label pair.
 
-    Leading punctuation/whitespace is stripped and the text is lower-cased
-    first, so " Purchase", "'purchase" and "purchase" all read as the buy
-    branch and " not" as the nobuy branch. The match against the label's
-    head word is EXACT (or continues it at a word boundary, so "not
-    purchase" still reads as nobuy): a prefix look-alike such as "none",
-    "nobody" or "yesterday" is a different word and returns None.
+    Folding is an explicit enumeration of literal token strings - no
+    punctuation stripping and no case-folding at match time (USER
+    DIRECTIVE after the exact-form audit): the bare form, its two case
+    variants and the standard leading-space BPE spelling count;
+    ambiguous punctuation-glue
+    forms ("(no", "=yes", "=no") and prefix look-alikes ("not", "none",
+    "nobody") NEVER fold. The negative branch also lists the leading-tab
+    spelling, which is the one extra form the audit observed in real
+    top-k lists ("\\tno"). For the historical labels this derives
+    "purchase"/"not" lists that keep every previously foldable form the
+    locked tests pin (" purchase", "not", " not").
     """
-    if not isinstance(token, str):
-        return None
     positive_head, negative_head = _label_heads(labels)
-    cleaned = re.sub(r"^[^0-9a-z]+", "", token.strip().lower())
-    if positive_head and (
-        cleaned == positive_head or cleaned.startswith(positive_head + " ")
-    ):
-        return "buy"
-    if negative_head and (
-        cleaned == negative_head or cleaned.startswith(negative_head + " ")
-    ):
-        return "nobuy"
-    return None
+
+    def forms(head: str) -> list[str]:
+        return [head, head.capitalize(), head.upper(), f" {head}"] if head else []
+
+    return {
+        "yes": forms(positive_head),
+        "no": forms(negative_head) + ([f"\t{negative_head}"] if negative_head else []),
+    }
 
 
 def purchase_branch_mass(
-    top_logprobs: list[dict[str, Any]], labels: tuple[str, str] = DEFAULT_LABELS
+    top_logprobs: list[dict[str, Any]],
+    labels: tuple[str, str] = DEFAULT_LABELS,
+    fold_forms: dict[str, Sequence[str]] | None = None,
 ) -> dict[str, Any]:
     """Branch probabilities from one decision-position top-k list.
 
-    The tokens whose exact form matches the positive label ("purchase" by
-    default, "yes" for the R1-YESNO profile) sum into p_buy/p_yes, and the
-    negative label's tokens into p_nobuy/p_no; neither_branch is True when
-    neither branch appears at all (so the caller can flag the cell instead
-    of guessing a probability). The matched raw token forms are recorded so
-    per-model tokenisation quirks (leading space, capitalisation) stay
-    visible. Schema continuity: the legacy p_buy/p_nobuy keys keep the
-    historical 0.0-when-absent semantics, while the newer p_yes/p_no keys
-    are None when a branch is absent - a silent 0.0 would fake a measured
-    answer.
+    A token counts toward p_buy/p_yes only when its text (modulo
+    leading/trailing whitespace - the BPE space/tab glue is not an
+    answer-word difference) equals a listed form of the positive
+    branch's fold list, and toward p_nobuy/p_no only when it matches the
+    negative branch's list - the conservative default lists derive from
+    the labels' head words (`_default_fold_forms`) and a configured
+    `fold_forms` (keys "yes" = positive branch, "no" = negative branch)
+    REPLACES the default outright. Ambiguous punctuation glue ("(no",
+    "=yes", "=no") never strips into a listed form and NEVER folds.
+    neither_branch is
+    True when neither branch appears at all (so the caller can flag the
+    cell instead of guessing a probability). The matched raw token forms
+    are recorded in top-k order so per-model tokenisation quirks (leading
+    space, capitalisation) stay visible. Schema continuity: the legacy
+    p_buy/p_nobuy keys keep the historical 0.0-when-absent semantics,
+    while the newer p_yes/p_no keys are None when a branch is absent - a
+    silent 0.0 would fake a measured answer.
     """
+    default = _default_fold_forms(labels)
+    yes_forms = frozenset(
+        form.strip()
+        for form in (
+            fold_forms["yes"] if fold_forms and "yes" in fold_forms else default["yes"]
+        )
+    )
+    no_forms = frozenset(
+        form.strip()
+        for form in (
+            fold_forms["no"] if fold_forms and "no" in fold_forms else default["no"]
+        )
+    )
     p_buy = 0.0
     p_nobuy = 0.0
     matched_yes: list[str] = []
@@ -287,13 +321,16 @@ def purchase_branch_mass(
         if logprob is None:
             continue
         probability = math.exp(logprob)
-        branch = _branch_of(token, labels)
-        if branch == "buy":
+        if probability < FOLD_PROBABILITY_FLOOR:
+            continue  # numerically-zero top-k noise, never an answer form
+        text = token or ""
+        stripped = text.strip()
+        if isinstance(token, str) and stripped in yes_forms:
             p_buy += probability
-            matched_yes.append(token or "")
-        elif branch == "nobuy":
+            matched_yes.append(text)
+        elif isinstance(token, str) and stripped in no_forms:
             p_nobuy += probability
-            matched_no.append(token or "")
+            matched_no.append(text)
     return {
         "p_buy": p_buy,
         "p_nobuy": p_nobuy,
@@ -397,20 +434,114 @@ def _is_control_token(token: Any, control_tokens: tuple[str, ...]) -> bool:
     return token in control_tokens
 
 
-def _find_decision_position(
-    positions: list[tuple], control_tokens: tuple[str, ...]
-) -> tuple[int | None, list[str]]:
-    """Walk the CHOSEN tokens; skip control tokens until the answer.
+def _matches_sequence_at(
+    positions: list[tuple], index: int, sequence: Sequence[str]
+) -> bool:
+    """Whether the reply's chosen tokens from `index` spell `sequence` out.
 
-    Returns (0-based index of the first substantive position or None,
-    the skipped control tokens in generation order). Only the CHOSEN
-    token decides: yes/no candidates hiding in a skipped position's
-    top-k are never measured.
+    Every offset must compare EXACTLY (case- and whitespace-sensitive) and
+    the reply must be long enough: a sequence cut short by the end of the
+    reply never matches, so a partial header consumes nothing.
+    """
+    if index + len(sequence) > len(positions):
+        return False
+    for offset, expected in enumerate(sequence):
+        if positions[index + offset][0] != expected:
+            return False
+    return True
+
+
+def _broken_sequence_prefix(
+    positions: list[tuple],
+    index: int,
+    sequence: Sequence[str],
+    control_tokens: tuple[str, ...],
+) -> int | None:
+    """The matched-prefix length of a sequence that breaks at a deviator.
+
+    A sequence that is PARTWAY matched at `index` and then deviates at a
+    token still inside the reply consumes nothing as a sequence. When the
+    already-matched prefix tokens are all single-token control tokens
+    (the single-token rule would skip and record each of them anyway),
+    the deviating token is swallowed together with that prefix - it is
+    the continuation of the broken header, not an answer - so the walk
+    resumes after it instead of measuring a half-formed header word.
+    Returns the prefix length, or None when no in-reply deviation of an
+    all-control prefix exists (including a reply that just ends: a cut
+    short header consumes nothing at all).
+    """
+    limit = min(len(sequence), len(positions) - index)
+    matched = 0
+    while matched < limit and positions[index + matched][0] == sequence[matched]:
+        matched += 1
+    # No deviation inside the reply (full match handled elsewhere, or the
+    # reply ends first): nothing to swallow.
+    if matched == 0 or matched >= len(sequence) or index + matched >= len(positions):
+        return None
+    prefix = (positions[index + offset][0] for offset in range(matched))
+    if not all(_is_control_token(token, control_tokens) for token in prefix):
+        return None
+    return matched
+
+
+def _find_decision_position(
+    positions: list[tuple],
+    control_tokens: tuple[str, ...],
+    control_sequences: tuple[Sequence[str], ...] = (),
+) -> tuple[int | None, list[str]]:
+    """Walk the CHOSEN tokens; skip controls until the answer.
+
+    At each position a WHOLE control SEQUENCE is matched first (exact
+    strings, exact order): a full match consumes the entire block - its
+    tokens are recorded in the skipped prefix - before the single-token
+    rule can stop after the block's first token. A sequence that only
+    PARTWAY matches consumes nothing as a block: the walk falls through
+    to the single-token rule (the built-in markup shape plus the
+    `control_tokens` extension), except that an all-control matched
+    prefix swallows its in-reply deviating token (see
+    `_broken_sequence_prefix`). Returns (0-based index of the first
+    substantive position or None, the skipped control tokens in
+    generation order). Only the CHOSEN token decides: yes/no candidates
+    hiding in a skipped position's top-k are never measured.
     """
     skipped: list[str] = []
-    for index, (token, _logprob, _top_k) in enumerate(positions):
+    index = 0
+    while index < len(positions):
+        sequence = next(
+            (
+                candidate
+                for candidate in control_sequences
+                if _matches_sequence_at(positions, index, candidate)
+            ),
+            None,
+        )
+        if sequence is not None:
+            skipped.extend(sequence)
+            index += len(sequence)
+            continue
+        broken = next(
+            (
+                matched
+                for candidate in control_sequences
+                if (
+                    matched := _broken_sequence_prefix(
+                        positions, index, candidate, control_tokens
+                    )
+                )
+                is not None
+            ),
+            None,
+        )
+        if broken is not None:
+            skipped.extend(
+                positions[index + offset][0] or "" for offset in range(broken)
+            )
+            index += broken + 1  # the deviating token is swallowed with it
+            continue
+        token = positions[index][0]
         if _is_control_token(token, control_tokens):
             skipped.append(token or "")
+            index += 1
             continue
         return index, skipped
     return None, skipped
@@ -420,21 +551,34 @@ def parse_first_token_response(
     body: Any,
     labels: tuple[str, str] = DEFAULT_LABELS,
     control_tokens: tuple[str, ...] = (),
+    control_sequences: Sequence[Sequence[str]] = (),
+    branch_mass_threshold: float = BRANCH_MASS_THRESHOLD,
+    fold_forms: dict[str, Sequence[str]] | None = None,
 ) -> dict[str, Any]:
     """Read one /v1/chat/completions reply into the p(buy) fields.
 
     The reply may carry SEVERAL generated token positions (the decision
     scan asks for a short window). The parser walks the CHOSEN token of
-    every position, skips control/channel tokens (the built-in "<|...>"
-    markup shape plus the exact `control_tokens` extension list) and
-    measures the yes/no mass at the FIRST substantive position's top-k.
+    every position: a WHOLE control sequence (`control_sequences`, exact
+    token strings in exact order - e.g. a fixed channel header) is
+    consumed as one block the moment it matches, any deviation consumes
+    nothing, and the built-in markup shape plus the exact `control_tokens`
+    extension list are skipped one token at a time. The yes/no mass is
+    measured at the FIRST substantive position's top-k only.
     The audit trail names the decision position (`decision_position`,
-    1-based; `top_logprobs` stays that position's raw top-k), the
+    the 1-based position right after the skipped control prefix;
+    `top_logprobs` stays the measured position's raw top-k), the
     skipped control tokens in generation order
     (`skipped_prefix`/`skipped_len`), every position's raw top-k
-    (`per_position_top_k`) and the extension list in force
-    (`control_tokens`). A reply of ONLY control tokens has no decision
-    position: `decision_position` is None with
+    (`per_position_top_k`) and the extension lists in force
+    (`control_tokens`/`control_sequences`). `fold_forms` replaces the
+    conservative default fold list per branch (see
+    `purchase_branch_mass`). `low_branch_mass` flags a
+    decision position whose combined yes/no mass is strictly below
+    `branch_mass_threshold` (a diffuse answer must never be read like a
+    sharp one); the flag is present on every parse, including replies
+    with no decision position at all. A reply of ONLY control tokens has
+    no decision position: `decision_position` is None with
     `no_substantive_position` True and None probabilities - the call
     itself still succeeded (it produced readable logprobs); the
     measurement is honestly None. p_yes_binary is the positive share of
@@ -445,9 +589,10 @@ def parse_first_token_response(
     positions = _token_positions(data)
     per_position = [_normalize_top_k(position[2]) for position in positions]
     extension = tuple(control_tokens or ())
-    index, skipped = _find_decision_position(positions, extension)
+    sequences = tuple(tuple(sequence) for sequence in (control_sequences or ()))
+    index, skipped = _find_decision_position(positions, extension, sequences)
     top = per_position[index] if index is not None else []
-    mass = purchase_branch_mass(top, labels)
+    mass = purchase_branch_mass(top, labels, fold_forms)
     total = mass["p_buy"] + mass["p_nobuy"]
     runaway = index is None and bool(positions)
     return {
@@ -456,12 +601,14 @@ def parse_first_token_response(
         "raw_logprob_response": _truncate(body),
         "p_yes_binary": mass["p_buy"] / total if total > 0.0 else None,
         "neither_branch_in_top_k": bool(mass["neither_branch"]),
-        "decision_position": None if index is None else index + 1,
+        "decision_position": None if index is None else len(skipped) + 1,
         "skipped_prefix": skipped,
         "skipped_len": len(skipped),
         "per_position_top_k": per_position,
         "control_tokens": list(extension),
+        "control_sequences": [list(sequence) for sequence in sequences],
         "no_substantive_position": runaway,
+        "low_branch_mass": bool(mass["branch_mass"] < branch_mass_threshold),
         "succeeded": bool(top) or runaway,
         **mass,
     }
@@ -589,13 +736,18 @@ def render_chat_template(messages: list[dict[str, Any]]) -> str:
 
 
 def _first_token_payload(
-    model: str, messages: list[dict[str, Any]], scan_tokens: int = 1
+    model: str,
+    messages: list[dict[str, Any]],
+    scan_tokens: int = 1,
+    top_k: int = TOP_LOGPROBS,
 ) -> dict[str, Any]:
     """The one-call first_token request: no grammar, logprobs requested.
 
     max_tokens is the decision-scan window: 1 keeps the historical
     single-token call; a larger window lets the parser walk past
-    control/channel tokens to the first substantive answer.
+    control/channel tokens to the first substantive answer. top_k is the
+    requested candidate coverage (payload top_logprobs): the historical
+    20, or a per-model override resolved by the queue profile.
     """
     return {
         "model": model,
@@ -603,7 +755,7 @@ def _first_token_payload(
         "temperature": 1.0,
         "max_tokens": scan_tokens,
         "logprobs": True,
-        "top_logprobs": TOP_LOGPROBS,
+        "top_logprobs": top_k,
     }
 
 
@@ -637,6 +789,8 @@ def _unified(first: dict[str, Any]) -> dict[str, Any]:
         "skipped_len": first.get("skipped_len"),
         "per_position_top_k": first.get("per_position_top_k") or [],
         "control_tokens": first.get("control_tokens") or [],
+        "control_sequences": first.get("control_sequences") or [],
+        "low_branch_mass": bool(first.get("low_branch_mass")),
         "no_substantive_position": bool(first.get("no_substantive_position")),
         "lp_buy_sum": None,
         "lp_nobuy_sum": None,
@@ -659,6 +813,10 @@ def make_first_token_scorer(
     labels: tuple[str, str] = DEFAULT_LABELS,
     scan_tokens: int = 1,
     control_tokens: tuple[str, ...] = (),
+    control_sequences: Sequence[Sequence[str]] = (),
+    top_k: int = TOP_LOGPROBS,
+    fold_forms: dict[str, Sequence[str]] | None = None,
+    branch_mass_threshold: float = BRANCH_MASS_THRESHOLD,
 ) -> Callable[[list[dict[str, Any]]], dict[str, Any]]:
     """Build the default one-call-per-prompt logprob scorer.
 
@@ -670,21 +828,36 @@ def make_first_token_scorer(
     scan_tokens is the decision-scan window (the request's max_tokens; 1
     keeps the historical single-token call, a larger window lets the
     parser walk past control/channel tokens). control_tokens extends the
-    control-token spec with exact per-model token strings.
+    control-token spec with exact per-model token strings and
+    control_sequences adds whole exact token SEQUENCES (e.g. a fixed
+    channel header) that are consumed as one block. top_k is the request's
+    candidate coverage (payload top_logprobs, default 20). fold_forms
+    replaces the conservative default fold list per branch, and
+    branch_mass_threshold sets when a decision position is flagged
+    low_branch_mass (default 0.6, strictly lower-than).
     """
     if scan_tokens < 1:
         raise ValueError(f"scan_tokens must be >= 1, got {scan_tokens}")
+    if top_k < 1:
+        raise ValueError(f"top_k must be >= 1, got {top_k}")
     root = _server_root(base_url)
 
     def scorer(messages: list[dict[str, Any]]) -> dict[str, Any]:
-        payload = _first_token_payload(model, messages, scan_tokens)
+        payload = _first_token_payload(model, messages, scan_tokens, top_k)
         try:
             status, body = post(f"{root}/v1/chat/completions", payload, timeout)
         except OSError as exc:  # surfaced, never swallowed
             return {
                 **_unified({"succeeded": False, "raw_logprob_response": str(exc)}),
             }
-        parsed = parse_first_token_response(body, labels, control_tokens)
+        parsed = parse_first_token_response(
+            body,
+            labels,
+            control_tokens,
+            control_sequences,
+            branch_mass_threshold,
+            fold_forms=fold_forms,
+        )
         if status != 200:
             parsed["succeeded"] = False
         return _unified(parsed)
@@ -842,6 +1015,10 @@ def make_scorer(
     labels: tuple[str, str] = DEFAULT_LABELS,
     scan_tokens: int = SCAN_TOKENS,
     control_tokens: tuple[str, ...] = (),
+    control_sequences: Sequence[Sequence[str]] = (),
+    top_k: int = TOP_LOGPROBS,
+    fold_forms: dict[str, Sequence[str]] | None = None,
+    branch_mass_threshold: float = BRANCH_MASS_THRESHOLD,
 ) -> Callable[[list[dict[str, Any]]], dict[str, Any]]:
     """Pick the scorer for one --logprob-mode; unknown modes refuse loudly.
 
@@ -852,9 +1029,14 @@ def make_scorer(
     scoring one order. labels threads the answer words (from the run's
     response_format) into the first_token branch matcher. scan_tokens is
     the first_token decision-scan window (the request's max_tokens; the
-    production default of 8 walks past control-token prefixes) and
-    control_tokens extends the control-token spec per model - both only
-    apply to first_token (candidate_scoring generates no tokens).
+    production default of 8 walks past control-token prefixes),
+    control_tokens/control_sequences extend the skipped control spec per
+    model (single tokens, or whole exact sequences consumed as one
+    block), top_k is the request's candidate coverage (payload
+    top_logprobs, default 20), fold_forms replaces the conservative
+    default fold list, and branch_mass_threshold sets the
+    low_branch_mass flag point - all only apply to first_token
+    (candidate_scoring generates no answer tokens).
     """
     if mode == FIRST_TOKEN:
         if ab_orders:
@@ -870,6 +1052,10 @@ def make_scorer(
             labels=labels,
             scan_tokens=scan_tokens,
             control_tokens=control_tokens,
+            control_sequences=control_sequences,
+            top_k=top_k,
+            fold_forms=fold_forms,
+            branch_mass_threshold=branch_mass_threshold,
         )
     if mode == CANDIDATE_SCORING:
         if ab_orders:

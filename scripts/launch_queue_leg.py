@@ -55,6 +55,7 @@ from launch_cells import (  # noqa: E402
 )
 from launch_queue import (  # noqa: E402
     PERSONAS_PER_MODEL,
+    model_top_k,
     persona_slice,
     queue_leg_dir,
     queue_leg_done,
@@ -63,6 +64,7 @@ from launch_queue import (  # noqa: E402
 )
 from launch_queue_outputs import QueueProgress, QueueResultsCsv  # noqa: E402
 from launch_support import Settings, _SWEEP, _now, _repo_sha  # noqa: E402
+from logprob_scoring import FIRST_TOKEN  # noqa: E402
 
 
 def _finalize_queue_leg(
@@ -110,6 +112,31 @@ def _finalize_queue_leg(
         target["depth"],
     )
     start, stop = persona_slice(target["model_index"])
+    manifest_extra: dict[str, Any] = {
+        "levels": plan["levels"],
+        "temperature": 1.0,
+        "seed": settings.seed,
+        "argv": list(sys.argv),
+        "started": _now(),
+        "finished": _now(),
+        "depth": target["depth"],
+        "run_name": run_dir.name,
+        "model_index": target["model_index"],
+        "persona_slice": [start, stop],
+        "personas_per_product": PERSONAS_PER_MODEL
+        if target["depth"] != "none"
+        else None,
+        "pool_seed": settings.pool_seed,
+        "grammar": settings.grammar,
+        "logprob_mode": settings.logprob_mode,
+        "response_format": settings.response_format,
+        "commit_sha": _repo_sha(),
+    }
+    if settings.logprob_mode == FIRST_TOKEN:
+        # Stamp the top-k coverage that was in force on this leg's
+        # first_token requests, so a reader knows how wide the recorded
+        # top-k lists are (the profile's per-model override, else 20).
+        manifest_extra["top_k"] = model_top_k(target["model"])
     write_manifest(
         leg_dir / "manifest.json",
         design,
@@ -118,26 +145,7 @@ def _finalize_queue_leg(
         blinding,
         products,
         settings.base_url,
-        extra={
-            "levels": plan["levels"],
-            "temperature": 1.0,
-            "seed": settings.seed,
-            "argv": list(sys.argv),
-            "started": _now(),
-            "finished": _now(),
-            "depth": target["depth"],
-            "run_name": run_dir.name,
-            "model_index": target["model_index"],
-            "persona_slice": [start, stop],
-            "personas_per_product": PERSONAS_PER_MODEL
-            if target["depth"] != "none"
-            else None,
-            "pool_seed": settings.pool_seed,
-            "grammar": settings.grammar,
-            "logprob_mode": settings.logprob_mode,
-            "response_format": settings.response_format,
-            "commit_sha": _repo_sha(),
-        },
+        extra=manifest_extra,
     )
     results.append(
         {
