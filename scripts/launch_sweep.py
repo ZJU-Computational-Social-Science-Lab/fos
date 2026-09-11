@@ -74,6 +74,7 @@ from launch_support import (  # noqa: E402
     _post_json,
     _repo_sha,
 )
+from launch_queue import model_top_k  # noqa: E402
 from launch_stop import AbortSignal, StopFlag, WATCHDOG_REASON  # noqa: E402
 from logprob_scoring import PostFn, make_scorer  # noqa: E402
 
@@ -198,6 +199,10 @@ def _make_logprob_scorer(
             ab_orders=ab_orders,
             labels=split_response_format(settings.response_format),
             scan_tokens=getattr(settings, "scan_tokens", 8),
+            # The per-model top-k coverage resolved from the queue
+            # profile config (overrides live in launch_queue, never
+            # here) - the same value the leg manifest stamps.
+            top_k=model_top_k(settings.model),
         )
     else:
         inner = make_scorer(
@@ -208,6 +213,7 @@ def _make_logprob_scorer(
             ab_orders=ab_orders,
             labels=split_response_format(settings.response_format),
             scan_tokens=getattr(settings, "scan_tokens", 8),
+            top_k=model_top_k(settings.model),
         )
 
     def scorer_fn(messages: list[dict[str, str]]) -> dict[str, Any]:
