@@ -61,6 +61,16 @@ CHOSEN token of each generated position from position 1:
   (`<|channel>`, `<|message>`, `<|end|>` — note the shape does not require
   a `|` before `>`) or appears in the per-model `control_tokens` extension
   list (exact token strings, addable without code changes);
+- a per-model `control_sequences` list (each entry: exact token strings in
+  exact order, beside `control_tokens`) names WHOLE blocks that are
+  consumed as one unit — Gemma's fixed channel header
+  (`<|channel>` → `thought` → `\n` → `<channel|>`, observed 6/6 in
+  TASK-1576) is one block, so the answer mass is read at position 5. A
+  header that deviates at ANY position is never consumed as a block: the
+  walk falls back to today's single-token skip, and an all-control matched
+  prefix swallows its in-reply deviating token with it (a half-formed
+  header word is not an answer). Matching is exact-string only; the
+  record stamps `control_sequences` beside `control_tokens`;
 - the walk skips control tokens and measures the yes/no mass at the FIRST
   substantive position's top-k only (exact token forms unchanged;
   yes/no candidates hiding in a skipped position's top-k never count);
@@ -72,6 +82,26 @@ CHOSEN token of each generated position from position 1:
   `decision_position`/`p_yes`/`p_no`/`p_yes_binary` are `None` with
   `no_substantive_position=True`, and `succeeded=True` — the call
   succeeded; the measurement is honestly None.
+
+#### The request's top-k coverage (per-model `top_k`)
+
+The first_token request's candidate coverage (payload `top_logprobs`) is
+per-model config in the queue spec (`launch_queue.MODEL_TOP_K_OVERRIDES`,
+resolved by `model_top_k(model)`), never a hardcoded branch in the scoring
+code: the muse-style profile override asks for 50, every other model keeps
+the historical 20. The resolved k is applied on every first_token request
+and stamped as `top_k` on each leg's manifest (first_token legs only), so
+the records always say how wide their top-k lists are.
+
+#### The low-coverage marker (`low_branch_mass`)
+
+A decision position whose combined yes/no mass is strictly below
+`branch_mass_threshold` (default 0.6, exactly-at counts as covered) is
+flagged `low_branch_mass=True` in the parse, the scorer result and every
+durable record — a diffuse answer must never be read like a sharp one.
+The flag only ADDS information: `p_yes`/`p_no`/`branch_mass` keep their
+exact semantics, and the field is present on runaway/no-decision records
+too.
 
 ### `candidate_scoring` (default; 2 calls/prompt, teacher-forced)
 
@@ -155,15 +185,23 @@ has no A/B form).
   and every request payload carry `grammar=None` / no `grammar` key — the
   request is fully unconstrained (the first_token payload never had one).
 - **Scoring:** `purchase_branch_mass` / `parse_first_token_response` take
-  `labels=(positive, negative)` and match tokens by EXACT first-word form
-  after junk-strip/case-fold (word-boundary continuation for multi-word
-  labels like "not purchase") — prefix look-alikes (`not`, `none`,
-  `nobody` vs `no`; `yesterday` vs `yes`) are different words and never
-  fold into a branch. Records carry the raw top-k, `p_yes`/`p_no` (None,
-  never a silent 0, when a branch is absent from the top-k),
-  `p_yes_binary = p_yes/(p_yes+p_no)` (None when the branch mass is 0),
-  the matched token forms (`matched_yes_tokens`/`matched_no_tokens`), and
-  the `response_format` + `parse_mode="first_token_logprob"` stamps;
+  `labels=(positive, negative)` and fold a top-k token into a branch only
+  when its spelling is in that branch's enumerated fold list
+  (`fold_forms`): the CONSERVATIVE default derives from the labels' head
+  words as bare form + case variants + the leading-space spelling (the
+  negative branch also the leading-tab form, per the exact-form audit) —
+  e.g. yes: `yes`/`Yes`/`YES`/`" yes"`, no: `no`/`No`/`NO`/`" no"`/`"\tno"`.
+  Comparison is literal modulo leading/trailing whitespace; ambiguous
+  punctuation glue (`(no`, `=yes`, `=no`) and prefix look-alikes (`not`,
+  `none`, `nobody` vs `no`; `yesterday` vs `yes`) NEVER fold, and a
+  configured `fold_forms={"yes": [...], "no": [...]}` REPLACES the
+  default. Top-k entries below one-in-a-million probability are sampler
+  noise and never fold. Records carry the raw top-k,
+  `p_yes`/`p_no` (None, never a silent 0, when a branch is absent from
+  the top-k), `p_yes_binary = p_yes/(p_yes+p_no)` (None when the branch
+  mass is 0), the `low_branch_mass` coverage flag, the matched token
+  forms (`matched_yes_tokens`/`matched_no_tokens`), and the
+  `response_format` + `parse_mode="first_token_logprob"` stamps;
   `parsed_purchase` stays None.
 
 ## Analysis
