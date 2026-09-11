@@ -93,6 +93,17 @@ the historical 20. The resolved k is applied on every first_token request
 and stamped as `top_k` on each leg's manifest (first_token legs only), so
 the records always say how wide their top-k lists are.
 
+#### The request's control sequences (per-model, default-off)
+
+The per-model control sequences (whole exact token blocks consumed as one
+step, e.g. gemma's channel header) ride the same proven path: profile
+config in `launch_queue.MODEL_CONTROL_SEQUENCES`, resolved by
+`model_control_sequences(model)` (empty tuple for every unlisted model -
+identity), stamped as `control_sequences` on each leg's manifest and
+threaded into the scorer by `launch_sweep`. A malformed override (an
+empty sequence, or one holding a non-string entry) is refused loudly at
+scorer construction - never a silent zero-token walk.
+
 #### The low-coverage marker (`low_branch_mass`)
 
 A decision position whose combined yes/no mass is strictly below

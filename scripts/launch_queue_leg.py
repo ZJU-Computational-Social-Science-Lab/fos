@@ -55,6 +55,7 @@ from launch_cells import (  # noqa: E402
 )
 from launch_queue import (  # noqa: E402
     PERSONAS_PER_MODEL,
+    model_control_sequences,
     model_top_k,
     persona_slice,
     queue_leg_dir,
@@ -137,6 +138,13 @@ def _finalize_queue_leg(
         # first_token requests, so a reader knows how wide the recorded
         # top-k lists are (the profile's per-model override, else 20).
         manifest_extra["top_k"] = model_top_k(target["model"])
+        # Stamp the control sequences that were in force too (the
+        # profile's per-model header override, else the default-off
+        # empty list), so a reader always knows which header config a
+        # leg's recorded replies were scored with.
+        manifest_extra["control_sequences"] = [
+            list(sequence) for sequence in model_control_sequences(target["model"])
+        ]
     write_manifest(
         leg_dir / "manifest.json",
         design,
