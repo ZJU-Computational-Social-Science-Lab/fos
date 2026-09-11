@@ -804,6 +804,36 @@ def _unified(first: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _validated_control_sequences(
+    control_sequences: Sequence[Sequence[str]],
+) -> tuple[tuple[str, ...], ...]:
+    """Refuse unusable control-sequence config BEFORE any call is made.
+
+    An EMPTY sequence matches vacuously: the decision walk would advance
+    by zero tokens forever - a silent hang with no error. A sequence
+    holding a NON-STRING entry can never match a token exactly. Both are
+    config bugs, so the scorer builder raises a clear ValueError naming
+    control_sequences at construction (mirrors the scan_tokens/top_k
+    guards) instead of looping or misreading a reply.
+    """
+    sequences = tuple(tuple(sequence) for sequence in (control_sequences or ()))
+    for sequence in sequences:
+        if not sequence:
+            raise ValueError(
+                "control_sequences contains an empty sequence - an empty "
+                "control sequence matches vacuously and would loop the "
+                "decision walk forever; remove it or fill it with exact "
+                "token strings"
+            )
+        for token in sequence:
+            if not isinstance(token, str):
+                raise ValueError(
+                    "control_sequences contains a non-string entry "
+                    f"{token!r} - only exact token strings can match"
+                )
+    return sequences
+
+
 def make_first_token_scorer(
     base_url: str,
     model: str,
@@ -830,7 +860,9 @@ def make_first_token_scorer(
     parser walk past control/channel tokens). control_tokens extends the
     control-token spec with exact per-model token strings and
     control_sequences adds whole exact token SEQUENCES (e.g. a fixed
-    channel header) that are consumed as one block. top_k is the request's
+    channel header) that are consumed as one block - an empty sequence,
+    or one holding a non-string entry, is refused loudly at construction
+    (never a silent zero-token walk). top_k is the request's
     candidate coverage (payload top_logprobs, default 20). fold_forms
     replaces the conservative default fold list per branch, and
     branch_mass_threshold sets when a decision position is flagged
@@ -840,6 +872,7 @@ def make_first_token_scorer(
         raise ValueError(f"scan_tokens must be >= 1, got {scan_tokens}")
     if top_k < 1:
         raise ValueError(f"top_k must be >= 1, got {top_k}")
+    control_sequences = _validated_control_sequences(control_sequences)
     root = _server_root(base_url)
 
     def scorer(messages: list[dict[str, Any]]) -> dict[str, Any]:
