@@ -126,6 +126,12 @@ class Settings:
     # slots and the scorer's branch labels (see sweep_kit's
     # split_response_format).
     response_format: str | None = None
+    # How many tokens one first_token call generates for the decision
+    # scan (the request's max_tokens): the window must reach past any
+    # control/channel prefix (e.g. "<|channel>") to the first substantive
+    # answer token. candidate_scoring ignores it (it generates no
+    # tokens; it scores the two appended candidates).
+    scan_tokens: int = 8
 
 
 def _load_unblinding_sweep() -> Any:

@@ -48,6 +48,31 @@ top-logprobs are split by branch:
 
 The raw top-k list, `branch_mass` and the flag are stored on the record.
 
+#### The decision position (control-token skip)
+
+Some models open a reply with a control/channel token (Gemma: `<|channel>`,
+observed on 8/8 probes in TASK-1564). Measuring at generated position 1
+would then read the marker, not the answer. The first_token call therefore
+generates a short window (`max_tokens = scan_tokens`, default 8, still
+grammar-free and with the prompt unchanged) and the parser walks the
+CHOSEN token of each generated position from position 1:
+
+- a chosen token is **control** when it has the built-in markup shape
+  (`<|channel>`, `<|message>`, `<|end|>` — note the shape does not require
+  a `|` before `>`) or appears in the per-model `control_tokens` extension
+  list (exact token strings, addable without code changes);
+- the walk skips control tokens and measures the yes/no mass at the FIRST
+  substantive position's top-k only (exact token forms unchanged;
+  yes/no candidates hiding in a skipped position's top-k never count);
+- the record gains `decision_position` (1-based), `skipped_prefix` /
+  `skipped_len` (the chosen control tokens in generation order),
+  `per_position_top_k` (every position's raw top-k), `control_tokens`
+  (the extension list in force) and `no_substantive_position`;
+- a reply of ONLY control tokens has no decision position:
+  `decision_position`/`p_yes`/`p_no`/`p_yes_binary` are `None` with
+  `no_substantive_position=True`, and `succeeded=True` — the call
+  succeeded; the measurement is honestly None.
+
 ### `candidate_scoring` (default; 2 calls/prompt, teacher-forced)
 
 `POST /completions` with the chat-templated prompt **plus the candidate
