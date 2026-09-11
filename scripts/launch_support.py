@@ -75,8 +75,16 @@ STAGE_DEPTHS = tuple(f"stage{i}" for i in range(2, 13))
 # personas per product and every model answers a deterministic 20-persona
 # slice of it (see launch_5model). R1LP is the logprob twin of that queue:
 # same five models and stratification, but one scoring pass per prompt with
-# no grammar (see logprob_scoring / LOGPROB-DESIGN.md).
-PROFILES = {"R1": 100, "FULL": 500, "R1-5MODEL": 100, "R1LP": 100}
+# no grammar (see logprob_scoring / LOGPROB-DESIGN.md). R1-YESNO is the
+# R1LP twin that asks the same question with the answer words "yes"/"no"
+# and reads the honest first-token probabilities (no grammar either).
+PROFILES = {
+    "R1": 100,
+    "FULL": 500,
+    "R1-5MODEL": 100,
+    "R1LP": 100,
+    "R1-YESNO": 100,
+}
 
 # Measured pilot numbers (RESULT-1501): nemotron Q8 per-call latency, the
 # persona-draw estimate, and the speedup of four concurrent clients on the
@@ -112,6 +120,12 @@ class Settings:
     # R1LP logprob scoring mechanism ("first_token" or
     # "candidate_scoring"); None is the historical sampling path.
     logprob_mode: str | None = None
+    # The survey's two answer words as one "<positive>/<negative>" value
+    # ("yes/no" for R1-YESNO); None keeps the historical "purchase"/
+    # "not purchase" prompt. One source of truth: it feeds BOTH the prompt
+    # slots and the scorer's branch labels (see sweep_kit's
+    # split_response_format).
+    response_format: str | None = None
 
 
 def _load_unblinding_sweep() -> Any:

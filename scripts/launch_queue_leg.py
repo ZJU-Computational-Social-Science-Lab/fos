@@ -135,6 +135,7 @@ def _finalize_queue_leg(
             "pool_seed": settings.pool_seed,
             "grammar": settings.grammar,
             "logprob_mode": settings.logprob_mode,
+            "response_format": settings.response_format,
             "commit_sha": _repo_sha(),
         },
     )
@@ -270,6 +271,7 @@ def run_queue_leg(
                     persona_depth="none",
                     skip_first=durable,
                     on_record=record_sink,
+                    response_format=settings.response_format,
                 )
             else:
                 run_logprob_persona_sweep(
@@ -282,6 +284,7 @@ def run_queue_leg(
                     seed=settings.seed,
                     skip_first=durable,
                     on_record=record_sink,
+                    response_format=settings.response_format,
                 )
         elif target["depth"] == "none":
             run_sweep(

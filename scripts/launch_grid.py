@@ -105,7 +105,11 @@ from launch_5model import (  # noqa: E402
     print_queue_dry_run,
     run_queue,
 )
-from launch_queue import LOGP_PROFILE, build_logprob_plan  # noqa: E402
+from launch_queue import (  # noqa: E402
+    LOGP_PROFILE,
+    YESNO_PROFILE,
+    build_logprob_plan,
+)
 
 DEFAULT_PRODUCTS = "data/configs/unblinding_products.json"
 DEFAULT_OUT = "results/unblinding"
@@ -314,7 +318,7 @@ def _build_run_name(args: argparse.Namespace) -> str:
     """
     if args.run_name:
         return args.run_name
-    if args.profile in (QUEUE_PROFILE, LOGP_PROFILE):
+    if args.profile in (QUEUE_PROFILE, LOGP_PROFILE, YESNO_PROFILE):
         stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
         return f"{args.profile}-{stamp}"
     stem = _safe_model_name(args.model).replace("nvidia_", "")
@@ -391,9 +395,12 @@ def _settings_from(args: argparse.Namespace, run_name: str) -> Settings:
     The R1-5MODEL queue stamps its one-token grammar on the settings so
     every purchase call of every model is constrained the same way. R1LP is
     the opposite: it sets logprob_mode and leaves the grammar None (no
-    constrained decoding).
+    constrained decoding). R1-YESNO is the yes/no twin of R1LP: it pins
+    first_token logprobs, no grammar at all, and stamps the response words
+    (response_format="yes/no") that feed both the prompt and the scorer.
     """
-    is_logprob = args.profile == LOGP_PROFILE
+    is_logprob = args.profile in (LOGP_PROFILE, YESNO_PROFILE)
+    is_yesno = args.profile == YESNO_PROFILE
     return Settings(
         model=args.model,
         port=args.port,
@@ -408,7 +415,10 @@ def _settings_from(args: argparse.Namespace, run_name: str) -> Settings:
         progress_every=args.progress_every,
         products_path=args.products,
         grammar=QUEUE_GRAMMAR if args.profile == QUEUE_PROFILE else None,
-        logprob_mode=args.logprob_mode if is_logprob else None,
+        logprob_mode=(
+            "first_token" if is_yesno else args.logprob_mode if is_logprob else None
+        ),
+        response_format="yes/no" if is_yesno else None,
     )
 
 
@@ -429,15 +439,22 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = _parse_args(argv)
     products_path = _resolve_products(args.products)
-    if args.profile in (QUEUE_PROFILE, LOGP_PROFILE):
-        # The five-model queue (R1-5MODEL) and its logprob twin (R1LP):
-        # five models in one invocation, stratified allocation; R1-5MODEL
-        # constrains every call with the one-token grammar, R1LP scores
-        # logprobs instead (no grammar).
+    if args.profile in (QUEUE_PROFILE, LOGP_PROFILE, YESNO_PROFILE):
+        # The five-model queue (R1-5MODEL) and its logprob twins (R1LP,
+        # R1-YESNO): five models in one invocation, stratified allocation;
+        # R1-5MODEL constrains every call with the one-token grammar, R1LP
+        # and R1-YESNO score logprobs instead (no grammar).
         if args.smoke:
             print(
                 f"error: --smoke is not wired for the {args.profile} queue "
                 "yet; smoke the models individually with the R1 profile first",
+                file=sys.stderr,
+            )
+            return 2
+        if args.profile == YESNO_PROFILE and args.ab_labels:
+            print(
+                "error: --ab-labels has no A/B form for the R1-YESNO "
+                "profile (first_token scoring, like R1LP's)",
                 file=sys.stderr,
             )
             return 2
@@ -448,11 +465,19 @@ def main(argv: list[str] | None = None) -> int:
         levels = [float(piece) for piece in args.levels.split(",") if piece.strip()]
         if not levels:
             _usage_error("error: no price levels parsed from --levels")
-        if args.profile == LOGP_PROFILE:
+        if args.profile in (LOGP_PROFILE, YESNO_PROFILE):
             plan = build_logprob_plan(
-                len(products), len(levels), levels=levels, ab_orders=args.ab_labels
+                len(products),
+                len(levels),
+                levels=levels,
+                ab_orders=args.ab_labels,
+                profile=YESNO_PROFILE
+                if args.profile == YESNO_PROFILE
+                else LOGP_PROFILE,
             )
-            logprob_mode = args.logprob_mode
+            logprob_mode = (
+                "first_token" if args.profile == YESNO_PROFILE else args.logprob_mode
+            )
         else:
             plan = build_queue_plan(len(products), len(levels), levels=levels)
             logprob_mode = None
