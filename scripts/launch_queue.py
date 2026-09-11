@@ -52,6 +52,10 @@ QUEUE_PROFILE = "R1-5MODEL"
 # The logprob twin of the queue (TASK-1545): same five models and
 # stratification, but ONE scoring pass per prompt and no grammar.
 LOGP_PROFILE = "R1LP"
+# The yes/no twin of R1LP (TASK-1563): identical one-pass geometry, but the
+# survey's answer words are "yes"/"no" and the honest first-token
+# probabilities are read without any grammar.
+YESNO_PROFILE = "R1-YESNO"
 LOGP_NONE_DRAWS = 1
 # Manager registry ids, in the run order the user confirmed (RESULT-1536
 # CHECK 5): the queue loads and runs them back to back, then unloads each.
@@ -212,13 +216,16 @@ def build_logprob_plan(
     seed: int = 42,
     pool_seed: int = 42,
     ab_orders: bool = False,
+    profile: str = LOGP_PROFILE,
 ) -> dict[str, Any]:
-    """The R1LP plan: the queue with ONE scoring pass per prompt.
+    """The R1LP-plan geometry under the given profile id (default R1LP).
 
     Identical stratification to R1-5MODEL (five models, 20-persona slices,
     bare legs) but none_draws=1, so per model the call count is
     40 x 11 x 2 = 880 bare + 20 x 40 x 11 x 2 = 17,600 persona scoring
-    passes = 18,480, and the five models together 92,400.
+    passes = 18,480, and the five models together 92,400. profile stamps
+    the plan with its own id ("R1-YESNO" rides the exact same geometry);
+    the default leaves the plain R1LP plan untouched.
 
     With ab_orders=True (the A/B label-order switch, USER DIRECTIVE)
     every cell is planned with BOTH label orders, so every count doubles:
@@ -232,7 +239,7 @@ def build_logprob_plan(
         seed=seed,
         pool_seed=pool_seed,
         none_draws=LOGP_NONE_DRAWS,
-        profile=LOGP_PROFILE,
+        profile=profile,
     )
     return _double_plan_for_ab(plan) if ab_orders else plan
 

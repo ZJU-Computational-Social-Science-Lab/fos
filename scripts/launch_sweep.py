@@ -56,6 +56,7 @@ from fos.experiments.sweep_kit import (  # noqa: E402
     parse_purchase,
     run_persona_sweep,
     run_sweep,
+    split_response_format,
     write_manifest,
 )
 from launch_cells import (  # noqa: E402
@@ -195,6 +196,7 @@ def _make_logprob_scorer(
             settings.base_url,
             settings.model,
             ab_orders=ab_orders,
+            labels=split_response_format(settings.response_format),
         )
     else:
         inner = make_scorer(
@@ -203,6 +205,7 @@ def _make_logprob_scorer(
             settings.model,
             post=post,
             ab_orders=ab_orders,
+            labels=split_response_format(settings.response_format),
         )
 
     def scorer_fn(messages: list[dict[str, str]]) -> dict[str, Any]:

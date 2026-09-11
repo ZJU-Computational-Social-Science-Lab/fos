@@ -109,13 +109,19 @@ _BLINDED_TASK = (
 )
 
 # The survey that both conditions put in the user message (paper Prompt 2).
+# The two response-word slots ({answer_pos}/{answer_neg}) are filled from
+# the single response_format config value: the historical defaults
+# ("purchase" / "not purchase") render today's bytes exactly, so every
+# stored prompt_sha256 stays stable; the R1-YESNO profile fills
+# "yes" / "no". The question sentence's own "not purchase" is the
+# question, not a response word, and never changes.
 _PURCHASE_SURVEY = (
     "Please consider the following product category: {category}.\n"
     "Suppose you are in a grocery store, and you see the following product in "
     "that category: {product}.\n"
     "The product is currently priced at ${price:.2f}. Would you or would you "
-    'not purchase the product? ["purchase" or "not purchase"]\n'
-    "Return example: purchase"
+    'not purchase the product? ["{answer_pos}" or "{answer_neg}"]\n'
+    "Return example: {answer_pos}"
 )
 
 # One fill-in-the-blank probe per covariate (paper Prompts 1, 7 and 8,
@@ -284,9 +290,44 @@ def build_unblinded_system_prompt(design: RandomizationDesign) -> str:
     )
 
 
-def build_purchase_user_prompt(category: str, product: str, price: float) -> str:
-    """Return the Prompt-2 purchase survey for one product at one price."""
-    return _PURCHASE_SURVEY.format(category=category, product=product, price=price)
+def split_response_format(response_format: str | None) -> tuple[str, str]:
+    """Split the one response_format value into its two answer words.
+
+    This is the single source of truth for both the prompt's response-word
+    slots and the scorer's branch labels, so the two can never drift apart.
+    None keeps the historical "purchase" / "not purchase" wording; any
+    "<positive>/<negative>" pair splits on the one slash. A value without
+    the "/" separator is refused loudly - silently mis-splitting it would
+    put the wrong words in front of the models and the scorer.
+    """
+    if response_format is None:
+        return ("purchase", "not purchase")
+    pieces = response_format.split("/")
+    if len(pieces) != 2 or not all(piece.strip() for piece in pieces):
+        raise ValueError(
+            f"response_format must be '<positive>/<negative>' (e.g. "
+            f"'yes/no') or None for the historical wording; got "
+            f"{response_format!r}"
+        )
+    return (pieces[0].strip(), pieces[1].strip())
+
+
+def build_purchase_user_prompt(
+    category: str, product: str, price: float, response_format: str | None = None
+) -> str:
+    """Return the Prompt-2 purchase survey for one product at one price.
+
+    response_format fills the survey's two response-word slots (see
+    split_response_format); None keeps the historical prompt byte-identical.
+    """
+    answer_pos, answer_neg = split_response_format(response_format)
+    return _PURCHASE_SURVEY.format(
+        category=category,
+        product=product,
+        price=price,
+        answer_pos=answer_pos,
+        answer_neg=answer_neg,
+    )
 
 
 def build_covariate_fillin_prompt(
@@ -575,6 +616,7 @@ def _persona_user_prompt(
     price: float,
     renderer: Callable[[dict[str, Any]], str] | None,
     persona: dict[str, Any],
+    response_format: str | None = None,
 ) -> str:
     """Return the purchase survey with the persona block rendered in front.
 
@@ -582,8 +624,11 @@ def _persona_user_prompt(
     the rest of the persona fields); the survey itself stays byte-identical
     to the plain sweep's so only the persona text differs. A depth with no
     block (or a renderer that produces nothing) returns the plain survey.
+    response_format threads through to the survey's response-word slots.
     """
-    survey = build_purchase_user_prompt(category, product, price)
+    survey = build_purchase_user_prompt(
+        category, product, price, response_format=response_format
+    )
     if renderer is None:
         return survey
     block = renderer(persona)
@@ -711,6 +756,7 @@ def run_logprob_sweep(
     *,
     skip_first: int = 0,
     on_record: Callable[[dict[str, Any]], None] | None = None,
+    response_format: str | None = None,
 ) -> list[dict[str, Any]]:
     """Run the R1LP logprob sweep: one scoring pass per (product x level x draw).
 
@@ -720,7 +766,9 @@ def run_logprob_sweep(
     are merged into the record (see build_record's extra/succeeded hooks).
     parsed_purchase therefore stays None and succeeded is the scoring
     call's success, so the record schema extends today's rather than
-    replacing it.
+    replacing it. response_format picks the prompt's response words and is
+    stamped on every record beside parse_mode="first_token_logprob", so a
+    record is always self-describing about how it was asked and parsed.
 
     skip_first and on_record keep the launch wrapper's cell-granular
     durability contract: a resumed leg executes only the missing cells and
@@ -751,7 +799,10 @@ def run_logprob_sweep(
                 )
                 price = _price_for_level(product["regular_price"], value)
                 user = build_purchase_user_prompt(
-                    product["category"], product["product"], price
+                    product["category"],
+                    product["product"],
+                    price,
+                    response_format=response_format,
                 )
                 messages = [
                     {"role": "system", "content": system},
@@ -775,7 +826,11 @@ def run_logprob_sweep(
                     covariate_count=covariate_count,
                     system_prompt=system,
                     user_prompt=user,
-                    extra=result,
+                    extra={
+                        **result,
+                        "response_format": response_format,
+                        "parse_mode": "first_token_logprob",
+                    },
                     succeeded=bool(result.get("succeeded")),
                 )
                 records.append(record)
@@ -795,6 +850,7 @@ def run_logprob_persona_sweep(
     *,
     skip_first: int = 0,
     on_record: Callable[[dict[str, Any]], None] | None = None,
+    response_format: str | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     """Run the R1LP persona logprob sweep: one scoring pass per persona cell.
 
@@ -802,8 +858,9 @@ def run_logprob_persona_sweep(
     prompt and the same (product x persona x level) enumeration as
     run_persona_sweep, but each cell is scored once for its p(buy) instead
     of sampled. Records carry persona and persona_index so the analysis can
-    average p(buy) over a model's personas. Returns (records,
-    skipped_empty) exactly like run_persona_sweep.
+    average p(buy) over a model's personas; response_format works exactly
+    as in run_logprob_sweep (prompt wording + record stamps). Returns
+    (records, skipped_empty) exactly like run_persona_sweep.
     """
     mode = design.blinding if blinding is None else blinding
     stored_design = replace(design, blinding=mode)
@@ -839,7 +896,12 @@ def run_logprob_persona_sweep(
                 else:
                     price = value
                 user = _persona_user_prompt(
-                    category, product_name, price, renderer, persona
+                    category,
+                    product_name,
+                    price,
+                    renderer,
+                    persona,
+                    response_format=response_format,
                 )
                 messages = [
                     {"role": "system", "content": system},
@@ -863,7 +925,11 @@ def run_logprob_persona_sweep(
                     covariate_count=covariate_count,
                     system_prompt=system,
                     user_prompt=user,
-                    extra=result,
+                    extra={
+                        **result,
+                        "response_format": response_format,
+                        "parse_mode": "first_token_logprob",
+                    },
                     succeeded=bool(result.get("succeeded")),
                 )
                 record["persona"] = persona

@@ -193,33 +193,75 @@ def _candidate_logprob(candidate: dict[str, Any]) -> float | None:
     return _prob_to_logprob(candidate.get("prob"))
 
 
-def _branch_of(token: str | None) -> str | None:
-    """Which decision branch a token text starts: 'buy', 'nobuy' or None.
+DEFAULT_LABELS = ("purchase", "not purchase")
 
-    Leading punctuation/whitespace is stripped first, so " Purchase",
-    "'purchase" and "purchase" all read as the buy branch and " not" as the
-    nobuy branch.
+
+def _label_heads(labels: tuple[str, str]) -> tuple[str, str]:
+    """The exact first word of each label, lower-cased and junk-free.
+
+    A token matches a branch only when its cleaned text equals this head
+    word (or continues it at a word boundary for multi-word labels like
+    "not purchase", whose head word is "not"). Prefix look-alikes
+    ("none" vs "no", "yesterday" vs "yes") are different words and
+    never match. A label with no readable word at all matches nothing.
+    """
+    positive, negative = labels
+    clean = lambda text: re.sub(r"^[^0-9a-z]+", "", text.strip().lower())  # noqa: E731
+
+    def head(label: str) -> str:
+        words = clean(label).split()
+        return words[0] if words else ""
+
+    return head(positive), head(negative)
+
+
+def _branch_of(
+    token: str | None, labels: tuple[str, str] = DEFAULT_LABELS
+) -> str | None:
+    """Which decision branch a token text belongs to: 'buy', 'nobuy' or None.
+
+    Leading punctuation/whitespace is stripped and the text is lower-cased
+    first, so " Purchase", "'purchase" and "purchase" all read as the buy
+    branch and " not" as the nobuy branch. The match against the label's
+    head word is EXACT (or continues it at a word boundary, so "not
+    purchase" still reads as nobuy): a prefix look-alike such as "none",
+    "nobody" or "yesterday" is a different word and returns None.
     """
     if not isinstance(token, str):
         return None
+    positive_head, negative_head = _label_heads(labels)
     cleaned = re.sub(r"^[^0-9a-z]+", "", token.strip().lower())
-    if cleaned.startswith("purchase"):
+    if positive_head and (
+        cleaned == positive_head or cleaned.startswith(positive_head + " ")
+    ):
         return "buy"
-    if cleaned.startswith("not"):
+    if negative_head and (
+        cleaned == negative_head or cleaned.startswith(negative_head + " ")
+    ):
         return "nobuy"
     return None
 
 
-def purchase_branch_mass(top_logprobs: list[dict[str, Any]]) -> dict[str, Any]:
-    """p_buy / p_nobuy / branch_mass from one decision-position top-k list.
+def purchase_branch_mass(
+    top_logprobs: list[dict[str, Any]], labels: tuple[str, str] = DEFAULT_LABELS
+) -> dict[str, Any]:
+    """Branch probabilities from one decision-position top-k list.
 
-    p_buy sums the probabilities of the tokens that continue the purchase
-    branch, p_nobuy sums the tokens that start the "not" branch, and
-    neither_branch is True when neither branch appears at all (so the
-    caller can flag the cell instead of guessing a probability).
+    The tokens whose exact form matches the positive label ("purchase" by
+    default, "yes" for the R1-YESNO profile) sum into p_buy/p_yes, and the
+    negative label's tokens into p_nobuy/p_no; neither_branch is True when
+    neither branch appears at all (so the caller can flag the cell instead
+    of guessing a probability). The matched raw token forms are recorded so
+    per-model tokenisation quirks (leading space, capitalisation) stay
+    visible. Schema continuity: the legacy p_buy/p_nobuy keys keep the
+    historical 0.0-when-absent semantics, while the newer p_yes/p_no keys
+    are None when a branch is absent - a silent 0.0 would fake a measured
+    answer.
     """
     p_buy = 0.0
     p_nobuy = 0.0
+    matched_yes: list[str] = []
+    matched_no: list[str] = []
     for entry in top_logprobs or []:
         if not isinstance(entry, dict):
             continue
@@ -228,16 +270,22 @@ def purchase_branch_mass(top_logprobs: list[dict[str, Any]]) -> dict[str, Any]:
         if logprob is None:
             continue
         probability = math.exp(logprob)
-        branch = _branch_of(token)
+        branch = _branch_of(token, labels)
         if branch == "buy":
             p_buy += probability
+            matched_yes.append(token or "")
         elif branch == "nobuy":
             p_nobuy += probability
+            matched_no.append(token or "")
     return {
         "p_buy": p_buy,
         "p_nobuy": p_nobuy,
+        "p_yes": p_buy if matched_yes else None,
+        "p_no": p_nobuy if matched_no else None,
         "branch_mass": p_buy + p_nobuy,
         "neither_branch": p_buy == 0.0 and p_nobuy == 0.0,
+        "matched_yes_tokens": matched_yes,
+        "matched_no_tokens": matched_no,
     }
 
 
@@ -272,13 +320,18 @@ def _first_token_entries(data: dict[str, Any]) -> tuple[list[dict], str]:
     return entries, content
 
 
-def parse_first_token_response(body: Any) -> dict[str, Any]:
+def parse_first_token_response(
+    body: Any, labels: tuple[str, str] = DEFAULT_LABELS
+) -> dict[str, Any]:
     """Read one /v1/chat/completions reply into the p(buy) fields.
 
     Returns the normalized top-logprobs, the generated token text, the
-    branch mass (p_buy/p_nobuy/branch_mass and the neither-branch flag),
-    the truncated raw response and whether the scoring call succeeded
-    (meaning: at least one logprob entry was readable).
+    branch mass (p_buy/p_nobuy/p_yes/p_no/branch_mass, the matched token
+    forms and the neither-branch flag), p_yes_binary (the positive share
+    of the two-branch mass, p_yes/(p_yes+p_no); None when neither branch
+    appears, never a silent 0), the truncated raw response and whether the
+    scoring call succeeded (meaning: at least one logprob entry was
+    readable).
     """
     data = _loads(body)
     entries, content = _first_token_entries(data)
@@ -291,11 +344,14 @@ def parse_first_token_response(body: Any) -> dict[str, Any]:
         if logprob is None:
             continue
         top.append({"token": token or "", "logprob": float(logprob)})
-    mass = purchase_branch_mass(top)
+    mass = purchase_branch_mass(top, labels)
+    total = mass["p_buy"] + mass["p_nobuy"]
     return {
         "top_logprobs": top,
         "raw_content": content,
         "raw_logprob_response": _truncate(body),
+        "p_yes_binary": mass["p_buy"] / total if total > 0.0 else None,
+        "neither_branch_in_top_k": bool(mass["neither_branch"]),
         "succeeded": bool(top),
         **mass,
     }
@@ -452,6 +508,11 @@ def _unified(first: dict[str, Any]) -> dict[str, Any]:
         "logprob_mode": FIRST_TOKEN,
         "p_buy_logprob": first.get("p_buy"),
         "p_nobuy_logprob": first.get("p_nobuy"),
+        "p_yes": first.get("p_yes"),
+        "p_no": first.get("p_no"),
+        "p_yes_binary": first.get("p_yes_binary"),
+        "matched_yes_tokens": first.get("matched_yes_tokens") or [],
+        "matched_no_tokens": first.get("matched_no_tokens") or [],
         "branch_mass": first.get("branch_mass"),
         "top_logprobs": first.get("top_logprobs") or [],
         "lp_buy_sum": None,
@@ -472,12 +533,15 @@ def make_first_token_scorer(
     timeout: float = 120.0,
     *,
     post: PostFn = _post_json,
+    labels: tuple[str, str] = DEFAULT_LABELS,
 ) -> Callable[[list[dict[str, Any]]], dict[str, Any]]:
     """Build the default one-call-per-prompt logprob scorer.
 
     The returned function takes the chat messages and returns the unified
-    logprob result (p_buy_logprob, p_nobuy_logprob, branch_mass, the raw
-    top-k list and the neither-branch flag).
+    logprob result (p_buy_logprob/p_yes, p_nobuy_logprob/p_no,
+    branch_mass, the matched token forms, the raw top-k list and the
+    neither-branch flag). labels names the two answer branches the tokens
+    are matched against ("yes"/"no" for the R1-YESNO profile).
     """
     root = _server_root(base_url)
 
@@ -489,7 +553,7 @@ def make_first_token_scorer(
             return {
                 **_unified({"succeeded": False, "raw_logprob_response": str(exc)}),
             }
-        parsed = parse_first_token_response(body)
+        parsed = parse_first_token_response(body, labels)
         if status != 200:
             parsed["succeeded"] = False
         return _unified(parsed)
@@ -644,6 +708,7 @@ def make_scorer(
     *,
     post: PostFn = _post_json,
     ab_orders: bool = False,
+    labels: tuple[str, str] = DEFAULT_LABELS,
 ) -> Callable[[list[dict[str, Any]]], dict[str, Any]]:
     """Pick the scorer for one --logprob-mode; unknown modes refuse loudly.
 
@@ -651,7 +716,8 @@ def make_scorer(
     A/B executor: every prompt is scored with BOTH label orders and the
     two halves are merged into one averaged result. first_token has no
     A/B form, so that combination refuses loudly instead of silently
-    scoring one order.
+    scoring one order. labels threads the answer words (from the run's
+    response_format) into the first_token branch matcher.
     """
     if mode == FIRST_TOKEN:
         if ab_orders:
@@ -659,7 +725,9 @@ def make_scorer(
                 "ab_orders=True requires candidate_scoring "
                 f"(no A/B form for {FIRST_TOKEN!r})"
             )
-        return make_first_token_scorer(base_url, model, timeout, post=post)
+        return make_first_token_scorer(
+            base_url, model, timeout, post=post, labels=labels
+        )
     if mode == CANDIDATE_SCORING:
         if ab_orders:
             return make_ab_scorer(base_url, model, timeout, post=post)

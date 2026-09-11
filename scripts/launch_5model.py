@@ -277,6 +277,10 @@ def write_queue_manifest(
         "models": plan["models"],
         "grammar": settings.grammar,
         "logprob_mode": settings.logprob_mode,
+        # The answer words this run asked with (e.g. "yes/no" for
+        # R1-YESNO; None = the historical "purchase"/"not purchase"), so
+        # a later audit can never mistake the run for an R1 rerun.
+        "response_format": settings.response_format,
         # Whether this run plans the A/B label-order switch: recorded so a
         # later --resume can refuse flags that disagree with the run.
         "ab_orders": bool(plan.get("ab_orders")),
