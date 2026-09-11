@@ -197,6 +197,7 @@ def _make_logprob_scorer(
             settings.model,
             ab_orders=ab_orders,
             labels=split_response_format(settings.response_format),
+            scan_tokens=getattr(settings, "scan_tokens", 8),
         )
     else:
         inner = make_scorer(
@@ -206,6 +207,7 @@ def _make_logprob_scorer(
             post=post,
             ab_orders=ab_orders,
             labels=split_response_format(settings.response_format),
+            scan_tokens=getattr(settings, "scan_tokens", 8),
         )
 
     def scorer_fn(messages: list[dict[str, str]]) -> dict[str, Any]:
