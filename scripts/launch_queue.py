@@ -337,8 +337,14 @@ def print_queue_dry_run(
     run_dir: Path,
     *,
     logprob_mode: str | None = None,
+    scan_tokens: int | None = None,
 ) -> None:
-    """Print the whole queue plan (sampling or R1LP logprob) and exit."""
+    """Print the whole queue plan (sampling or R1LP logprob) and exit.
+
+    scan_tokens (first_token runs only) names the decision-scan window
+    the run's requests will carry, so the request shape is visible
+    before any call is made.
+    """
     profile = plan.get("profile", QUEUE_PROFILE)
     draws = int(plan.get("draws", NONE_LEG_DRAWS))
     per_model = int(plan["sweep_calls"] / len(plan["models"]))
@@ -356,8 +362,10 @@ def print_queue_dry_run(
             f"per product), {draws} plain draws/cell"
         )
     if logprob_mode:
+        window = f"; decision scan max_tokens={scan_tokens}" if scan_tokens else ""
         print(
-            f"  grammar       none (no constrained decoding; logprob mode {logprob_mode})"
+            f"  grammar       none (no constrained decoding; "
+            f"logprob mode {logprob_mode}{window})"
         )
     else:
         print(
