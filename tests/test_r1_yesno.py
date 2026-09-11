@@ -304,7 +304,7 @@ def test_r1_yesno_scorer_payload_never_carries_a_grammar_key():
         "the R1-YESNO request must be unconstrained - no grammar key, "
         "the model answers in its own words"
     )
-    assert payload["max_tokens"] == 1
+    assert payload["max_tokens"] == 8  # superseded by decision-position directive (TASK-1565): scan window, see test_decision_position.py
     assert payload["logprobs"] is True and payload["top_logprobs"] == 20
     assert result["p_yes"] == pytest.approx(P_YES)
     assert result["p_no"] == pytest.approx(P_NO)
