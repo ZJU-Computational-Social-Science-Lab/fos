@@ -89,6 +89,15 @@ LEG_FILE = "records.jsonl"
 # never as a model-name branch inside the scoring code. A model absent
 # from the map keeps the historical TOP_LOGPROBS coverage.
 MODEL_TOP_K_OVERRIDES: dict[str, int] = {"meta/muse-glimmer": 50}
+# Per-model first_token control-SEQUENCE overrides (whole exact token
+# sequences consumed as one block, e.g. a fixed channel header),
+# resolved through model_control_sequences: the profile config lives
+# HERE in the queue spec - never as a model-name branch inside the
+# scoring code. A model absent from the map keeps the default-off empty
+# tuple (identity: byte-identical behavior for every unlisted model).
+MODEL_CONTROL_SEQUENCES: dict[str, tuple[tuple[str, ...], ...]] = {
+    "google/gemma-4-26b-a4b": (("<|channel>", "thought", "\n", "<channel|>"),),
+}
 # The archived R1 run's pools (40/40 products, seed 42) reused by default.
 DEFAULT_POOLS_FROM = (
     "results/unblinding/R1-nemotron-cascade-2-30b-a3b-20260909T004614/pools"
@@ -288,6 +297,21 @@ def model_top_k(model: str) -> int:
     request, so the records always say which coverage they hold.
     """
     return MODEL_TOP_K_OVERRIDES.get(model, TOP_LOGPROBS)
+
+
+def model_control_sequences(model: str) -> tuple[tuple[str, ...], ...]:
+    """One model's control sequences: its profile override, or none.
+
+    The per-model override map (MODEL_CONTROL_SEQUENCES) is queue-profile
+    config: a model whose replies open with a fixed channel header gets
+    that exact token sequence consumed as one block, every other model
+    (known or unknown) keeps the default-off empty tuple - the identity
+    that leaves scoring byte-identical. The resolved value is stamped on
+    each leg's manifest and threaded into the scorer, so the records
+    always say which header config they hold. A malformed override
+    (empty or non-string) is refused at scorer construction.
+    """
+    return MODEL_CONTROL_SEQUENCES.get(model, ())
 
 
 def queue_leg_dir(run_dir: Path, target: dict[str, Any]) -> Path:
