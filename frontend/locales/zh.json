@@ -497,7 +497,14 @@
       "workspaceHint": "保持一个可信的默认模型在线，再按总结、长上下文或基准测试需求补充其它端点。",
       "type": {
         "openai": "OpenAI 兼容",
-        "gemini": "Gemini"
+        "gemini": "Gemini",
+        "other": "其他"
+      },
+      "compatibleProvider": {
+        "chatgpt": "ChatGPT",
+        "deepseek": "DeepSeek",
+        "minimax": "MiniMax",
+        "kimi": "Kimi"
       },
       "searchEngine": {
         "ddg": "DuckDuckGo",
@@ -582,6 +589,7 @@
         "maxTokens": "最大令牌数",
         "newLlmTitle": "添加 LLM 配置",
         "openaiCompatibleAccessConfig": "OpenAI 兼容访问配置",
+        "openaiCompatibleProviders": "OpenAI 兼容服务商",
         "optional": "可选",
         "providerTypeRequired": "提供商类型为必填项",
         "responseFormat": "响应格式",

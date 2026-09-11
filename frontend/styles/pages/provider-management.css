@@ -87,6 +87,30 @@
     color: var(--ss-heading);
   }
 
+  .provider-picker__type-option {
+    width: 100%;
+    min-height: 2.6rem;
+    padding: 0.68rem 1rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--ss-text-muted);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .provider-picker__type-option:hover {
+    background: color-mix(in srgb, var(--ss-surface-muted) 70%, transparent);
+    color: var(--ss-heading);
+  }
+
+  .provider-picker__type-option:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--ss-brand-primary) 45%, transparent);
+    outline-offset: -2px;
+  }
+
   .provider-button--danger {
     background: rgba(214, 79, 79, 0.1);
     border-color: rgba(214, 79, 79, 0.18);
@@ -602,6 +626,51 @@
   .provider-field__textarea:focus {
     border-color: color-mix(in srgb, var(--ss-brand-primary) 36%, var(--ss-border));
     box-shadow: 0 0 0 3px rgba(157, 108, 55, 0.08);
+  }
+
+  .provider-type-picker {
+    position: relative;
+  }
+
+  .provider-type-picker__trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .provider-type-picker__menu {
+    position: absolute;
+    z-index: 5;
+    top: calc(100% + 0.35rem);
+    right: 0;
+    left: 0;
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.3rem;
+    border: 1px solid color-mix(in srgb, var(--ss-border) 84%, transparent);
+    border-radius: 0.75rem;
+    background: white;
+    box-shadow: 0 10px 20px rgba(38, 28, 18, 0.12);
+  }
+
+  .provider-type-picker__option {
+    width: 100%;
+    padding: 0.62rem 0.7rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--ss-text);
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+  }
+
+  .provider-type-picker__option:hover,
+  .provider-type-picker__option:focus-visible {
+    background: color-mix(in srgb, var(--ss-surface-muted) 82%, white);
+    outline: none;
   }
 
   .provider-field__textarea {
