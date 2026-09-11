@@ -497,7 +497,14 @@
       "workspaceHint": "Keep one trusted default model online, then add alternates for synthesis, long context, or benchmarking.",
       "type": {
         "openai": "OpenAI-compatible",
-        "gemini": "Gemini"
+        "gemini": "Gemini",
+        "other": "Other"
+      },
+      "compatibleProvider": {
+        "chatgpt": "ChatGPT",
+        "deepseek": "DeepSeek",
+        "minimax": "MiniMax",
+        "kimi": "Kimi"
       },
       "searchEngine": {
         "ddg": "DuckDuckGo",
@@ -582,6 +589,7 @@
         "maxTokens": "Max Tokens",
         "newLlmTitle": "Add LLM Configuration",
         "openaiCompatibleAccessConfig": "OpenAI-Compatible Access Config",
+        "openaiCompatibleProviders": "OpenAI-compatible providers",
         "optional": "Optional",
         "providerTypeRequired": "Provider type is required",
         "responseFormat": "Response Format",
