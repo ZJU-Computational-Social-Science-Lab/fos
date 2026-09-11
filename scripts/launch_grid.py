@@ -484,8 +484,16 @@ def main(argv: list[str] | None = None) -> int:
         if args.dry_run:
             run_name = _build_run_name(args)
             run_dir = Path(args.out) / run_name
+            dry_scan = (
+                _settings_from(args, run_name).scan_tokens if logprob_mode else None
+            )
             print_queue_dry_run(
-                args, products, plan, run_dir, logprob_mode=logprob_mode
+                args,
+                products,
+                plan,
+                run_dir,
+                logprob_mode=logprob_mode,
+                scan_tokens=dry_scan,
             )
             return 0
         stop = StopFlag(force_first=args.force)
