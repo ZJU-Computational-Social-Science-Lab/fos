@@ -11,10 +11,13 @@ offline against a fake transport.
 
 The two mechanisms (chosen with --logprob-mode):
     first_token - ONE call per prompt: POST /v1/chat/completions
-        with max_tokens=1, temperature=1.0, logprobs=true, top_logprobs=20.
-        The top-logprobs at the decision position give p_buy (tokens that
-        continue "purchase"), p_nobuy (tokens that start "not") and their
-        sum branch_mass; a flag records when neither branch is in the top-k.
+        with a short max_tokens window (the decision scan),
+        temperature=1.0, logprobs=true, top_logprobs=20. The parser walks
+        the generated tokens, SKIPS control/channel tokens and reads the
+        top-logprobs at the FIRST substantive answer position: p_buy
+        (tokens that continue "purchase"), p_nobuy (tokens that start
+        "not") and their sum branch_mass; a flag records when neither
+        branch is in the top-k.
     candidate_scoring (default) - TWO calls per prompt (one per
         candidate): POST /completions with the chat-templated prompt plus
         the candidate
@@ -33,8 +36,11 @@ top_logprobs/probs) and always keeps a truncated raw response for audit.
 Plain-language function map:
     purchase_branch_mass(...)     - p_buy / p_nobuy / branch_mass from a
                                     top-logprobs list.
-    parse_first_token_response()  - top-logprobs + content out of one
-                                    /v1/chat/completions reply.
+    parse_first_token_response()  - the decision position and top-logprobs
+                                    out of one /v1/chat/completions reply
+                                    (control/channel chosen tokens are
+                                    skipped; the first substantive answer
+                                    position is measured).
     parse_candidate_response()    - per-token logprobs out of one
                                     /completions reply (all variants).
     sum_candidate_logprobs(...)   - lp_sum / lp_tokens / lp_mean for the
@@ -85,6 +91,17 @@ AB_LABEL_ORDERS = (
     (_PURCHASE_CANDIDATE, _NOBUY_CANDIDATE),
     (_NOBUY_CANDIDATE, _PURCHASE_CANDIDATE),
 )
+# The production decision-scan window: how many tokens one first_token
+# call generates so the parser can walk past a control-token prefix
+# (e.g. Gemma's "<|channel>") to the first substantive answer token. The
+# bare make_first_token_scorer primitive keeps the historical 1-token
+# default; the make_scorer dispatcher defaults production runs to this.
+SCAN_TOKENS = 8
+# The built-in control-token shape: special markup tokens such as
+# "<|channel>", "<|message>" or "<|end|>". Note the shape must NOT
+# require a "|" before the ">" ("<|channel>" has none); per-model extras
+# are plain exact strings via the control_tokens extension list.
+_CONTROL_MARKUP_RE = re.compile(r"<\|.*>")
 
 PostFn = Callable[[str, dict[str, Any], float], tuple[int, str]]
 
@@ -289,54 +306,72 @@ def purchase_branch_mass(
     }
 
 
-def _first_token_entries(data: dict[str, Any]) -> tuple[list[dict], str]:
-    """The top-logprobs list and generated content of a chat reply."""
+def _reply_choice(data: dict[str, Any]) -> dict[str, Any]:
+    """The first choice of a chat reply ({} when unreadable)."""
     choices = data.get("choices")
-    if not isinstance(choices, list) or not choices:
-        return [], ""
-    choice = choices[0] if isinstance(choices[0], dict) else {}
-    message = choice.get("message") if isinstance(choice.get("message"), dict) else {}
-    content = message.get("content") if isinstance(message.get("content"), str) else ""
-    logprobs = choice.get("logprobs")
-    entries: list[dict] = []
-    if isinstance(logprobs, dict):
-        content_block = logprobs.get("content")
-        if isinstance(content_block, list) and content_block:
-            first = content_block[0]
-            if isinstance(first, dict):
-                candidate = first.get("top_logprobs")
-                if isinstance(candidate, list):
-                    entries = candidate
-                elif "token" in first or "logprob" in first:
-                    entries = [first]
-        if not entries:
-            positional = logprobs.get("top_logprobs")
-            if isinstance(positional, list) and positional:
-                first = positional[0]
-                if isinstance(first, list):
-                    entries = first
-                elif isinstance(first, dict):
-                    entries = positional
-    return entries, content
+    if isinstance(choices, list) and choices and isinstance(choices[0], dict):
+        return choices[0]
+    return {}
 
 
-def parse_first_token_response(
-    body: Any, labels: tuple[str, str] = DEFAULT_LABELS
-) -> dict[str, Any]:
-    """Read one /v1/chat/completions reply into the p(buy) fields.
+def _reply_content(data: dict[str, Any]) -> str:
+    """The generated message text of a chat reply ("" when unreadable)."""
+    message = _reply_choice(data).get("message")
+    content = message.get("content") if isinstance(message, dict) else None
+    return content if isinstance(content, str) else ""
 
-    Returns the normalized top-logprobs, the generated token text, the
-    branch mass (p_buy/p_nobuy/p_yes/p_no/branch_mass, the matched token
-    forms and the neither-branch flag), p_yes_binary (the positive share
-    of the two-branch mass, p_yes/(p_yes+p_no); None when neither branch
-    appears, never a silent 0), the truncated raw response and whether the
-    scoring call succeeded (meaning: at least one logprob entry was
-    readable).
+
+def _position_top_k(block: dict[str, Any]) -> list[Any]:
+    """One generated position's raw top-k candidate list.
+
+    A position without its own candidate list IS its own single
+    candidate: that is the flat shape the single-token parser read.
     """
-    data = _loads(body)
-    entries, content = _first_token_entries(data)
-    top = []
-    for entry in entries:
+    candidates = block.get("top_logprobs")
+    if isinstance(candidates, list) and candidates:
+        return candidates
+    return [block]
+
+
+def _token_positions(data: dict[str, Any]) -> list[tuple]:
+    """Every generated token position of a chat reply, in order.
+
+    Each position is (chosen token text or None, chosen logprob or None,
+    its raw top-k candidate list). The OpenAI shape walks
+    logprobs.content[*] (one block per generated token); the positional
+    logprobs.top_logprobs shape (no chosen token per position) becomes
+    ONE position, measured the way the single-token parser always read
+    it.
+    """
+    logprobs = _reply_choice(data).get("logprobs")
+    if not isinstance(logprobs, dict):
+        return []
+    content = logprobs.get("content")
+    if isinstance(content, list):
+        positions: list[tuple] = []
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            token = _token_from_entry(block)
+            positions.append(
+                (token, _logprob_from_entry(block, token), _position_top_k(block))
+            )
+        if positions:
+            return positions
+    positional = logprobs.get("top_logprobs")
+    if isinstance(positional, list) and positional:
+        first = positional[0]
+        if isinstance(first, list):
+            return [(None, None, first)]
+        if isinstance(first, dict):
+            return [(None, None, positional)]
+    return []
+
+
+def _normalize_top_k(candidates: list[Any]) -> list[dict[str, Any]]:
+    """The readable {"token", "logprob"} entries of one raw top-k list."""
+    top: list[dict[str, Any]] = []
+    for entry in candidates:
         if not isinstance(entry, dict):
             continue
         token = _token_from_entry(entry)
@@ -344,15 +379,90 @@ def parse_first_token_response(
         if logprob is None:
             continue
         top.append({"token": token or "", "logprob": float(logprob)})
+    return top
+
+
+def _is_control_token(token: Any, control_tokens: tuple[str, ...]) -> bool:
+    """Whether one CHOSEN token is a control/channel token.
+
+    Control by default: the special markup shape ("<|channel>",
+    "<|message>", "<|end|>" - the observed Gemma-style openers).
+    Per-model extras are exact token strings in `control_tokens`,
+    extendable without code changes; ordinary answer words never match.
+    """
+    if not isinstance(token, str):
+        return False
+    if _CONTROL_MARKUP_RE.fullmatch(token):
+        return True
+    return token in control_tokens
+
+
+def _find_decision_position(
+    positions: list[tuple], control_tokens: tuple[str, ...]
+) -> tuple[int | None, list[str]]:
+    """Walk the CHOSEN tokens; skip control tokens until the answer.
+
+    Returns (0-based index of the first substantive position or None,
+    the skipped control tokens in generation order). Only the CHOSEN
+    token decides: yes/no candidates hiding in a skipped position's
+    top-k are never measured.
+    """
+    skipped: list[str] = []
+    for index, (token, _logprob, _top_k) in enumerate(positions):
+        if _is_control_token(token, control_tokens):
+            skipped.append(token or "")
+            continue
+        return index, skipped
+    return None, skipped
+
+
+def parse_first_token_response(
+    body: Any,
+    labels: tuple[str, str] = DEFAULT_LABELS,
+    control_tokens: tuple[str, ...] = (),
+) -> dict[str, Any]:
+    """Read one /v1/chat/completions reply into the p(buy) fields.
+
+    The reply may carry SEVERAL generated token positions (the decision
+    scan asks for a short window). The parser walks the CHOSEN token of
+    every position, skips control/channel tokens (the built-in "<|...>"
+    markup shape plus the exact `control_tokens` extension list) and
+    measures the yes/no mass at the FIRST substantive position's top-k.
+    The audit trail names the decision position (`decision_position`,
+    1-based; `top_logprobs` stays that position's raw top-k), the
+    skipped control tokens in generation order
+    (`skipped_prefix`/`skipped_len`), every position's raw top-k
+    (`per_position_top_k`) and the extension list in force
+    (`control_tokens`). A reply of ONLY control tokens has no decision
+    position: `decision_position` is None with
+    `no_substantive_position` True and None probabilities - the call
+    itself still succeeded (it produced readable logprobs); the
+    measurement is honestly None. p_yes_binary is the positive share of
+    the two-branch mass, p_yes/(p_yes+p_no); None when neither branch
+    appears, never a silent 0.
+    """
+    data = _loads(body)
+    positions = _token_positions(data)
+    per_position = [_normalize_top_k(position[2]) for position in positions]
+    extension = tuple(control_tokens or ())
+    index, skipped = _find_decision_position(positions, extension)
+    top = per_position[index] if index is not None else []
     mass = purchase_branch_mass(top, labels)
     total = mass["p_buy"] + mass["p_nobuy"]
+    runaway = index is None and bool(positions)
     return {
         "top_logprobs": top,
-        "raw_content": content,
+        "raw_content": _reply_content(data),
         "raw_logprob_response": _truncate(body),
         "p_yes_binary": mass["p_buy"] / total if total > 0.0 else None,
         "neither_branch_in_top_k": bool(mass["neither_branch"]),
-        "succeeded": bool(top),
+        "decision_position": None if index is None else index + 1,
+        "skipped_prefix": skipped,
+        "skipped_len": len(skipped),
+        "per_position_top_k": per_position,
+        "control_tokens": list(extension),
+        "no_substantive_position": runaway,
+        "succeeded": bool(top) or runaway,
         **mass,
     }
 
@@ -478,13 +588,20 @@ def render_chat_template(messages: list[dict[str, Any]]) -> str:
     return "".join(parts)
 
 
-def _first_token_payload(model: str, messages: list[dict[str, Any]]) -> dict[str, Any]:
-    """The one-call first_token request: no grammar, logprobs requested."""
+def _first_token_payload(
+    model: str, messages: list[dict[str, Any]], scan_tokens: int = 1
+) -> dict[str, Any]:
+    """The one-call first_token request: no grammar, logprobs requested.
+
+    max_tokens is the decision-scan window: 1 keeps the historical
+    single-token call; a larger window lets the parser walk past
+    control/channel tokens to the first substantive answer.
+    """
     return {
         "model": model,
         "messages": messages,
         "temperature": 1.0,
-        "max_tokens": 1,
+        "max_tokens": scan_tokens,
         "logprobs": True,
         "top_logprobs": TOP_LOGPROBS,
     }
@@ -515,6 +632,12 @@ def _unified(first: dict[str, Any]) -> dict[str, Any]:
         "matched_no_tokens": first.get("matched_no_tokens") or [],
         "branch_mass": first.get("branch_mass"),
         "top_logprobs": first.get("top_logprobs") or [],
+        "decision_position": first.get("decision_position"),
+        "skipped_prefix": first.get("skipped_prefix") or [],
+        "skipped_len": first.get("skipped_len"),
+        "per_position_top_k": first.get("per_position_top_k") or [],
+        "control_tokens": first.get("control_tokens") or [],
+        "no_substantive_position": bool(first.get("no_substantive_position")),
         "lp_buy_sum": None,
         "lp_nobuy_sum": None,
         "lp_buy_tokens": None,
@@ -534,6 +657,8 @@ def make_first_token_scorer(
     *,
     post: PostFn = _post_json,
     labels: tuple[str, str] = DEFAULT_LABELS,
+    scan_tokens: int = 1,
+    control_tokens: tuple[str, ...] = (),
 ) -> Callable[[list[dict[str, Any]]], dict[str, Any]]:
     """Build the default one-call-per-prompt logprob scorer.
 
@@ -542,18 +667,24 @@ def make_first_token_scorer(
     branch_mass, the matched token forms, the raw top-k list and the
     neither-branch flag). labels names the two answer branches the tokens
     are matched against ("yes"/"no" for the R1-YESNO profile).
+    scan_tokens is the decision-scan window (the request's max_tokens; 1
+    keeps the historical single-token call, a larger window lets the
+    parser walk past control/channel tokens). control_tokens extends the
+    control-token spec with exact per-model token strings.
     """
+    if scan_tokens < 1:
+        raise ValueError(f"scan_tokens must be >= 1, got {scan_tokens}")
     root = _server_root(base_url)
 
     def scorer(messages: list[dict[str, Any]]) -> dict[str, Any]:
-        payload = _first_token_payload(model, messages)
+        payload = _first_token_payload(model, messages, scan_tokens)
         try:
             status, body = post(f"{root}/v1/chat/completions", payload, timeout)
         except OSError as exc:  # surfaced, never swallowed
             return {
                 **_unified({"succeeded": False, "raw_logprob_response": str(exc)}),
             }
-        parsed = parse_first_token_response(body, labels)
+        parsed = parse_first_token_response(body, labels, control_tokens)
         if status != 200:
             parsed["succeeded"] = False
         return _unified(parsed)
@@ -709,6 +840,8 @@ def make_scorer(
     post: PostFn = _post_json,
     ab_orders: bool = False,
     labels: tuple[str, str] = DEFAULT_LABELS,
+    scan_tokens: int = SCAN_TOKENS,
+    control_tokens: tuple[str, ...] = (),
 ) -> Callable[[list[dict[str, Any]]], dict[str, Any]]:
     """Pick the scorer for one --logprob-mode; unknown modes refuse loudly.
 
@@ -717,7 +850,11 @@ def make_scorer(
     two halves are merged into one averaged result. first_token has no
     A/B form, so that combination refuses loudly instead of silently
     scoring one order. labels threads the answer words (from the run's
-    response_format) into the first_token branch matcher.
+    response_format) into the first_token branch matcher. scan_tokens is
+    the first_token decision-scan window (the request's max_tokens; the
+    production default of 8 walks past control-token prefixes) and
+    control_tokens extends the control-token spec per model - both only
+    apply to first_token (candidate_scoring generates no tokens).
     """
     if mode == FIRST_TOKEN:
         if ab_orders:
@@ -726,7 +863,13 @@ def make_scorer(
                 f"(no A/B form for {FIRST_TOKEN!r})"
             )
         return make_first_token_scorer(
-            base_url, model, timeout, post=post, labels=labels
+            base_url,
+            model,
+            timeout,
+            post=post,
+            labels=labels,
+            scan_tokens=scan_tokens,
+            control_tokens=control_tokens,
         )
     if mode == CANDIDATE_SCORING:
         if ab_orders:
