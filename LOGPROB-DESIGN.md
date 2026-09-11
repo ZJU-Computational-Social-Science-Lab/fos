@@ -109,6 +109,38 @@ purchase"), ("not purchase", "purchase"))` in `scripts/logprob_scoring.py`
 the `label_order` it scored. Costs double: 36,960 per model, 184,800
 across the five models (`build_logprob_plan(..., ab_orders=True)`).
 
+## R1-YESNO — the yes/no variant (`--profile R1-YESNO`, TASK-1563)
+
+R1-YESNO asks the five models the same purchase question as R1-5MODEL, but
+the model answers in its own words and we read its honest first-token
+probabilities instead of forcing the answer with a grammar. It rides the
+exact R1LP geometry: `logprob_mode="first_token"`, one scoring pass per
+prompt, 18,480 calls per model, 92,400 total, no `ab_orders` (first_token
+has no A/B form).
+
+- **Response words (one source of truth):** `Settings.response_format`
+  (`"yes/no"` on this profile; `None` = the historical
+  `"purchase"/"not purchase"` prompt, byte-identical).
+  `sweep_kit.split_response_format` splits it ONCE into the label pair
+  that feeds BOTH the survey's two response-word slots (the bracket hint
+  and the return example; the question sentence's own "not purchase" is
+  the question and stays) AND the scorer's branch matcher — prompt and
+  scoring can never drift apart.
+- **No grammar anywhere:** the profile's settings, plan, run/leg manifests
+  and every request payload carry `grammar=None` / no `grammar` key — the
+  request is fully unconstrained (the first_token payload never had one).
+- **Scoring:** `purchase_branch_mass` / `parse_first_token_response` take
+  `labels=(positive, negative)` and match tokens by EXACT first-word form
+  after junk-strip/case-fold (word-boundary continuation for multi-word
+  labels like "not purchase") — prefix look-alikes (`not`, `none`,
+  `nobody` vs `no`; `yesterday` vs `yes`) are different words and never
+  fold into a branch. Records carry the raw top-k, `p_yes`/`p_no` (None,
+  never a silent 0, when a branch is absent from the top-k),
+  `p_yes_binary = p_yes/(p_yes+p_no)` (None when the branch mass is 0),
+  the matched token forms (`matched_yes_tokens`/`matched_no_tokens`), and
+  the `response_format` + `parse_mode="first_token_logprob"` stamps;
+  `parsed_purchase` stays None.
+
 ## Analysis
 
 `scripts/r1_logprob_analysis.py` reads a logprob run directory and produces
