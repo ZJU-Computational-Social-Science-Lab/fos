@@ -2,8 +2,10 @@
 # (TASK-1578, RED phase; tests ONLY - no implementation lives here).
 #
 # WHY THESE TESTS EXIST: the muse model's useful yes/no candidates only
-# show up in a top-50 candidate list, while every other model keeps the
-# historical top-20. The override must therefore live in the queue
+# show up in a top-100 candidate list (user launch order 2026-09-11:
+# k=100 pins the free-cell no-branch, rank 44-50 at k=50), while every
+# other model keeps the historical top-20. The override must therefore
+# live in the queue
 # PROFILE CONFIG (never a hardcoded model-name branch in scoring code):
 # a plan-layer resolver answers "what k does this model use?", the
 # first_token REQUEST carries the resolved k (payload top_logprobs), and
@@ -167,30 +169,31 @@ def test_request_top_k_is_configurable_and_defaults_to_twenty():
     )
 
     muse_post = _FakePost(_scan_body())
-    _first_token_scorer(muse_post, top_k=50)([{"role": "user", "content": "buy?"}])
-    assert muse_post.calls[0][1]["top_logprobs"] == 50, (
+    _first_token_scorer(muse_post, top_k=100)([{"role": "user", "content": "buy?"}])
+    assert muse_post.calls[0][1]["top_logprobs"] == 100, (
         "the request must use the configured top_k (the muse-style "
-        "top-50 sweep) instead of the hardcoded 20"
+        "top-100 sweep) instead of the hardcoded 20"
     )
 
     dispatch_post = _FakePost(_scan_body())
     make_scorer(
-        "first_token", BASE_URL, MODEL, post=dispatch_post, labels=YES_NO, top_k=50
+        "first_token", BASE_URL, MODEL, post=dispatch_post, labels=YES_NO, top_k=100
     )([{"role": "user", "content": "buy?"}])
-    assert dispatch_post.calls[0][1]["top_logprobs"] == 50
+    assert dispatch_post.calls[0][1]["top_logprobs"] == 100
 
 
-def test_muse_profile_overrides_top_k_to_fifty_others_keep_twenty():
+def test_muse_profile_overrides_top_k_to_one_hundred_others_keep_twenty():
     """The queue plan layer resolves the per-model top_k from config:
-    muse-glimmer -> 50, every other queue model (and any unknown model)
+    muse-glimmer -> 100, every other queue model (and any unknown model)
     -> 20."""
     import launch_queue
 
     _require_function(launch_queue, "model_top_k", "queue plan layer")
     from launch_queue import MODEL_QUEUE, model_top_k
 
-    assert model_top_k("meta/muse-glimmer") == 50, (
-        "the muse profile override must resolve to top_k 50"
+    # user launch order 2026-09-11: k=100 pins the free-cell no-branch (rank 44-50 at k=50)
+    assert model_top_k("meta/muse-glimmer") == 100, (
+        "the muse profile override must resolve to top_k 100"
     )
     for model in MODEL_QUEUE:
         if model == "meta/muse-glimmer":
@@ -203,15 +206,15 @@ def test_muse_profile_overrides_top_k_to_fifty_others_keep_twenty():
 
 def test_the_muse_leg_manifest_stamps_the_overridden_top_k(tmp_path):
     """A completed leg's manifest records the per-leg k that was in force:
-    50 for the muse leg, 20 for another model's leg."""
+    100 for the muse leg, 20 for another model's leg."""
     muse_manifest, muse_results = _finalize_durable_leg(tmp_path, "meta/muse-glimmer")
     assert muse_manifest.exists(), "a completed leg must write its manifest.json"
     assert muse_results and muse_results[0]["ok"], (
         f"the durable muse leg must finalize cleanly; got {muse_results}"
     )
     payload = json.loads(muse_manifest.read_text(encoding="utf-8"))
-    assert "top_k" in payload and payload["top_k"] == 50, (
-        f"the muse leg's manifest must stamp the overridden top_k 50 - "
+    assert "top_k" in payload and payload["top_k"] == 100, (
+        f"the muse leg's manifest must stamp the overridden top_k 100 - "
         f"without the stamp a reader cannot know which coverage the "
         f"top-k lists of this leg have (got: {payload.get('top_k')!r})"
     )
