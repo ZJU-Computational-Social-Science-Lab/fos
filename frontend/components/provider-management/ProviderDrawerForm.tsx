@@ -1,5 +1,11 @@
 ﻿// frontend/components/provider-management/ProviderDrawerForm.tsx
-import { useEffect, useState } from "react";
+//
+// This file shows the side panel (drawer) used to add or change an LLM provider.
+// It renders the form fields and a small "provider type" chooser.
+// The panel closes only when a person presses and releases on the dark area
+// around it. Selecting text inside the panel and dragging the mouse out no
+// longer closes it by mistake.
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { ChevronDown, Eye, EyeOff, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Provider } from "../../services/providers";
@@ -40,6 +46,23 @@ export function ProviderDrawerForm({
   const [showApiKey, setShowApiKey] = useState(false);
   const [providerPickerStep, setProviderPickerStep] = useState<ProviderPickerStep>("closed");
 
+  // Remembers whether the current press began on the dark area around the panel.
+  const pressStartedOnBackdrop = useRef(false);
+
+  // Notes where a press started so a text selection begun inside the panel is respected.
+  const handleBackdropMouseDown = (event: MouseEvent<HTMLDivElement>): void => {
+    pressStartedOnBackdrop.current = event.target === event.currentTarget;
+  };
+
+  // Closes the panel only when the press starts and ends on the dark area around it.
+  const handleBackdropMouseUp = (event: MouseEvent<HTMLDivElement>): void => {
+    const releasedOnBackdrop = event.target === event.currentTarget;
+    if (pressStartedOnBackdrop.current && releasedOnBackdrop) {
+      onClose();
+    }
+    pressStartedOnBackdrop.current = false;
+  };
+
   useEffect(() => {
     setValues(initialValues);
     setShowApiKey(false);
@@ -54,8 +77,13 @@ export function ProviderDrawerForm({
       : t("settings.providers.providerForm.editLlmTitle", { name: provider?.name ?? "" });
 
   return (
-    <div className="provider-drawer-shell" role="presentation" onClick={onClose}>
-      <aside className="provider-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+    <div
+      className="provider-drawer-shell"
+      role="presentation"
+      onMouseDown={handleBackdropMouseDown}
+      onMouseUp={handleBackdropMouseUp}
+    >
+      <aside className="provider-drawer" role="dialog" aria-modal="true">
         <div className="provider-drawer__header">
           <div>
             <h2 className="provider-drawer__title">{title}</h2>
