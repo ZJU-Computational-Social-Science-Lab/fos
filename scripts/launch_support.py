@@ -78,12 +78,16 @@ STAGE_DEPTHS = tuple(f"stage{i}" for i in range(2, 13))
 # no grammar (see logprob_scoring / LOGPROB-DESIGN.md). R1-YESNO is the
 # R1LP twin that asks the same question with the answer words "yes"/"no"
 # and reads the honest first-token probabilities (no grammar either).
+# R1-YESNO-QWENEXT re-runs the R1-YESNO experiment with three more Qwen
+# models, all sharing qwen3.8-27b's [40, 60) persona slice (see
+# launch_yesno_qwenext).
 PROFILES = {
     "R1": 100,
     "FULL": 500,
     "R1-5MODEL": 100,
     "R1LP": 100,
     "R1-YESNO": 100,
+    "R1-YESNO-QWENEXT": 100,
 }
 
 # Measured pilot numbers (RESULT-1501): nemotron Q8 per-call latency, the
