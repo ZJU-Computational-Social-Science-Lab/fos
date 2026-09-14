@@ -3,7 +3,7 @@
  * Each test checks one small action a person can take in the provider menu.
  */
 
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -75,14 +75,15 @@ const INITIAL_VALUES: ProviderFormValues = {
 };
 
 // This helper opens the drawer with the same empty values each time.
-function renderProviderDrawer(): void {
+// It lets each test pass its own close handler so close behaviour can be checked.
+function renderProviderDrawer(onClose: () => void = () => undefined): void {
   render(
     <ProviderDrawerForm
       isOpen
       mode="create"
       provider={null}
       initialValues={INITIAL_VALUES}
-      onClose={() => undefined}
+      onClose={onClose}
       onSubmit={() => undefined}
       isSaving={false}
     />,
@@ -140,5 +141,53 @@ describe("ProviderDrawerForm", () => {
 
     expect(screen.getByRole("button", { name: "Provider type" })).toHaveTextContent("Other");
     expect(screen.queryByRole("listbox", { name: "OpenAI-compatible providers" })).not.toBeInTheDocument();
+  });
+});
+
+describe("ProviderDrawerForm close behaviour", () => {
+  // This test checks that a normal click on the dark area around the drawer still closes it.
+  it("test_pressing_and_releasing_on_the_outer_area_closes_the_drawer", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    renderProviderDrawer(onClose);
+
+    const shell = document.querySelector(".provider-drawer-shell");
+    expect(shell).not.toBeNull();
+
+    await user.click(shell as HTMLElement);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // This test checks the bug: picking text inside the drawer and dragging the mouse
+  // out of the drawer must not close it.
+  it("test_dragging_the_mouse_out_of_the_drawer_while_picking_text_does_not_close_the_drawer", () => {
+    const onClose = vi.fn();
+    renderProviderDrawer(onClose);
+
+    const drawer = screen.getByRole("dialog");
+    const shell = document.querySelector(".provider-drawer-shell") as HTMLElement;
+
+    // A browser starts the press on the text inside the drawer, releases the
+    // button outside it, then fires the click on the outer area that wraps both.
+    fireEvent.mouseDown(drawer);
+    fireEvent.mouseUp(shell);
+    fireEvent.click(shell);
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  // This test checks that pressing and releasing fully inside the drawer never closes it.
+  it("test_pressing_and_releasing_inside_the_drawer_does_not_close_it", () => {
+    const onClose = vi.fn();
+    renderProviderDrawer(onClose);
+
+    const drawer = screen.getByRole("dialog");
+
+    fireEvent.mouseDown(drawer);
+    fireEvent.mouseUp(drawer);
+    fireEvent.click(drawer);
+
+    expect(onClose).not.toHaveBeenCalled();
   });
 });
