@@ -22,6 +22,10 @@ What each function does (plain language):
                                      map (the shared pool is untouched).
     build_queue_plan(...)          - The queue plan: 20 legs, per-model and
                                      total call counts (26,400 x 5).
+    plan_model_queue(plan)         - The plan's model queue in run order
+                                     (the 5-model queue when absent).
+    plan_persona_slice(plan, i)    - The plan-recorded persona slice of
+                                     queue slot i (fallback: partition).
     queue_leg_dir / queue_leg_jsonl - Where one leg lives on disk.
     queue_leg_done(...)            - Is this (model, leg) already complete?
     model_top_k(model)             - The model's first_token top-k: its
@@ -125,17 +129,22 @@ def persona_slice(
 
 
 def slice_persona_map(
-    personas_by_product: dict[str, dict[str, Any]], model_index: int
+    personas_by_product: dict[str, dict[str, Any]],
+    model_index: int,
+    *,
+    bounds: tuple[int, int] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """One model's deterministic persona share of the shared pool map.
 
     Returns a new map of the same shape with each product's persona list
     trimmed to the model's [20i, 20i+20) slice; the input map is never
-    mutated (all five models read from the same 100-persona pool). A pool
-    shorter than the slice raises - the run would silently drop cells
-    otherwise, so we never guess.
+    mutated (all five models read from the same 100-persona pool). bounds
+    overrides the queue partition with a plan-recorded slice (the QWENEXT
+    plans share one slice across their models); the default keeps the
+    partition. A pool shorter than the slice raises - the run would
+    silently drop cells otherwise, so we never guess.
     """
-    start, stop = persona_slice(model_index)
+    start, stop = bounds if bounds is not None else persona_slice(model_index)
     sliced: dict[str, dict[str, Any]] = {}
     for product, info in personas_by_product.items():
         personas = info["personas"]
@@ -146,6 +155,37 @@ def slice_persona_map(
             )
         sliced[product] = {**info, "personas": personas[start:stop]}
     return sliced
+
+
+def plan_model_queue(plan: dict[str, Any]) -> tuple[str, ...]:
+    """The plan's model queue in run order (the 5-model queue by default).
+
+    Every plan builder stamps its model order on plan["models"], so the
+    runner reads the queue from the plan instead of assuming the 5-model
+    queue: a plan with a different queue (the three Qwen models of
+    QWENEXT) then runs through the same runner unchanged. A plan without
+    a models entry falls back to MODEL_QUEUE.
+    """
+    models = plan.get("models") or []
+    if not models:
+        return MODEL_QUEUE
+    return tuple(meta["model"] for meta in models)
+
+
+def plan_persona_slice(plan: dict[str, Any], model_index: int) -> tuple[int, int]:
+    """The persona slice of queue slot model_index as the plan records it.
+
+    Every plan builder stamps each model's persona_slice on its models
+    list, so the runner reads the slice from the plan: the 5-model plans
+    record the [20i, 20i+20) partition, the QWENEXT plans record the
+    shared [40, 60) slice all three of their models answer. A plan
+    without a models entry falls back to the queue partition.
+    """
+    models = plan.get("models") or []
+    if 0 <= model_index < len(models):
+        start, stop = models[model_index]["persona_slice"]
+        return int(start), int(stop)
+    return persona_slice(model_index)
 
 
 def _model_meta(
