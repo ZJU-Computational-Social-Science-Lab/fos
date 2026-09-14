@@ -11,7 +11,9 @@ normalized row to the run's results.csv. The leg's records.csv and its
 manifest.json are written only when the whole leg completes; a leg
 interrupted mid-run keeps every completed cell and is continued by
 --resume at the cell level. The demographics legs slice the shared
-100-persona pool to the model's deterministic [20i, 20i+20) share.
+100-persona pool to the plan-recorded persona slice of the leg's model
+(the 5-model partition [20i, 20i+20); the QWENEXT plans record the
+shared [40, 60) slice instead).
 
 What each function does (plain language):
     run_queue_leg(...)        - Run one leg to completion (or to a stop /
@@ -57,7 +59,7 @@ from launch_queue import (  # noqa: E402
     PERSONAS_PER_MODEL,
     model_control_sequences,
     model_top_k,
-    persona_slice,
+    plan_persona_slice,
     queue_leg_dir,
     queue_leg_done,
     queue_leg_jsonl,
@@ -112,7 +114,7 @@ def _finalize_queue_leg(
         list(_SWEEP.COVARIATE_KINDS),
         target["depth"],
     )
-    start, stop = persona_slice(target["model_index"])
+    start, stop = plan_persona_slice(plan, target["model_index"])
     manifest_extra: dict[str, Any] = {
         "levels": plan["levels"],
         "temperature": 1.0,
@@ -245,7 +247,9 @@ def run_queue_leg(
         if personas_by_product is None:
             raise RuntimeError("persona leg without persona pools")
         personas_by_model = slice_persona_map(
-            personas_by_product, target["model_index"]
+            personas_by_product,
+            target["model_index"],
+            bounds=plan_persona_slice(plan, target["model_index"]),
         )
     design = _SWEEP._build_design(
         plan["levels"],

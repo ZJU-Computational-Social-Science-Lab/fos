@@ -110,6 +110,11 @@ from launch_queue import (  # noqa: E402
     YESNO_PROFILE,
     build_logprob_plan,
 )
+from launch_yesno_qwenext import (  # noqa: E402
+    QWENEXT_PROFILE,
+    build_qwenext_plan,
+    print_qwenext_dry_run,
+)
 
 DEFAULT_PRODUCTS = "data/configs/unblinding_products.json"
 DEFAULT_OUT = "results/unblinding"
@@ -314,11 +319,12 @@ def _build_run_name(args: argparse.Namespace) -> str:
     """Default run name: profile, model stem and local time.
 
     The R1-5MODEL queue has no single model to name itself after, so its
-    default run name is just the profile and the local time.
+    default run name is just the profile and the local time (the logprob
+    twins and the QWENEXT queue follow the same pattern).
     """
     if args.run_name:
         return args.run_name
-    if args.profile in (QUEUE_PROFILE, LOGP_PROFILE, YESNO_PROFILE):
+    if args.profile in (QUEUE_PROFILE, LOGP_PROFILE, YESNO_PROFILE, QWENEXT_PROFILE):
         stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
         return f"{args.profile}-{stamp}"
     stem = _safe_model_name(args.model).replace("nvidia_", "")
@@ -398,9 +404,11 @@ def _settings_from(args: argparse.Namespace, run_name: str) -> Settings:
     constrained decoding). R1-YESNO is the yes/no twin of R1LP: it pins
     first_token logprobs, no grammar at all, and stamps the response words
     (response_format="yes/no") that feed both the prompt and the scorer.
+    R1-YESNO-QWENEXT mirrors R1-YESNO exactly (first_token, yes/no words,
+    no grammar) - only its model queue and shared persona slice differ.
     """
-    is_logprob = args.profile in (LOGP_PROFILE, YESNO_PROFILE)
-    is_yesno = args.profile == YESNO_PROFILE
+    is_logprob = args.profile in (LOGP_PROFILE, YESNO_PROFILE, QWENEXT_PROFILE)
+    is_yesno = args.profile in (YESNO_PROFILE, QWENEXT_PROFILE)
     return Settings(
         model=args.model,
         port=args.port,
@@ -439,11 +447,13 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = _parse_args(argv)
     products_path = _resolve_products(args.products)
-    if args.profile in (QUEUE_PROFILE, LOGP_PROFILE, YESNO_PROFILE):
+    if args.profile in (QUEUE_PROFILE, LOGP_PROFILE, YESNO_PROFILE, QWENEXT_PROFILE):
         # The five-model queue (R1-5MODEL) and its logprob twins (R1LP,
         # R1-YESNO): five models in one invocation, stratified allocation;
         # R1-5MODEL constrains every call with the one-token grammar, R1LP
-        # and R1-YESNO score logprobs instead (no grammar).
+        # and R1-YESNO score logprobs instead (no grammar). R1-YESNO-QWENEXT
+        # is the three-Qwen-model queue that re-runs the R1-YESNO
+        # experiment on the shared qwen3.8-27b persona slice.
         if args.smoke:
             print(
                 f"error: --smoke is not wired for the {args.profile} queue "
@@ -451,9 +461,9 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 2
-        if args.profile == YESNO_PROFILE and args.ab_labels:
+        if args.profile in (YESNO_PROFILE, QWENEXT_PROFILE) and args.ab_labels:
             print(
-                "error: --ab-labels has no A/B form for the R1-YESNO "
+                f"error: --ab-labels has no A/B form for the {args.profile} "
                 "profile (first_token scoring, like R1LP's)",
                 file=sys.stderr,
             )
@@ -478,12 +488,18 @@ def main(argv: list[str] | None = None) -> int:
             logprob_mode = (
                 "first_token" if args.profile == YESNO_PROFILE else args.logprob_mode
             )
+        elif args.profile == QWENEXT_PROFILE:
+            plan = build_qwenext_plan(len(products), len(levels), levels=levels)
+            logprob_mode = "first_token"
         else:
             plan = build_queue_plan(len(products), len(levels), levels=levels)
             logprob_mode = None
         if args.dry_run:
             run_name = _build_run_name(args)
             run_dir = Path(args.out) / run_name
+            if args.profile == QWENEXT_PROFILE:
+                print_qwenext_dry_run(args, products, plan, run_dir)
+                return 0
             dry_scan = (
                 _settings_from(args, run_name).scan_tokens if logprob_mode else None
             )

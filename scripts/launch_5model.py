@@ -18,6 +18,11 @@ and writes the run-level manifest whose 20 legs merge exactly once, with
 the persona partition and grammar recorded. --resume skips completed
 (model, leg) pairs and, inside a pending leg, its durable cells.
 
+The queue itself comes from the plan (plan_model_queue / the plans'
+models list): the five-model R1 queue today, and the three-model
+QWENEXT queue of launch_yesno_qwenext rides the exact same phases -
+per-model load, legs, unload - with the plans' own persona slices.
+
 What each function does (plain language):
     _make_log()               - A timestamped console logger.
     _pool_marker_matches(...) - Is the run dir's pools.json a matching
@@ -63,7 +68,6 @@ from launch_manifest import (  # noqa: E402
 )
 from launch_queue import (  # noqa: E402
     DEFAULT_POOLS_FROM as DEFAULT_POOLS_FROM,
-    MODEL_QUEUE,
     QUEUE_GRAMMAR,
     QUEUE_PROFILE as QUEUE_PROFILE,
     _durable_calls,
@@ -71,6 +75,7 @@ from launch_queue import (  # noqa: E402
     _resolve_pools_from,
     build_queue_plan as build_queue_plan,
     pending_queue_targets,
+    plan_model_queue,
     print_queue_dry_run as print_queue_dry_run,
     queue_leg_done,
 )
@@ -190,7 +195,7 @@ def ensure_queue_pools(
         return loaded
     if marker.exists():
         marker.unlink()  # stale marker from an interrupted copy: regenerate
-    drawing_model = MODEL_QUEUE[0]
+    drawing_model = plan_model_queue(plan)[0]
     if loaded != drawing_model:
         log(
             f"loading {drawing_model} on :{settings.port} to draw the "
@@ -372,9 +377,10 @@ def _run_model_phase(
         )
     done_event = threading.Event()
     _start_thread(_watchdog, (model_settings, abort, done_event, log))
+    model_queue = plan_model_queue(plan)
     log(
-        f"queue [{MODEL_QUEUE.index(model_settings.model) + 1}/"
-        f"{len(MODEL_QUEUE)}] {model_settings.model}: launching "
+        f"queue [{model_queue.index(model_settings.model) + 1}/"
+        f"{len(model_queue)}] {model_settings.model}: launching "
         f"{len(model_targets)} legs concurrently "
         f"({remaining_calls:,} calls remaining)"
     )
@@ -409,8 +415,8 @@ def _run_model_phase(
     )
     done_event.set()
     log(
-        f"queue [{MODEL_QUEUE.index(model_settings.model) + 1}/"
-        f"{len(MODEL_QUEUE)}] {model_settings.model}: phase finished "
+        f"queue [{model_queue.index(model_settings.model) + 1}/"
+        f"{len(model_queue)}] {model_settings.model}: phase finished "
         f"({state['done']:,} calls this phase, parse "
         f"{100.0 * state['parsed'] / max(1, state['done']):.1f}%), "
         f"level {level}"
@@ -515,7 +521,7 @@ def run_queue(
     each model's pending legs run concurrently with cell-granular
     durability and 1525's graceful/hard stop, completed (model, leg) pairs
     and durable cells are skipped on --resume, and the final manifest
-    merges all 20 planned legs exactly once. Every purchase call of every
+    merges every planned leg exactly once. Every purchase call of every
     model carries the queue's one-token grammar.
     """
     if stop is None:
@@ -570,7 +576,7 @@ def run_queue(
             "already complete - skipping"
         )
     if not pending:
-        log("nothing to run (all 20 legs complete)")
+        log(f"nothing to run (all {len(targets)} legs complete)")
         write_queue_manifest(
             settings=settings,
             plan=plan,
@@ -685,10 +691,11 @@ def run_queue(
     results_csv = QueueResultsCsv(run_dir, regular_prices, plain_seed)
     results: list[dict[str, Any]] = []
     try:
-        # Process the models in queue order; only models with a pending leg
-        # get loaded at all (a resumed run skips its completed models).
-        for model_index in range(len(MODEL_QUEUE)):
-            model = MODEL_QUEUE[model_index]
+        # Process the models in the plan's queue order; only models with a
+        # pending leg get loaded at all (a resumed run skips its completed
+        # models).
+        model_queue = plan_model_queue(plan)
+        for model_index, model in enumerate(model_queue):
             safe = _safe_model_name(model)
             model_targets = [t for t in pending if t["safe_model"] == safe]
             if not model_targets:
@@ -701,7 +708,7 @@ def run_queue(
                 break
             if loaded != model:
                 log(
-                    f"queue [{model_index + 1}/{len(MODEL_QUEUE)}] loading "
+                    f"queue [{model_index + 1}/{len(model_queue)}] loading "
                     f"{model} on :{settings.port} through the manager..."
                 )
                 _load_model(settings.manager_url, model, settings.port)
