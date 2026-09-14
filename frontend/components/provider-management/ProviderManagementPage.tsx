@@ -19,7 +19,8 @@ import {
 
 export type ProviderFormValues = {
   name: string;
-  provider: "openai-compatible" | "gemini";
+  provider: "openai-compatible" | "custom";
+  compatible_provider: "" | "chatgpt" | "deepseek" | "minimax" | "kimi";
   base_url: string;
   api_key: string;
   model: string;
@@ -35,6 +36,7 @@ export type ProviderFormValues = {
 const EMPTY_FORM: ProviderFormValues = {
   name: "",
   provider: "openai-compatible",
+  compatible_provider: "",
   base_url: "",
   api_key: "",
   model: "",
@@ -47,8 +49,21 @@ const EMPTY_FORM: ProviderFormValues = {
   metadata: "",
 };
 
-const normalizeProviderType = (provider: string): ProviderFormValues["provider"] =>
-  provider.includes("gemini") ? "gemini" : "openai-compatible";
+const normalizeProviderType = (
+  provider: string,
+  config: Record<string, unknown>,
+): ProviderFormValues["provider"] => {
+  if (provider === "custom" || config["provider_type"] === "custom") return "custom";
+  return "openai-compatible";
+};
+
+const normalizeCompatibleProvider = (
+  provider: unknown,
+): ProviderFormValues["compatible_provider"] => {
+  if (provider === "chatgpt" || provider === "deepseek") return provider;
+  if (provider === "minimax" || provider === "kimi") return provider;
+  return "";
+};
 
 const formatDrawerValues = (provider: Provider | null): ProviderFormValues => {
   if (!provider) return EMPTY_FORM;
@@ -56,7 +71,8 @@ const formatDrawerValues = (provider: Provider | null): ProviderFormValues => {
   const config = provider.config ?? {};
   return {
     name: provider.name ?? "",
-    provider: normalizeProviderType(provider.provider),
+    provider: normalizeProviderType(provider.provider, config),
+    compatible_provider: normalizeCompatibleProvider(config["compatible_provider"]),
     base_url: provider.base_url ?? "",
     api_key: "",
     model: provider.model ?? "",
@@ -150,6 +166,8 @@ export function ProviderManagementPage() {
   const saveProviderMutation = useMutation({
     mutationFn: async (payload: ProviderFormValues) => {
       const config = {
+        provider_type: payload.provider,
+        compatible_provider: payload.compatible_provider || undefined,
         custom_endpoint: payload.custom_endpoint.trim() || undefined,
         temperature: parseNumberField(payload.temperature),
         top_p: parseNumberField(payload.top_p),
@@ -160,9 +178,9 @@ export function ProviderManagementPage() {
       };
       const request = {
         name: payload.name.trim(),
-        provider: payload.provider,
+        provider: "openai-compatible",
         model: payload.model.trim(),
-        base_url: payload.provider === "openai-compatible" ? payload.base_url.trim() : null,
+        base_url: payload.base_url.trim(),
         api_key: payload.api_key.trim() || undefined,
         config,
       };
