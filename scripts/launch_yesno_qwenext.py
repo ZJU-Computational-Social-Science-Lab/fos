@@ -17,17 +17,26 @@ the same archived run as every other profile. Like launch_queue.py this
 module is a pure specification: it opens no sockets and writes no files;
 the network only runs inside the runner's run paths.
 
+The GLM companion run (R1-YESNO-QWENEXT-GLM) is the same study for one
+more model: glm/glm-4.7-flash answers the SAME shared [40, 60) slice
+with the identical geometry, as its own run dir (own profile stamp) that
+analysis merges with the 3-model run. It reuses everything here - only
+the model queue and the profile stamp differ, chosen per plan build.
+
 What each function does (plain language):
     qwenext_persona_slice(index)  - The shared [40, 60) slice every
                                     QWENEXT model answers (the exact
                                     slice qwen3.8-27b answered in
                                     R1-YESNO); refuses an index outside
-                                    the 3-model queue instead of
-                                    silently slicing empty.
+                                    the queue instead of silently
+                                    slicing empty.
     _qwenext_model_meta(...)      - The plan's summary of one model: its
                                     calls and its shared persona slice.
-    build_qwenext_plan(...)       - The queue plan: 12 legs, per-model
-                                    and total call counts (18,480 x 3).
+    build_qwenext_plan(...)       - The queue plan: 12 legs for the
+                                    3-model queue (18,480 x 3 calls) or
+                                    4 legs for the one-model GLM
+                                    companion (18,480); pass
+                                    model_queue to pick the queue.
     print_qwenext_dry_run(...)    - The printed plan (dry run) - no
                                     manager, no server, no grammar.
 """
@@ -70,31 +79,42 @@ QWENEXT_MODEL_QUEUE = (
 # three new models answer exactly those personas of every product.
 QWENEXT_SLICE_MODEL = "qwen/qwen3.8-27b"
 _SLICE_INDEX = MODEL_QUEUE.index(QWENEXT_SLICE_MODEL)
+# The GLM companion run's own profile stamp and one-model queue: clearly
+# the same study (the name extends QWENEXT_PROFILE) but never colliding
+# with the 3-model run's stamp, so the two run dirs merge unambiguously.
+# glm/glm-4.7-flash is the manager registry id (~/fos-model-manager).
+QWENEXT_GLM_PROFILE = "R1-YESNO-QWENEXT-GLM"
+QWENEXT_GLM_MODEL_QUEUE = ("glm/glm-4.7-flash",)
 
 
-def qwenext_persona_slice(model_index: int) -> tuple[int, int]:
+def qwenext_persona_slice(
+    model_index: int, model_queue: tuple[str, ...] = QWENEXT_MODEL_QUEUE
+) -> tuple[int, int]:
     """The pool index range every QWENEXT model answers: [40, 60).
 
-    All three models share qwen3.8-27b's R1-YESNO slice by design (a
-    shared slice, not a partition), so their answers stay directly
-    comparable. An index outside the 3-model queue raises instead of
-    silently slicing empty - the same never-guess convention as
-    launch_queue.persona_slice.
+    All models (the three Qwen models and the GLM companion alike) share
+    qwen3.8-27b's R1-YESNO slice by design (a shared slice, not a
+    partition), so their answers stay directly comparable. An index
+    outside the queue raises instead of silently slicing empty - the
+    same never-guess convention as launch_queue.persona_slice.
     """
-    if not 0 <= model_index < len(QWENEXT_MODEL_QUEUE):
+    if not 0 <= model_index < len(model_queue):
         raise ValueError(
             f"model_index {model_index} is outside the QWENEXT queue "
-            f"(0..{len(QWENEXT_MODEL_QUEUE) - 1})"
+            f"(0..{len(model_queue) - 1})"
         )
     return persona_slice(_SLICE_INDEX)
 
 
 def _qwenext_model_meta(
-    model_index: int, product_count: int, level_count: int
+    model_queue: tuple[str, ...],
+    model_index: int,
+    product_count: int,
+    level_count: int,
 ) -> dict[str, Any]:
     """The plan's summary of one model: its calls and persona slice."""
-    model = QWENEXT_MODEL_QUEUE[model_index]
-    start, stop = qwenext_persona_slice(model_index)
+    model = model_queue[model_index]
+    start, stop = qwenext_persona_slice(model_index, model_queue)
     none_calls = 2 * product_count * level_count * LOGP_NONE_DRAWS
     demographics_calls = 2 * product_count * PERSONAS_PER_MODEL * level_count
     return {
@@ -117,24 +137,30 @@ def build_qwenext_plan(
     seed: int = 42,
     pool_seed: int = 42,
     profile: str = QWENEXT_PROFILE,
+    model_queue: tuple[str, ...] = QWENEXT_MODEL_QUEUE,
 ) -> dict[str, Any]:
     """The whole QWENEXT plan: 12 legs, per-model and total call counts.
 
-    legs holds the 12 (model x depth x blinding) targets in queue order:
+    legs holds the (model x depth x blinding) targets in queue order:
     for each model, none_blinded, none_unblinded, demographics_blinded,
     demographics_unblinded. None legs carry 40 x levels x 1 calls each,
     demographics legs 40 x 20 x levels each; per model that is the
     R1-YESNO 880 + 17,600 = 18,480 one-pass scoring calls, and the three
     models together 55,440. Every model answers the SAME shared [40, 60)
     slice, the pools are reused by default (pool_draws 0), and none of
-    the three models holds a top-k or control-sequence override (the
+    the models holds a top-k or control-sequence override (the
     launch_queue maps stay authoritative; qwen3.8-27b needed none).
+
+    model_queue picks the queue to plan: the default 3-model QWENEXT
+    queue, or the one-model GLM companion queue (pass it together with
+    the companion's profile stamp - 4 legs, 18,480 calls). Building
+    without the parameter yields exactly the live run's plan.
     """
     levels = list(levels) if levels is not None else []
     targets: list[dict[str, Any]] = []
     models: list[dict[str, Any]] = []
-    for index in range(len(QWENEXT_MODEL_QUEUE)):
-        meta = _qwenext_model_meta(index, product_count, level_count)
+    for index in range(len(model_queue)):
+        meta = _qwenext_model_meta(model_queue, index, product_count, level_count)
         models.append(meta)
         for depth in BASE_DEPTHS:
             for blinding in BLINDINGS:
