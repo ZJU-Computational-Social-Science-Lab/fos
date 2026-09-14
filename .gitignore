@@ -99,3 +99,21 @@ opencode.json
 
 # Python package build artifacts (scoped to the src package)
 /src/fos.egg-info/
+
+# Local research data and planning docs (kept on disk, never committed)
+/LOGPROB-DESIGN.md
+/LAUNCH-READY.md
+/QUICKSTART.md
+/TESTING_PLAN.md
+docs/FOS_GRANULARITY.md
+docs/MODEL_ROUTING_DIAGNOSIS.md
+docs/MODEL_SCHEDULING.md
+docs/environment-agent-current-state.md
+docs/environment-agent-design.md
+docs/mock_council_pilot.md
+docs/superpowers/specs/2026-06-02-results-section-design.md
+frontend/docs/scenario-parameter-parity-checklist.md
+frontend/docs/ai-scientist-draft-schema-v1.md
+data/configs/balance_table.md
+data/populations/balance_table.md
+data/populations/leakage_screen.md
