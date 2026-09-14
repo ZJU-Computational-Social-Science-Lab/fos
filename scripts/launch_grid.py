@@ -111,6 +111,9 @@ from launch_queue import (  # noqa: E402
     build_logprob_plan,
 )
 from launch_yesno_qwenext import (  # noqa: E402
+    QWENEXT_GLM_MODEL_QUEUE,
+    QWENEXT_GLM_PROFILE,
+    QWENEXT_MODEL_QUEUE,
     QWENEXT_PROFILE,
     build_qwenext_plan,
     print_qwenext_dry_run,
@@ -320,11 +323,18 @@ def _build_run_name(args: argparse.Namespace) -> str:
 
     The R1-5MODEL queue has no single model to name itself after, so its
     default run name is just the profile and the local time (the logprob
-    twins and the QWENEXT queue follow the same pattern).
+    twins and the QWENEXT queues, 3-model and GLM companion alike, follow
+    the same pattern).
     """
     if args.run_name:
         return args.run_name
-    if args.profile in (QUEUE_PROFILE, LOGP_PROFILE, YESNO_PROFILE, QWENEXT_PROFILE):
+    if args.profile in (
+        QUEUE_PROFILE,
+        LOGP_PROFILE,
+        YESNO_PROFILE,
+        QWENEXT_PROFILE,
+        QWENEXT_GLM_PROFILE,
+    ):
         stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
         return f"{args.profile}-{stamp}"
     stem = _safe_model_name(args.model).replace("nvidia_", "")
@@ -406,9 +416,16 @@ def _settings_from(args: argparse.Namespace, run_name: str) -> Settings:
     (response_format="yes/no") that feed both the prompt and the scorer.
     R1-YESNO-QWENEXT mirrors R1-YESNO exactly (first_token, yes/no words,
     no grammar) - only its model queue and shared persona slice differ.
+    R1-YESNO-QWENEXT-GLM is that same yes/no shape again for the one-model
+    GLM companion run.
     """
-    is_logprob = args.profile in (LOGP_PROFILE, YESNO_PROFILE, QWENEXT_PROFILE)
-    is_yesno = args.profile in (YESNO_PROFILE, QWENEXT_PROFILE)
+    is_logprob = args.profile in (
+        LOGP_PROFILE,
+        YESNO_PROFILE,
+        QWENEXT_PROFILE,
+        QWENEXT_GLM_PROFILE,
+    )
+    is_yesno = args.profile in (YESNO_PROFILE, QWENEXT_PROFILE, QWENEXT_GLM_PROFILE)
     return Settings(
         model=args.model,
         port=args.port,
@@ -447,13 +464,21 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = _parse_args(argv)
     products_path = _resolve_products(args.products)
-    if args.profile in (QUEUE_PROFILE, LOGP_PROFILE, YESNO_PROFILE, QWENEXT_PROFILE):
+    if args.profile in (
+        QUEUE_PROFILE,
+        LOGP_PROFILE,
+        YESNO_PROFILE,
+        QWENEXT_PROFILE,
+        QWENEXT_GLM_PROFILE,
+    ):
         # The five-model queue (R1-5MODEL) and its logprob twins (R1LP,
         # R1-YESNO): five models in one invocation, stratified allocation;
         # R1-5MODEL constrains every call with the one-token grammar, R1LP
         # and R1-YESNO score logprobs instead (no grammar). R1-YESNO-QWENEXT
         # is the three-Qwen-model queue that re-runs the R1-YESNO
-        # experiment on the shared qwen3.8-27b persona slice.
+        # experiment on the shared qwen3.8-27b persona slice, and
+        # R1-YESNO-QWENEXT-GLM is its one-model GLM companion (identical
+        # geometry, its own run dir).
         if args.smoke:
             print(
                 f"error: --smoke is not wired for the {args.profile} queue "
@@ -461,7 +486,10 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 2
-        if args.profile in (YESNO_PROFILE, QWENEXT_PROFILE) and args.ab_labels:
+        if (
+            args.profile in (YESNO_PROFILE, QWENEXT_PROFILE, QWENEXT_GLM_PROFILE)
+            and args.ab_labels
+        ):
             print(
                 f"error: --ab-labels has no A/B form for the {args.profile} "
                 "profile (first_token scoring, like R1LP's)",
@@ -488,8 +516,19 @@ def main(argv: list[str] | None = None) -> int:
             logprob_mode = (
                 "first_token" if args.profile == YESNO_PROFILE else args.logprob_mode
             )
-        elif args.profile == QWENEXT_PROFILE:
-            plan = build_qwenext_plan(len(products), len(levels), levels=levels)
+        elif args.profile in (QWENEXT_PROFILE, QWENEXT_GLM_PROFILE):
+            queue = (
+                QWENEXT_GLM_MODEL_QUEUE
+                if args.profile == QWENEXT_GLM_PROFILE
+                else QWENEXT_MODEL_QUEUE
+            )
+            plan = build_qwenext_plan(
+                len(products),
+                len(levels),
+                levels=levels,
+                profile=args.profile,
+                model_queue=queue,
+            )
             logprob_mode = "first_token"
         else:
             plan = build_queue_plan(len(products), len(levels), levels=levels)
@@ -497,7 +536,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.dry_run:
             run_name = _build_run_name(args)
             run_dir = Path(args.out) / run_name
-            if args.profile == QWENEXT_PROFILE:
+            if args.profile in (QWENEXT_PROFILE, QWENEXT_GLM_PROFILE):
                 print_qwenext_dry_run(args, products, plan, run_dir)
                 return 0
             dry_scan = (
