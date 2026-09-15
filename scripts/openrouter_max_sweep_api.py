@@ -46,7 +46,8 @@ What each function / object does (plain language):
                               order; refuses a pool too short to hold them.
     make_openrouter_chat_fn(...) - Wraps a transport into the sweep kit's
                               chat function: builds the payload (pinned
-                              schema attached), retries 429/5xx with
+                              schema attached), retries 429/5xx and
+                              connection errors/read timeouts with
                               growing backoff, aborts loudly on a rejected
                               model id, and reports each answer's token
                               usage to on_usage.
@@ -98,7 +99,10 @@ COMPLETION_USD_PER_M = 6.0
 DEFAULT_MAX_COST_USD = 15.0
 DEFAULT_CONCURRENCY = 4
 MAX_TRIES = 5
-DEFAULT_TIMEOUT_SECONDS = 120.0
+# Generous because this endpoint mandates reasoning: a reasoning model can
+# legitimately think for minutes before answering, and cutting it off turns
+# a slow-but-good call into a wasted one.
+DEFAULT_TIMEOUT_SECONDS = 240.0
 
 # The answer-size cap. Deliberately generous: the strict schema keeps the
 # answer itself tiny, but this endpoint mandates reasoning (sending a
@@ -250,8 +254,11 @@ def subsample_personas(pool: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _is_retryable(status: int) -> bool:
-    """True for the polite-to-retry statuses: rate limits and server hiccups."""
-    return status == 429 or 500 <= status <= 599
+    """True for the polite-to-retry outcomes: rate limits (429), server
+    hiccups (5xx), and exchanges that never got an answer at all (-1:
+    connection errors and read timeouts - the most common transient
+    failure, so they retry exactly like a 429 would)."""
+    return status == -1 or status == 429 or 500 <= status <= 599
 
 
 def _is_model_rejection(status: int) -> bool:
@@ -287,12 +294,13 @@ def make_openrouter_chat_fn(
     (messages, temperature) and returns the answer text, with the pinned
     response_format attached to every request, with reasoning left at
     the provider default (this endpoint mandates reasoning; disabling it
-    is rejected with HTTP 400). Rate limits (429) and server
-    errors (5xx) are retried with growing sleeps, at most max_tries tries;
-    a rejected model id aborts at once naming the model - never retried,
-    never substituted. A transport that fails WITHOUT an HTTP answer (a
-    connection error, or any non-OpenRouterError failure it raises) also
-    consumes one try; if every try fails that way, the adapter raises
+    is rejected with HTTP 400). Rate limits (429), server errors (5xx),
+    and exchanges that never got an HTTP answer (connection errors and
+    read timeouts, reported with status -1) are retried with growing
+    sleeps, at most max_tries tries; a rejected model id aborts at once
+    naming the model - never retried, never substituted. A transport that
+    fails with some other non-OpenRouterError failure also consumes one
+    try; if every try fails that way, the adapter raises
     OpenRouterError(-1) naming the underlying error - nothing is swallowed.
     Each successful call reports its usage block to on_usage (the caller's
     cost accounting), when given.
