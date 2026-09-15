@@ -20,9 +20,12 @@ What each function / object does (plain language):
                               start a call that would push past it).
     DEFAULT_CONCURRENCY     - How many legs may run at once.
     MAX_TRIES               - The most times one call is attempted.
-    DEFAULT_TIMEOUT_SECONDS - Seconds one API call may take.
-    DEFAULT_MAX_TOKENS      - The small answer-size cap (the forced JSON
-                              schema keeps the answer tiny anyway).
+    DEFAULT_TIMEOUT_SECONDS - Seconds one call may take before it is cut.
+    DEFAULT_MAX_TOKENS      - The answer-size cap: a truncation guard, not
+                              a cost knob (only generated tokens bill).
+    REASONING_SETTINGS      - Asks OpenRouter to switch the model's
+                              thinking off; the sweep wants the forced
+                              decision, not a chain of thought.
     OPENROUTER_URL          - The chat-completions endpoint.
     DEFAULT_POOLS_FROM      - The archived persona pools reused by default
                               (taken from launch_queue so it cannot drift).
@@ -99,7 +102,22 @@ DEFAULT_MAX_COST_USD = 15.0
 DEFAULT_CONCURRENCY = 4
 MAX_TRIES = 5
 DEFAULT_TIMEOUT_SECONDS = 120.0
-DEFAULT_MAX_TOKENS = 64
+
+# The answer-size cap. Deliberately generous: the strict schema keeps the
+# answer itself tiny, but a thinking model burns tokens before the answer,
+# and a cap set too low truncates the response to an empty content string
+# (every token still billed, nothing parsed - seen live at 64 tokens).
+# Only GENERATED tokens are billed, so a high cap costs nothing extra once
+# thinking is disabled.
+DEFAULT_MAX_TOKENS = 2048
+
+# Ask OpenRouter to switch the model's chain-of-thought OFF (its unified
+# parameter, mapped per provider - e.g. enable_thinking=false for Qwen3).
+# The grammar sweep wants the schema-forced decision, not reasoning: with
+# thinking on, qwen3.8-max spends its completion budget before answering
+# (seen live: content="" at a 64-token cap), and per-call cost becomes
+# reasoning-length-dependent instead of pinned.
+REASONING_SETTINGS = {"enabled": False}
 
 # The endpoint every call POSTs to.
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -278,7 +296,8 @@ def make_openrouter_chat_fn(
     transport is a payload-dict-in, parsed-JSON-body-out callable (the real
     HTTP layer in production, a fake in tests). The returned function takes
     (messages, temperature) and returns the answer text, with the pinned
-    response_format attached to every request. Rate limits (429) and server
+    response_format attached to every request and the model's thinking
+    switched off (REASONING_SETTINGS). Rate limits (429) and server
     errors (5xx) are retried with growing sleeps, at most max_tries tries;
     a rejected model id aborts at once naming the model - never retried,
     never substituted. A transport that fails WITHOUT an HTTP answer (a
@@ -296,6 +315,7 @@ def make_openrouter_chat_fn(
             "temperature": temperature,
             "response_format": build_response_format(),
             "max_tokens": DEFAULT_MAX_TOKENS,
+            "reasoning": dict(REASONING_SETTINGS),
         }
         for attempt in range(max_tries):
             try:
