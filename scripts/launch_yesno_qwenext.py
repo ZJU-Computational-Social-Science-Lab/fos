@@ -31,6 +31,14 @@ stamp) that analysis merges with the 3-model run and the GLM companion.
 It reuses everything here - only the model queue and the profile stamp
 differ, chosen per plan build.
 
+The local Gemma companion run (R1-YESNO-GEMMA31B) is the same study once
+more: google/gemma-4-31b-it-qat (the Gemma-4-31B-it QAT Q4_0 GGUF served
+by the local model manager) answers the SAME shared [40, 60) slice with
+the identical geometry, as its own run dir (own profile stamp) that
+analysis merges with the 3-model run and the GLM / QWEN36D companions.
+It reuses everything here - only the model queue and the profile stamp
+differ, chosen per plan build.
+
 What each function does (plain language):
     qwenext_persona_slice(index)  - The shared [40, 60) slice every
                                     QWENEXT model answers (the exact
@@ -43,9 +51,10 @@ What each function does (plain language):
     build_qwenext_plan(...)       - The queue plan: 12 legs for the
                                     3-model queue (18,480 x 3 calls) or
                                     4 legs for a one-model companion
-                                    (18,480; GLM or the local dense
-                                    Qwen3.6-27B); pass model_queue to
-                                    pick the queue.
+                                    (18,480; GLM, the local dense
+                                    Qwen3.6-27B, or the local Gemma-
+                                    4-31B); pass model_queue to pick
+                                    the queue.
     print_qwenext_dry_run(...)    - The printed plan (dry run) - no
                                     manager, no server, no grammar.
 """
@@ -102,6 +111,14 @@ QWENEXT_GLM_MODEL_QUEUE = ("glm/glm-4.7-flash",)
 # GGUF (Q4_K_M).
 QWENEXT_QWEN36D_PROFILE = "R1-YESNO-QWEN36D"
 QWENEXT_QWEN36D_MODEL_QUEUE = ("qwen/qwen3.6-27b-dense",)
+# The local Gemma companion run's own profile stamp and one-model queue:
+# clearly the same study (the name extends QWENEXT_PROFILE) but never
+# colliding with the 3-model run's or the GLM / QWEN36D companions'
+# stamps, so the run dirs merge unambiguously. google/gemma-4-31b-it-qat
+# is the manager registry id (~/fos-model-manager) of the freshly
+# downloaded Gemma-4-31B-it QAT GGUF (Q4_0).
+QWENEXT_GEMMA31B_PROFILE = "R1-YESNO-GEMMA31B"
+QWENEXT_GEMMA31B_MODEL_QUEUE = ("google/gemma-4-31b-it-qat",)
 
 
 def qwenext_persona_slice(
@@ -170,9 +187,9 @@ def build_qwenext_plan(
 
     model_queue picks the queue to plan: the default 3-model QWENEXT
     queue, or a one-model companion queue (pass it together with the
-    companion's profile stamp - 4 legs, 18,480 calls; GLM or the local
-    dense Qwen3.6-27B). Building without the parameter yields exactly
-    the live run's plan.
+    companion's profile stamp - 4 legs, 18,480 calls; GLM, the local
+    dense Qwen3.6-27B, or the local Gemma-4-31B). Building without the
+    parameter yields exactly the live run's plan.
     """
     levels = list(levels) if levels is not None else []
     targets: list[dict[str, Any]] = []

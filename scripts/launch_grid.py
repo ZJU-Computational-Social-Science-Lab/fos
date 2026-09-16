@@ -111,6 +111,8 @@ from launch_queue import (  # noqa: E402
     build_logprob_plan,
 )
 from launch_yesno_qwenext import (  # noqa: E402
+    QWENEXT_GEMMA31B_MODEL_QUEUE,
+    QWENEXT_GEMMA31B_PROFILE,
     QWENEXT_GLM_MODEL_QUEUE,
     QWENEXT_GLM_PROFILE,
     QWENEXT_MODEL_QUEUE,
@@ -337,6 +339,7 @@ def _build_run_name(args: argparse.Namespace) -> str:
         QWENEXT_PROFILE,
         QWENEXT_GLM_PROFILE,
         QWENEXT_QWEN36D_PROFILE,
+        QWENEXT_GEMMA31B_PROFILE,
     ):
         stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
         return f"{args.profile}-{stamp}"
@@ -420,8 +423,9 @@ def _settings_from(args: argparse.Namespace, run_name: str) -> Settings:
     R1-YESNO-QWENEXT mirrors R1-YESNO exactly (first_token, yes/no words,
     no grammar) - only its model queue and shared persona slice differ.
     R1-YESNO-QWENEXT-GLM is that same yes/no shape again for the one-model
-    GLM companion run, and R1-YESNO-QWEN36D for the one-model local dense
-    Qwen3.6-27B companion.
+    GLM companion run, R1-YESNO-QWEN36D for the one-model local dense
+    Qwen3.6-27B companion, and R1-YESNO-GEMMA31B for the one-model local
+    Gemma-4-31B companion.
     """
     is_logprob = args.profile in (
         LOGP_PROFILE,
@@ -429,12 +433,14 @@ def _settings_from(args: argparse.Namespace, run_name: str) -> Settings:
         QWENEXT_PROFILE,
         QWENEXT_GLM_PROFILE,
         QWENEXT_QWEN36D_PROFILE,
+        QWENEXT_GEMMA31B_PROFILE,
     )
     is_yesno = args.profile in (
         YESNO_PROFILE,
         QWENEXT_PROFILE,
         QWENEXT_GLM_PROFILE,
         QWENEXT_QWEN36D_PROFILE,
+        QWENEXT_GEMMA31B_PROFILE,
     )
     return Settings(
         model=args.model,
@@ -481,6 +487,7 @@ def main(argv: list[str] | None = None) -> int:
         QWENEXT_PROFILE,
         QWENEXT_GLM_PROFILE,
         QWENEXT_QWEN36D_PROFILE,
+        QWENEXT_GEMMA31B_PROFILE,
     ):
         # The five-model queue (R1-5MODEL) and its logprob twins (R1LP,
         # R1-YESNO): five models in one invocation, stratified allocation;
@@ -489,8 +496,10 @@ def main(argv: list[str] | None = None) -> int:
         # is the three-Qwen-model queue that re-runs the R1-YESNO
         # experiment on the shared qwen3.8-27b persona slice,
         # R1-YESNO-QWENEXT-GLM is its one-model GLM companion (identical
-        # geometry, its own run dir), and R1-YESNO-QWEN36D is its one-model
-        # local dense Qwen3.6-27B companion (identical geometry, own dir).
+        # geometry, its own run dir), R1-YESNO-QWEN36D is its one-model
+        # local dense Qwen3.6-27B companion (identical geometry, own dir),
+        # and R1-YESNO-GEMMA31B is its one-model local Gemma-4-31B
+        # companion (identical geometry, own dir).
         if args.smoke:
             print(
                 f"error: --smoke is not wired for the {args.profile} queue "
@@ -504,6 +513,7 @@ def main(argv: list[str] | None = None) -> int:
                 QWENEXT_PROFILE,
                 QWENEXT_GLM_PROFILE,
                 QWENEXT_QWEN36D_PROFILE,
+                QWENEXT_GEMMA31B_PROFILE,
             )
             and args.ab_labels
         ):
@@ -533,11 +543,18 @@ def main(argv: list[str] | None = None) -> int:
             logprob_mode = (
                 "first_token" if args.profile == YESNO_PROFILE else args.logprob_mode
             )
-        elif args.profile in (QWENEXT_PROFILE, QWENEXT_GLM_PROFILE, QWENEXT_QWEN36D_PROFILE):
+        elif args.profile in (
+            QWENEXT_PROFILE,
+            QWENEXT_GLM_PROFILE,
+            QWENEXT_QWEN36D_PROFILE,
+            QWENEXT_GEMMA31B_PROFILE,
+        ):
             if args.profile == QWENEXT_GLM_PROFILE:
                 queue = QWENEXT_GLM_MODEL_QUEUE
             elif args.profile == QWENEXT_QWEN36D_PROFILE:
                 queue = QWENEXT_QWEN36D_MODEL_QUEUE
+            elif args.profile == QWENEXT_GEMMA31B_PROFILE:
+                queue = QWENEXT_GEMMA31B_MODEL_QUEUE
             else:
                 queue = QWENEXT_MODEL_QUEUE
             plan = build_qwenext_plan(
@@ -558,6 +575,7 @@ def main(argv: list[str] | None = None) -> int:
                 QWENEXT_PROFILE,
                 QWENEXT_GLM_PROFILE,
                 QWENEXT_QWEN36D_PROFILE,
+                QWENEXT_GEMMA31B_PROFILE,
             ):
                 print_qwenext_dry_run(args, products, plan, run_dir)
                 return 0
