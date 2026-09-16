@@ -90,6 +90,7 @@ PROFILES = {
     "R1-YESNO-QWENEXT": 100,
     "R1-YESNO-QWENEXT-GLM": 100,
     "R1-YESNO-QWEN36D": 100,
+    "R1-YESNO-GEMMA31B": 100,
 }
 
 # Measured pilot numbers (RESULT-1501): nemotron Q8 per-call latency, the
