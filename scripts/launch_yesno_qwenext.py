@@ -23,6 +23,14 @@ with the identical geometry, as its own run dir (own profile stamp) that
 analysis merges with the 3-model run. It reuses everything here - only
 the model queue and the profile stamp differ, chosen per plan build.
 
+The local dense companion run (R1-YESNO-QWEN36D) is the same study again
+for one more model: qwen/qwen3.6-27b-dense (the brand-new dense 27B GGUF
+served by the local model manager) answers the SAME shared [40, 60)
+slice with the identical geometry, as its own run dir (own profile
+stamp) that analysis merges with the 3-model run and the GLM companion.
+It reuses everything here - only the model queue and the profile stamp
+differ, chosen per plan build.
+
 What each function does (plain language):
     qwenext_persona_slice(index)  - The shared [40, 60) slice every
                                     QWENEXT model answers (the exact
@@ -34,9 +42,10 @@ What each function does (plain language):
                                     calls and its shared persona slice.
     build_qwenext_plan(...)       - The queue plan: 12 legs for the
                                     3-model queue (18,480 x 3 calls) or
-                                    4 legs for the one-model GLM
-                                    companion (18,480); pass
-                                    model_queue to pick the queue.
+                                    4 legs for a one-model companion
+                                    (18,480; GLM or the local dense
+                                    Qwen3.6-27B); pass model_queue to
+                                    pick the queue.
     print_qwenext_dry_run(...)    - The printed plan (dry run) - no
                                     manager, no server, no grammar.
 """
@@ -85,6 +94,14 @@ _SLICE_INDEX = MODEL_QUEUE.index(QWENEXT_SLICE_MODEL)
 # glm/glm-4.7-flash is the manager registry id (~/fos-model-manager).
 QWENEXT_GLM_PROFILE = "R1-YESNO-QWENEXT-GLM"
 QWENEXT_GLM_MODEL_QUEUE = ("glm/glm-4.7-flash",)
+# The local dense companion run's own profile stamp and one-model queue:
+# clearly the same study (the name extends QWENEXT_PROFILE) but never
+# colliding with the 3-model run's or the GLM companion's stamps, so the
+# run dirs merge unambiguously. qwen/qwen3.6-27b-dense is the manager
+# registry id (~/fos-model-manager) of the freshly downloaded dense 27B
+# GGUF (Q4_K_M).
+QWENEXT_QWEN36D_PROFILE = "R1-YESNO-QWEN36D"
+QWENEXT_QWEN36D_MODEL_QUEUE = ("qwen/qwen3.6-27b-dense",)
 
 
 def qwenext_persona_slice(
@@ -152,9 +169,10 @@ def build_qwenext_plan(
     launch_queue maps stay authoritative; qwen3.8-27b needed none).
 
     model_queue picks the queue to plan: the default 3-model QWENEXT
-    queue, or the one-model GLM companion queue (pass it together with
-    the companion's profile stamp - 4 legs, 18,480 calls). Building
-    without the parameter yields exactly the live run's plan.
+    queue, or a one-model companion queue (pass it together with the
+    companion's profile stamp - 4 legs, 18,480 calls; GLM or the local
+    dense Qwen3.6-27B). Building without the parameter yields exactly
+    the live run's plan.
     """
     levels = list(levels) if levels is not None else []
     targets: list[dict[str, Any]] = []
