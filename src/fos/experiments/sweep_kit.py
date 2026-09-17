@@ -305,9 +305,7 @@ def split_response_format(response_format: str | None) -> tuple[str, str]:
     pieces = response_format.split("/")
     if len(pieces) != 2 or not all(piece.strip() for piece in pieces):
         raise ValueError(
-            f"response_format must be '<positive>/<negative>' (e.g. "
-            f"'yes/no') or None for the historical wording; got "
-            f"{response_format!r}"
+            T("error.sweep_kit.response_format_invalid", value=repr(response_format))
         )
     return (pieces[0].strip(), pieces[1].strip())
 
