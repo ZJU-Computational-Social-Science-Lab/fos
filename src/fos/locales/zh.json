@@ -63,7 +63,8 @@
       "unsupported_stage": "阶段必须是 1 到 12 的整数，实际为：{stage}"
     },
     "sweep_kit": {
-      "unsupported_fillin_kind": "不支持的协变量填空类型：{kind}"
+      "unsupported_fillin_kind": "不支持的协变量填空类型：{kind}",
+      "response_format_invalid": "response_format 必须是 '<positive>/<negative>'（如 'yes/no'）或 None；实际为：{value}"
     },
     "personas": {
       "unsupported_depth": "不支持的画像深度：{depth}；请选择以下之一：{supported}"

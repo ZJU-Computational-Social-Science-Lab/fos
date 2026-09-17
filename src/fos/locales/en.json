@@ -63,7 +63,8 @@
       "unsupported_stage": "Stage must be an integer 1..12, got {stage}"
     },
     "sweep_kit": {
-      "unsupported_fillin_kind": "Unsupported covariate fill-in kind: {kind}"
+      "unsupported_fillin_kind": "Unsupported covariate fill-in kind: {kind}",
+      "response_format_invalid": "response_format must be '<positive>/<negative>' (e.g. 'yes/no') or None; got {value}"
     },
     "personas": {
       "unsupported_depth": "Unsupported persona depth: {depth}; choose one of: {supported}"
