@@ -39,6 +39,17 @@ analysis merges with the 3-model run and the GLM / QWEN36D companions.
 It reuses everything here - only the model queue and the profile stamp
 differ, chosen per plan build.
 
+The local four-model batch run (R1-YESNO-NEWBATCH) is the same study for
+FOUR brand-new local GGUFs in one sequential queue, run SMALLEST→LARGEST
+(a user requirement, so the 8B proves the queue plumbing before the
+bigger models spend hours): ibm/granite-4.1-8b, google/gemma-4-12b-it-
+qat, ibm/granite-4.1-30b, qwen/qwen3-32b. Each answers the SAME shared
+[40, 60) slice with the identical geometry (4 x 18,480 = 73,920 calls
+across 16 legs), as its own run dir (own profile stamp) that analysis
+merges with the 3-model run and every one-model companion. It reuses
+everything here - only the model queue and the profile stamp differ,
+chosen per plan build.
+
 What each function does (plain language):
     qwenext_persona_slice(index)  - The shared [40, 60) slice every
                                     QWENEXT model answers (the exact
@@ -119,6 +130,20 @@ QWENEXT_QWEN36D_MODEL_QUEUE = ("qwen/qwen3.6-27b-dense",)
 # downloaded Gemma-4-31B-it QAT GGUF (Q4_0).
 QWENEXT_GEMMA31B_PROFILE = "R1-YESNO-GEMMA31B"
 QWENEXT_GEMMA31B_MODEL_QUEUE = ("google/gemma-4-31b-it-qat",)
+# The local four-model batch run's own profile stamp and queue: clearly
+# the same study (the name extends QWENEXT_PROFILE) but never colliding
+# with the 3-model run's or any companion's stamps, so the run dirs
+# merge unambiguously. The queue is exactly the four freshly downloaded
+# manager-registry GGUFs (Q4 quants) in SMALLEST→LARGEST order: the 8B
+# runs first so the queue plumbing is proven cheaply before the 30B/32B
+# spend hours.
+QWENEXT_NEWBATCH_PROFILE = "R1-YESNO-NEWBATCH"
+QWENEXT_NEWBATCH_MODEL_QUEUE = (
+    "ibm/granite-4.1-8b",
+    "google/gemma-4-12b-it-qat",
+    "ibm/granite-4.1-30b",
+    "qwen/qwen3-32b",
+)
 
 
 def qwenext_persona_slice(
