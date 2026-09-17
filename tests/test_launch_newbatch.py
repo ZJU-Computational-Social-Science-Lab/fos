@@ -1,55 +1,43 @@
-# Locked tests for the R1-YESNO-NEWBATCH **local companion batch run**
-# (TASK-1709, RED phase; tests ONLY - no implementation lives here).
+# Locked tests for the R1-YESNO-NEWBATCH local companion batch run
+# (TASK-1710, RED phase; tests ONLY - no implementation lives here;
+# re-dispatch of TASK-1709 with the UPDATED run order).
 #
-# WHY THESE TESTS EXIST: the user downloaded FOUR brand-new model GGUFs
-# (Qwen3-32B, Granite-4.1-30B, Gemma-4-12B-it-QAT, Granite-4.1-8B) and
-# wants them run through the EXACT R1-YESNO-QWENEXT geometry as ONE
-# sequential queue in a single launch - the same multi-model pattern the
-# 3-model R1-YESNO-QWENEXT run uses (build_qwenext_plan already takes a
-# model_queue), with its own run dir so analysis can merge it with the
-# rest of the family. These tests pin that contract, all offline (no
-# manager daemon, no GPU, no model loads, no network). Locked here:
+# WHAT THIS FILE DOES: pins the contract for running FOUR brand-new GGUFs
+# (Granite-4.1-8B, Gemma-4-12B-it-QAT, Granite-4.1-30B, Qwen3-32B) as ONE
+# sequential queue through the EXACT R1-YESNO-QWENEXT geometry (the
+# 3-model run's build_qwenext_plan(model_queue=...) pattern), as its own
+# run dir so analysis merges it with the family. UPDATED vs TASK-1709:
+# queue order is SMALLEST→LARGEST (user requirement) - the 8B proves the
+# queue plumbing before the bigger models spend hours. All offline (no
+# daemon, no GPU, no model loads, no network). Locked:
+#   (1) PROFILE: QWENEXT_NEWBATCH_PROFILE = "R1-YESNO-NEWBATCH" - own
+#       stamp, never colliding with the 3-model/GLM/QWEN36D/GEMMA31B
+#       runs; accepted by launch_grid (PROFILES entry, 100 personas).
+#   (2) QUEUE: QWENEXT_NEWBATCH_MODEL_QUEUE, exactly FOUR manager
+#       registry ids, SMALLEST→LARGEST: ibm/granite-4.1-8b,
+#       google/gemma-4-12b-it-qat, ibm/granite-4.1-30b, qwen/qwen3-32b.
+#   (3) PLAN: the FULL QWENEXT geometry for four models - 16 legs,
+#       880 + 17,600 = 18,480 cells/model, 73,920 total, shared
+#       [40, 60) slice, pools reused, no grammar, one scoring pass.
+#   (4) UNTOUCHED: the 3-model and GLM/QWEN36D/GEMMA31B plans are
+#       byte-identical to today's; no new id leaks into them.
+#   (5) LAUNCHER: --profile R1-YESNO-NEWBATCH mirrors R1-YESNO
+#       (first_token yes/no, no grammar), own run-name stamp, offline
+#       dry run, same DEFAULT_POOLS_FROM.
+#   (6) RUNNER: plan-carried helpers drive the 4-model plan - no fork.
+#   (7) REGISTRY: launcher ids == ~/fos-model-manager MODEL_REGISTRY ids
+#       == pinned GGUF paths on disk. (Manager-side template branches -
+#       qwen3-32b built-in, gemma-4-12b via a NEW branch ahead of the
+#       generic gemma one, granites via a NEW granite branch - are
+#       pinned in ~/fos-model-manager/test_registry_newbatch.py.)
 #
-#   (1) PROFILE: launch_yesno_qwenext names the new batch profile
-#       QWENEXT_NEWBATCH_PROFILE = "R1-YESNO-NEWBATCH" - clearly the same
-#       study but never colliding with the 3-model, GLM, QWEN36D or
-#       GEMMA31B run stamps - and launch_grid's --profile dispatch
-#       accepts it (PROFILES entry, 100-persona pool).
-#   (2) QUEUE: exactly FOUR models, the manager registry ids, in this
-#       run order: qwen/qwen3-32b, ibm/granite-4.1-30b,
-#       google/gemma-4-12b-it-qat, ibm/granite-4.1-8b.
-#   (3) PLAN: build_qwenext_plan(model_queue=...) reproduces the FULL
-#       QWENEXT geometry for exactly four models: 16 legs (4 models x
-#       none/demographics x blinded/unblinded), 880 + 17,600 = 18,480
-#       cells per model, 73,920 total, the SHARED [40, 60) persona slice
-#       for every model, pools reused (pool_draws 0), no grammar, one
-#       scoring pass per prompt, and the plan stamped with the NEWBATCH
-#       profile id.
-#   (4) UNTOUCHED: the default 3-model R1-YESNO-QWENEXT plan and the
-#       GLM / QWEN36D / GEMMA31B companion plans are byte-identical to
-#       today's, and none of the four new ids leaks into them.
-#   (5) LAUNCHER: --profile R1-YESNO-NEWBATCH goes through launch_grid's
-#       established --profile dispatch; its settings mirror R1-YESNO
-#       (first_token, yes/no words, no grammar); its default run name is
-#       its own stamp R1-YESNO-NEWBATCH-<YYYYMMDDTHHMMSS>; its dry run
-#       prints the whole plan offline; it reuses the same
-#       DEFAULT_POOLS_FROM.
-#   (6) RUNNER: the plan-carried helpers (plan_model_queue /
-#       plan_persona_slice / leg durability) drive the 4-model plan
-#       unchanged - no runner fork.
-#   (7) REGISTRY: every launcher id equals the id registered in
-#       ~/fos-model-manager MODEL_REGISTRY character for character, each
-#       registered GGUF path is exactly the pinned file, and each file
-#       exists on disk. (The manager-side branch behavior - qwen3-32b on
-#       its BUILT-IN template, the gemma-4-12b on the 31B QAT template
-#       via a NEW branch ahead of the generic gemma one, both granites on
-#       their BUILT-IN templates via a NEW granite branch - is pinned in
-#       ~/fos-model-manager/test_registry_newbatch.py.)
-#
-# The locked tests in test_launch_yesno_qwenext.py, test_launch_qwenext_
-# wiring.py, test_launch_qwenext_resume.py, test_launch_queue.py,
+# NOTES: the night sequence runs the Gemma-4-31B RESUME (R1-YESNO-
+# GEMMA31B, 11,101/18,400 durable cells) BEFORE this batch - watchdog
+# orchestration, not this profile. The locked tests in
+# test_launch_yesno_qwenext.py, test_launch_qwenext_wiring.py,
+# test_launch_qwenext_resume.py, test_launch_queue.py,
 # test_launch_qwenext_glm.py, test_launch_qwen36d.py and
-# test_launch_gemma31b.py must stay green. No test here touches a real
+# test_launch_gemma31b.py must stay green. Nothing here touches a real
 # server, the manager daemon, or any other run dir.
 import importlib.util
 import re
@@ -67,31 +55,39 @@ if _SCRIPTS not in sys.path:
 
 MODULE_NAME = "launch_yesno_qwenext"
 
-# The batch's registry ids IN RUN ORDER and the exact GGUF file each one
-# must load (all four freshly downloaded on 09-17, Q4 quants).
+# The batch's registry ids IN RUN ORDER - SMALLEST→LARGEST (user
+# requirement) - and the exact GGUF file each one must load (all four
+# freshly downloaded on 09-17, Q4 quants, verified on disk).
 NEWBATCH_MODEL_IDS = (
-    "qwen/qwen3-32b",
-    "ibm/granite-4.1-30b",
-    "google/gemma-4-12b-it-qat",
     "ibm/granite-4.1-8b",
+    "google/gemma-4-12b-it-qat",
+    "ibm/granite-4.1-30b",
+    "qwen/qwen3-32b",
 )
 NEWBATCH_GGUFS = {
-    "qwen/qwen3-32b": (
+    "ibm/granite-4.1-8b": (
         "/home/justin/.lmstudio/models/lmstudio-community/"
-        "Qwen3-32B-GGUF/Qwen3-32B-Q4_K_M.gguf"
-    ),
-    "ibm/granite-4.1-30b": (
-        "/home/justin/.lmstudio/models/lmstudio-community/"
-        "granite-4.1-30b-GGUF/granite-4.1-30b-Q4_K_M.gguf"
+        "granite-4.1-8b-GGUF/granite-4.1-8b-Q4_K_M.gguf"
     ),
     "google/gemma-4-12b-it-qat": (
         "/home/justin/.lmstudio/models/lmstudio-community/"
         "gemma-4-12B-it-QAT-GGUF/gemma-4-12B-it-QAT-Q4_0.gguf"
     ),
-    "ibm/granite-4.1-8b": (
+    "ibm/granite-4.1-30b": (
         "/home/justin/.lmstudio/models/lmstudio-community/"
-        "granite-4.1-8b-GGUF/granite-4.1-8b-Q4_K_M.gguf"
+        "granite-4.1-30b-GGUF/granite-4.1-30b-Q4_K_M.gguf"
     ),
+    "qwen/qwen3-32b": (
+        "/home/justin/.lmstudio/models/lmstudio-community/"
+        "Qwen3-32B-GGUF/Qwen3-32B-Q4_K_M.gguf"
+    ),
+}
+# Each model's parameter count in billions, for the size-order lock.
+NEWBATCH_MODEL_SIZES_B = {
+    "ibm/granite-4.1-8b": 8,
+    "google/gemma-4-12b-it-qat": 12,
+    "ibm/granite-4.1-30b": 30,
+    "qwen/qwen3-32b": 32,
 }
 
 # The full R1-YESNO design inputs (same as the 3-model QWENEXT run and
@@ -117,9 +113,8 @@ def _newbatch_constants():
     queue = getattr(module, "QWENEXT_NEWBATCH_MODEL_QUEUE", None)
     if profile is None or queue is None:
         pytest.fail(
-            "launch_yesno_qwenext does not define the NEWBATCH batch "
-            "constants yet (needs "
-            "QWENEXT_NEWBATCH_PROFILE='R1-YESNO-NEWBATCH' and "
+            "launch_yesno_qwenext does not define the NEWBATCH constants "
+            "yet (needs QWENEXT_NEWBATCH_PROFILE='R1-YESNO-NEWBATCH' and "
             f"QWENEXT_NEWBATCH_MODEL_QUEUE={NEWBATCH_MODEL_IDS!r}); got "
             f"profile={profile!r}, queue={queue!r}"
         )
@@ -137,7 +132,7 @@ def _build_newbatch_plan():
         )
     except TypeError as exc:
         pytest.fail(
-            "build_qwenext_plan does not accept the NEWBATCH queue "
+            f"build_qwenext_plan does not accept the NEWBATCH queue "
             f"(model_queue parameter regression?): {exc}"
         )
 
@@ -151,34 +146,35 @@ def _forbid_sockets(monkeypatch, reason: str) -> None:
     monkeypatch.setattr(socket, "create_connection", _refuse)
 
 
+def _launch_grid_args(profile):
+    """launch_grid's parsed args for the NEWBATCH profile, or clear RED."""
+    from launch_grid import _parse_args
+
+    try:
+        return _parse_args(["--profile", profile])
+    except SystemExit as exc:
+        pytest.fail(
+            f"launch_grid refused --profile {profile} (exit {exc.code}): the "
+            "NEWBATCH profile is not registered in the launcher's --profile "
+            "dispatch yet"
+        )
+
+
 # --- (1) Profile: the batch is its own run-level profile ------------------
 
 def test_newbatch_profile_constant_is_defined_and_distinct():
-    """The four-model batch runs under its OWN profile id
-    R1-YESNO-NEWBATCH: clearly the same yes/no study (it extends the
-    R1-YESNO naming) but never the 3-model run's profile or any of the
-    one-model companions', so analysis can tell all the run dirs
-    apart."""
+    """The batch runs under its OWN profile id R1-YESNO-NEWBATCH: the
+    same yes/no study family, but never the 3-model run's profile or any
+    companion's, so analysis can tell all the run dirs apart."""
     module = _qwenext_module()
     profile, _queue = _newbatch_constants()
     assert profile == "R1-YESNO-NEWBATCH", (
-        f"the NEWBATCH profile must be 'R1-YESNO-NEWBATCH' (the same "
-        f"study family as {module.QWENEXT_PROFILE!r}, distinguishable "
-        f"for the analysis merge); got {profile!r}"
+        f"the NEWBATCH profile must be 'R1-YESNO-NEWBATCH'; got {profile!r}"
     )
     assert profile != module.QWENEXT_PROFILE
-    assert profile != module.QWENEXT_GLM_PROFILE, (
-        "the NEWBATCH profile must not reuse the GLM companion's profile "
-        f"({module.QWENEXT_GLM_PROFILE!r})"
-    )
-    assert profile != module.QWENEXT_QWEN36D_PROFILE, (
-        "the NEWBATCH profile must not reuse the QWEN36D companion's "
-        f"profile ({module.QWENEXT_QWEN36D_PROFILE!r})"
-    )
-    assert profile != module.QWENEXT_GEMMA31B_PROFILE, (
-        "the NEWBATCH profile must not reuse the GEMMA31B companion's "
-        f"profile ({module.QWENEXT_GEMMA31B_PROFILE!r})"
-    )
+    assert profile != module.QWENEXT_GLM_PROFILE, "must not reuse the GLM stamp"
+    assert profile != module.QWENEXT_QWEN36D_PROFILE, "must not reuse the QWEN36D stamp"
+    assert profile != module.QWENEXT_GEMMA31B_PROFILE, "must not reuse the GEMMA31B stamp"
     assert profile.startswith("R1-YESNO-"), (
         "the NEWBATCH profile must extend the R1-YESNO naming so the "
         "runs read as one study family"
@@ -187,9 +183,8 @@ def test_newbatch_profile_constant_is_defined_and_distinct():
 
 def test_newbatch_profile_is_registered_in_the_launcher_profiles():
     """launch_grid's --profile choices come from launch_support.PROFILES,
-    so the NEWBATCH profile must be registered there with the
-    study-standard 100-persona pool - otherwise the launcher refuses the
-    profile before any plan is built."""
+    so NEWBATCH must be registered there with the study-standard
+    100-persona pool - or the launcher refuses the profile up front."""
     profile, _queue = _newbatch_constants()
     from launch_support import PROFILES
 
@@ -198,39 +193,38 @@ def test_newbatch_profile_is_registered_in_the_launcher_profiles():
         f"({sorted(PROFILES)}) - launch_grid's --profile dispatch can "
         "never select it"
     )
-    assert PROFILES[profile] == 100, (
-        f"the NEWBATCH batch shares the study's 100-persona pool; got "
-        f"PROFILES[{profile!r}] = {PROFILES[profile]!r}"
-    )
+    assert PROFILES[profile] == 100, f"the batch shares the 100-persona pool; got {PROFILES[profile]!r}"
 
 
-# --- (2) Queue: exactly the four new models, in run order -----------------
+# --- (2) Queue: exactly the four new models, SMALLEST→LARGEST -------------
 
-def test_newbatch_queue_is_exactly_the_four_new_models_in_order():
-    """The NEWBATCH queue is exactly the four freshly downloaded models,
-    in the planned run order (qwen3-32b, granite-4.1-30b, gemma-4-12b-
-    it-qat, granite-4.1-8b) - each the manager registry id, character
-    for character (locked against the registry in
-    test_newbatch_registry_ids_match_the_model_manager_registry)."""
+def test_newbatch_queue_is_exactly_the_four_new_models_smallest_to_largest():
+    """The queue is exactly the four new models in SMALLEST→LARGEST run
+    order (user requirement): granite-4.1-8b, gemma-4-12b-it-qat,
+    granite-4.1-30b, qwen3-32b - each the manager registry id, character
+    for character (locked against the registry below). The smallest runs
+    first so the queue plumbing is proven cheaply."""
     _profile, queue = _newbatch_constants()
     assert queue == NEWBATCH_MODEL_IDS, (
         f"QWENEXT_NEWBATCH_MODEL_QUEUE must be exactly "
-        f"{NEWBATCH_MODEL_IDS!r} (run order matters: one sequential "
-        f"queue, loaded back to back); got {queue!r}"
+        f"{NEWBATCH_MODEL_IDS!r} (SMALLEST→LARGEST run order matters: "
+        f"one sequential queue, loaded back to back); got {queue!r}"
     )
-    assert len(queue) == 4
-    assert len(set(queue)) == 4, "the four ids must be distinct"
+    assert len(queue) == 4 and len(set(queue)) == 4, "four distinct ids"
+    sizes = [NEWBATCH_MODEL_SIZES_B[model_id] for model_id in queue]
+    assert sizes == sorted(sizes), (
+        f"the queue must run SMALLEST→LARGEST; got sizes {sizes}B for "
+        f"{queue!r}"
+    )
 
 
 # --- (3) Plan: the full QWENEXT geometry for exactly four models ----------
 
 def test_newbatch_plan_carries_the_full_qwenext_geometry_for_four_models():
-    """The NEWBATCH plan is the R1-YESNO geometry exactly, for four
-    models: 16 legs (4 models x none/demographics x blinded/unblinded),
-    880 bare + 17,600 demographics = 18,480 calls per model and 73,920
-    total, the SHARED [40, 60) persona slice for EVERY model, pools
-    reused, one scoring pass per prompt, and the plan stamped with the
-    NEWBATCH profile id (not the 3-model run's, not any companion's)."""
+    """The plan is the R1-YESNO geometry exactly, for four models: 16
+    legs, 880 + 17,600 = 18,480 calls per model and 73,920 total, the
+    SHARED [40, 60) persona slice for EVERY model, pools reused, one
+    scoring pass per prompt, the NEWBATCH profile stamp."""
     from launch_queue import LOGP_NONE_DRAWS, PERSONAS_PER_MODEL
 
     assert LOGP_NONE_DRAWS == 1
@@ -249,16 +243,12 @@ def test_newbatch_plan_carries_the_full_qwenext_geometry_for_four_models():
             f"got {meta['model']!r}"
         )
         assert meta["model_index"] == index
-        assert "/" not in meta["safe_model"], (
-            "safe_model must be filesystem-safe"
-        )
+        assert "/" not in meta["safe_model"], "safe_model must be filesystem-safe"
         assert meta["persona_slice"] == [40, 60], (
-            f"{meta['model']} must answer the SAME shared [40, 60) slice "
-            f"as the whole R1-YESNO family; got {meta['persona_slice']}"
+            f"{meta['model']} must answer the SHARED [40, 60) slice; "
+            f"got {meta['persona_slice']}"
         )
-        assert meta["none_calls"] == 880, (
-            f"2 x 40 x 11 x 1 = 880 bare cells; got {meta['none_calls']}"
-        )
+        assert meta["none_calls"] == 880, f"2 x 40 x 11 x 1 = 880 bare cells; got {meta['none_calls']}"
         assert meta["demographics_calls"] == 17_600, (
             f"2 x 40 x 20 x 11 = 17,600 demographics cells; "
             f"got {meta['demographics_calls']}"
@@ -269,20 +259,17 @@ def test_newbatch_plan_carries_the_full_qwenext_geometry_for_four_models():
     )
     for model_pos in range(4):
         legs = plan["legs"][model_pos * 4:(model_pos + 1) * 4]
-        assert [leg["depth"] for leg in legs] == [
-            "none", "none", "demographics", "demographics"
+        assert [
+            (leg["depth"], leg["blinding"], leg["calls"]) for leg in legs
+        ] == [
+            ("none", "blinded", 440), ("none", "unblinded", 440),
+            ("demographics", "blinded", 8_800), ("demographics", "unblinded", 8_800),
         ]
-        assert [leg["blinding"] for leg in legs] == [
-            "blinded", "unblinded", "blinded", "unblinded"
-        ]
-        assert [leg["calls"] for leg in legs] == [440, 440, 8_800, 8_800]
         assert all(
             leg["model"] == queue[model_pos] and leg["model_index"] == model_pos
             for leg in legs
         ), f"legs {model_pos * 4}..{model_pos * 4 + 3} must belong to {queue[model_pos]!r}"
-    assert plan["sweep_calls"] == 73_920, (
-        f"four models x 18,480 cells = 73,920; got {plan['sweep_calls']}"
-    )
+    assert plan["sweep_calls"] == 73_920, f"4 x 18,480 = 73,920; got {plan['sweep_calls']}"
     assert plan["draws"] == 1, "one scoring pass per prompt, like R1-YESNO"
     assert plan["k"] == 100 and plan["per_model_personas"] == PERSONAS_PER_MODEL
     assert plan["pool_draws"] == 0, "pools are reused (no persona draws)"
@@ -291,14 +278,10 @@ def test_newbatch_plan_carries_the_full_qwenext_geometry_for_four_models():
 
 
 def test_default_qwenext_and_all_companion_plans_are_unchanged_by_the_new_queue():
-    """Adding the four-model batch must not disturb the four existing
-    specs: calling build_qwenext_plan WITHOUT the model_queue parameter
-    still yields the 3-model QWENEXT plan (identical to passing the
-    explicit 3-model queue), and the GLM, QWEN36D and GEMMA31B companion
-    plans still build exactly as today - 1 model, 4 legs, 18,480 calls
-    at full scale (168 at the 2x2 probe scale), each with its own
-    profile stamp - and none of the four new ids leaks into any of
-    them."""
+    """Adding the batch must not disturb the four existing specs: the
+    default build_qwenext_plan call still yields the 3-model QWENEXT
+    plan, the GLM/QWEN36D/GEMMA31B companions still build exactly as
+    today, and no new id leaks into any of them."""
     module = _qwenext_module()
     default_plan = module.build_qwenext_plan(2, 2, levels=[0.0, 100.0])
     assert default_plan["profile"] == "R1-YESNO-QWENEXT"
@@ -312,9 +295,8 @@ def test_default_qwenext_and_all_companion_plans_are_unchanged_by_the_new_queue(
         model_queue=module.QWENEXT_MODEL_QUEUE,
     )
     assert default_plan == explicit_plan, (
-        "building with the model_queue parameter defaulted to the 3-model "
-        "queue must produce the identical plan (the executed run's spec "
-        "cannot shift)"
+        "building without the parameter must equal the explicit 3-model "
+        "queue (the executed run's spec cannot shift)"
     )
     glm_plan = module.build_qwenext_plan(
         2, 2, levels=[0.0, 100.0],
@@ -347,19 +329,13 @@ def test_default_qwenext_and_all_companion_plans_are_unchanged_by_the_new_queue(
     assert gemma31b_plan["models"][0]["model"] == "google/gemma-4-31b-it-qat"
     assert gemma31b_plan["sweep_calls"] == 168
     for new_id in NEWBATCH_MODEL_IDS:
-        assert new_id not in str(default_plan), (
-            f"the new model {new_id} must not leak into the default "
-            "3-model plan"
-        )
-        assert new_id not in str(glm_plan), (
-            f"the new model {new_id} must not leak into the GLM plan"
-        )
-        assert new_id not in str(qwen36d_plan), (
-            f"the new model {new_id} must not leak into the QWEN36D plan"
-        )
-        assert new_id not in str(gemma31b_plan), (
-            f"the new model {new_id} must not leak into the GEMMA31B plan"
-        )
+        for label, other_plan in (
+            ("3-model", default_plan), ("GLM", glm_plan),
+            ("QWEN36D", qwen36d_plan), ("GEMMA31B", gemma31b_plan),
+        ):
+            assert new_id not in str(other_plan), (
+                f"the new model {new_id} must not leak into the {label} plan"
+            )
 
 
 # --- (5) Launcher: reachable through launch_grid's --profile dispatch -----
@@ -386,16 +362,10 @@ def test_newbatch_profile_is_reachable_from_the_launcher_dry_run(
         )
     assert code == 0
     out = capsys.readouterr().out
-    assert f"{profile} launch plan (dry run)" in out, (
-        f"the dry run must announce the batch profile; got:\n{out}"
-    )
+    assert f"{profile} launch plan (dry run)" in out, f"dry run must announce the profile; got:\n{out}"
     for model_id in queue:
-        assert model_id in out, (
-            f"the dry run must list {model_id}; got:\n{out}"
-        )
-    assert "pool personas 40-59" in out, (
-        f"the dry run must show the shared [40, 60) slice; got:\n{out}"
-    )
+        assert model_id in out, f"the dry run must list {model_id}; got:\n{out}"
+    assert "pool personas 40-59" in out, f"must show the shared [40, 60) slice; got:\n{out}"
     assert "73,920" in out, f"the queue total must be visible; got:\n{out}"
     assert "root ::=" not in out, (
         "the purchase grammar must never appear - this profile is "
@@ -408,16 +378,9 @@ def test_newbatch_settings_score_first_token_yes_no_without_grammar():
     exactly: first_token scoring, the yes/no response words, and no
     grammar."""
     profile, _queue = _newbatch_constants()
-    from launch_grid import _parse_args, _settings_from
+    from launch_grid import _settings_from
 
-    try:
-        args = _parse_args(["--profile", profile])
-    except SystemExit as exc:
-        pytest.fail(
-            f"launch_grid refused --profile {profile} (exit {exc.code}): the "
-            "NEWBATCH profile is not registered yet"
-        )
-    settings = _settings_from(args, "newbatch-probe")
+    settings = _settings_from(_launch_grid_args(profile), "newbatch-probe")
     assert settings.logprob_mode == "first_token", (
         f"the NEWBATCH batch must score first_token like R1-YESNO; got "
         f"{settings.logprob_mode!r}"
@@ -426,9 +389,7 @@ def test_newbatch_settings_score_first_token_yes_no_without_grammar():
         f"the NEWBATCH batch must ask the yes/no response words; got "
         f"{settings.response_format!r}"
     )
-    assert settings.grammar is None, (
-        "the NEWBATCH batch is grammar-free like R1-YESNO"
-    )
+    assert settings.grammar is None, "the NEWBATCH batch is grammar-free like R1-YESNO"
 
 
 def test_newbatch_default_run_name_is_its_own_distinct_stamp():
@@ -438,16 +399,9 @@ def test_newbatch_default_run_name_is_its_own_distinct_stamp():
     R1-YESNO-QWENEXT-<stamp> or any companion's dirs, so analysis can
     merge run dirs unambiguously."""
     profile, _queue = _newbatch_constants()
-    from launch_grid import _build_run_name, _parse_args
+    from launch_grid import _build_run_name
 
-    try:
-        args = _parse_args(["--profile", profile])
-    except SystemExit as exc:
-        pytest.fail(
-            f"launch_grid refused --profile {profile} (exit {exc.code}): the "
-            "NEWBATCH profile is not registered yet"
-        )
-    name = _build_run_name(args)
+    name = _build_run_name(_launch_grid_args(profile))
     assert re.fullmatch(r"R1-YESNO-NEWBATCH-\d{8}T\d{6}", name), (
         f"the NEWBATCH default run name must be its own profile stamp "
         f"(R1-YESNO-NEWBATCH-<YYYYMMDDTHHMMSS>, the queue-profile branch, "
@@ -462,18 +416,11 @@ def test_newbatch_reuses_the_same_default_pools():
     unchanged."""
     profile, _queue = _newbatch_constants()
     from launch_5model import DEFAULT_POOLS_FROM
-    from launch_grid import _parse_args
 
     assert DEFAULT_POOLS_FROM == (
         "results/unblinding/R1-nemotron-cascade-2-30b-a3b-20260909T004614/pools"
     )
-    try:
-        args = _parse_args(["--profile", profile])
-    except SystemExit as exc:
-        pytest.fail(
-            f"launch_grid refused --profile {profile} (exit {exc.code}): the "
-            "NEWBATCH profile is not registered yet"
-        )
+    args = _launch_grid_args(profile)
     assert args.pools_from == DEFAULT_POOLS_FROM, (
         f"the NEWBATCH batch must reuse the study's shared pools by "
         f"default; got pools_from={args.pools_from!r}"
@@ -487,13 +434,8 @@ def test_queue_runner_helpers_drive_a_four_model_newbatch_plan_unchanged(tmp_pat
     plan (queue of four, shared slice for every index, the usual leg
     durability on disk for all 16 legs)."""
     from launch_queue import (
-        LEG_FILE,
-        pending_queue_targets,
-        plan_model_queue,
-        plan_persona_slice,
-        queue_leg_dir,
-        queue_leg_done,
-        queue_leg_jsonl,
+        LEG_FILE, pending_queue_targets, plan_model_queue,
+        plan_persona_slice, queue_leg_dir, queue_leg_done, queue_leg_jsonl,
     )
     assert LEG_FILE == "records.jsonl"
     _profile, queue = _newbatch_constants()
@@ -509,9 +451,7 @@ def test_queue_runner_helpers_drive_a_four_model_newbatch_plan_unchanged(tmp_pat
         )
     for leg in plan["legs"]:
         leg_dir = queue_leg_dir(tmp_path, leg)
-        assert leg_dir == tmp_path / leg["safe_model"] / (
-            f"{leg['depth']}_{leg['blinding']}"
-        )
+        assert leg_dir == tmp_path / leg["safe_model"] / f"{leg['depth']}_{leg['blinding']}"
         assert queue_leg_jsonl(leg_dir) == leg_dir / LEG_FILE
         assert queue_leg_done(tmp_path, leg) is False, (
             "a leg with nothing on disk must never count as done"
