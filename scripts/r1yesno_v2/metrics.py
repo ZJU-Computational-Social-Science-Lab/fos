@@ -134,7 +134,11 @@ def summarize_model(cells: pd.DataFrame) -> dict[str, float]:
 
 
 def _model_info_row(model_id: str) -> dict[str, str]:
-    """Look up display name, method and run directory for one model id."""
+    """Look up display name, method and run directory for one model id.
+
+    The run_dir column carries the registry's provenance string, which for
+    repaired legs reads "<run dir> + repaired sidecar" (see registry).
+    """
     from scripts.r1yesno_v2.registry import MODELS
 
     info = MODELS.get(model_id)
@@ -143,7 +147,7 @@ def _model_info_row(model_id: str) -> dict[str, str]:
     return {
         "display_name": info["short_name"],
         "probability_method": info["method"],
-        "run_dir": info["run_dir"],
+        "run_dir": info.get("run_provenance", info["run_dir"]),
     }
 
 
