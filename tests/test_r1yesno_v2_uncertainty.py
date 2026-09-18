@@ -141,8 +141,9 @@ def test_collect_clusters_keeps_every_cluster_and_observation():
         )
         order = np.argsort(price)
         np.testing.assert_allclose(
-            np.asarray(p)[order], np.sort(expected["p"].to_numpy()),
-            err_msg=f"cluster {key} answers do not match its rows",
+            np.asarray(p)[order],
+            expected.sort_values("price_scaled")["p"].to_numpy(),
+            err_msg=f"cluster {key} answers do not match their prices",
         )
     assert total_observations == 20, "every observation must be kept exactly once"
 
