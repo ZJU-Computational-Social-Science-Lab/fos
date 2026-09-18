@@ -6,7 +6,9 @@
 #   arch_marker — the symbol for one architecture (dense=circle, MoE=triangle,
 #     unknown=diamond);
 #   save_figure — write one picture as PNG (300 dpi) and PDF;
-#   size_for_params — point size for a model's total parameter count.
+#   size_for_params — point size for a model's total parameter count;
+#   add_g_footnote — write a one-line definition of the gain number G along
+#     the bottom of a picture, so each figure explains itself.
 
 from __future__ import annotations
 
@@ -75,6 +77,18 @@ def size_for_params(total_params_b: float | None) -> float:
     if total_params_b is None or total_params_b <= 0:
         return 60.0
     return 30.0 + 90.0 * (total_params_b / 36.0) ** 0.5
+
+
+G_FOOTNOTE = (
+    "G = ratio of the purchase-probability slope on price (20–200% of regular,"
+    " straight-line fit) to the human slope; G=1 = human-sized response, G=0 = no"
+    " response. Markers: ○ dense, △ MoE, ◇ unknown."
+)
+
+
+def add_g_footnote(fig: plt.Figure, y: float = 0.008) -> None:
+    """Write the one-line gain-G definition in small grey text under a figure."""
+    fig.text(0.01, y, G_FOOTNOTE, fontsize=6, color="grey", ha="left", va="bottom")
 
 
 def clean_log_ticks(ax: plt.Axes) -> None:
