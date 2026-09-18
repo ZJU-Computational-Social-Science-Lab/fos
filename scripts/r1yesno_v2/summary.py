@@ -228,10 +228,12 @@ MoE range {moe.min():.2f}-{moe.max():.2f} vs dense range {dense.min():.2f}-{dens
   (B moves { _fmt(table.loc[(table.model_id == 'gemma-4-26b-a4b') & (table.condition == BLINDED), 'B_pp'].iloc[0], 1)} -> {_fmt(table.loc[(table.model_id == 'gemma-4-26b-a4b') & (table.condition == UNBLINDED), 'B_pp'].iloc[0], 1)} pp).
 - Qwen3.8-Max: forced-choice API measure, partial legs ({int(table.loc[(table.model_id == 'qwen3.8-max-0902') & (table.condition == UNBLINDED), 'n_cells'].iloc[0])} unblinded primary cells of 400;
   11-35 products only) — treat its G={_fmt(table.loc[(table.model_id == 'qwen3.8-max-0902') & (table.condition == UNBLINDED), 'G_lin'].iloc[0])} as indicative.
-- Gemma-4-31B: its repair pass has finished and the run is frozen, but both demographics legs
-  stay partial: unblinded {g31_unb_cells}/400 ({g31_unb_records} records) and blinded
-  {g31_bld_cells}/400 ({g31_bld_records} records) primary cells — its G values are computed
-  from the cells that exist (as-found).
+- Gemma-4-31B: unblinded leg rebuilt to {g31_unb_cells}/400 primary cells via the documented
+  sidecar repair of the frozen run's retry damage ({g31_unb_records} valid readings; backfilled
+  cells carry legacy nulls, excluded from means; 13 primary cells are null in every surviving
+  source — frozen file, pre-retry backup and retry snapshot — so no reading exists for them);
+  blinded stays partial: {g31_bld_cells}/400 ({g31_bld_records} records) primary cells — its
+  G values are computed from the cells that exist.
 - Community fine-tune qwen3.6-35b-UC tracks its base model only loosely
   (G {_fmt(table.loc[(table.model_id == 'qwen3.6-35b-a3b-uncensored') & (table.condition == UNBLINDED), 'G_lin'].iloc[0])} vs
   {_fmt(table.loc[(table.model_id == 'qwen3.6-35b-a3b') & (table.condition == UNBLINDED), 'G_lin'].iloc[0])} for the official base).
@@ -247,15 +249,17 @@ family-specific as much as scale-related.
 {chr(10).join(method_lines)}
 
 **Gemma-4-31B provenance.** Run `R1-YESNO-GEMMA31B-20260917T120236` (the only complete
-Gemma-4-31B run; the 055107 dir is empty, the 231219 dir a 5% stub). Its first-token yes/no
-answers went through a repair-and-retry pass that has now finished, so the run is frozen and
-no row lacks a yes/no reading; the retry repaired the failed readings but did not restore full
-grid coverage. The frozen unblinded leg covers {g31_unb_cells}/400 primary cells
-({g31_unb_records} records) and the blinded leg {g31_bld_cells}/400 ({g31_bld_records} records),
-and some cells carry more readings than the one-per-persona design (extra repair readings are
-averaged in as-found). Its computed blinded G is {g31_bld_g:.2f} from {g31_bld_cells} cells and
-unblinded G={g31_unb_g:.2f} from {g31_unb_cells} cells — far from 0 as required. Counts and G
-values are final for this frozen run.
+Gemma-4-31B run; the 055107 dir is empty, the 231219 dir a 5% stub). A 2026-09-18 in-place retry
+repaired the failed yes/no readings but dropped 25 of 440 cells and double-wrote 1,198 persona
+slots; the unblinded leg was therefore rebuilt into a sidecar — one row per product-price-persona,
+frozen-file reading wins, cells only present in the pre-retry backup are backfilled, backup nulls
+stay null and are excluded from cell means (see the sidecar's .provenance.md) — and the registry
+reads that leg from the sidecar; the frozen run dir is untouched. 13 primary cells (260 persona
+slots) have no usable reading in any surviving source — frozen file, pre-retry backup and retry
+snapshot — so the sidecar cannot restore them. The blinded leg still comes from the frozen run
+dir and stays partial: {g31_bld_cells}/400 primary cells ({g31_bld_records}
+records). Its computed blinded G is {g31_bld_g:.2f} from {g31_bld_cells} cells and
+unblinded G={g31_unb_g:.2f} from {g31_unb_cells} cells — far from 0 as required.
 
 **Coverage anomalies.**
 {chr(10).join(f'- {row.model_id} {row.condition}: {row.primary_cells}/400 primary cells ({row.records} records)' for row in partial.itertuples()) or '- none: all demographics legs cover the 400 primary cells.'}
