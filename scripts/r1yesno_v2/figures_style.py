@@ -1,13 +1,15 @@
 # This file holds the shared drawing style for every figure of the paper:
-# one fixed color per model family, one symbol per architecture type, and
-# the picture-quality settings. Its functions:
+# one fixed color per model family, one symbol and one line style per
+# architecture type, and the picture-quality settings. Its functions:
 #   apply_style — turn on the shared look (font, resolution, tight margins);
 #   family_color — the color for one family name (same in every figure);
 #   arch_marker — the symbol for one architecture (dense=circle, MoE=triangle,
 #     unknown=diamond);
+#   arch_linestyle — the line style for one architecture (dense=solid,
+#     MoE=dashed, unknown=dotted);
 #   save_figure — write one picture as PNG (300 dpi) and PDF;
 #   size_for_params — point size for a model's total parameter count;
-#   add_g_footnote — write a one-line definition of the gain number G along
+#   add_g_footnote — write the one-line definition of the gain number G along
 #     the bottom of a picture, so each figure explains itself.
 
 from __future__ import annotations
@@ -19,14 +21,16 @@ import matplotlib
 matplotlib.use("Agg")  # draw to files, no screen needed
 import matplotlib.pyplot as plt  # noqa: E402
 
-# Fixed family colors (colorblind-safe, muted; human is always black).
+# Fixed family colors (muted, mutually distinct; human is always black).
+# Qwen/Gemma/Granite are pinned by the figure spec (blue/orange/green); the
+# rest are chosen so no two families look alike at thin-line width.
 FAMILY_COLORS: dict[str, str] = {
     "Qwen": "#0072B2",       # blue
-    "Gemma": "#D55E00",      # vermillion
-    "Granite": "#009E73",    # bluish green
-    "OpenAI": "#CC79A7",     # reddish purple
-    "NVIDIA": "#56B4E9",     # sky blue
-    "Meta-Muse": "#E69F00",  # orange
+    "Gemma": "#E69F00",      # orange
+    "Granite": "#009E73",    # green
+    "OpenAI": "#CC79A7",     # muted reddish purple
+    "NVIDIA": "#56B4E9",     # sky blue (clearly lighter than Qwen blue)
+    "Meta-Muse": "#8C564B",  # muted brown
     "GLM": "#9467BD",        # muted purple
     "Other": "#7F7F7F",      # grey
 }
@@ -38,6 +42,13 @@ ARCH_MARKERS: dict[str, str] = {
     "dense": "o",
     "MoE": "^",
     "unknown": "D",
+}
+
+# One line style per architecture, used for curve lines.
+ARCH_LINESTYLES: dict[str, str] = {
+    "dense": "solid",
+    "MoE": "dashed",
+    "unknown": "dotted",
 }
 
 FAMILY_ZORDER = {family: i + 2 for i, family in enumerate(FAMILY_COLORS)}
@@ -72,6 +83,11 @@ def arch_marker(architecture: str) -> str:
     return ARCH_MARKERS.get(architecture, ARCH_MARKERS["unknown"])
 
 
+def arch_linestyle(architecture: str) -> str:
+    """Return the line style for one architecture type."""
+    return ARCH_LINESTYLES.get(architecture, ARCH_LINESTYLES["unknown"])
+
+
 def size_for_params(total_params_b: float | None) -> float:
     """Return the marker area for a model's total size (restrained sqrt)."""
     if total_params_b is None or total_params_b <= 0:
@@ -80,9 +96,8 @@ def size_for_params(total_params_b: float | None) -> float:
 
 
 G_FOOTNOTE = (
-    "G = ratio of the purchase-probability slope on price (20–200% of regular,"
-    " straight-line fit) to the human slope; G=1 = human-sized response, G=0 = no"
-    " response. Markers: ○ dense, △ MoE, ◇ unknown."
+    "G = slope ratio vs humans; 1 = human-sized, 0 = no response;"
+    " ○ dense △ MoE ◇ unknown"
 )
 
 
