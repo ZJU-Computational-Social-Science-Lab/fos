@@ -380,3 +380,68 @@ def test_ensure_model_loaded_still_fails_when_manager_is_down(monkeypatch):
         runner.ensure_model_loaded("http://127.0.0.1:8081", "http://127.0.0.1:8080", config.MODELS[0], 8080)
     assert load_calls == []
     assert health_calls == []
+
+
+# --- TASK-2083: a full run must skip cells the preflight already finished ---
+# The preflight writes persona 0's records under <run_dir>/PREFLIGHT/...;
+# a full launch right after must NOT measure those cells again (spec §10:
+# never duplicate a completed record). A fake PREFLIGHT leg file is read
+# by the planner exactly like a real one, and the fake scorer keeps both
+# tests fully offline.
+
+
+def _run_one_model_full(run_dir, monkeypatch) -> None:
+    """Run gpt-oss-20b's whole full-mode leg block for persona 0, offline."""
+    from twin2k6 import runner
+
+    monkeypatch.setattr(legexec, "make_scorer", lambda context: _good_scorer)
+    runner.run_model(
+        "gpt-oss-20b", run_dir, "full", _personas(), [0],
+        "http://127.0.0.1:8080", runner.new_progress(total=16),
+    )
+
+
+def _leg_records(run_dir, model: str, leg: str) -> list[dict]:
+    """The records a full run wrote into one leg's file, in file order."""
+    path = run_dir / registry.safe_model_name(model) / leg / "records.jsonl"
+    return [
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()
+    ]
+
+
+def test_full_run_skips_the_cell_preflight_already_completed(tmp_path, monkeypatch, capsys):
+    model = "gpt-oss-20b"
+    run_dir = tmp_path / "run"
+    cell = (model, 0, "disease", "gain", "blinded")
+    preflight_dir = (
+        run_dir / "PREFLIGHT" / registry.safe_model_name(model) / "disease_blinded"
+    )
+    preflight_dir.mkdir(parents=True)
+    context = legexec.make_leg_context(model, "http://127.0.0.1:8080", _personas())
+    cells.run_cells(
+        [cell],
+        legexec.make_transport(context, lambda record: None, scorer=_good_scorer),
+        preflight_dir / "records.jsonl",
+    )
+
+    _run_one_model_full(run_dir, monkeypatch)
+
+    full_records = _leg_records(run_dir, model, "disease_blinded")
+    assert [(r["persona_id"], r["arm"]) for r in full_records] == [(0, "loss")]
+    assert "1 skipped from preflight" in capsys.readouterr().out
+    preflight_records = _leg_records(
+        run_dir / "PREFLIGHT", model, "disease_blinded"
+    )
+    assert len(preflight_records) == 1  # the preflight file was only read
+
+
+def test_full_run_without_preflight_records_runs_every_cell(tmp_path, monkeypatch):
+    model = "gpt-oss-20b"
+    run_dir = tmp_path / "run"  # no PREFLIGHT dir exists in a fresh run dir
+
+    _run_one_model_full(run_dir, monkeypatch)
+
+    full_records = _leg_records(run_dir, model, "disease_blinded")
+    assert [(r["persona_id"], r["arm"]) for r in full_records] == [
+        (0, "gain"), (0, "loss"),
+    ]

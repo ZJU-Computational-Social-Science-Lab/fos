@@ -6,7 +6,9 @@
 # finished record to its leg's records file the moment it exists (flush per
 # record, force-sync every 50, torn-line repair on resume), and unloads the
 # model. A killed run restarts with --resume and skips every cell already on
-# disk. --mode preflight runs just persona 0 on every model into a PREFLIGHT
+# disk — including the persona-0 cells the preflight subtree finished, so a
+# full launch after a preflight never duplicates a completed record (spec
+# §10). --mode preflight runs just persona 0 on every model into a PREFLIGHT
 # folder and writes the technical PREFLIGHT_REPORT.md; it never starts the
 # full run. --dry-run needs no server: it prints the cell counts and checks
 # the rendered prompts, writing nothing.
@@ -322,7 +324,7 @@ def note_record(root: Path, progress: dict, mode: str, model: str) -> None:
 
 def run_model(model: str, root: Path, mode: str, personas: list[dict],
               ids: list[int], base_url: str, progress: dict) -> None:
-    """One model's whole leg block: 12 legs (6 experiments × 2 blinding)."""
+    """One model's 12-leg block; full mode skips preflight-finished cells."""
     context = legexec.make_leg_context(model, base_url, personas)
     transport = legexec.make_transport(
         context,
@@ -331,6 +333,17 @@ def run_model(model: str, root: Path, mode: str, personas: list[dict],
     for experiment in experiments.EXPERIMENTS:
         for blind in config.BLINDINGS:
             planned = legexec.leg_cells(model, ids, experiment, blind)
+            # Full mode must also skip cells the preflight leg already
+            # finished (spec §10: never duplicate a completed record).
+            preflight_keys: set[tuple] = set()
+            if mode == "full":
+                preflight_keys = cells.load_existing_keys(legexec.leg_dir(
+                    Path(root) / PREFLIGHT_DIRNAME, model, experiment, blind,
+                ) / "records.jsonl")
+            preflight_skipped = len(planned)
+            planned = [cell for cell in planned
+                       if cells.record_key(cell) not in preflight_keys]
+            preflight_skipped -= len(planned)
             directory = legexec.leg_dir(root, model, experiment, blind)
             directory.mkdir(parents=True, exist_ok=True)
             path = directory / "records.jsonl"
@@ -338,8 +351,11 @@ def run_model(model: str, root: Path, mode: str, personas: list[dict],
             if durable:
                 log(f"  leg {experiment}_{blind}: {durable} records durable")
             cells.run_cells(planned, transport, path)
-            log(f"  leg {experiment}_{blind}: {len(planned)} cells planned "
-                f"({durable} were already durable)")
+            extra = (f"; {preflight_skipped} skipped from preflight"
+                     if preflight_skipped else "")
+            log(f"  leg {experiment}_{blind}: "
+                f"{len(planned) + preflight_skipped} cells planned "
+                f"({durable} were already durable{extra})")
 
 
 def ensure_model_loaded(manager_url: str, base_url: str, model: str,
