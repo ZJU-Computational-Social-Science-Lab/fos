@@ -1,17 +1,21 @@
 # This file holds the shared look and the shared ordering for every figure
-# of the paper: one fixed color per model family, the blinding-condition
-# names both figures use, the one model row order both figures share, the
-# heatmap color scale, and the picture-quality and saving settings. Its
-# functions:
+# of the paper: the four family blocks and one fixed color per block, the
+# blinding-condition names both figures use, the one fixed model row order
+# both figures share (the user's explicit choice, NOT a performance sort),
+# the marker symbol per architecture, the heatmap color scale, and the
+# picture-quality and saving settings. Its functions:
 #   apply_style — turn on the shared look (font, resolution, tight margins);
-#   family_color — the color for one family name (same in every figure);
-#   arch_marker — the symbol for one architecture (dense=circle, MoE=triangle,
-#     unknown=circle, the neutral default);
+#   block_of_family — which family block (Qwen, Gemma, Granite, Other) a
+#     model family belongs to;
+#   family_color — the fixed block color for one model family;
+#   arch_marker — the symbol for one architecture (dense=circle,
+#     MoE=triangle; anything else raises an error so no unknown symbol can
+#     ever be drawn);
+#   figure_row_order — the one fixed model order both figures share;
+#   figure_blocks — the four family blocks with their model ids, in that
+#     fixed order;
 #   purchase_cmap — the heatmap color scale (viridis) with light grey set
 #     aside for "no data" cells;
-#   figure_row_order — the one model order both figures use: family blocks
-#     in family order, inside a block smallest active parameters first,
-#     models with unknown parameters last in their block;
 #   save_figure — write one picture as PNG (300 dpi) and PDF.
 
 from __future__ import annotations
@@ -24,30 +28,32 @@ matplotlib.use("Agg")  # draw to files, no screen needed
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.colors import Colormap  # noqa: E402
 
-from scripts.r1yesno_v2.registry import FAMILY_ORDER, MODELS  # noqa: E402
+from scripts.r1yesno_v2.registry import MODELS  # noqa: E402
 
-# Fixed family colors (muted, mutually distinct; human is always black).
-# Qwen/Gemma/Granite are pinned by the figure spec (blue/orange/green); the
-# rest are chosen so no two families look alike at marker size.
-FAMILY_COLORS: dict[str, str] = {
-    "Qwen": "#0072B2",       # blue
-    "Gemma": "#E69F00",      # orange
-    "Granite": "#009E73",    # green
-    "OpenAI": "#CC79A7",     # muted reddish purple
-    "NVIDIA": "#56B4E9",     # sky blue (clearly lighter than Qwen blue)
-    "Meta-Muse": "#8C564B",  # muted brown
-    "GLM": "#9467BD",        # muted purple
-    "Other": "#7F7F7F",      # grey
+# The four family blocks both figures use, in display order. Registry
+# families not named here (OpenAI, NVIDIA, Meta-Muse, GLM) all belong to
+# the "Other" block.
+FAMILY_BLOCKS: tuple[str, ...] = ("Qwen", "Gemma", "Granite", "Other")
+
+# Fixed block colors (muted, mutually distinct; human is always black).
+# Qwen/Gemma/Granite are pinned by the figure spec (blue/orange/green);
+# "Other" is a muted reddish purple so it stays clearly separate from the
+# three pinned colors even at dot size.
+BLOCK_COLORS: dict[str, str] = {
+    "Qwen": "#0072B2",     # blue
+    "Gemma": "#E69F00",    # orange
+    "Granite": "#009E73",  # green
+    "Other": "#CC79A7",    # muted reddish purple
 }
 
 HUMAN_COLOR = "#000000"
 
-# One symbol per architecture, used in every figure. Unknown architecture
-# gets the neutral circle (no diamond anywhere).
+# One symbol per architecture, used in every figure. An architecture with
+# no entry here raises an error, so a figure can never silently draw an
+# "unknown" symbol.
 ARCH_MARKERS: dict[str, str] = {
     "dense": "o",
     "MoE": "^",
-    "unknown": "o",
 }
 
 # The two blinding conditions every figure shows side by side.
@@ -57,6 +63,33 @@ CONDITIONS = (BLINDED, UNBLINDED)
 PANEL_TITLES = {BLINDED: "Blinded", UNBLINDED: "Unblinded"}
 
 NO_DATA_COLOR = "lightgrey"
+
+# The one model row order both figures share: four family blocks, and
+# inside each block the user's explicit chosen order (NOT sorted by
+# performance or size). The Human reference rows are added by the heatmap
+# itself; this list is the 16 models only.
+FIGURE_ROW_ORDER: tuple[str, ...] = (
+    # Qwen block
+    "qwen3-4b",
+    "qwen3-32b",
+    "qwen3.6-35b-a3b",
+    "qwen3.6-35b-a3b-uncensored",
+    "qwen3.6-27b-dense",
+    "qwen3.8-27b",
+    "qwen3.8-max-0902",
+    # Gemma block
+    "gemma-4-12b-it-qat",
+    "gemma-4-26b-a4b",
+    "gemma-4-31b-it-qat",
+    # Granite block
+    "granite-4.1-8b",
+    "granite-4.1-30b",
+    # Other block
+    "gpt-oss-20b",
+    "nemotron-cascade-2-30b-a3b",
+    "muse-glimmer",
+    "glm-4.7-flash",
+)
 
 
 def apply_style() -> None:
@@ -78,14 +111,46 @@ def apply_style() -> None:
     )
 
 
+def block_of_family(family: str) -> str:
+    """Return the family block one model family belongs to."""
+    return family if family in FAMILY_BLOCKS else "Other"
+
+
 def family_color(family: str) -> str:
-    """Return the fixed color for one family (unknown families get grey)."""
-    return FAMILY_COLORS.get(family, FAMILY_COLORS["Other"])
+    """Return the fixed block color for one model family."""
+    return BLOCK_COLORS[block_of_family(family)]
 
 
 def arch_marker(architecture: str) -> str:
-    """Return the marker symbol for one architecture type."""
-    return ARCH_MARKERS.get(architecture, ARCH_MARKERS["unknown"])
+    """Return the marker symbol for one architecture; error if unknown."""
+    if architecture not in ARCH_MARKERS:
+        raise ValueError(f"no marker defined for architecture {architecture!r}")
+    return ARCH_MARKERS[architecture]
+
+
+def figure_row_order(model_ids: list[str]) -> list[str]:
+    """Return the one fixed model order both figures share.
+
+    Raises ValueError when the loaded models are not exactly the registered
+    sixteen, so an incomplete or extended roster can never be drawn quietly.
+    """
+    if set(model_ids) != set(FIGURE_ROW_ORDER):
+        missing = sorted(set(FIGURE_ROW_ORDER) - set(model_ids))
+        extra = sorted(set(model_ids) - set(FIGURE_ROW_ORDER))
+        raise ValueError(f"model roster mismatch; missing={missing} extra={extra}")
+    return list(FIGURE_ROW_ORDER)
+
+
+def figure_blocks() -> list[tuple[str, list[str]]]:
+    """Return the family blocks with their model ids in the fixed order."""
+    blocks: list[tuple[str, list[str]]] = []
+    for block in FAMILY_BLOCKS:
+        ids = [
+            model_id for model_id in FIGURE_ROW_ORDER
+            if block_of_family(MODELS[model_id]["family"]) == block
+        ]
+        blocks.append((block, ids))
+    return blocks
 
 
 def purchase_cmap() -> Colormap:
@@ -93,30 +158,6 @@ def purchase_cmap() -> Colormap:
     cmap = matplotlib.colormaps["viridis"].copy()
     cmap.set_bad(NO_DATA_COLOR)
     return cmap
-
-
-def figure_row_order(model_ids: list[str]) -> list[str]:
-    """Return the one model order both figures share.
-
-    Models are grouped into family blocks (registry family order), inside a
-    block sorted by active parameters ascending (ties broken by model id
-    for a stable order), and models whose active parameter count is unknown
-    go last inside their block.
-    """
-    family_rank = {family: i for i, family in enumerate(FAMILY_ORDER)}
-
-    def sort_key(model_id: str) -> tuple[int, float, float, str]:
-        info = MODELS[model_id]
-        active = info["active_params_b"]
-        known = active is not None
-        return (
-            family_rank.get(info["family"], len(FAMILY_ORDER)),
-            0.0 if known else 1.0,  # unknown-params models last in the block
-            float(active) if known else 0.0,
-            model_id,
-        )
-
-    return sorted(model_ids, key=sort_key)
 
 
 def save_figure(fig: plt.Figure, outdir: Path, name: str) -> list[Path]:
