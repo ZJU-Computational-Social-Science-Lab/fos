@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from scripts.r1yesno_v2.figures_curves import BLINDED, UNBLINDED
+from scripts.r1yesno_v2.figures_style import BLINDED, UNBLINDED
 from scripts.r1yesno_v2.registry import MODELS
 
 PRIMARY_CONDITIONS = (BLINDED, UNBLINDED)
@@ -246,10 +246,11 @@ above its own 12B dense; Granite splits by size: near-flat at 8B, above-human at
 family-specific as much as scale-related.
 
 **Figures** (in `figs/`, each as .png and .pdf):
-- `fig1_curves` — purchase probability vs price (20-200% of regular), blinded and unblinded;
-  human reference (thick black) and all 16 models, colored by family (legend on the right).
-- `fig2_gain_vs_active_params` — gain G vs active parameters (log x), blinded and unblinded,
-  plus a strip for the unknown-active-params model; reference lines at G=0 and G=1.
+- `fig1_heatmap_purchase_probability` — purchase probability per price level (20-200% of
+  regular), one heatmap row per human group and model (rows grouped by family, white block
+  separators), blinded and unblinded side by side on one shared 0-1 color scale.
+- `fig2_gain_dotplot` — price-response gain G per model (one dot per model, family colors;
+  circle = dense, triangle = MoE), reference lines at G=0 and G=1, blinded and unblinded.
 
 **Probability measure per model**
 {chr(10).join(method_lines)}

@@ -1,16 +1,18 @@
-# This file holds the shared drawing style for every figure of the paper:
-# one fixed color per model family, one symbol and one line style per
-# architecture type, and the picture-quality settings. Its functions:
+# This file holds the shared look and the shared ordering for every figure
+# of the paper: one fixed color per model family, the blinding-condition
+# names both figures use, the one model row order both figures share, the
+# heatmap color scale, and the picture-quality and saving settings. Its
+# functions:
 #   apply_style — turn on the shared look (font, resolution, tight margins);
 #   family_color — the color for one family name (same in every figure);
 #   arch_marker — the symbol for one architecture (dense=circle, MoE=triangle,
-#     unknown=diamond);
-#   arch_linestyle — the line style for one architecture (dense=solid,
-#     MoE=dashed, unknown=dotted);
-#   save_figure — write one picture as PNG (300 dpi) and PDF;
-#   size_for_params — point size for a model's total parameter count;
-#   add_g_footnote — write the one-line definition of the gain number G along
-#     the bottom of a picture, so each figure explains itself.
+#     unknown=circle, the neutral default);
+#   purchase_cmap — the heatmap color scale (viridis) with light grey set
+#     aside for "no data" cells;
+#   figure_row_order — the one model order both figures use: family blocks
+#     in family order, inside a block smallest active parameters first,
+#     models with unknown parameters last in their block;
+#   save_figure — write one picture as PNG (300 dpi) and PDF.
 
 from __future__ import annotations
 
@@ -20,10 +22,13 @@ import matplotlib
 
 matplotlib.use("Agg")  # draw to files, no screen needed
 import matplotlib.pyplot as plt  # noqa: E402
+from matplotlib.colors import Colormap  # noqa: E402
+
+from scripts.r1yesno_v2.registry import FAMILY_ORDER, MODELS  # noqa: E402
 
 # Fixed family colors (muted, mutually distinct; human is always black).
 # Qwen/Gemma/Granite are pinned by the figure spec (blue/orange/green); the
-# rest are chosen so no two families look alike at thin-line width.
+# rest are chosen so no two families look alike at marker size.
 FAMILY_COLORS: dict[str, str] = {
     "Qwen": "#0072B2",       # blue
     "Gemma": "#E69F00",      # orange
@@ -37,21 +42,21 @@ FAMILY_COLORS: dict[str, str] = {
 
 HUMAN_COLOR = "#000000"
 
-# One symbol per architecture, used in every figure.
+# One symbol per architecture, used in every figure. Unknown architecture
+# gets the neutral circle (no diamond anywhere).
 ARCH_MARKERS: dict[str, str] = {
     "dense": "o",
     "MoE": "^",
-    "unknown": "D",
+    "unknown": "o",
 }
 
-# One line style per architecture, used for curve lines.
-ARCH_LINESTYLES: dict[str, str] = {
-    "dense": "solid",
-    "MoE": "dashed",
-    "unknown": "dotted",
-}
+# The two blinding conditions every figure shows side by side.
+BLINDED = "demographics_blinded"
+UNBLINDED = "demographics_unblinded"
+CONDITIONS = (BLINDED, UNBLINDED)
+PANEL_TITLES = {BLINDED: "Blinded", UNBLINDED: "Unblinded"}
 
-FAMILY_ZORDER = {family: i + 2 for i, family in enumerate(FAMILY_COLORS)}
+NO_DATA_COLOR = "lightgrey"
 
 
 def apply_style() -> None:
@@ -83,35 +88,35 @@ def arch_marker(architecture: str) -> str:
     return ARCH_MARKERS.get(architecture, ARCH_MARKERS["unknown"])
 
 
-def arch_linestyle(architecture: str) -> str:
-    """Return the line style for one architecture type."""
-    return ARCH_LINESTYLES.get(architecture, ARCH_LINESTYLES["unknown"])
+def purchase_cmap() -> Colormap:
+    """Return the heatmap color scale: viridis, light grey = no data."""
+    cmap = matplotlib.colormaps["viridis"].copy()
+    cmap.set_bad(NO_DATA_COLOR)
+    return cmap
 
 
-def size_for_params(total_params_b: float | None) -> float:
-    """Return the marker area for a model's total size (restrained sqrt)."""
-    if total_params_b is None or total_params_b <= 0:
-        return 60.0
-    return 30.0 + 90.0 * (total_params_b / 36.0) ** 0.5
+def figure_row_order(model_ids: list[str]) -> list[str]:
+    """Return the one model order both figures share.
 
+    Models are grouped into family blocks (registry family order), inside a
+    block sorted by active parameters ascending (ties broken by model id
+    for a stable order), and models whose active parameter count is unknown
+    go last inside their block.
+    """
+    family_rank = {family: i for i, family in enumerate(FAMILY_ORDER)}
 
-G_FOOTNOTE = (
-    "G = slope ratio vs humans; 1 = human-sized, 0 = no response;"
-    " ○ dense △ MoE ◇ unknown"
-)
+    def sort_key(model_id: str) -> tuple[int, float, float, str]:
+        info = MODELS[model_id]
+        active = info["active_params_b"]
+        known = active is not None
+        return (
+            family_rank.get(info["family"], len(FAMILY_ORDER)),
+            0.0 if known else 1.0,  # unknown-params models last in the block
+            float(active) if known else 0.0,
+            model_id,
+        )
 
-
-def add_g_footnote(fig: plt.Figure, y: float = 0.008) -> None:
-    """Write the one-line gain-G definition in small grey text under a figure."""
-    fig.text(0.01, y, G_FOOTNOTE, fontsize=6, color="grey", ha="left", va="bottom")
-
-
-def clean_log_ticks(ax: plt.Axes) -> None:
-    """Replace log-axis default tick labels with plain numbers (4, 10, 30)."""
-    ticks = [4, 10, 30]
-    ax.set_xticks(ticks)
-    ax.set_xticklabels([str(t) for t in ticks])
-    ax.minorticks_off()
+    return sorted(model_ids, key=sort_key)
 
 
 def save_figure(fig: plt.Figure, outdir: Path, name: str) -> list[Path]:
