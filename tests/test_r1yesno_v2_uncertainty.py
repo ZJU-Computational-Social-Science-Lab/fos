@@ -118,7 +118,7 @@ def test_collect_clusters_keeps_every_cluster_and_observation():
     uncertainty = _uncertainty()
     prices = [0.2, 0.4, 0.6, 0.8, 1.0]
     df = _long_frame(
-        products=["prod_a", "prod_a", "prod_b", "prod_b"],
+        products=["prod_a", "prod_b"],
         personas=[["p1", "p2"], ["p1", "p2"]],
         prices_per_cluster=prices,
     )
