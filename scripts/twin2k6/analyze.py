@@ -262,7 +262,7 @@ def write_analysis_outputs(records: list[dict], benchmarks: dict, out_dir: Path)
                ["model", "experiment", "mean_branch_mass",
                 "low_branch_mass_share"], diagnostic_rows)
 
-    gains = [gain for _k, gain in gain_rows] if gain_rows else []
+    gains = [gain for _model, _experiment, _name, gain in gain_rows]
     summary = {
         "study": config.STUDY_NAME,
         "records": len(records),
