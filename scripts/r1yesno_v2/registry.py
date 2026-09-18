@@ -49,9 +49,17 @@ MODELS: dict[str, dict] = {
         generation="Gemma-4", architecture="dense", total_params_b=30.7,
         active_params_b=30.7, local_or_api="local", quantization="qat_q4_0",
         run_dir="R1-YESNO-GEMMA31B-20260917T120236", safe_dir="google_gemma-4-31b-it-qat",
+        # The 2026-09-18 in-place retry left the frozen demographics_unblinded
+        # file damaged (25 cells dropped, 1,198 persona slots double-written),
+        # so this leg is read from the repaired sidecar instead (task 2035;
+        # merge rule and counts documented in the sidecar's .provenance.md).
+        # Path is relative to the results root. The frozen run dir is untouched.
+        leg_overrides={"demographics_unblinded": Path(
+            "R1-YESNO-ANALYSIS-V2/derived/gemma31b_120236_demographics_unblinded_repaired.jsonl")},
+        run_provenance="R1-YESNO-GEMMA31B-20260917T120236 + repaired sidecar",
         method=LOGPROB_METHOD,
         metadata_source="https://huggingface.co/google/gemma-4-31B-it-qat-q4_0-unquantized",
-        notes="31B dense; QAT Q4_0; demographics legs row-partial (retry filtered); served gemma-4-31B-it-QAT-Q4_0.gguf",
+        notes="31B dense; QAT Q4_0; demographics_unblinded read from repaired sidecar (blinded leg row-partial); served gemma-4-31B-it-QAT-Q4_0.gguf",
     ),
     "gemma-4-12b-it-qat": dict(
         display_name="Gemma-4-12B (QAT)", short_name="Gemma-4-12B", family="Gemma",
