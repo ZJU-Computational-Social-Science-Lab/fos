@@ -13,8 +13,9 @@
 from pathlib import Path
 
 # Short study id -> the id the model manager's /models/load endpoint knows,
-# transcribed from the manager's MODEL_REGISTRY (two ids differ textually
-# from the study's short names: the uncensored qwen has no "qwen/" prefix).
+# transcribed from the manager's MODEL_REGISTRY (one id differs textually
+# from the study's short name: the uncensored qwen has no "qwen/" prefix;
+# qwen3-4b is registered under exactly its short name, with no org prefix).
 MANAGER_MODEL_IDS: dict[str, str] = {
     "gpt-oss-20b": "openai/gpt-oss-20b",
     "gemma-4-26b-a4b": "google/gemma-4-26b-a4b",
@@ -27,7 +28,7 @@ MANAGER_MODEL_IDS: dict[str, str] = {
         "qwen3.6-35b-a3b-uncensored-hauhaucs-aggressive"
     ),
     "qwen3-32b": "qwen/qwen3-32b",
-    "qwen3-4b": "qwen/qwen3-4b",
+    "qwen3-4b": "qwen3-4b",
     "granite-4.1-8b": "ibm/granite-4.1-8b",
     "granite-4.1-30b": "ibm/granite-4.1-30b",
     "nemotron-cascade-2-30b-a3b": "nvidia/nemotron-cascade-2-30b-a3b",
@@ -76,7 +77,7 @@ GGUF_PATHS: dict[str, str] = {
         "~/.lmstudio/models/lmstudio-community/Qwen3-32B-GGUF/"
         "Qwen3-32B-Q4_K_M.gguf"
     ),
-    "qwen/qwen3-4b": (
+    "qwen3-4b": (
         "~/.lmstudio/models/lmstudio-community/Qwen3-4B-Instruct-2507-GGUF/"
         "Qwen3-4B-Instruct-2507-Q8_0.gguf"
     ),
