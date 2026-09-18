@@ -219,7 +219,7 @@ def test_errors_file_holds_the_worked_example_disease_numbers(tmp_path: Path):
     numbers), unblinded error 0.05581 (contrast -0.3 vs human -0.35581)."""
     _summary, out_dir = _run_write(tmp_path)
     _header, rows = _read_csv(out_dir / "errors.csv")
-    assert len(rows) == 2 * len(EXPECTED_GAINS), (
+    assert len(rows) == len(MODELS) * 2 * len(EXPECTED_GAINS), (
         "one normalized-error row per model per blinding per contrast")
     disease = {
         (row["model"], row["blinding"]): float(row["normalized_error"])
@@ -240,7 +240,7 @@ def test_arm_means_file_matches_hand_computed_sunk_cost_means(tmp_path: Path):
     _summary, out_dir = _run_write(tmp_path)
     _header, rows = _read_csv(out_dir / "arm_means.csv")
     assert rows[0].keys() == {
-        "model", "experiment", "blinding", "arm", "mean"}.keys()
+        "model", "experiment", "blinding", "arm", "mean"}
     got = {
         (row["model"], row["experiment"], row["blinding"],
          row["arm"]): float(row["mean"])
