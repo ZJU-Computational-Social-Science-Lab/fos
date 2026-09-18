@@ -18,6 +18,7 @@ import pandas as pd
 from adjustText import adjust_text
 
 from scripts.r1yesno_v2.figures_style import (
+    add_g_footnote,
     apply_style,
     arch_marker,
     clean_log_ticks,
@@ -146,6 +147,7 @@ def fig1_active_params_vs_gain(table: pd.DataFrame, outdir: Path) -> list[Path]:
     axes[0].set_ylabel("price-response gain  G")
     _draw_unknown_strip(axes[2], table, unknown_ids)
     _add_family_marker_legend(fig, known[UNBLINDED])
+    add_g_footnote(fig, y=0.015)
     fig.suptitle("Price-response gain vs active parameter scale", fontsize=11, y=1.00)
     return save_figure(fig, outdir, "fig1_active_params_vs_gain")
 
@@ -225,14 +227,29 @@ def fig2_all_models_gain_ranking(table: pd.DataFrame, outdir: Path) -> list[Path
         ax.set_xlabel("price-response gain  G")
     axes[0].set_ylabel("model (sorted by G in this panel)")
     fig.suptitle("All models ranked by price-response gain", fontsize=11)
-    fig.tight_layout(rect=(0, 0.02, 1, 0.97))
+    add_g_footnote(fig, y=0.008)
+    fig.tight_layout(rect=(0, 0.05, 1, 0.97))
     return save_figure(fig, outdir, "fig2_all_models_gain_ranking")
+
+
+def _gain_axis_limits(table: pd.DataFrame) -> tuple[float, float]:
+    """Return y-limits that fit every model's gain G in both conditions.
+
+    The top gets 15% headroom above the tallest point (so its dot and name
+    label stay inside the picture) and never cuts below the G=1 human line;
+    the bottom keeps the G=0 line visible.
+    """
+    gains = pd.concat([_with_plot_info(table, c)["G_lin"] for c in (BLINDED, UNBLINDED)])
+    top = max(float(gains.max()) * 1.15, G_REFERENCE * 1.15)
+    bottom = min(-0.1, float(gains.min()) - 0.1)
+    return bottom, top
 
 
 def fig3_bias_vs_gain(table: pd.DataFrame, outdir: Path) -> list[Path]:
     """Figure 3: average purchase bias B (pp) against gain G, per condition."""
     apply_style()
     fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.8), sharey=True)
+    y_bottom, y_top = _gain_axis_limits(table)
     for ax, condition in zip(axes, (BLINDED, UNBLINDED)):
         rows = _with_plot_info(table, condition)
         _scatter_models(ax, rows, "B_pp")
@@ -241,9 +258,10 @@ def fig3_bias_vs_gain(table: pd.DataFrame, outdir: Path) -> list[Path]:
         _label_points(ax, rows, "B_pp")
         ax.set_title(PANEL_TITLES[condition], fontsize=10)
         ax.set_xlabel("bias  B  (percentage points; + = over-purchase)")
-        ax.set_ylim(min(-0.1, float(rows["G_lin"].min()) - 0.1), None)
+        ax.set_ylim(y_bottom, y_top)
     axes[0].set_ylabel("price-response gain  G")
     _add_family_marker_legend(fig, _with_plot_info(table, UNBLINDED))
+    add_g_footnote(fig, y=0.008)
     fig.suptitle("Purchase bias vs price-response gain", fontsize=11)
     fig.tight_layout(rect=(0, 0.06, 1, 0.95))
     return save_figure(fig, outdir, "fig3_bias_vs_gain")
