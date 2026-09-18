@@ -186,10 +186,15 @@ def summary_text(
     deltas = prior_art_deltas(table, prior_art_path)
     partial = coverage.loc[coverage["primary_cells"] < EXPECTED_PRIMARY_CELLS]
     swing = _largest_blinding_swing(table)
-    g31_blinded = table.loc[
-        (table["model_id"] == "gemma-4-31b-it-qat") & (table["condition"] == BLINDED),
-        "G_lin",
-    ]
+    g31_id = "gemma-4-31b-it-qat"
+    g31 = table.loc[table["model_id"] == g31_id]
+    g31_unb_cells = int(g31.loc[g31["condition"] == UNBLINDED, "n_cells"].iloc[0])
+    g31_bld_cells = int(g31.loc[g31["condition"] == BLINDED, "n_cells"].iloc[0])
+    g31_unb_g = float(g31.loc[g31["condition"] == UNBLINDED, "G_lin"].iloc[0])
+    g31_bld_g = float(g31.loc[g31["condition"] == BLINDED, "G_lin"].iloc[0])
+    g31_cov = coverage.loc[coverage["model_id"] == g31_id]
+    g31_unb_records = int(g31_cov.loc[g31_cov["condition"] == UNBLINDED, "records"].iloc[0])
+    g31_bld_records = int(g31_cov.loc[g31_cov["condition"] == BLINDED, "records"].iloc[0])
     method_lines = [
         f"- {model_id}: {MODELS[model_id]['method']}"
         for model_id in MODELS
@@ -223,8 +228,10 @@ MoE range {moe.min():.2f}-{moe.max():.2f} vs dense range {dense.min():.2f}-{dens
   (B moves { _fmt(table.loc[(table.model_id == 'gemma-4-26b-a4b') & (table.condition == BLINDED), 'B_pp'].iloc[0], 1)} -> {_fmt(table.loc[(table.model_id == 'gemma-4-26b-a4b') & (table.condition == UNBLINDED), 'B_pp'].iloc[0], 1)} pp).
 - Qwen3.8-Max: forced-choice API measure, partial legs ({int(table.loc[(table.model_id == 'qwen3.8-max-0902') & (table.condition == UNBLINDED), 'n_cells'].iloc[0])} unblinded primary cells of 400;
   11-35 products only) — treat its G={_fmt(table.loc[(table.model_id == 'qwen3.8-max-0902') & (table.condition == UNBLINDED), 'G_lin'].iloc[0])} as indicative.
-- Gemma-4-31B: demographics legs are row-partial after the failed first-token retries
-  (see provenance below); its G is computed from the cells that exist.
+- Gemma-4-31B: its repair pass has finished and the run is frozen, but both demographics legs
+  stay partial: unblinded {g31_unb_cells}/400 ({g31_unb_records} records) and blinded
+  {g31_bld_cells}/400 ({g31_bld_records} records) primary cells — its G values are computed
+  from the cells that exist (as-found).
 - Community fine-tune qwen3.6-35b-UC tracks its base model only loosely
   (G {_fmt(table.loc[(table.model_id == 'qwen3.6-35b-a3b-uncensored') & (table.condition == UNBLINDED), 'G_lin'].iloc[0])} vs
   {_fmt(table.loc[(table.model_id == 'qwen3.6-35b-a3b') & (table.condition == UNBLINDED), 'G_lin'].iloc[0])} for the official base).
@@ -241,13 +248,14 @@ family-specific as much as scale-related.
 
 **Gemma-4-31B provenance.** Run `R1-YESNO-GEMMA31B-20260917T120236` (the only complete
 Gemma-4-31B run; the 055107 dir is empty, the 231219 dir a 5% stub). Its first-token yes/no
-retries kept ~61-63% of demographics records valid; the current (post-filter) `records.jsonl`
-legs are non-null-only and row-partial, and were still being appended to by a retry process at
-analysis time — cell counts here are whatever existed at run time. Its computed blinded G is
-{g31_blinded.iloc[0]:.2f} from {int(table.loc[(table.model_id == 'gemma-4-31b-it-qat') & (table.condition == BLINDED), 'n_cells'].iloc[0])} cells —
-far from 0 as required, {abs(g31_blinded.iloc[0] - 0.813):.2f} above the ~0.81 prior recomputation
-(METHODS.md), consistent with the retry having appended further valid records since that
-snapshot; treat its exact value as provisional until the run is frozen.
+answers went through a repair-and-retry pass that has now finished, so the run is frozen and
+no row lacks a yes/no reading; the retry repaired the failed readings but did not restore full
+grid coverage. The frozen unblinded leg covers {g31_unb_cells}/400 primary cells
+({g31_unb_records} records) and the blinded leg {g31_bld_cells}/400 ({g31_bld_records} records),
+and some cells carry more readings than the one-per-persona design (extra repair readings are
+averaged in as-found). Its computed blinded G is {g31_bld_g:.2f} from {g31_bld_cells} cells and
+unblinded G={g31_unb_g:.2f} from {g31_unb_cells} cells — far from 0 as required. Counts and G
+values are final for this frozen run.
 
 **Coverage anomalies.**
 {chr(10).join(f'- {row.model_id} {row.condition}: {row.primary_cells}/400 primary cells ({row.records} records)' for row in partial.itertuples()) or '- none: all demographics legs cover the 400 primary cells.'}

@@ -19,6 +19,7 @@ from adjustText import adjust_text
 
 from scripts.r1yesno_v2.figures_style import (
     HUMAN_COLOR,
+    add_g_footnote,
     apply_style,
     arch_marker,
     clean_log_ticks,
@@ -160,7 +161,8 @@ def fig5_family_scaling(table: pd.DataFrame, outdir: Path) -> list[Path]:
     ax.set_ylabel("price-response gain  G  (unblinded)")
     ax.set_title("Gain vs active parameters across families and generations", fontsize=10)
     _note_unknown_x_models(table, ax)
-    fig.tight_layout()
+    add_g_footnote(fig, y=0.008)
+    fig.tight_layout(rect=(0, 0.045, 1, 1))
     return save_figure(fig, outdir, "fig5_family_scaling")
 
 
