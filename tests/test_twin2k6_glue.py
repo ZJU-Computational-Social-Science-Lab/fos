@@ -225,3 +225,158 @@ def test_records_per_model_matches_the_pinned_grid():
 
     assert runner.records_per_model("full") == 3200
     assert runner.records_per_model("preflight") == 32
+
+
+# --- TASK-2080: ensure_model_loaded must load FIRST, then poll health ---
+# After an explicit unload nothing listens on :8080, so a health probe made
+# before the load decision used to crash the run. These tests fake the
+# manager, the health endpoint and the clock so everything stays offline.
+
+
+class _FakeHealthReply:
+    """A stand-in for the reply urlopen gives: just a status number."""
+
+    def __init__(self, status: int) -> None:
+        self.status = status
+
+    def __enter__(self) -> "_FakeHealthReply":
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        return None
+
+
+def _patch_manager(monkeypatch, status: dict, calls: list) -> None:
+    """Fake the manager's status answer (and remember that it was asked)."""
+    import launch_support
+
+    def fake_status(manager_url: str) -> dict:
+        calls.append(manager_url)
+        if isinstance(status, Exception):
+            raise status
+        return status
+
+    monkeypatch.setattr(launch_support, "_manager_status", fake_status)
+
+
+def _patch_load(monkeypatch, calls: list, on_load=None) -> None:
+    """Fake the model load so no real manager or GPU is ever touched."""
+    import launch_support
+
+    def fake_load(manager_url: str, model_id: str, port: int) -> None:
+        calls.append((manager_url, model_id, port))
+        if on_load is not None:
+            on_load()
+
+    monkeypatch.setattr(launch_support, "_load_model", fake_load)
+
+
+def test_ensure_model_loaded_skips_load_when_manager_reports_model_healthy(monkeypatch):
+    from twin2k6 import config, registry, runner
+
+    model = config.MODELS[0]
+    model_id = registry.manager_model_id(model)
+    manager_calls: list = []
+    load_calls: list = []
+    health_calls: list = []
+    _patch_manager(monkeypatch, {"8080": {"model": model_id}}, manager_calls)
+    _patch_load(monkeypatch, load_calls)
+
+    def fake_urlopen(url, timeout):
+        health_calls.append(url)
+        return _FakeHealthReply(200)
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    runner.ensure_model_loaded("http://127.0.0.1:8081", "http://127.0.0.1:8080", model, 8080)
+    assert load_calls == []
+    assert len(health_calls) <= 1
+
+
+def test_ensure_model_loaded_loads_model_when_nothing_listens_on_port(monkeypatch):
+    import urllib.error
+
+    from twin2k6 import config, registry, runner
+
+    model = config.MODELS[0]
+    model_id = registry.manager_model_id(model)
+    load_calls: list = []
+    _patch_manager(monkeypatch, {}, [])
+    _patch_load(monkeypatch, load_calls, on_load=lambda: state.update(loaded=True))
+    state = {"loaded": False}
+
+    def fake_urlopen(url, timeout):
+        if not state["loaded"]:
+            raise urllib.error.URLError(ConnectionRefusedError("Connection refused"))
+        return _FakeHealthReply(200)
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    runner.ensure_model_loaded("http://127.0.0.1:8081", "http://127.0.0.1:8080", model, 8080)
+    assert load_calls == [("http://127.0.0.1:8081", model_id, 8080)]
+
+
+def test_ensure_model_loaded_retries_health_until_server_comes_up(monkeypatch):
+    import urllib.error
+
+    from twin2k6 import config, runner
+
+    attempts: list = []
+    load_calls: list = []
+    _patch_manager(monkeypatch, {}, [])
+    _patch_load(monkeypatch, load_calls)
+    monkeypatch.setattr("time.sleep", lambda seconds: None)
+
+    def fake_urlopen(url, timeout):
+        attempts.append(url)
+        if len(attempts) < 3:
+            raise urllib.error.URLError(ConnectionRefusedError("Connection refused"))
+        return _FakeHealthReply(200)
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    runner.ensure_model_loaded("http://127.0.0.1:8081", "http://127.0.0.1:8080", config.MODELS[0], 8080)
+    assert len(attempts) >= 3
+    assert len(load_calls) == 1
+
+
+def test_ensure_model_loaded_raises_after_health_poll_timeout(monkeypatch):
+    import urllib.error
+
+    from twin2k6 import config, runner
+
+    load_calls: list = []
+    _patch_manager(monkeypatch, {}, [])
+    _patch_load(monkeypatch, load_calls)
+    monkeypatch.setattr("time.sleep", lambda seconds: None)
+    clock = {"now": 0.0}
+
+    def fake_monotonic() -> float:
+        clock["now"] += 100.0
+        return clock["now"]
+
+    monkeypatch.setattr("time.monotonic", fake_monotonic)
+
+    def fake_urlopen(url, timeout):
+        raise urllib.error.URLError(ConnectionRefusedError("Connection refused"))
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    with pytest.raises(RuntimeError, match="600s"):
+        runner.ensure_model_loaded("http://127.0.0.1:8081", "http://127.0.0.1:8080", config.MODELS[0], 8080)
+    assert len(load_calls) == 1
+
+
+def test_ensure_model_loaded_still_fails_when_manager_is_down(monkeypatch):
+    from twin2k6 import config, runner
+
+    health_calls: list = []
+    load_calls: list = []
+    _patch_manager(monkeypatch, OSError("connection refused"), [])
+    _patch_load(monkeypatch, load_calls)
+
+    def fake_urlopen(url, timeout):
+        health_calls.append(url)
+        return _FakeHealthReply(200)
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    with pytest.raises(RuntimeError, match="8081"):
+        runner.ensure_model_loaded("http://127.0.0.1:8081", "http://127.0.0.1:8080", config.MODELS[0], 8080)
+    assert load_calls == []
+    assert health_calls == []
