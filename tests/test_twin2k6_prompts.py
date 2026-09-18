@@ -250,14 +250,29 @@ def test_no_qid_string_ever_appears_in_a_user_prompt():
 
 
 def test_no_other_experiments_question_text_leaks_into_a_prompt():
-    """A prompt for one experiment never contains another's question text."""
+    """Each prompt shows ONLY its own arm's text — never a sibling arm's
+    text, never another experiment's question. (Amended, TASK-2069: a
+    participant sees one arm, so the user prompt must contain that arm's
+    verbatim question and none of the experiment's other arms. The
+    unblinded system prompt lists every version on purpose, so it is only
+    checked against OTHER experiments' text; the blinded system prompt
+    keeps that check too.)"""
     stimuli = _stimuli_by_qid()
     for exp_name, arm in _all_arm_pairs():
         spec = experiments.EXPERIMENTS[exp_name]
-        own_texts = {stimuli[qid]["question_text"] for _a, qid in spec.arms}
+        own_qid = dict(spec.arms)[arm]
+        own_text = stimuli[own_qid]["question_text"]
+        sibling_texts = [
+            stimuli[qid]["question_text"]
+            for _a, qid in spec.arms
+            if qid != own_qid
+        ]
         user = prompts.build_user_prompt(dict(PERSONA), exp_name, arm)
         blinded = prompts.build_system_prompt(exp_name, blinded=True)
         unblinded = prompts.build_system_prompt(exp_name, blinded=False)
+        assert own_text in user, f"{exp_name}/{arm}: own question text missing"
+        for text in sibling_texts:
+            assert text not in user, f"{exp_name}/{arm} leaks a sibling arm's text"
         for other_name, other_spec in experiments.EXPERIMENTS.items():
             if other_name == exp_name:
                 continue
@@ -266,5 +281,3 @@ def test_no_other_experiments_question_text_leaks_into_a_prompt():
                 assert text not in user, f"{exp_name}/{arm} leaks {other_name} text"
                 assert text not in blinded, f"{exp_name} blinded system leaks {other_name}"
                 assert text not in unblinded, f"{exp_name} unblinded system leaks {other_name}"
-        for text in own_texts:
-            assert text in user, f"{exp_name}/{arm}: own question text missing"
