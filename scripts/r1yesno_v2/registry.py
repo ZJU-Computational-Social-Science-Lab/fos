@@ -78,14 +78,18 @@ MODELS: dict[str, dict] = {
         method=LOGPROB_METHOD, metadata_source="https://huggingface.co/Qwen/Qwen3.8-27B",
         notes="27B dense; served Q4_K_M GGUF",
     ),
+    # Architecture/params are user-provided (2026-09-18): MoE, ~95B active,
+    # total undisclosed. The run-provenance phrases that used to live in
+    # `notes` (partial legs, temperatures) are recorded in the run dirs and
+    # DATA_INVENTORY; the CSV row now carries the user-provided facts only.
     "qwen3.8-max-0902": dict(
         display_name="Qwen3.8-Max", short_name="Qwen3.8-Max", family="Qwen",
-        generation="Qwen3.8", architecture="unknown", total_params_b=None,
-        active_params_b=None, local_or_api="api", quantization="unknown",
+        generation="Qwen3.8", architecture="MoE", total_params_b=None,
+        active_params_b=95.0, local_or_api="api", quantization="unknown",
         run_dir="R1-API-QWEN38MAX-20260915T051942", safe_dir="qwen_qwen3.8-max-0902",
         method=FORCED_CHOICE_METHOD,
-        metadata_source="https://www.alibabacloud.com/help/en/model-studio/models",
-        notes="API-only; architecture/params not officially disclosed (third-party MoE claims unverified); partial legs (designed 11 products, resumed unevenly); temperatures 1.0 none / 0.0 personas",
+        metadata_source="user-provided (2026-09-18); official card undisclosed",
+        notes="user asserts MoE ~95B active; treat as approximate",
     ),
     "qwen3.6-27b-dense": dict(
         display_name="Qwen3.6-27B", short_name="Qwen3.6-27B-dense", family="Qwen",
