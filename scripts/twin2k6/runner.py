@@ -18,6 +18,7 @@ import hashlib
 import json
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -343,25 +344,51 @@ def run_model(model: str, root: Path, mode: str, personas: list[dict],
 
 def ensure_model_loaded(manager_url: str, base_url: str, model: str,
                         port: int) -> None:
-    """Load one model through the manager unless it is already healthy."""
+    """Load one model through the manager and wait until it answers.
+
+    The manager is asked first: if it already reports this model on the
+    port we only double-check that the server really answers. Otherwise
+    we load FIRST (the port may be dark after an unload) and poll the
+    health endpoint afterwards, for up to ten minutes, instead of
+    failing just because nothing listens yet.
+    """
     import urllib.request
 
     from launch_support import _load_model, _manager_status
     model_id = registry.manager_model_id(model)
     try:
         loaded = (_manager_status(manager_url).get(str(port)) or {}).get("model")
-        with urllib.request.urlopen(f"{base_url}/health", timeout=10.0) as reply:
-            healthy = reply.status == 200
     except OSError as exc:
         raise RuntimeError(
-            f"cannot reach model manager {manager_url} or server {base_url}: {exc}"
+            f"cannot reach model manager {manager_url}: {exc}"
         ) from exc
-    if loaded == model_id and healthy:
-        log(f"model {model} already loaded and healthy on :{port}")
-        return
+    if loaded == model_id:
+        try:
+            with urllib.request.urlopen(f"{base_url}/health", timeout=10.0) as reply:
+                if reply.status == 200:
+                    log(f"model {model} already loaded and healthy on :{port}")
+                    return
+        except OSError:
+            log(f"manager says {model} is loaded but :{port} is not answering; reloading")
     log(f"loading {model} ({model_id}) on :{port} via the manager...")
     _load_model(manager_url, model_id, port)
-    log(f"model {model} healthy on :{port}")
+    started = time.monotonic()
+    deadline = started + 600.0
+    poll = 0
+    while time.monotonic() < deadline:
+        poll += 1
+        try:
+            with urllib.request.urlopen(f"{base_url}/health", timeout=10.0) as reply:
+                if reply.status == 200:
+                    log(f"model {model} healthy on :{port}")
+                    return
+        except OSError:
+            pass
+        if poll % 5 == 0:
+            elapsed = time.monotonic() - started
+            log(f"waiting for {model} on :{port} ({elapsed:.0f}s)")
+        time.sleep(3.0)
+    raise RuntimeError(f"model {model} not healthy on :{port} within 600s of load")
 
 
 def unload_model(manager_url: str, port: int, model: str) -> None:
