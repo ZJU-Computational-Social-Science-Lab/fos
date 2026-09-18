@@ -195,7 +195,9 @@ def ensure_pool(run_dir: Path, manager_url: str, base_url: str) -> list[dict]:
         pool_seed=POOL_SEED, pool_overdraw=1.2, seed=config.SEED, draws=1,
         progress_every=1000, products_path=str(write_products_file(run_dir)),
     )
-    products = json.loads(settings.products_path)["products"]
+    products = json.loads(
+        Path(settings.products_path).read_text(encoding="utf-8")
+    )["products"]
     _pool_phase(settings, products, Path(settings.products_path),
                 Path(run_dir), POOL_K, log)
     return load_pool(run_dir)
