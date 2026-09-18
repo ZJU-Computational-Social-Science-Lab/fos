@@ -60,13 +60,34 @@ def load_all_models(results_root: Path) -> tuple[dict, dict, pd.DataFrame, pd.Da
                   else load.load_forced_choice_records)
         for leg_dir in sorted(path for path in model_path.iterdir() if path.is_dir()):
             condition = leg_dir.name.strip().lower()
-            records = reader(leg_dir / "records.jsonl")
+            records_path = _records_path(results_root, model_id, info, condition, leg_dir)
+            records = reader(records_path)
             cells = load.primary_cells(records)
             cells_by_model_cond[(model_id, condition)] = cells
             records_by_model_cond[(model_id, condition)] = records
             coverage_rows.append(_coverage_row(model_id, condition, records, cells))
     coverage = pd.DataFrame(coverage_rows)
     return cells_by_model_cond, records_by_model_cond, coverage, _print_coverage(coverage)
+
+
+def _records_path(
+    results_root: Path, model_id: str, info: dict, condition: str, leg_dir: Path
+) -> Path:
+    """Resolve one leg's answer file; a registered sidecar override wins.
+
+    Registry entries may redirect a single leg ("leg_overrides") to a repaired
+    file stored under the results root — used when the frozen run-dir file is
+    known-damaged and must stay untouched. Raises FileNotFoundError when an
+    override is registered but missing on disk, so the failure is loud.
+    """
+    override = info.get("leg_overrides", {}).get(condition)
+    if override is None:
+        return leg_dir / "records.jsonl"
+    resolved = results_root / override
+    if not resolved.is_file():
+        raise FileNotFoundError(f"sidecar override for {model_id} {condition} missing: {resolved}")
+    print(f"  {model_id} {condition}: reading repaired sidecar {resolved.name}")
+    return resolved
 
 
 def _coverage_row(
