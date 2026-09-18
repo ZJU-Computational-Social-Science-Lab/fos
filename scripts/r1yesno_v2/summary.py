@@ -245,6 +245,12 @@ Qwen rises from Qwen3 to Qwen3.6 then varies; Gemma rises with size but its 26B-
 above its own 12B dense; Granite splits by size: near-flat at 8B, above-human at 30B. The pattern is therefore
 family-specific as much as scale-related.
 
+**Figures** (in `figs/`, each as .png and .pdf):
+- `fig1_curves` — purchase probability vs price (20-200% of regular), blinded and unblinded;
+  human reference (thick black) and all 16 models, colored by family (legend on the right).
+- `fig2_gain_vs_active_params` — gain G vs active parameters (log x), blinded and unblinded,
+  plus a strip for the unknown-active-params model; reference lines at G=0 and G=1.
+
 **Probability measure per model**
 {chr(10).join(method_lines)}
 
