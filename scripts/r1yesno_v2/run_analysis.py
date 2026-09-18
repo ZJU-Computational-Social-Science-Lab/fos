@@ -1,7 +1,7 @@
 # This file is the command-line entry point of the analysis pipeline. It
 # loads every model's answers, computes the price-response numbers, writes
-# the CSV tables and the five figures, prints the full model roster, and
-# writes SUMMARY-V2.md. Run it as:
+# the CSV tables and the two paper figures (fig1_curves, fig2_gain_vs_active_params),
+# prints the full model roster, and writes SUMMARY-V2.md. Run it as:
 #   python -m scripts.r1yesno_v2.run_analysis --results-root <results/unblinding>
 #     --outdir <output dir> [--copy-to <mirror dir>]
 
@@ -224,14 +224,8 @@ def main() -> None:
     supplement.to_csv(csv_dir / "model_price_response_metrics_none_supplement.csv", index=False)
     write_metadata_csv(csv_dir / "model_metadata.csv")
     print("[4/7] drawing figures")
-    figures.fig1_active_params_vs_gain(table, args.outdir / "figs")
-    figures.fig2_all_models_gain_ranking(table, args.outdir / "figs")
-    figures.fig3_bias_vs_gain(table, args.outdir / "figs")
-    figures_curves.fig4_curves(cells_by_model_cond, human_cells, "demographics_blinded",
-                               args.outdir / "figs")
-    figures_curves.fig4_curves(cells_by_model_cond, human_cells, "demographics_unblinded",
-                               args.outdir / "figs")
-    figures_curves.fig5_family_scaling(table, args.outdir / "figs")
+    figures_curves.fig1_curves(cells_by_model_cond, human_cells, args.outdir / "figs")
+    figures.fig2_gain_vs_active_params(table, args.outdir / "figs")
     print("[5/7] model roster")
     print(summary.roster_text(table, coverage, unregistered, supplement))
     print("[6/7] writing SUMMARY-V2.md")
@@ -257,12 +251,8 @@ V2_CSVS = (
     "model_price_response_metrics_none_supplement.csv",
 )
 V2_FIGS = (
-    "fig1_active_params_vs_gain",
-    "fig2_all_models_gain_ranking",
-    "fig3_bias_vs_gain",
-    "fig4_curves_blinded",
-    "fig4_curves_unblinded",
-    "fig5_family_scaling",
+    "fig1_curves",
+    "fig2_gain_vs_active_params",
 )
 
 
