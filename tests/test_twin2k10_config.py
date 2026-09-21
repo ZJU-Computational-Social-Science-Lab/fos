@@ -117,3 +117,19 @@ def test_shipped_stimuli_cover_10_experiments_and_23_questions() -> None:
         "anchoring_african", "outcome_bias", "myside", "prob_matching",
         "abs_relative", "false_consensus",
     }
+
+
+# --------------------------------------------------------------------------
+# TASK-2150 RED tests — review blocker B1 (RESULT-2146): the numeric
+# generation window must fit a bare 10-row multi-row answer (~50 tokens
+# even with zero prose) with comfortable headroom, or every 10-row
+# sample is silently cut off before its last rows.
+# --------------------------------------------------------------------------
+
+
+def test_numeric_max_tokens_fits_a_full_ten_row_answer_with_headroom() -> None:
+    """A bare 10-row answer is ~50 tokens; the window must be >= 128."""
+    assert config.NUMERIC_MAX_TOKENS >= 128, (
+        f"NUMERIC_MAX_TOKENS={config.NUMERIC_MAX_TOKENS} truncates a bare "
+        "10-row multi_numeric answer (~50 tokens) before its last rows"
+    )
