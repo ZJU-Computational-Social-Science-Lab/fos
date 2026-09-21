@@ -144,17 +144,22 @@ def parse_numeric(text: str | None) -> float | int | None:
 
 
 def parse_multi_numeric(text: str | None) -> list[float | int | None]:
-    """One value per numbered line of a multi-row answer, in row order.
+    """One value per distinct row number of a multi-row answer, in order.
 
-    Lines like "1. 80" or "2) 65" are read in line-number order; a line
-    with no number after it ("3.") stays None instead of a made-up 0.
-    Lines without a leading number are ignored (never parsed as values).
+    Lines like "1. 80" or "2) 65" are read in line order; a line with no
+    number after it ("3.") stays None instead of a made-up 0. The FIRST
+    value seen for a row number wins and later repeats of that row number
+    are ignored — a model that answers "1. 42 / 2. 42 / 3. 42" and then
+    chats about its answer with another numbered list must not gain extra
+    result slots. Lines without a leading row number are never parsed.
     """
-    pairs: list[tuple[int, float | int | None]] = []
+    first_by_row: dict[int, float | int | None] = {}
     for line in (text or "").splitlines():
         match = re.match(r"^\s*(\d+)\s*[.)]\s*(.*)$", line)
         if match is None:
             continue
-        pairs.append((int(match.group(1)), parse_numeric(match.group(2))))
-    pairs.sort(key=lambda pair: pair[0])
-    return [value for _number, value in pairs]
+        row = int(match.group(1))
+        if row in first_by_row:
+            continue
+        first_by_row[row] = parse_numeric(match.group(2))
+    return [first_by_row[row] for row in sorted(first_by_row)]

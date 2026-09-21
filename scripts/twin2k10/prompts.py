@@ -152,6 +152,24 @@ def _rows_lines(stimulus: dict) -> str:
     )
 
 
+def _scale_lines(stimulus: dict) -> str | None:
+    """The numbered answer scale of a multi-row question, one per line.
+
+    Renders "1 = <label>", "2 = <label>", ... from the survey's own
+    columns list (the number is the label's position, starting at 1), so
+    the model knows what each answer number means instead of guessing.
+    Returns None when the item carries no columns, so the block is simply
+    left out (never an error, never a made-up scale).
+    """
+    columns = stimulus.get("columns")
+    if not columns:
+        return None
+    return "\n".join(
+        f"{number} = {label}"
+        for number, label in enumerate(columns, start=1)
+    )
+
+
 def _final_instruction(stimuli: dict[str, dict], qids: tuple[str, ...]) -> str:
     """The closing instruction an arm's prompt ends with.
 
@@ -182,10 +200,11 @@ def build_user_prompt(persona: dict, experiment: str, arm: str) -> str:
 
     Shape: the EMBODY persona block, then each of the arm's questions in
     survey order (its verbatim question text, then its lettered options
-    for a choice question or its numbered rows for a multi-row question),
-    then the closing instruction for the arm's answer kinds. Takes no
-    blinding argument — blinding lives only in the system prompt. Raises
-    KeyError for an unknown experiment or arm.
+    for a choice question, or its numbered rows plus the item's numbered
+    answer scale for a multi-row question), then the closing instruction
+    for the arm's answer kinds. Takes no blinding argument — blinding
+    lives only in the system prompt. Raises KeyError for an unknown
+    experiment or arm.
     """
     spec = experiments.EXPERIMENTS[experiment]
     stimuli = experiments.load_stimuli()
@@ -198,5 +217,8 @@ def build_user_prompt(persona: dict, experiment: str, arm: str) -> str:
             parts.append(_option_lines(stimulus))
         elif kind == "multi_numeric":
             parts.append(_rows_lines(stimulus))
+            scale = _scale_lines(stimulus)
+            if scale is not None:
+                parts.append(scale)
     parts.append(_final_instruction(stimuli, spec.arm_qids(arm)))
     return "\n\n".join(parts)
