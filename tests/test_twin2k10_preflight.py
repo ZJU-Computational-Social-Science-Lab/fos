@@ -95,3 +95,45 @@ def test_the_decision_is_pure_and_stable() -> None:
     second = preflight.decide([dict(r) for r in records])
     assert first == second
     assert preflight.decide([])["stop"] is False
+
+
+# --------------------------------------------------------------------------
+# TASK-2150 RED tests — review blocker B1 (RESULT-2146): a multi-row
+# sample whose rows ALL parse but whose row count falls short of the
+# record's expected_rows is the truncation signature (e.g. a 32-token
+# window cutting a 10-row answer down to 8 rows) — the preflight must
+# STOP on it and name the row deficit, and must still PROCEED on a full
+# count.
+# --------------------------------------------------------------------------
+
+
+def _multi_record(expected_rows: int, filled_rows: int) -> dict:
+    """A multi-row record with `filled_rows` of `expected_rows` parseable."""
+    values = list(range(1, filled_rows + 1))
+    return {"experiment": "false_consensus", "arm": "all", "model": "m",
+            "persona_id": 0, "blind": "blinded",
+            "top_logprobs": [_entry("1", 0.5)],
+            "expected_rows": expected_rows,
+            "multi_numeric_values": [values]}
+
+
+def test_truncated_multi_sample_stops_even_when_every_row_parses() -> None:
+    """8 parseable rows of an expected 10 is the truncation signature."""
+    verdict = preflight.decide([_multi_record(expected_rows=10,
+                                              filled_rows=8)])
+    assert verdict["stop"] is True, (
+        "a multi sample with 8 of 10 rows — every row parseable — must "
+        "stop the run as truncated, not pass the preflight"
+    )
+    reasons = " ".join(verdict["reasons"])
+    assert "8" in reasons and "10" in reasons, (
+        f"the stop reason must name the row deficit (8 of 10): {reasons}"
+    )
+
+
+def test_full_ten_of_ten_multi_sample_proceeds() -> None:
+    """A complete 10/10 multi sample is healthy — no truncation stop."""
+    verdict = preflight.decide([_multi_record(expected_rows=10,
+                                              filled_rows=10)])
+    assert verdict["stop"] is False
+    assert verdict["reasons"] == []

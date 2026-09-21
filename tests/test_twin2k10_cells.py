@@ -171,3 +171,62 @@ def test_records_on_disk_carry_their_cell_identity() -> None:
         for cell, line in zip(planned, lines):
             record = json.loads(line)
             assert cells.record_key(record) == cells.record_key(cell)
+
+
+# --------------------------------------------------------------------------
+# TASK-2150 RED tests — review blocker B1 (RESULT-2146): a multi-row
+# record must carry `expected_rows` (the answered item's own statement
+# count, read from the shipped stimuli) so the preflight can tell a
+# complete 10-row answer from a truncated one. The records here are
+# built through the real record builder with fake scorer/sampler calls
+# — no network, no models.
+# --------------------------------------------------------------------------
+
+
+def _offline_multi_record(experiment: str, arm: str,
+                          answer_rows: int) -> dict:
+    """One real multi-row cell's record with every fake call healthy."""
+    from twin2k10 import legexec
+
+    context = legexec.LegContext(
+        model=config.MODELS[0],
+        model_id=f"offline-{config.MODELS[0]}",
+        base_url="http://127.0.0.1:8080",
+        personas=[{"persona_id": 0}],
+        stimuli=experiments.load_stimuli(),
+        inference=legexec.inference_settings("http://127.0.0.1:8080"),
+    )
+    answer = "\n".join(
+        f"{row}. {row * 10}" for row in range(1, answer_rows + 1)
+    )
+
+    def fake_sampler(messages: list) -> dict:
+        return {"samples": [answer] * config.NUMERIC_SAMPLES_K,
+                "first_top_logprobs": [], "calls_failed": 0,
+                "errors": [], "elapsed_seconds": 0.0}
+
+    def fake_scorer(messages: list) -> dict:
+        return {"top_logprobs": [], "decision_position": 0,
+                "skipped_prefix": [], "skipped_len": 0, "succeeded": True}
+
+    cell = (config.MODELS[0], 0, experiment, arm, "blinded")
+    return legexec.execute_cell(context, fake_scorer, fake_sampler, cell)
+
+
+def test_multi_numeric_records_carry_the_item_row_count_as_expected_rows() -> None:
+    """false_consensus answers a 10-row item, so its record says 10."""
+    record = _offline_multi_record("false_consensus", "all", answer_rows=10)
+    assert record.get("expected_rows") == 10, (
+        "a multi-row record must carry expected_rows (its item's row "
+        "count) so the preflight can catch truncated answers"
+    )
+
+
+def test_expected_rows_reads_each_items_own_row_count() -> None:
+    """problem1's item has 10 rows and problem2's has 6 — no hardcoding."""
+    ten_rows = _offline_multi_record("prob_matching", "problem1",
+                                     answer_rows=10)
+    six_rows = _offline_multi_record("prob_matching", "problem2",
+                                     answer_rows=6)
+    assert ten_rows.get("expected_rows") == 10
+    assert six_rows.get("expected_rows") == 6
