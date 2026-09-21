@@ -86,9 +86,10 @@ LOW_BRANCH_MASS_THRESHOLD = 0.80
 NUMERIC_SAMPLES_K = 20
 
 # How many tokens a numeric sample call may generate before it is cut
-# off — comfortably more than "about 15,000 feet", small enough that
-# 300k numeric calls stay cheap.
-NUMERIC_MAX_TOKENS = 32
+# off. 128 fits even a bare 10-row multi-row answer (~50 tokens with no
+# prose) with comfortable headroom, so a truncation in the stored
+# samples means the model stopped early — never that the window cut it.
+NUMERIC_MAX_TOKENS = 128
 
 # Durability promise: the records file is force-synced to disk at least
 # this often, so a crash can lose at most 50 finished records.
@@ -100,6 +101,15 @@ SEED = 42
 # Run folders start with this prefix (results/unblinding/T2K10-<stamp>/)
 # so they can never collide with twin2k6 run folders.
 RUN_NAME_PREFIX = "T2K10-"
+
+# The live smoke test (--smoke) runs ONE small model on ONE persona
+# through the whole 19-arm x 2-blinding grid, so a pre-launch check
+# costs minutes instead of days. Its run folders start with their own
+# prefix (results/unblinding/T2K10-SMOKE-<stamp>/) so a smoke run can
+# never be mistaken for — or appended onto — a production run folder.
+SMOKE_MODEL = "qwen3-4b"
+SMOKE_PERSONA_ID = 0
+SMOKE_RUN_NAME_PREFIX = "T2K10-SMOKE-"
 
 # Where run folders are created, relative to the repo root.
 RUNS_ROOT = REPO_ROOT / "results" / "unblinding"
