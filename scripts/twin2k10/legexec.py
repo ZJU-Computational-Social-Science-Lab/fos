@@ -181,7 +181,9 @@ def _sampled_part(context: LegContext, sampler: Callable,
     Draws the K temperature samples for the arm's first question of the
     given kind, parses every sample with the kind's parser, and reports
     the parsed values plus the parse-failure count (a parse failure is
-    never silent — the preflight stops on it). A multi-row record also
+    never silent — the preflight stops on it). A multi-row sample counts
+    as failed when it is unparseable, ANY of its rows is None, or its
+    length differs from the item's row count. A multi-row record also
     carries expected_rows, its item's own row count, so the preflight
     can tell a complete answer from a truncated one.
     """
@@ -198,8 +200,11 @@ def _sampled_part(context: LegContext, sampler: Callable,
         failures = sum(1 for value in values if value is None)
     else:
         expected_rows = len(context.stimuli[qids[0]]["rows"])
-        failures = sum(1 for value in values
-                       if value is None or len(value) != expected_rows)
+        failures = sum(
+            1 for value in values
+            if value is None or any(row is None for row in value)
+            or len(value) != expected_rows
+        )
     prefix = "numeric" if kind == "numeric" else "multi_numeric"
     part = {
         f"{prefix}_qid": qids[0],
@@ -278,9 +283,10 @@ def _stamp_status(record: dict, choice: dict, numeric: dict,
                   multi: dict) -> None:
     """Stamp the record's footer: parse failures, success flag, error text.
 
-    succeeded is True only when every call behind the record succeeded;
-    failures surface as the kept record's error text so a resumed run
-    never re-hides them.
+    succeeded is True only when every call behind the record succeeded
+    AND every sample parsed cleanly — a record with any unparseable row
+    must never claim success. Failures surface as the kept record's
+    error text so a resumed run never re-hides them.
     """
     choice_failed = 1 if (choice and not choice.get("choice_succeeded")) else 0
     calls_failed = (
@@ -298,9 +304,12 @@ def _stamp_status(record: dict, choice: dict, numeric: dict,
     problems.extend(numeric.get("numeric_errors") or [])
     problems.extend(multi.get("multi_numeric_errors") or [])
     record["parse_failures"] = parse_failed
-    record["succeeded"] = calls_failed == 0
+    record["succeeded"] = calls_failed == 0 and parse_failed == 0
+    detail = "; ".join(problems)
+    if not detail and parse_failed:
+        detail = f"{parse_failed} sample(s) failed to parse"
     record["error"] = None if record["succeeded"] else (
-        "; ".join(problems) or f"{calls_failed} call(s) failed"
+        detail or f"{calls_failed} call(s) failed"
     )
 
 
