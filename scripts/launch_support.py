@@ -30,6 +30,8 @@ What each function does:
                                  (must match its _safe_product_name).
     _count_accepted(folder)    - Accepted personas in one product folder.
     _short_products(...)       - Products whose pool is still below K.
+    _short_product_names(...)  - Plain names for the short-products warning
+                                 (dicts contribute their "product" field).
     _generate_pools(...)       - Run the persona pool batch tool and top up
                                  any product that came up short.
     _accepted_so_far(...)      - Accepted personas already on disk across
@@ -318,6 +320,21 @@ def _short_products(
     ]
 
 
+def _short_product_names(entries: list[Any]) -> list[str]:
+    """Plain names for the short-products warning, one per entry.
+
+    Product entries are dicts whose name lives in the "product" field
+    (falling back to the whole entry if the field is missing); anything
+    else contributes its string form. Every name is cut to 50 characters
+    exactly like the warning always did, so the message stays one line.
+    """
+    names = []
+    for entry in entries:
+        name = entry.get("product", entry) if isinstance(entry, dict) else entry
+        names.append(str(name)[:50])
+    return names
+
+
 def _read_personas(folder: Path) -> list[dict[str, Any]]:
     """Read every accepted persona dict from one product pool folder."""
     personas: list[dict[str, Any]] = []
@@ -464,7 +481,7 @@ def _generate_pools(
     if short:
         raise SystemExit(
             "error: persona pools still incomplete after retries; short "
-            "products: " + ", ".join(name[:50] for name in short)
+            "products: " + ", ".join(_short_product_names(short))
         )
     log(f"persona pools: complete ({requested:,} requests across rounds)")
     return requested
