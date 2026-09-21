@@ -4,11 +4,13 @@
 # between-subjects experiments plus false_consensus's single
 # within-subject arm; an anchoring arm's two questions share their one
 # cell). enumerate_cells lists every cell in a fixed deterministic order;
-# record_key reads a cell's or a record's five-part identity;
-# load_existing_keys reads finished cells back from a records.jsonl file;
-# and run_cells scores only the missing cells, writing each finished
-# record to disk (flushed, force-synced regularly) before the next call
-# starts, so a crash never loses or duplicates finished work.
+# smoke_cells lists the small live pre-launch check's grid (one model,
+# one persona, every arm, both blinding arms); record_key reads a cell's
+# or a record's five-part identity; load_existing_keys reads finished
+# cells back from a records.jsonl file; and run_cells scores only the
+# missing cells, writing each finished record to disk (flushed,
+# force-synced regularly) before the next call starts, so a crash never
+# loses or duplicates finished work.
 
 import json
 import os
@@ -51,6 +53,20 @@ def enumerate_cells(models: Iterable[str] | None = None,
                              arm_name, blinding)
                         )
     return grid
+
+
+def smoke_cells() -> list[tuple]:
+    """The --smoke grid: 1 model x 1 persona x 19 arms x 2 blinding arms.
+
+    The live pre-launch check's 38 cells: the smallest study model
+    (config.SMOKE_MODEL) answers persona config.SMOKE_PERSONA_ID on
+    every arm in both blinding arms, so every question kind (choice,
+    numeric, multi-row) goes through the real execution path before a
+    57,000-cell launch. A pure filter over enumerate_cells — it never
+    mixes into the production grid, which keeps its own 100 personas.
+    """
+    return enumerate_cells(models=[config.SMOKE_MODEL],
+                           personas=[config.SMOKE_PERSONA_ID])
 
 
 def record_key(cell_or_record) -> tuple:
