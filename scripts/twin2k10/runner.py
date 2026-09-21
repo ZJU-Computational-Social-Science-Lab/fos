@@ -13,7 +13,10 @@
 # every cell already on disk — preflight cells included, so a full
 # launch after a preflight never duplicates a completed record. --dry-run
 # needs no server: it prints the cell counts and checks the rendered
-# prompts, writing nothing.
+# prompts, writing nothing. --smoke runs the live pre-launch check
+# instead of the production grid: the smallest model answers one persona
+# on all 19 arms x 2 blinding arms, in its own T2K10-SMOKE-<stamp> run
+# folder, so production folders are never touched by a smoke run.
 
 from __future__ import annotations
 
@@ -95,6 +98,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--dry-run", action="store_true",
         help="print cell counts and check rendered prompts; write nothing",
     )
+    parser.add_argument(
+        "--smoke", action="store_true",
+        help="live pre-launch smoke test: the smallest model (%s) answers "
+             "one persona on all 19 arms x 2 blinding arms (%d cells) into "
+             "its own T2K10-SMOKE-<stamp> run dir — a production run dir is "
+             "never touched"
+             % (config.SMOKE_MODEL, 19 * len(config.BLINDINGS)),
+    )
     parser.add_argument("--manager-url", default=config.DEFAULT_MANAGER_URL)
     parser.add_argument("--base-url", default=config.DEFAULT_BASE_URL)
     parser.add_argument("--port", type=int, default=8080)
@@ -113,10 +124,13 @@ def resolve_models(requested: str | None) -> list[str]:
     return models
 
 
-def new_run_dir() -> Path:
-    """A fresh run folder: results/unblinding/T2K10-<UTC stamp>/."""
+def new_run_dir(smoke: bool = False) -> Path:
+    """A fresh run folder: results/unblinding/T2K10-<UTC stamp>/, or the
+    smoke test's own T2K10-SMOKE-<stamp>/ so the two can never mix."""
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-    return config.RUNS_ROOT / f"{config.RUN_NAME_PREFIX}{stamp}"
+    prefix = (config.SMOKE_RUN_NAME_PREFIX if smoke
+              else config.RUN_NAME_PREFIX)
+    return config.RUNS_ROOT / f"{prefix}{stamp}"
 
 
 def file_sha256(path: Path) -> str:
@@ -297,16 +311,37 @@ def preflight_phase(run_dir: Path, models: list[str], personas: list[dict],
     return set(verdict)
 
 
+def _run_shape(args: argparse.Namespace) -> tuple[list[str], list[int], int]:
+    """The run's model list, persona ids, and record total (smoke-aware).
+
+    A smoke run is exactly the smoke filter's grid (1 model x 1 persona
+    x 19 arms x 2 blindings); a production run is the requested models
+    over the full 100-persona pool. Either way the auto-preflight runs
+    persona 0 first, through the same durable leg files.
+    """
+    if args.smoke:
+        return ([config.SMOKE_MODEL], [config.SMOKE_PERSONA_ID],
+                len(cells.smoke_cells()))
+    models = resolve_models(args.models)
+    return models, list(range(config.PERSONA_COUNT)), \
+        len(models) * cells.EXPECTED_RECORDS_PER_MODEL
+
+
 def run_all(args: argparse.Namespace) -> int:
     """The full flow: run folder, pool, auto-preflight, grid, finalize."""
-    run_dir = Path(args.run_dir) if args.run_dir else new_run_dir()
+    models, persona_ids, total = _run_shape(args)
+    run_dir = Path(args.run_dir) if args.run_dir else new_run_dir(args.smoke)
     run_dir.mkdir(parents=True, exist_ok=True)
     log(f"run dir: {run_dir}")
-    models = resolve_models(args.models)
+    if args.smoke:
+        log(f"smoke run: {models[0]} answers persona "
+            f"{config.SMOKE_PERSONA_ID} on all 19 arms x 2 blindings "
+            f"({total} cells) — a T2K10-SMOKE- folder; production run "
+            f"dirs are never touched")
     if not args.resume:
         refuse_started(run_dir)
     write_start_manifest(run_dir, models)
-    progress = new_progress(len(models) * cells.EXPECTED_RECORDS_PER_MODEL)
+    progress = new_progress(total)
     write_progress(run_dir, progress)
     personas = serving.ensure_pool(run_dir, args.manager_url, args.base_url,
                                    log)
@@ -325,7 +360,7 @@ def run_all(args: argparse.Namespace) -> int:
         log(f"=== model {model} ({registry.manager_model_id(model)}) ===")
         serving.ensure_model_loaded(args.manager_url, args.base_url, model,
                                     args.port, log)
-        run_legs(run_dir, model, personas, list(range(config.PERSONA_COUNT)),
+        run_legs(run_dir, model, personas, persona_ids,
                  args.base_url, progress)
         serving.unload_model(args.manager_url, args.port, model, log)
     write_progress(run_dir, progress)
@@ -361,21 +396,48 @@ def check_prompt_pair(system: str, user: str, arm_qids: tuple[str, ...],
                 )
 
 
-def dry_run(models: list[str]) -> int:
+def log_smoke_coverage() -> None:
+    """The offline smoke-filter report: grid shape + item kinds covered.
+
+    Pure enumeration over the shipped stimuli — proves without a server
+    that the smoke grid is 1 model x 1 persona x 19 arms x 2 blindings
+    and that choice, numeric and multi-row questions all appear in it.
+    """
+    grid = cells.smoke_cells()
+    stimuli = experiments.load_stimuli()
+    kinds: set[str] = set()
+    for _model, _persona, experiment, arm, _blind in grid:
+        for qid in experiments.EXPERIMENTS[experiment].arm_qids(arm):
+            kinds.add(stimuli[qid]["response_kind"])
+    arms = {(cell[2], cell[3]) for cell in grid}
+    blindings = sorted({cell[4] for cell in grid})
+    models = sorted({cell[0] for cell in grid})
+    personas = sorted({cell[1] for cell in grid})
+    log(f"dry run (smoke): {len(grid)} cells = {len(models)} model "
+        f"({config.SMOKE_MODEL}) x {len(personas)} persona x "
+        f"{len(arms)} arms x {len(blindings)} blindings {blindings}")
+    log(f"dry run (smoke): item kinds covered: {sorted(kinds)}")
+
+
+def dry_run(models: list[str], smoke: bool = False) -> int:
     """The offline rehearsal: cell counts + prompt exactness, no server.
 
     Renders every (experiment, arm, blinding) prompt pair with a
     clearly-synthetic placeholder persona, checks the exact stimulus
     wording and every lettered option line, prints the cell counts, and
-    writes nothing anywhere.
+    writes nothing anywhere. With smoke=True it reports the smoke
+    filter's grid instead of the production counts.
     """
     stimuli = experiments.load_stimuli()
-    total = len(cells.enumerate_cells())
-    log(f"dry run: {len(models)} models x "
-        f"{cells.EXPECTED_RECORDS_PER_MODEL} = {total} cells total")
-    for model in models:
-        count = len(cells.enumerate_cells(models=[model]))
-        log(f"dry run: model {model}: {count} cells")
+    if smoke:
+        log_smoke_coverage()
+    else:
+        total = len(cells.enumerate_cells())
+        log(f"dry run: {len(models)} models x "
+            f"{cells.EXPECTED_RECORDS_PER_MODEL} = {total} cells total")
+        for model in models:
+            count = len(cells.enumerate_cells(models=[model]))
+            log(f"dry run: model {model}: {count} cells")
     checked = 0
     for experiment, spec in experiments.EXPERIMENTS.items():
         for arm, arm_qids in spec.arms:
@@ -393,9 +455,10 @@ def dry_run(models: list[str]) -> int:
 def main(argv: list[str] | None = None) -> int:
     """The CLI entry point (module execution starts here)."""
     args = parse_args(argv)
-    models = resolve_models(args.models)
+    models = ([config.SMOKE_MODEL] if args.smoke
+              else resolve_models(args.models))
     if args.dry_run:
-        return dry_run(models)
+        return dry_run(models, smoke=args.smoke)
     return run_all(args)
 
 

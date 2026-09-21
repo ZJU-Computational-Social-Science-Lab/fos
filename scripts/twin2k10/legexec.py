@@ -181,7 +181,9 @@ def _sampled_part(context: LegContext, sampler: Callable,
     Draws the K temperature samples for the arm's first question of the
     given kind, parses every sample with the kind's parser, and reports
     the parsed values plus the parse-failure count (a parse failure is
-    never silent — the preflight stops on it).
+    never silent — the preflight stops on it). A multi-row record also
+    carries expected_rows, its item's own row count, so the preflight
+    can tell a complete answer from a truncated one.
     """
     qids = [qid for qid in arm_qids
             if context.stimuli[qid]["response_kind"] == kind]
@@ -191,14 +193,15 @@ def _sampled_part(context: LegContext, sampler: Callable,
     parse = (scoring.parse_numeric if kind == "numeric"
              else scoring.parse_multi_numeric)
     values = [parse(text) for text in raw["samples"]]
+    expected_rows: int | None = None
     if kind == "numeric":
         failures = sum(1 for value in values if value is None)
     else:
-        n_rows = len(context.stimuli[qids[0]]["rows"])
+        expected_rows = len(context.stimuli[qids[0]]["rows"])
         failures = sum(1 for value in values
-                       if value is None or len(value) != n_rows)
+                       if value is None or len(value) != expected_rows)
     prefix = "numeric" if kind == "numeric" else "multi_numeric"
-    return {
+    part = {
         f"{prefix}_qid": qids[0],
         f"{prefix}_samples": raw["samples"],
         f"{prefix}_values": values,
@@ -208,6 +211,9 @@ def _sampled_part(context: LegContext, sampler: Callable,
         f"{prefix}_elapsed_seconds": float(raw["elapsed_seconds"]),
         f"{prefix}_errors": raw["errors"],
     }
+    if expected_rows is not None:
+        part["expected_rows"] = expected_rows
+    return part
 
 
 def _base_record(context: LegContext, cell: Cell) -> tuple[dict, list[dict]]:
