@@ -66,16 +66,16 @@ def test_allais_scoring_keeps_missing_letters_none_and_sums_the_mass() -> None:
     """A two-letter choice: found letter scored, missing letter None."""
     top_k = [
         _entry("A", 0.55),
-        _entry(" a", 0.20),      # second spelling folds into A
+        _entry(" a", 0.30),      # second spelling folds into A (mass 0.85)
         _entry("(B", 0.10),      # impostor — must NOT fold into B
         _entry("Answer", 0.05),  # prose — never folds
         _entry("B", 1e-9),       # below the floor — B stays missing
     ]
     record = scoring.score_labels(top_k, "allais", decision_position=1,
                                   skipped_prefix=[], skipped_len=0)
-    assert record["p_raw"]["A"] == pytest.approx(0.75)
+    assert record["p_raw"]["A"] == pytest.approx(0.85)
     assert record["p_raw"]["B"] is None
-    assert record["branch_mass"] == pytest.approx(0.75)
+    assert record["branch_mass"] == pytest.approx(0.85)
     assert record["p_norm"]["A"] == pytest.approx(1.0)
     assert record["p_norm"]["B"] is None
     assert record["low_branch_mass"] is False
