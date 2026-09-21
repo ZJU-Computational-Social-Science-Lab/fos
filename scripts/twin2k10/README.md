@@ -35,7 +35,63 @@ The single command does everything, in order:
 
 Useful options: `--models qwen3-4b,glm-4.7-flash` (a comma-separated
 subset), `--dry-run` (offline: prints cell counts and checks every
-rendered prompt, writes nothing, needs no server).
+rendered prompt, writes nothing, needs no server), `--smoke` (the live
+pre-launch smoke test, below).
+
+## Smoke test (live pre-launch check, --smoke)
+
+Before committing days of hardware to the 57,000-cell launch, run the
+smoke test: the smallest model (`qwen3-4b`) answers ONE persona on all
+19 arms × 2 blinding arms — 38 cells, every question kind (choice,
+numeric K-samples, multi-row) through the real execution path — in
+clock-time minutes, not days:
+
+```bash
+python -m scripts.twin2k10.runner --smoke
+```
+
+A smoke run writes ONLY into its own
+`results/unblinding/T2K10-SMOKE-<UTC stamp>/` folder. It never appends
+to or creates a production `T2K10-<stamp>` folder, and the production
+launch never reads a smoke folder — so smoke records can never pollute
+the real grid. (An offline rehearsal of the smoke grid's shape:
+`--smoke --dry-run`.)
+
+What to check in the smoke run's records before launching:
+
+1. `PREFLIGHT_REPORT.md` says PROCEED and no `skipped_models.json` was
+   written. The built-in verdict already stops on the failure
+   signatures: empty `top_logprobs` at the decision token, unparseable
+   numeric samples, and multi-row samples that fall short of their
+   item's `expected_rows`.
+2. Spot-check the records themselves:
+
+   ```bash
+   # a. every record saw a decision token (non-empty top_logprobs)
+   grep -rc '"top_logprobs": \[\]' results/unblinding/T2K10-SMOKE-<stamp>/
+   #    → every count must be 0
+
+   # b. every numeric sample parsed into a number
+   grep -rc '"numeric_parse_failures": 0' results/unblinding/T2K10-SMOKE-<stamp>/
+
+   # c. multi-row answers are complete — each record's
+   #    multi_numeric_values rows == its expected_rows (10/10 for
+   #    false_consensus and prob_matching problem1, 6/6 for problem2)
+   python - <<'EOF'
+   import json, pathlib
+   root = pathlib.Path("results/unblinding/T2K10-SMOKE-<stamp>")
+   for path in sorted(root.rglob("records.jsonl")):
+       for line in path.read_text().splitlines():
+           r = json.loads(line)
+           if "expected_rows" in r:
+               assert all(len(v) == r["expected_rows"]
+                          for v in r["multi_numeric_values"]), path
+   print("all multi-row samples complete")
+   EOF
+   ```
+
+Then launch the full study (without `--smoke`): it starts a fresh
+production folder and the two never interact.
 
 ## How long will it take
 
@@ -44,7 +100,7 @@ Per model, the grid makes:
 - 2,400 choice calls (12 choice arms × 100 personas × 2 blindings), one
   first-token call each;
 - 24,000 numeric sample calls (6 numeric arms × 100 × 2 blindings ×
-  K=20), each a short generation (≤ 32 tokens);
+  K=20), each a short generation (≤ 128 tokens);
 - 20,000 multi-row sample calls (5 multi-row arms × 100 × 2 blindings ×
   K=20), likewise short.
 
