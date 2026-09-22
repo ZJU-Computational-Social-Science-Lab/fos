@@ -15,13 +15,12 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from twin2k10 import config
+
 
 def _record_label(record: dict) -> str:
     """One record's short "who/what" tag for a stop reason line."""
-    return (
-        f"{record.get('model')}/{record.get('experiment')}/"
-        f"{record.get('arm')}"
-    )
+    return f"{record.get('model')}/{record.get('experiment')}/{record.get('arm')}"
 
 
 def _choice_reasons(record: dict) -> list[str]:
@@ -30,18 +29,22 @@ def _choice_reasons(record: dict) -> list[str]:
     Empty top-logprobs is the known GGUF failure signature. A p_raw where
     EVERY letter is None means no answer letter could be read at all — a
     single missing letter next to found ones is normal, not a failure.
+    A digit-bearing record whose top_logprobs field is ABSENT (not empty)
+    has no choice call of its own to judge — the digit items are judged
+    on their own entries below.
     """
     reasons: list[str] = []
-    if not record.get("top_logprobs"):
+    has_digit_items = bool(record.get("digit_items"))
+    if not record.get("top_logprobs") and not (
+        has_digit_items and "top_logprobs" not in record
+    ):
         reasons.append(
             f"{_record_label(record)}: empty top_logprobs at the decision "
             "position (GGUF failure signature)"
         )
     p_raw = record.get("p_raw")
     if p_raw and all(value is None for value in p_raw.values()):
-        reasons.append(
-            f"{_record_label(record)}: no answer letter readable in p_raw"
-        )
+        reasons.append(f"{_record_label(record)}: no answer letter readable in p_raw")
     return reasons
 
 
@@ -58,6 +61,9 @@ def _digit_reasons(record: dict) -> list[str]:
     reasons: list[str] = []
     for item in record.get("digit_items") or []:
         where = _item_label(record, item)
+        if "digit_mass" in item:
+            reasons.extend(_digit_mass_reasons(item, where))
+            continue
         if not item.get("top_logprobs"):
             reasons.append(
                 f"{where}: empty top_logprobs at the decision position "
@@ -65,10 +71,28 @@ def _digit_reasons(record: dict) -> list[str]:
             )
         p_raw = item.get("p_raw")
         if p_raw and all(value is None for value in p_raw.values()):
-            reasons.append(
-                f"{where}: no answer digit readable in the item's p_raw"
-            )
+            reasons.append(f"{where}: no answer digit readable in the item's p_raw")
     return reasons
+
+
+def _digit_mass_reasons(item: dict, where: str) -> list[str]:
+    """The stop reasons one scanned digit item gives (may be []).
+
+    The multi-position scan stamps digit_mass (the best position's total
+    digit probability) and decision_position (where it was found); the
+    item passes only when that mass reaches the dominance gate. Below
+    it, the model never wrote a dominant digit anywhere in the scan
+    window — a technical failure the reason names with mass and position.
+    Items without a digit_mass field (legacy shape) are never gated.
+    """
+    mass = item.get("digit_mass") or 0.0
+    if mass >= config.DIGIT_MASS_PREFLIGHT_THRESHOLD:
+        return []
+    return [
+        f"{where}: digit mass {mass:.2f} at best position "
+        f"{item.get('decision_position')} is below the "
+        f"{config.DIGIT_MASS_PREFLIGHT_THRESHOLD} dominance gate"
+    ]
 
 
 def _item_label(record: dict, item: dict) -> str:
@@ -93,8 +117,9 @@ def decide(records: list[dict]) -> dict:
     return {"stop": bool(reasons), "reasons": reasons}
 
 
-def build_report(run_dir: Path, per_model: dict[str, list[dict]],
-                 verdict: dict[str, list[str]]) -> str:
+def build_report(
+    run_dir: Path, per_model: dict[str, list[dict]], verdict: dict[str, list[str]]
+) -> str:
     """The PREFLIGHT_REPORT.md text: technical verdicts, no behaviour.
 
     per_model maps each model to its preflight records; verdict maps each
@@ -115,8 +140,10 @@ def build_report(run_dir: Path, per_model: dict[str, list[dict]],
     ]
     for model, records in per_model.items():
         reasons = verdict.get(model, [])
-        lines.append(f"- {model}: {len(records)} records — "
-                     + ("PROCEED" if not reasons else "STOP"))
+        lines.append(
+            f"- {model}: {len(records)} records — "
+            + ("PROCEED" if not reasons else "STOP")
+        )
         for reason in reasons:
             lines.append(f"  - {reason}")
     lines += [
@@ -139,8 +166,9 @@ def build_report(run_dir: Path, per_model: dict[str, list[dict]],
     return "\n".join(lines)
 
 
-def write_outputs(preflight_dir: Path, per_model: dict[str, list[dict]],
-                  verdict: dict[str, list[str]]) -> dict:
+def write_outputs(
+    preflight_dir: Path, per_model: dict[str, list[dict]], verdict: dict[str, list[str]]
+) -> dict:
     """Examine a finished preflight and write its report + skip list.
 
     Writes PREFLIGHT_REPORT.md always and skipped_models.json when any
@@ -151,15 +179,18 @@ def write_outputs(preflight_dir: Path, per_model: dict[str, list[dict]],
     """
     preflight_dir = Path(preflight_dir)
     report = build_report(preflight_dir, per_model, verdict)
-    (preflight_dir / "PREFLIGHT_REPORT.md").write_text(report,
-                                                       encoding="utf-8")
+    (preflight_dir / "PREFLIGHT_REPORT.md").write_text(report, encoding="utf-8")
     if verdict:
         (preflight_dir / "skipped_models.json").write_text(
-            json.dumps({"skipped_models": sorted(verdict),
-                        "reason": "preflight technical failure "
-                                  "(see PREFLIGHT_REPORT.md)",
-                        "written": datetime.now(timezone.utc).isoformat()},
-                       indent=2) + "\n",
+            json.dumps(
+                {
+                    "skipped_models": sorted(verdict),
+                    "reason": "preflight technical failure (see PREFLIGHT_REPORT.md)",
+                    "written": datetime.now(timezone.utc).isoformat(),
+                },
+                indent=2,
+            )
+            + "\n",
             encoding="utf-8",
         )
     return {"verdict": verdict}
