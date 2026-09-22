@@ -5,8 +5,11 @@
 # within-subject experiment (a single "all" arm whose question has 10
 # rows). The two anchoring experiments are special: each of their arms
 # carries TWO questions — the more/less anchor choice first, then the
-# numeric estimate — so one anchoring record holds both a first-token
-# letter scoring and K numeric samples. The file also loads the shipped
+# numeric estimate. The file also translates each arm into its FIRST-TOKEN
+# ITEMS (arm_items): the exact list of single-answer calls the study makes
+# — one letter item for a choice question, one digit item (0-9) for a
+# numeric estimate, and one digit item PER ROW for a multi-row question,
+# each on the row's own answer scale. The file also loads the shipped
 # survey-question file so prompts and scoring always read the exact same
 # question texts.
 
@@ -144,3 +147,63 @@ def label_letters(experiment: str,
         f"experiment {experiment!r} has no choice question, so it has no "
         "answer letters to score"
     )
+
+
+def arm_items(experiment: str, arm: str,
+              stimuli: dict[str, dict] | None = None) -> list[dict]:
+    """One first-token item descriptor per single-answer call of an arm.
+
+    The study measures every question with deterministic first-token
+    calls, so an arm becomes a list of items in survey order: a choice
+    question is ONE item scored on its letter labels; a numeric question
+    is ONE digit item scored on "0".."9" (the first significant digit);
+    a multi-row question splits into one digit item PER ROW, each on the
+    row's own answer scale (the scale's positions as text). Each
+    descriptor carries: qid, kind ("choice" or "digit"), labels (the
+    answer tokens that fold), the verbatim question_text, and — for a
+    split row — the 1-based row number and that row's verbatim
+    statement. The shipped stimuli file is only ever READ: the split is
+    derived here, never by editing the data. Raises KeyError for an
+    unknown experiment or arm.
+    """
+    stimuli = stimuli if stimuli is not None else load_stimuli()
+    items: list[dict] = []
+    for qid in EXPERIMENTS[experiment].arm_qids(arm):
+        stimulus = stimuli[qid]
+        kind = stimulus["response_kind"]
+        if kind == "choice":
+            items.append({
+                "qid": qid, "kind": "choice",
+                "labels": tuple(stimulus["labels"]),
+                "question_text": stimulus["question_text"],
+                "row": None, "statement": None,
+            })
+        elif kind == "numeric":
+            items.append({
+                "qid": qid, "kind": "digit",
+                "labels": tuple("0123456789"),
+                "question_text": stimulus["question_text"],
+                "row": None, "statement": None,
+            })
+        else:
+            items.extend(_row_items(qid, stimulus))
+    return items
+
+
+def _row_items(qid: str, stimulus: dict) -> list[dict]:
+    """One digit item per row of a multi-row question (helper for arm_items).
+
+    The labels are the answer-scale positions as text ("1", "2", ... one
+    per column), the row number is 1-based in file order, and the
+    statement is that row's verbatim text.
+    """
+    labels = tuple(str(number)
+                   for number in range(1, len(stimulus["columns"]) + 1))
+    return [
+        {
+            "qid": qid, "kind": "digit", "labels": labels,
+            "question_text": stimulus["question_text"],
+            "row": number, "statement": statement,
+        }
+        for number, statement in enumerate(stimulus["rows"], start=1)
+    ]
