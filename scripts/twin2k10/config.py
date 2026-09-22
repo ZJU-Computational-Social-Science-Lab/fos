@@ -76,6 +76,15 @@ TEMPERATURE = 1.0
 TOP_K = 100
 PROBABILITY_FLOOR = FOLD_PROBABILITY_FLOOR  # 1e-6, same number as R1
 
+# Granite-style models write lead-in prose before a digit answer, so a
+# digit-item call generates a deeper window (16 tokens) than the choice
+# scan (8) and the study scans every position for digit probability mass.
+DIGIT_SCAN_TOKENS = 16
+
+# A digit item passes preflight only when its best position's digit mass
+# is at least this share (the digit dominates what the model writes there).
+DIGIT_MASS_PREFLIGHT_THRESHOLD = 0.5
+
 # A combined letter mass strictly below 0.80 is flagged "diffuse" — same
 # stricter-than-R1 threshold the twin2k6 study used.
 LOW_BRANCH_MASS_THRESHOLD = 0.80

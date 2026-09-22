@@ -32,12 +32,14 @@ def fold_label_tokens(letter: str) -> frozenset[str]:
     lowercase ("A", " A", "a", " a"). Nothing else — not "A.", "(A",
     "Answer" — ever folds into a letter.
     """
-    return frozenset({
-        letter,
-        f" {letter}",
-        letter.lower(),
-        f" {letter.lower()}",
-    })
+    return frozenset(
+        {
+            letter,
+            f" {letter}",
+            letter.lower(),
+            f" {letter.lower()}",
+        }
+    )
 
 
 def _stripped_form_to_letter(letters) -> dict[str, str]:
@@ -53,8 +55,7 @@ def _stripped_form_to_letter(letters) -> dict[str, str]:
     return lookup
 
 
-def _raw_letter_probabilities(top_logprobs, lookup: dict[str, str]
-                              ) -> dict[str, float]:
+def _raw_letter_probabilities(top_logprobs, lookup: dict[str, str]) -> dict[str, float]:
     """Sum the raw probabilities each letter collects from one top-k list.
 
     Walks the entries with the proven R1 helpers (token text and logprob
@@ -79,8 +80,9 @@ def _raw_letter_probabilities(top_logprobs, lookup: dict[str, str]
     return raw
 
 
-def _normalized(p_raw: dict[str, float | None], branch_mass: float, letters
-                ) -> dict[str, float | None]:
+def _normalized(
+    p_raw: dict[str, float | None], branch_mass: float, letters
+) -> dict[str, float | None]:
     """Divide each found letter's raw probability by the branch mass.
 
     With zero mass (no letter appeared at all) every normalized probability
@@ -117,12 +119,12 @@ def score_labels(
     ValueError when no labels are given and the experiment has no choice
     question.
     """
-    fold_targets = (tuple(labels) if labels is not None
-                    else experiments.label_letters(experiment))
+    fold_targets = (
+        tuple(labels) if labels is not None else experiments.label_letters(experiment)
+    )
     lookup = _stripped_form_to_letter(fold_targets)
     raw = _raw_letter_probabilities(top_logprobs, lookup)
-    p_raw: dict[str, float | None] = {label: raw.get(label)
-                                      for label in fold_targets}
+    p_raw: dict[str, float | None] = {label: raw.get(label) for label in fold_targets}
     branch_mass = float(sum(raw.values()))
     return {
         "p_raw": p_raw,
@@ -133,6 +135,62 @@ def score_labels(
         "decision_position": decision_position,
         "skipped_prefix": skipped_prefix,
         "skipped_len": skipped_len,
+    }
+
+
+def _leading_digit_mass(top_logprobs: list[dict]) -> dict[str, float]:
+    """One position's per-digit probabilities, keyed by leading digit.
+
+    A token counts toward a digit when its text (stripped) STARTS with
+    that digit — "7" and " 7" count toward "7", and multi-digit number
+    tokens like "30" or " 15" count toward their LEADING digit ("3",
+    "1"). Prose tokens ("The", " to") contribute nothing. Entries under
+    the visibility floor are top-k noise and never count.
+    """
+    raw: dict[str, float] = {}
+    for entry in top_logprobs or []:
+        token = _token_from_entry(entry)
+        if token is None:
+            continue
+        logprob = _logprob_from_entry(entry, token)
+        if logprob is None:
+            continue
+        probability = math.exp(logprob)
+        if probability < config.PROBABILITY_FLOOR:
+            continue  # numerically-zero top-k noise, never an answer form
+        stripped = token.strip()
+        if stripped and stripped[0].isdigit():
+            raw[stripped[0]] = raw.get(stripped[0], 0.0) + probability
+    return raw
+
+
+def scan_digit_positions(
+    position_top_logprobs: list[list[dict]], labels: tuple[str, ...]
+) -> dict:
+    """Scan every generated position and read the digit from the best one.
+
+    position_top_logprobs is ONE top-k list per generated position
+    (index 0 = position 1). Each position's digit mass is the summed
+    probability of its digit-starting tokens; the position with the
+    MAXIMUM mass wins (a tie goes to the EARLIEST position). Returns the
+    digit item's scan fields: decision_position (1-based), p_raw / p_norm
+    from THAT position (every label, None when it never appeared), and
+    digit_mass (the chosen position's total digit mass).
+    """
+    best_mass = -1.0
+    best_raw: dict[str, float] = {}
+    best_position: int | None = None
+    for index, top_logprobs in enumerate(position_top_logprobs or []):
+        raw = _leading_digit_mass(top_logprobs)
+        mass = float(sum(raw.values()))
+        if mass > best_mass:
+            best_mass, best_raw, best_position = mass, raw, index + 1
+    p_raw: dict[str, float | None] = {label: best_raw.get(label) for label in labels}
+    return {
+        "decision_position": best_position,
+        "p_raw": p_raw,
+        "p_norm": _normalized(p_raw, max(best_mass, 0.0), labels),
+        "digit_mass": max(best_mass, 0.0),
     }
 
 
