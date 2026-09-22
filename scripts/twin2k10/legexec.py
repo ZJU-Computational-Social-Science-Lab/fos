@@ -71,8 +71,7 @@ def inference_settings(base_url: str) -> dict:
     }
 
 
-def make_leg_context(model: str, base_url: str,
-                     personas: list[dict]) -> LegContext:
+def make_leg_context(model: str, base_url: str, personas: list[dict]) -> LegContext:
     """One model's frozen cell context: ids, pool, prompts, settings."""
     return LegContext(
         model=model,
@@ -95,6 +94,24 @@ def make_scorer(context: LegContext) -> Callable:
         context.base_url,
         context.model_id,
         scan_tokens=config.SCAN_TOKENS,
+        top_k=config.TOP_K,
+        control_sequences=registry.control_sequences(context.model),
+    )
+
+
+def make_digit_scorer(context: LegContext) -> Callable:
+    """The first-token scorer for digit items, with the deeper window.
+
+    Identical to make_scorer except the scan window is the digit scan
+    knob (config.DIGIT_SCAN_TOKENS = 16): Granite-style models write
+    lead-in prose before the digit, so digit calls generate a deeper
+    window for scoring.scan_digit_positions to walk. The choice scorer's
+    window (8) never changes.
+    """
+    return make_first_token_scorer(
+        context.base_url,
+        context.model_id,
+        scan_tokens=config.DIGIT_SCAN_TOKENS,
         top_k=config.TOP_K,
         control_sequences=registry.control_sequences(context.model),
     )
@@ -125,16 +142,16 @@ def label_map(stimulus: dict) -> dict[str, str]:
     return dict(zip(labels, options))
 
 
-def _item_messages(system_prompt: str, persona: dict, experiment: str,
-                   arm: str, item: dict) -> list[dict]:
+def _item_messages(
+    system_prompt: str, persona: dict, experiment: str, arm: str, item: dict
+) -> list[dict]:
     """One item's ready-to-send chat messages: system + its OWN user prompt.
 
     Each first-token item is asked on its own single-question prompt, so
     a rating call never sees another policy's statement and a digit
     estimate call never sees the anchor question.
     """
-    user_prompt = prompts.build_user_prompt(persona, experiment, arm,
-                                            item=item)
+    user_prompt = prompts.build_user_prompt(persona, experiment, arm, item=item)
     return [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
@@ -152,8 +169,10 @@ def _run_item(scorer: Callable, messages: list[dict]) -> dict:
     try:
         raw = scorer(messages)
     except Exception as exc:  # noqa: BLE001 — surfaced on the record below
-        raw = {"succeeded": False,
-               "raw_logprob_response": f"{type(exc).__name__}: {exc}"}
+        raw = {
+            "succeeded": False,
+            "raw_logprob_response": f"{type(exc).__name__}: {exc}",
+        }
     return {**raw, "elapsed_seconds": time.monotonic() - started}
 
 
@@ -174,13 +193,47 @@ def _score_item(experiment: str, item: dict, raw: dict) -> dict:
     )
 
 
+def _score_digit_item(experiment: str, item: dict, raw: dict) -> dict:
+    """Score one digit item through the multi-position scan.
+
+    Runs scoring.scan_digit_positions over every generated position's
+    top-k, re-folds the CHOSEN position's top-k through the same choice
+    machinery (same floor, same payload keys), and stamps digit_mass on
+    top so preflight can gate the item on its best-position dominance.
+    """
+    labels = tuple(item["labels"])
+    positions = raw.get("per_position_top_k") or []
+    if positions:
+        scan = scoring.scan_digit_positions(positions, labels)
+        index = scan["decision_position"]
+        chosen = positions[index - 1] if index else []
+        decision_position = index
+    else:
+        # No per-position window on this result (an offline fake or an
+        # older transport): the decision-position top-k IS the scan.
+        chosen = raw.get("top_logprobs") or []
+        decision_position = raw.get("decision_position")
+        scan = scoring.scan_digit_positions([chosen], labels)
+    scored = scoring.score_labels(
+        chosen,
+        experiment,
+        labels=labels,
+        decision_position=decision_position,
+        skipped_prefix=raw.get("skipped_prefix"),
+        skipped_len=raw.get("skipped_len"),
+    )
+    scored["digit_mass"] = scan["digit_mass"]
+    return scored
+
+
 def _failed_text(raw: dict) -> str:
     """One failed call's error text (the exception, or a plain fallback)."""
     return raw.get("raw_logprob_response") or "call failed"
 
 
-def _choice_part(experiment: str, scorer: Callable, items: list[dict],
-                 message_list: list[list[dict]]) -> dict:
+def _choice_part(
+    experiment: str, scorer: Callable, items: list[dict], message_list: list[list[dict]]
+) -> dict:
     """The choice-scoring fragment of one record (empty when no choice).
 
     Scores the arm's choice item with one first-token call; a failed
@@ -196,15 +249,15 @@ def _choice_part(experiment: str, scorer: Callable, items: list[dict],
             "choice_qid": item["qid"],
             **scored,
             "choice_succeeded": bool(raw.get("succeeded")),
-            "choice_error": (None if raw.get("succeeded")
-                             else _failed_text(raw)),
+            "choice_error": (None if raw.get("succeeded") else _failed_text(raw)),
             "choice_elapsed_seconds": float(raw["elapsed_seconds"]),
         }
     return {}
 
 
-def _digit_part(experiment: str, scorer: Callable, items: list[dict],
-                message_list: list[list[dict]]) -> list[dict]:
+def _digit_part(
+    experiment: str, scorer: Callable, items: list[dict], message_list: list[list[dict]]
+) -> list[dict]:
     """One digit_items entry per digit item of the arm, in survey order.
 
     Each entry is one item's own label distribution plus its own prompt
@@ -216,25 +269,33 @@ def _digit_part(experiment: str, scorer: Callable, items: list[dict],
         if item["kind"] != "digit":
             continue
         raw = _run_item(scorer, messages)
-        scored = _score_item(experiment, item, raw)
+        scored = _score_digit_item(experiment, item, raw)
         succeeded = bool(raw.get("succeeded"))
-        entries.append({
-            "qid": item["qid"],
-            "row": item["row"],
-            "statement": item["statement"],
-            "user_prompt": messages[-1]["content"],
-            "prompt_sha256": prompt_sha256(messages[0]["content"],
-                                           messages[-1]["content"]),
-            **scored,
-            "succeeded": succeeded,
-            "error": None if succeeded else _failed_text(raw),
-            "elapsed_seconds": float(raw["elapsed_seconds"]),
-        })
+        entries.append(
+            {
+                "qid": item["qid"],
+                "row": item["row"],
+                "statement": item["statement"],
+                "user_prompt": messages[-1]["content"],
+                "prompt_sha256": prompt_sha256(
+                    messages[0]["content"], messages[-1]["content"]
+                ),
+                **scored,
+                "succeeded": succeeded,
+                "error": None if succeeded else _failed_text(raw),
+                "elapsed_seconds": float(raw["elapsed_seconds"]),
+            }
+        )
     return entries
 
 
-def _base_record(context: LegContext, cell: Cell, arm_qids: tuple[str, ...],
-                 system_prompt: str, user_prompt: str) -> dict:
+def _base_record(
+    context: LegContext,
+    cell: Cell,
+    arm_qids: tuple[str, ...],
+    system_prompt: str,
+    user_prompt: str,
+) -> dict:
     """The identity-and-prompt head of one record.
 
     Stamps the run-level fields (model ids, prompts, their hash, the
@@ -245,8 +306,11 @@ def _base_record(context: LegContext, cell: Cell, arm_qids: tuple[str, ...],
     """
     _model, persona_id, experiment, arm, blind = cell
     first_choice = next(
-        (context.stimuli[qid] for qid in arm_qids
-         if context.stimuli[qid]["response_kind"] == "choice"),
+        (
+            context.stimuli[qid]
+            for qid in arm_qids
+            if context.stimuli[qid]["response_kind"] == "choice"
+        ),
         None,
     )
     return {
@@ -281,8 +345,7 @@ def _audit_top_logprobs(choice: dict, digit_entries: list[dict]) -> list | None:
     return None
 
 
-def _stamp_status(record: dict, choice: dict,
-                  digit_entries: list[dict]) -> None:
+def _stamp_status(record: dict, choice: dict, digit_entries: list[dict]) -> None:
     """Stamp the record's footer: the success flag and the error text.
 
     succeeded is True only when EVERY first-token call behind the record
@@ -293,15 +356,21 @@ def _stamp_status(record: dict, choice: dict,
     problems: list[str] = []
     if choice and choice.get("choice_error"):
         problems.append(str(choice["choice_error"]))
-    problems.extend(str(entry["error"]) for entry in digit_entries
-                    if entry["error"])
+    problems.extend(str(entry["error"]) for entry in digit_entries if entry["error"])
     record["succeeded"] = not problems
-    record["error"] = None if not problems else (
-        "; ".join(problems) or f"{len(problems)} call(s) failed"
+    record["error"] = (
+        None
+        if not problems
+        else ("; ".join(problems) or f"{len(problems)} call(s) failed")
     )
 
 
-def execute_cell(context: LegContext, scorer: Callable, cell: Cell) -> dict:
+def execute_cell(
+    context: LegContext,
+    scorer: Callable,
+    cell: Cell,
+    digit_scorer: Callable | None = None,
+) -> dict:
     """Run one cell end to end and return its record (never raises).
 
     Builds the system prompt once and one prompt PER first-token item of
@@ -316,12 +385,14 @@ def execute_cell(context: LegContext, scorer: Callable, cell: Cell) -> dict:
     persona = context.personas[persona_id]
     items = experiments.arm_items(experiment, arm, context.stimuli)
     system_prompt = prompts.build_system_prompt(experiment, blind == "blinded")
-    message_list = [_item_messages(system_prompt, persona, experiment, arm,
-                                   item) for item in items]
-    record = _base_record(context, cell, arm_qids, system_prompt,
-                          message_list[0][-1]["content"])
+    message_list = [
+        _item_messages(system_prompt, persona, experiment, arm, item) for item in items
+    ]
+    record = _base_record(
+        context, cell, arm_qids, system_prompt, message_list[0][-1]["content"]
+    )
     choice = _choice_part(experiment, scorer, items, message_list)
-    digit_entries = _digit_part(experiment, scorer, items, message_list)
+    digit_entries = _digit_part(experiment, digit_scorer or scorer, items, message_list)
     record.update(choice)
     record["digit_items"] = digit_entries
     audit = _audit_top_logprobs(choice, digit_entries)
@@ -331,8 +402,11 @@ def execute_cell(context: LegContext, scorer: Callable, cell: Cell) -> dict:
     return record
 
 
-def make_transport(context: LegContext, on_record: Callable[[dict], None],
-                   scorer: Callable | None = None) -> Callable:
+def make_transport(
+    context: LegContext,
+    on_record: Callable[[dict], None],
+    scorer: Callable | None = None,
+) -> Callable:
     """The cells.run_cells transport for one model: execute + notify.
 
     on_record fires after each cell's record exists (the runner uses it
@@ -341,18 +415,21 @@ def make_transport(context: LegContext, on_record: Callable[[dict], None],
     inject fakes here — the same injectable-transport pattern as the R1
     code).
     """
-    scorer = scorer if scorer is not None else make_scorer(context)
+    if scorer is None:
+        scorer = make_scorer(context)
+        digit_scorer = make_digit_scorer(context)
 
     def transport(cell: Cell) -> dict:
-        record = execute_cell(context, scorer, cell)
+        record = execute_cell(context, scorer, cell, digit_scorer=digit_scorer)
         on_record(record)
         return record
 
     return transport
 
 
-def leg_cells(model: str, persona_ids: list[int],
-              experiment: str, blind: str) -> list[Cell]:
+def leg_cells(
+    model: str, persona_ids: list[int], experiment: str, blind: str
+) -> list[Cell]:
     """One leg's cells in pinned order: persona, then arm in registry order.
 
     Built with cells.enumerate_cells (single experiment map, single
@@ -370,5 +447,4 @@ def leg_dir(run_root, model: str, experiment: str, blind: str):
     """One leg's directory: <root>/<safe_model>/<experiment>_<blind>."""
     from pathlib import Path
 
-    return Path(run_root) / registry.safe_model_name(model) / \
-        f"{experiment}_{blind}"
+    return Path(run_root) / registry.safe_model_name(model) / f"{experiment}_{blind}"
