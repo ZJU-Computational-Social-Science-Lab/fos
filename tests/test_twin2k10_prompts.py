@@ -184,24 +184,26 @@ def test_anchoring_mc_item_prompt_is_the_choice_question_alone() -> None:
 
 
 def test_anchoring_digit_item_prompt_is_the_verbatim_estimate_only() -> None:
-    """The estimate call sees ONLY the estimate question, asked as a number.
+    """The estimate call sees the verbatim estimate question, asked as a number.
 
-    The anchor question must NOT leak into the digit call's prompt — its
-    first token would then be the anchor letter, not a digit.
+    Amended by TASK-2215 per RESULT-2214 Fix 2: the arm's anchor context
+    MAY now appear above the estimate question (it must — the anchor was
+    never reaching the estimate call), but the lettered option lines must
+    still never render (the first-token digit scan must read a digit, not
+    an anchor letter) and the estimate question stays the last question
+    before the pinned single-number instruction.
     """
-    stimuli = _stimuli()
     items = experiments.arm_items("anchoring_redwood", "low")
     digit = next(item for item in items if item["kind"] == "digit")
-    anchor = stimuli["QID167"]
     user = prompts.build_user_prompt(PERSONA, "anchoring_redwood", "low",
                                      item=digit)
     assert digit["question_text"] in user
-    assert anchor["question_text"] not in user, (
-        "the anchor choice question must not appear in the digit item's "
-        "prompt — the first-token digit scan would read the letter"
-    )
     assert _last_paragraph(user) == prompts.NUMERIC_INSTRUCTION
-    assert "A." not in user
+    assert "A. more" not in user and "B. less" not in user, (
+        "the anchor choice question's letter options must never render in "
+        "the digit item's prompt — the first-token digit scan would read "
+        "the letter"
+    )
 
 
 def test_false_consensus_item_prompt_shows_one_policy_and_the_scale() -> None:
