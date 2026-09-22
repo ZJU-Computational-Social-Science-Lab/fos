@@ -6,19 +6,19 @@
 #   - The stop-or-proceed decision is one PURE function: it takes the
 #     preflight records in memory and returns a verdict, touching no
 #     files and no network.
-#   - It says STOP exactly on the three technical failure criteria: a
-#     record whose top-logprobs came back empty (the known GGUF failure
-#     signature), a choice record where no answer letter could be read
-#     (missing labels), and a numeric smoke record where a sample could
-#     not be parsed into a number.
+#   - It says STOP exactly on technical failure criteria: a record whose
+#     top-logprobs came back empty (the known GGUF failure signature), a
+#     choice record where no answer letter could be read, and a digit
+#     item where no answer digit could be read. TASK-2182: the sampling-
+#     era truncation checks (expected_rows, unparseable numeric samples)
+#     are GONE — records carry per-item first-token label distributions,
+#     and leftover sampling fields are simply never inspected.
 #   - Clean records mean PROCEED, and every stop verdict says why.
 #
 # All offline: pure functions over synthetic record dicts; no files.
 import math
 import sys
 from pathlib import Path
-
-import pytest
 
 # The launch scripts live in scripts/ and are not on pytest's pythonpath.
 _SCRIPTS = str(Path(__file__).resolve().parent.parent / "scripts")
@@ -43,18 +43,30 @@ def _good_choice_record() -> dict:
             "top_logprobs": top_k, **scored}
 
 
-def _good_numeric_record() -> dict:
-    """A healthy numeric smoke record: every sample parses to a number."""
-    return {"experiment": "base_rate", "arm": "30_engineers", "model": "m",
+def _digit_item(labels, top_k, p_raw=None, row=None, qid="QID287") -> dict:
+    """One healthy digit-item entry as the executor stamps it (helper)."""
+    return {
+        "qid": qid, "row": row, "statement": None,
+        "top_logprobs": list(top_k),
+        "p_raw": p_raw if p_raw is not None
+        else {label: 1.0 / len(labels) for label in labels},
+    }
+
+
+def _good_digit_record() -> dict:
+    """A healthy digit preflight record: every item's digits readable."""
+    labels = tuple("12345")
+    top_k = [_entry("1", 0.6), _entry("2", 0.3)]
+    item = _digit_item(labels, top_k, row=1)
+    return {"experiment": "false_consensus", "arm": "all", "model": "m",
             "persona_id": 0, "blind": "blinded",
-            "top_logprobs": [_entry("1", 0.5)],
-            "numeric_samples": ["30", "about 35 percent", "40"]}
+            "top_logprobs": top_k, "digit_items": [item]}
 
 
 def test_clean_records_mean_proceed() -> None:
-    """Healthy choice + numeric records produce stop=False."""
+    """Healthy choice + digit records produce stop=False."""
     verdict = preflight.decide(
-        [_good_choice_record(), _good_numeric_record()]
+        [_good_choice_record(), _good_digit_record()]
     )
     assert verdict["stop"] is False
     assert verdict["reasons"] == []
@@ -78,62 +90,108 @@ def test_missing_labels_stop_the_run() -> None:
     assert verdict["reasons"]
 
 
-def test_numeric_sample_that_fails_to_parse_stops_the_run() -> None:
-    """A numeric smoke sample with no parseable number is a failure."""
-    unparseable = _good_numeric_record()
-    unparseable["numeric_samples"] = ["30", "I refuse to answer"]
-    assert scoring.parse_numeric("I refuse to answer") is None
-    verdict = preflight.decide([unparseable])
+# ---------------------------------------------------------------------------
+# TASK-2182 design pivot — digit-label checks replace the sampling-era
+# numeric/truncation checks. A digit item fails technically exactly when
+# a choice record fails: its top-logprobs came back empty (GGUF
+# signature) or NO label digit could be read from its distribution.
+# There is no truncation concept left: every item is one deterministic
+# first-token call, and sampling-era record fields are never inspected.
+# ---------------------------------------------------------------------------
+
+
+def test_digit_item_with_no_readable_digit_stops_the_run() -> None:
+    """A rating item whose distribution has no digit at all is a failure."""
+    labels = tuple("12345")
+    blank = _digit_item(labels, [_entry("Support", 0.9)],
+                        p_raw={label: None for label in labels}, row=7)
+    record = _good_digit_record()
+    record["digit_items"].append(blank)
+    verdict = preflight.decide([record])
+    assert verdict["stop"] is True, (
+        "a digit item with every label None must stop the run, exactly "
+        "like a choice record where no answer letter is readable"
+    )
+    assert verdict["reasons"], "a stop verdict must say why"
+
+
+def test_digit_item_with_empty_top_logprobs_stops_the_run() -> None:
+    """The GGUF failure signature on a digit item stops the run too."""
+    labels = tuple("12345")
+    empty = _digit_item(labels, [], p_raw={label: None for label in labels},
+                        row=3)
+    record = _good_digit_record()
+    record["digit_items"][0] = empty
+    verdict = preflight.decide([record])
     assert verdict["stop"] is True
     assert verdict["reasons"]
 
 
+def test_record_with_every_digit_item_readable_proceeds() -> None:
+    """A full false_consensus record (10 healthy rating items) passes."""
+    labels = tuple("12345")
+    items = [_digit_item(labels, [_entry("1", 0.5), _entry("2", 0.4)],
+                         row=row) for row in range(1, 11)]
+    record = _good_digit_record()
+    record["digit_items"] = items
+    verdict = preflight.decide([record])
+    assert verdict["stop"] is False
+    assert verdict["reasons"] == []
+
+
+def test_anchoring_record_with_healthy_mc_and_digit_proceeds() -> None:
+    """An anchoring record: one choice distribution + one digit item."""
+    record = _good_choice_record()
+    record["experiment"] = "anchoring_redwood"
+    record["arm"] = "low"
+    record["digit_items"] = [_digit_item(
+        tuple("0123456789"), [_entry("7", 0.5)],
+        p_raw={digit: 0.1 for digit in "0123456789"}, qid="QID168",
+    )]
+    verdict = preflight.decide([record])
+    assert verdict["stop"] is False
+    assert verdict["reasons"] == []
+
+
+def test_leftover_sampling_fields_are_never_inspected() -> None:
+    """Sampling-era fields on a record can no longer stop anything.
+
+    The truncation/unparseable-sample checks are deleted with the
+    sampling machinery: a record that still carries old sampling fields
+    is judged only on its first-token label distributions.
+    """
+    record = _good_choice_record()
+    record.update({
+        "numeric_samples": ["I refuse to answer"],
+        "multi_numeric_values": [[None, None, None]],
+        "expected_rows": 10,
+        "numeric_parse_failures": 99,
+    })
+    verdict = preflight.decide([record])
+    assert verdict["stop"] is False, verdict["reasons"]
+
+
+def test_a_record_without_digit_items_has_no_digit_reasons() -> None:
+    """A pure-choice record simply has no digit items to check."""
+    verdict = preflight.decide([_good_choice_record()])
+    assert verdict["stop"] is False
+    assert verdict["reasons"] == []
+
+
 def test_the_decision_is_pure_and_stable() -> None:
     """Same records in, same verdict out; calling it changes nothing."""
-    records = [_good_choice_record(), _good_numeric_record()]
+    records = [_good_choice_record(), _good_digit_record()]
     first = preflight.decide([dict(r) for r in records])
     second = preflight.decide([dict(r) for r in records])
     assert first == second
     assert preflight.decide([])["stop"] is False
 
 
-# --------------------------------------------------------------------------
-# TASK-2150 RED tests — review blocker B1 (RESULT-2146): a multi-row
-# sample whose rows ALL parse but whose row count falls short of the
-# record's expected_rows is the truncation signature (e.g. a 32-token
-# window cutting a 10-row answer down to 8 rows) — the preflight must
-# STOP on it and name the row deficit, and must still PROCEED on a full
-# count.
-# --------------------------------------------------------------------------
-
-
-def _multi_record(expected_rows: int, filled_rows: int) -> dict:
-    """A multi-row record with `filled_rows` of `expected_rows` parseable."""
-    values = list(range(1, filled_rows + 1))
-    return {"experiment": "false_consensus", "arm": "all", "model": "m",
-            "persona_id": 0, "blind": "blinded",
-            "top_logprobs": [_entry("1", 0.5)],
-            "expected_rows": expected_rows,
-            "multi_numeric_values": [values]}
-
-
-def test_truncated_multi_sample_stops_even_when_every_row_parses() -> None:
-    """8 parseable rows of an expected 10 is the truncation signature."""
-    verdict = preflight.decide([_multi_record(expected_rows=10,
-                                              filled_rows=8)])
-    assert verdict["stop"] is True, (
-        "a multi sample with 8 of 10 rows — every row parseable — must "
-        "stop the run as truncated, not pass the preflight"
-    )
-    reasons = " ".join(verdict["reasons"])
-    assert "8" in reasons and "10" in reasons, (
-        f"the stop reason must name the row deficit (8 of 10): {reasons}"
-    )
-
-
-def test_full_ten_of_ten_multi_sample_proceeds() -> None:
-    """A complete 10/10 multi sample is healthy — no truncation stop."""
-    verdict = preflight.decide([_multi_record(expected_rows=10,
-                                              filled_rows=10)])
-    assert verdict["stop"] is False
-    assert verdict["reasons"] == []
+# ---------------------------------------------------------------------------
+# TASK-2150 RED tests — review blocker B1 (RESULT-2146) — REMOVED by the
+# TASK-2182 design pivot (owner decision): with sampling deleted there
+# is no generation window, no truncation signature and no expected_rows
+# field to check. Their digit-era replacements are the digit-label
+# checks above (test_digit_item_with_no_readable_digit_stops_the_run and
+# friends).
+# ---------------------------------------------------------------------------
