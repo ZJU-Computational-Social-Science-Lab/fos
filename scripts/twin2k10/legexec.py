@@ -197,9 +197,13 @@ def _score_digit_item(experiment: str, item: dict, raw: dict) -> dict:
     """Score one digit item through the multi-position scan.
 
     Runs scoring.scan_digit_positions over every generated position's
-    top-k, re-folds the CHOSEN position's top-k through the same choice
-    machinery (same floor, same payload keys), and stamps digit_mass on
-    top so preflight can gate the item on its best-position dominance.
+    top-k and takes the item's p_raw / p_norm from the CHOSEN position's
+    LEADING-digit distribution (keyed by the item's digit labels), so a
+    model answering with multi-digit number tokens ("379") still fills
+    the digit its token starts with — an all-None distribution is then
+    impossible for a parseable answer. digit_mass stays the same scan
+    mass preflight gates on; the audit fields (top_logprobs, skipped
+    prefix/length) are stamped as before.
     """
     labels = tuple(item["labels"])
     positions = raw.get("per_position_top_k") or []
@@ -222,6 +226,10 @@ def _score_digit_item(experiment: str, item: dict, raw: dict) -> dict:
         skipped_prefix=raw.get("skipped_prefix"),
         skipped_len=raw.get("skipped_len"),
     )
+    scored["p_raw"] = scan["p_raw"]
+    scored["p_norm"] = scan["p_norm"]
+    scored["branch_mass"] = scan["digit_mass"]
+    scored["low_branch_mass"] = scan["digit_mass"] < config.LOW_BRANCH_MASS_THRESHOLD
     scored["digit_mass"] = scan["digit_mass"]
     return scored
 
