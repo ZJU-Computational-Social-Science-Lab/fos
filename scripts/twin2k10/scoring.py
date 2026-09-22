@@ -1,14 +1,17 @@
-# This file turns model answers into numbers, three ways. (1) Choice
-# scoring is exactly twin2k6's: a letter answer folds only its four
-# spellings ("A", " A", "a", " a"), punctuation/prose look-alikes never
-# fold, entries under the one-in-a-million floor are sampler noise, a
-# missing letter stays explicitly None (never a faked 0.0), the found
-# letters' raw probabilities sum into the branch mass, and a mass under
-# 0.80 is flagged. (2) parse_numeric pulls the number out of messy model
-# prose ("about 15,000 feet" -> 15000, "$5,000,000" -> 5000000) and
-# returns None — never an exception, never 0 — when there is no number.
-# (3) parse_multi_numeric reads a numbered list ("1. 80", "2. 65", ...)
-# into one value per line, keeping blank lines as None.
+# This file turns model answers into numbers, two ways. (1) Choice AND
+# digit scoring is exactly twin2k6's folding machinery: an answer token
+# folds only its four spellings ("A", " A", "a", " a" — a digit's
+# lowercase forms equal its bare forms, so "1" folds "1" and " 1"),
+# punctuation/prose look-alikes never fold, entries under the
+# one-in-a-million floor are sampler noise, a missing label stays
+# explicitly None (never a faked 0.0), the found labels' raw
+# probabilities sum into the branch mass, and a mass under 0.80 is
+# flagged. The label list to fold toward comes either from the
+# experiment's choice letters or from the caller's explicit labels=
+# (the digit labels of one first-token item). (2) parse_numeric pulls
+# the number out of messy model prose ("about 15,000 feet" -> 15000,
+# "$5,000,000" -> 5000000) and returns None — never an exception, never
+# 0 — when there is no number.
 
 import math
 import re
@@ -97,26 +100,33 @@ def score_labels(
     decision_position: int | None = None,
     skipped_prefix: list | None = None,
     skipped_len: int | None = None,
+    labels: tuple[str, ...] | None = None,
 ) -> dict:
-    """Score one decision-position top-logprob list for one experiment.
+    """Score one decision-position top-logprob list into a distribution.
 
-    Returns the record's choice-scoring fields: p_raw / p_norm (every
-    answer letter of the experiment, None when the letter never appeared),
-    branch_mass (the found letters' summed raw probability), the
-    low_branch_mass flag (mass strictly below 0.80), and the untouched
-    audit fields (the full top_logprobs array, decision_position,
-    skipped_prefix, skipped_len). Raises KeyError for an unknown
-    experiment and ValueError when the experiment has no choice question.
+    Folds the top-k entries toward the given label list: the caller's
+    explicit labels (a first-token item's own choice letters or digit
+    labels) when supplied, otherwise the experiment's choice letters.
+    Returns the record's scoring fields: p_raw / p_norm (every label,
+    None when it never appeared), branch_mass (the found labels' summed
+    raw probability), the low_branch_mass flag (mass strictly below
+    0.80), and the untouched audit fields (the full top_logprobs array,
+    decision_position, skipped_prefix, skipped_len). A digit item scores
+    through exactly this path — its record payload is byte-for-byte the
+    choice shape. Raises KeyError for an unknown experiment and
+    ValueError when no labels are given and the experiment has no choice
+    question.
     """
-    letters = experiments.label_letters(experiment)
-    lookup = _stripped_form_to_letter(letters)
+    fold_targets = (tuple(labels) if labels is not None
+                    else experiments.label_letters(experiment))
+    lookup = _stripped_form_to_letter(fold_targets)
     raw = _raw_letter_probabilities(top_logprobs, lookup)
-    p_raw: dict[str, float | None] = {letter: raw.get(letter)
-                                      for letter in letters}
+    p_raw: dict[str, float | None] = {label: raw.get(label)
+                                      for label in fold_targets}
     branch_mass = float(sum(raw.values()))
     return {
         "p_raw": p_raw,
-        "p_norm": _normalized(p_raw, branch_mass, letters),
+        "p_norm": _normalized(p_raw, branch_mass, fold_targets),
         "branch_mass": branch_mass,
         "low_branch_mass": branch_mass < config.LOW_BRANCH_MASS_THRESHOLD,
         "top_logprobs": top_logprobs,
@@ -141,25 +151,3 @@ def parse_numeric(text: str | None) -> float | int | None:
         return None
     value = float(match.group().replace(",", ""))
     return int(value) if value.is_integer() else value
-
-
-def parse_multi_numeric(text: str | None) -> list[float | int | None]:
-    """One value per distinct row number of a multi-row answer, in order.
-
-    Lines like "1. 80" or "2) 65" are read in line order; a line with no
-    number after it ("3.") stays None instead of a made-up 0. The FIRST
-    value seen for a row number wins and later repeats of that row number
-    are ignored — a model that answers "1. 42 / 2. 42 / 3. 42" and then
-    chats about its answer with another numbered list must not gain extra
-    result slots. Lines without a leading row number are never parsed.
-    """
-    first_by_row: dict[int, float | int | None] = {}
-    for line in (text or "").splitlines():
-        match = re.match(r"^\s*(\d+)\s*[.)]\s*(.*)$", line)
-        if match is None:
-            continue
-        row = int(match.group(1))
-        if row in first_by_row:
-            continue
-        first_by_row[row] = parse_numeric(match.group(2))
-    return [first_by_row[row] for row in sorted(first_by_row)]

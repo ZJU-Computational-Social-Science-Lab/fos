@@ -2,21 +2,18 @@
 # pure function, decide(records), that takes the preflight records in
 # memory and returns a stop-or-proceed verdict — touching no files and no
 # network. It says STOP exactly on technical failure criteria: a record
-# whose top-logprobs came back empty (the known GGUF failure signature), a
-# choice record where no answer letter could be read, a numeric sample
-# that cannot be parsed into a number, a multi-row sample with an
-# unparseable row, or a multi-row sample TRUNCATED short of its item's
-# row count even when every row it has parses (8 of 10 rows is a cut-off
-# answer, not a model choice). It never judges whether an answer is
-# sensible. The
-# file also writes the preflight report and the skipped-models list the
-# runner uses to leave broken models out of the full run.
+# whose top-logprobs came back empty (the known GGUF failure signature),
+# a choice record where no answer letter could be read, or a digit item
+# where no answer digit could be read (each digit item failing exactly
+# like a choice record: empty top-k, or an all-None distribution). It
+# never judges whether an answer is sensible, and sampling-era record
+# fields are simply never inspected. The file also writes the preflight
+# report and the skipped-models list the runner uses to leave broken
+# models out of the full run.
 
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-
-from twin2k10 import scoring
 
 
 def _record_label(record: dict) -> str:
@@ -48,49 +45,37 @@ def _choice_reasons(record: dict) -> list[str]:
     return reasons
 
 
-def _multi_row_reasons(record: dict) -> list[str]:
-    """The stop reasons one record's multi-row samples give (may be []).
+def _digit_reasons(record: dict) -> list[str]:
+    """The stop reasons one record's digit items give (may be []).
 
-    multi_numeric_values holds one parsed value per row per K sample. A
-    sample fails when a row is missing or unparseable — and it fails as
-    TRUNCATED when every surviving row parses but the row count falls
-    short of the record's expected_rows (the signature of a generation
-    window cutting the answer short, e.g. 8 of 10 rows). The first
-    failing sample decides the reason; the rest would say the same.
-    """
-    expected = record.get("expected_rows")
-    for sample in (record.get("multi_numeric_values") or []):
-        if not sample or any(value is None for value in sample):
-            return [
-                f"{_record_label(record)}: a multi-row sample has a "
-                f"missing or unparseable row: {sample!r}"
-            ]
-        if expected is not None and len(sample) < expected:
-            return [
-                f"{_record_label(record)}: multi-row sample truncated — "
-                f"{len(sample)} of {expected} rows, every row parseable "
-                f"(deficit {expected - len(sample)}): {sample!r}"
-            ]
-    return []
-
-
-def _numeric_reasons(record: dict) -> list[str]:
-    """The stop reasons a record's numeric samples give (may be []).
-
-    numeric_samples holds one raw sample string per K sample; every one
-    must parse to a number. multi_numeric_values is checked separately
-    (missing/unparseable rows, and truncation against expected_rows).
+    Every digit_items entry is judged exactly like a choice record: its
+    top-logprobs must be non-empty (empty is the GGUF failure signature)
+    and at least one label digit must be readable from its p_raw (an
+    all-None distribution means no answer digit could be read at all — a
+    single weak digit next to found ones is normal, not a failure).
+    Sampling-era record fields are never looked at.
     """
     reasons: list[str] = []
-    bad = [sample for sample in (record.get("numeric_samples") or [])
-           if scoring.parse_numeric(sample) is None]
-    if bad:
-        reasons.append(
-            f"{_record_label(record)}: {len(bad)} numeric sample(s) "
-            f"unparseable, e.g. {bad[0]!r}"
-        )
-    reasons.extend(_multi_row_reasons(record))
+    for item in record.get("digit_items") or []:
+        where = _item_label(record, item)
+        if not item.get("top_logprobs"):
+            reasons.append(
+                f"{where}: empty top_logprobs at the decision position "
+                "(GGUF failure signature)"
+            )
+        p_raw = item.get("p_raw")
+        if p_raw and all(value is None for value in p_raw.values()):
+            reasons.append(
+                f"{where}: no answer digit readable in the item's p_raw"
+            )
     return reasons
+
+
+def _item_label(record: dict, item: dict) -> str:
+    """One digit item's short "who/what" tag for a stop reason line."""
+    row = item.get("row")
+    at = f" row {row}" if row is not None else ""
+    return f"{_record_label(record)}: digit item {item.get('qid')}{at}"
 
 
 def decide(records: list[dict]) -> dict:
@@ -104,7 +89,7 @@ def decide(records: list[dict]) -> dict:
     reasons: list[str] = []
     for record in records:
         reasons.extend(_choice_reasons(record))
-        reasons.extend(_numeric_reasons(record))
+        reasons.extend(_digit_reasons(record))
     return {"stop": bool(reasons), "reasons": reasons}
 
 
