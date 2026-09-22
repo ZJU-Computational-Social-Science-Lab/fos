@@ -4,8 +4,9 @@
 # the authoritative research delivery), how many personas answer, the
 # inference settings copied from the proven R1 pipeline, the study's own
 # thresholds (the 0.80 branch-mass flag, the at-most-50-records fsync
-# promise), and twin2k10's own knobs: K=20 temperature samples per numeric
-# answer and run names that start with "T2K10-". There are no functions
+# promise), and twin2k10's own knobs: run names that start with "T2K10-".
+# Since the first-token pivot there are NO sampling knobs: every numeric
+# answer is one deterministic first-token call. There are no functions
 # here — only named constants so every other module and every test reads
 # the same numbers from one source.
 
@@ -65,8 +66,7 @@ PERSONA_COUNT = 100
 # meanings as twin2k6's):
 #   SCAN_TOKENS — the short generation window that lets the parser walk
 #                 past control tokens to the first real answer token;
-#   TEMPERATURE — the paper's fixed sampling temperature (also used for
-#                 every numeric re-sample);
+#   TEMPERATURE — the paper's fixed sampling temperature;
 #   TOP_K       — how many top logprobs to request, big enough that all
 #                 answer-letter spellings of the widest scale fit;
 #   PROBABILITY_FLOOR — top-k entries below one in a million are sampler
@@ -79,17 +79,6 @@ PROBABILITY_FLOOR = FOLD_PROBABILITY_FLOOR  # 1e-6, same number as R1
 # A combined letter mass strictly below 0.80 is flagged "diffuse" — same
 # stricter-than-R1 threshold the twin2k6 study used.
 LOW_BRANCH_MASS_THRESHOLD = 0.80
-
-# Numeric sampling: every numeric answer is measured K times at the study
-# temperature and every parsed sample is stored, so the spread of a
-# model's numeric answers is visible, not just one draw.
-NUMERIC_SAMPLES_K = 20
-
-# How many tokens a numeric sample call may generate before it is cut
-# off. 128 fits even a bare 10-row multi-row answer (~50 tokens with no
-# prose) with comfortable headroom, so a truncation in the stored
-# samples means the model stopped early — never that the window cut it.
-NUMERIC_MAX_TOKENS = 128
 
 # Durability promise: the records file is force-synced to disk at least
 # this often, so a crash can lose at most 50 finished records.
