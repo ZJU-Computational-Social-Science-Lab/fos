@@ -309,10 +309,20 @@ def test_anchoring_record_stores_the_mc_item_plus_one_digit_item() -> None:
     assert entry["row"] is None and entry["statement"] is None
     assert set(entry["p_raw"]) == set("0123456789")
     assert entry["p_raw"]["7"] == pytest.approx(0.9)
-    # The digit call's prompt is the estimate question alone.
+    from twin2k10 import prompts
+    # The digit call's prompt carries the estimate question verbatim, with the
+    # arm's anchor choice question embedded above it (RESULT-2214 Fix 2: the
+    # anchor context must reach the estimate call so low/high arms differ).
+    # Amended per TASK-2217: the earlier "anchor must NOT appear" assertion was
+    # pre-pivot and contradicts the locked TASK-2215 test
+    # test_different_anchor_numbers_produce_different_digit_prompts.
     digit_user = calls[1][-1]["content"]
     assert "How tall do you think the tallest redwood tree" in digit_user
-    assert "more or less than 85 feet" not in digit_user
+    assert "Is the tallest redwood tree in the world more or less than 85 feet tall?" in digit_user
+    # The anchor's letter option lines must never render in the digit prompt.
+    assert "A. more" not in digit_user
+    assert "B. less" not in digit_user
+    assert digit_user.split("\n\n")[-1].strip() == prompts.NUMERIC_INSTRUCTION.strip()
 
 
 def test_base_rate_record_uses_the_first_significant_digit_labels() -> None:
