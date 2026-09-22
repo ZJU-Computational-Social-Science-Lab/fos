@@ -1,15 +1,18 @@
 # This file builds the exact texts the models are shown. The system prompt
 # is one short line normally, or that line plus a fixed note plus the full
 # list of every version of the experiment when the model is told the setup
-# was randomized ("unblinded"). The user prompt carries the "EMBODY THIS
-# PERSON" block with the 11 demographic fields, then every question of the
-# arm in survey order (an anchoring arm shows its anchor choice question
-# AND its numeric estimate question), then one final instruction: a
-# letter answer for choice questions, a single number for numeric
-# questions, and a numbered list with exactly one number per row for
-# multi-row questions. Nothing here ever mentions question ids or the
-# banned words "uniform" / "equal probability"; blinding lives only in
-# the system prompt.
+# was randomized ("unblinded"). Every ANSWER is measured with one
+# deterministic first-token call, so each item gets its OWN user prompt
+# (build_user_prompt with item=): the "EMBODY THIS PERSON" block with the
+# 11 demographic fields, then that one item — a choice question with its
+# lettered options, or one rating statement (or one numeric estimate
+# question) with its "N = label" answer scale — then one closing
+# instruction: a letter answer, or a single number. Whole-arm rendering
+# (item=None) still exists for the choice-only arms whose single item IS
+# the arm; an arm holding digit items has no single prompt and refuses to
+# render one. Nothing here ever mentions question ids or the banned words
+# "uniform" / "equal probability"; blinding lives only in the system
+# prompt.
 
 from twin2k10 import experiments
 
@@ -52,16 +55,9 @@ VERSIONS_HEADER = "The experimental versions are:"
 # The last line of a choice question's user prompt.
 FINAL_INSTRUCTION = "Answer with only the corresponding uppercase letter."
 
-# The last line of a numeric question's user prompt.
+# The last line of every digit item's user prompt: the model answers one
+# number, whose first token the study folds over the item's digit labels.
 NUMERIC_INSTRUCTION = "Answer with a single number."
-
-# The last line of an anchoring arm's user prompt: its TWO questions (the
-# more/less anchor choice, then the numeric estimate) are answered in one
-# reply, in order.
-CHOICE_THEN_NUMERIC_INSTRUCTION = (
-    "Answer the first question with only the corresponding uppercase "
-    "letter. Then answer the second question with a single number."
-)
 
 
 def render_persona_block(persona: dict) -> str:
@@ -139,27 +135,15 @@ def _option_lines(stimulus: dict) -> str:
     )
 
 
-def _rows_lines(stimulus: dict) -> str:
-    """The numbered statement rows of a multi-row question, one per line.
-
-    Renders "1. <statement>", "2. <statement>", ... in the row order the
-    survey file ships, so the model can answer with one numbered value
-    per row.
-    """
-    return "\n".join(
-        f"{number}. {row}"
-        for number, row in enumerate(stimulus["rows"], start=1)
-    )
-
-
 def _scale_lines(stimulus: dict) -> str | None:
-    """The numbered answer scale of a multi-row question, one per line.
+    """The numbered answer scale of a digit item, one per line.
 
     Renders "1 = <label>", "2 = <label>", ... from the survey's own
     columns list (the number is the label's position, starting at 1), so
     the model knows what each answer number means instead of guessing.
-    Returns None when the item carries no columns, so the block is simply
-    left out (never an error, never a made-up scale).
+    Returns None when the item carries no columns (a 0-9 estimate item),
+    so the block is simply left out (never an error, never a made-up
+    scale).
     """
     columns = stimulus.get("columns")
     if not columns:
@@ -170,55 +154,59 @@ def _scale_lines(stimulus: dict) -> str | None:
     )
 
 
-def _final_instruction(stimuli: dict[str, dict], qids: tuple[str, ...]) -> str:
-    """The closing instruction an arm's prompt ends with.
+def _item_user_prompt(persona: dict, item: dict,
+                      stimuli: dict[str, dict]) -> str:
+    """The full user prompt for ONE first-token item of an arm.
 
-    Choice-only arm: the pinned letter instruction. Numeric arm: ask for
-    a single number. Anchoring arm (choice + numeric): ask for the letter
-    first, then the number. Multi-row arm: ask for one numbered answer
-    per row and say how many rows there are.
+    Shape: the EMBODY persona block, then the item itself — a choice
+    item shows its verbatim question plus its lettered option lines and
+    ends with the letter instruction; a digit item shows its verbatim
+    question (and, for a split row, that row's statement), then the
+    item's "N = label" answer scale when it has one, and ends with the
+    single-number instruction. Each call therefore sees exactly one
+    question — never another row's statement and never another question
+    of the arm.
     """
-    kinds = [stimuli[qid]["response_kind"] for qid in qids]
-    if kinds == ["choice"]:
-        return FINAL_INSTRUCTION
-    if "multi_numeric" in kinds:
-        multi = next(stimuli[qid] for qid in qids
-                     if stimuli[qid]["response_kind"] == "multi_numeric")
-        n_rows = len(multi["rows"])
-        return (
-            f"The statements above are {n_rows} in total. Answer with a "
-            f"numbered list of exactly {n_rows} numbers, one per line, "
-            f"formatted like '1. 42'."
-        )
-    if kinds == ["choice", "numeric"]:
-        return CHOICE_THEN_NUMERIC_INSTRUCTION
-    return NUMERIC_INSTRUCTION
+    parts = [render_persona_block(persona), item["question_text"]]
+    if item["kind"] == "choice":
+        parts.append(_option_lines(stimuli[item["qid"]]))
+        parts.append(FINAL_INSTRUCTION)
+        return "\n\n".join(parts)
+    if item["statement"] is not None:
+        parts.append(item["statement"])
+    scale = _scale_lines(stimuli[item["qid"]])
+    if scale is not None:
+        parts.append(scale)
+    parts.append(NUMERIC_INSTRUCTION)
+    return "\n\n".join(parts)
 
 
-def build_user_prompt(persona: dict, experiment: str, arm: str) -> str:
-    """The full user prompt for one persona answering one experiment arm.
+def build_user_prompt(persona: dict, experiment: str, arm: str,
+                      item: dict | None = None) -> str:
+    """The user prompt for one persona answering one experiment arm.
 
-    Shape: the EMBODY persona block, then each of the arm's questions in
-    survey order (its verbatim question text, then its lettered options
-    for a choice question, or its numbered rows plus the item's numbered
-    answer scale for a multi-row question), then the closing instruction
-    for the arm's answer kinds. Takes no blinding argument — blinding
-    lives only in the system prompt. Raises KeyError for an unknown
-    experiment or arm.
+    With item= (the normal path since every answer is one first-token
+    call): that single item's prompt — see _item_user_prompt. With
+    item=None: the arm's whole-question rendering, which only exists
+    for arms whose every item is the same single choice question; an
+    arm holding digit items has NO single prompt (asking for one would
+    rebuild the banned answer-everything-at-once shape), so it raises
+    ValueError instead of rendering a made-up prompt. Raises KeyError
+    for an unknown experiment or arm.
     """
-    spec = experiments.EXPERIMENTS[experiment]
     stimuli = experiments.load_stimuli()
+    if item is not None:
+        return _item_user_prompt(persona, item, stimuli)
+    items = experiments.arm_items(experiment, arm, stimuli)
+    if any(one["kind"] == "digit" for one in items):
+        raise ValueError(
+            f"experiment {experiment!r} arm {arm!r} has digit items, "
+            "which are asked one per call on their own prompts — render "
+            "each item with build_user_prompt(..., item=item)"
+        )
     parts = [render_persona_block(persona)]
-    for qid in spec.arm_qids(arm):
-        stimulus = stimuli[qid]
-        parts.append(stimulus["question_text"])
-        kind = stimulus["response_kind"]
-        if kind == "choice":
-            parts.append(_option_lines(stimulus))
-        elif kind == "multi_numeric":
-            parts.append(_rows_lines(stimulus))
-            scale = _scale_lines(stimulus)
-            if scale is not None:
-                parts.append(scale)
-    parts.append(_final_instruction(stimuli, spec.arm_qids(arm)))
+    for one in items:
+        parts.append(one["question_text"])
+        parts.append(_option_lines(stimuli[one["qid"]]))
+    parts.append(FINAL_INSTRUCTION)
     return "\n\n".join(parts)
