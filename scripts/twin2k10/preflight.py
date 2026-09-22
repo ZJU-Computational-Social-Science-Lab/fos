@@ -78,21 +78,26 @@ def _digit_reasons(record: dict) -> list[str]:
 def _digit_mass_reasons(item: dict, where: str) -> list[str]:
     """The stop reasons one scanned digit item gives (may be []).
 
-    The multi-position scan stamps digit_mass (the best position's total
-    digit probability) and decision_position (where it was found); the
-    item passes only when that mass reaches the dominance gate. Below
-    it, the model never wrote a dominant digit anywhere in the scan
-    window — a technical failure the reason names with mass and position.
+    Two independent checks: the item's digit_mass (the best position's
+    total digit probability) must reach the dominance gate — below it
+    the model never wrote a dominant digit anywhere in the scan window,
+    and the reason names the mass and position — AND its p_raw must have
+    found at least one digit (an all-None distribution means no answer
+    digit could be read at all, even when the mass looks healthy).
     Items without a digit_mass field (legacy shape) are never gated.
     """
     mass = item.get("digit_mass") or 0.0
-    if mass >= config.DIGIT_MASS_PREFLIGHT_THRESHOLD:
-        return []
-    return [
-        f"{where}: digit mass {mass:.2f} at best position "
-        f"{item.get('decision_position')} is below the "
-        f"{config.DIGIT_MASS_PREFLIGHT_THRESHOLD} dominance gate"
-    ]
+    reasons: list[str] = []
+    if mass < config.DIGIT_MASS_PREFLIGHT_THRESHOLD:
+        reasons.append(
+            f"{where}: digit mass {mass:.2f} at best position "
+            f"{item.get('decision_position')} is below the "
+            f"{config.DIGIT_MASS_PREFLIGHT_THRESHOLD} dominance gate"
+        )
+    p_raw = item.get("p_raw")
+    if p_raw and all(value is None for value in p_raw.values()):
+        reasons.append(f"{where}: no answer digit readable in the item's p_raw")
+    return reasons
 
 
 def _item_label(record: dict, item: dict) -> str:
