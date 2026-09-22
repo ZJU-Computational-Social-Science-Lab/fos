@@ -13,6 +13,13 @@
 #     arm's questions. Choice questions render "A. <option>" lines;
 #     numeric questions ask for a single number; multi-row questions ask
 #     for one numbered answer per row (false_consensus: 10 answers).
+#   - TASK-2182 pivot: every numeric answer is measured with ONE
+#     deterministic first-token call on its OWN prompt, so multi-item arms
+#     build one prompt PER ITEM via build_user_prompt(..., item=...): a
+#     single-policy rating prompt (statement + 1–5 scale), or an anchoring
+#     digit prompt (verbatim estimate question only). The old "numbered
+#     list of exactly 10 numbers" instruction is banned: an arm with
+#     digit items refuses whole-arm rendering outright.
 #
 # All offline: pure string building; no network, no models.
 import sys
@@ -116,22 +123,30 @@ def test_unblinded_system_prompt_adds_the_note_and_all_versions() -> None:
 def test_banned_words_never_appear_in_any_prompt() -> None:
     """'uniform' and 'equal probability' are banned by the research design."""
     for experiment, arm in ARMS:
-        user = prompts.build_user_prompt(PERSONA, experiment, arm)
+        items = experiments.arm_items(experiment, arm)
+        users = [prompts.build_user_prompt(PERSONA, experiment, arm,
+                                           item=item) for item in items]
         for blinded in (True, False):
             system = prompts.build_system_prompt(experiment, blinded=blinded)
-            for text in (user, system):
+            for text in users + [system]:
                 assert "uniform" not in text.lower(), experiment
                 assert "equal probability" not in text.lower(), experiment
 
 
 def test_user_prompt_carries_every_verbatim_question_of_the_arm() -> None:
-    """Each arm's question texts appear word for word in the user prompt."""
+    """Each arm's question texts appear word for word, item by item.
+
+    After the pivot a multi-item arm is asked one item per call, so the
+    verbatim guarantee is per item prompt: every item's prompt carries
+    its own question text (and, for split rows, its own statement).
+    """
     for experiment, arm in ARMS:
-        user = prompts.build_user_prompt(PERSONA, experiment, arm)
-        for qid in _arm_qids(experiment, arm):
-            assert _stimuli()[qid]["question_text"] in user, \
-                (experiment, arm, qid)
-        assert "EMBODY THIS PERSON:" in user
+        items = experiments.arm_items(experiment, arm)
+        for item in items:
+            user = prompts.build_user_prompt(PERSONA, experiment, arm,
+                                             item=item)
+            assert item["question_text"] in user, (experiment, arm, item)
+            assert "EMBODY THIS PERSON:" in user
 
 
 def test_choice_options_render_as_letter_lines_matching_option_count() -> None:
@@ -143,39 +158,110 @@ def test_choice_options_render_as_letter_lines_matching_option_count() -> None:
     assert _last_paragraph(user) == prompts.FINAL_INSTRUCTION
 
 
-def test_numeric_prompt_asks_for_a_single_number() -> None:
-    """base_rate asks for one number and shows no letter options."""
-    user = prompts.build_user_prompt(PERSONA, "base_rate", "30_engineers")
-    assert "number" in _last_paragraph(user).lower()
+def test_base_rate_digit_prompt_is_the_verbatim_question_asking_a_number() -> None:
+    """base_rate asks for one number on its own deterministic prompt.
+
+    The item prompt carries the verbatim question text, no letter options,
+    and ends with the pinned single-number instruction.
+    """
+    item = next(i for i in experiments.arm_items("base_rate", "30_engineers")
+                if i["kind"] == "digit")
+    user = prompts.build_user_prompt(PERSONA, "base_rate", "30_engineers",
+                                     item=item)
+    assert item["question_text"] in user
+    assert _last_paragraph(user) == prompts.NUMERIC_INSTRUCTION
     assert "A." not in user
 
 
-def test_anchoring_prompt_carries_both_questions_and_asks_a_number() -> None:
-    """An anchoring arm shows the anchor choice AND the numeric estimate."""
-    user = prompts.build_user_prompt(PERSONA, "anchoring_redwood", "low")
+def test_anchoring_mc_item_prompt_is_the_choice_question_alone() -> None:
+    """The anchor choice call sees the anchor question and its options."""
+    items = experiments.arm_items("anchoring_redwood", "low")
+    mc = next(item for item in items if item["kind"] == "choice")
+    user = prompts.build_user_prompt(PERSONA, "anchoring_redwood", "low",
+                                     item=mc)
     assert "A. more" in user and "B. less" in user
-    assert "number" in _last_paragraph(user).lower()
+    assert _last_paragraph(user) == prompts.FINAL_INSTRUCTION
 
 
-def test_multi_numeric_prompt_requests_one_numbered_answer_per_row() -> None:
-    """Multi-row questions list every row and ask for that many answers."""
-    cases = [
-        ("linda", "conjunction", 3),
-        ("prob_matching", "problem1", 10),
-        ("prob_matching", "problem2", 6),
-        ("false_consensus", "all", 10),
-    ]
-    for experiment, arm, n_rows in cases:
-        user = prompts.build_user_prompt(PERSONA, experiment, arm)
-        rows = [e for e in _stimuli().values()
-                if e["experiment"] == experiment and e["arm"] == arm][0]["rows"]
-        for row in rows:
-            assert row in user, (experiment, arm, row)
-        assert str(n_rows) in _last_paragraph(user), (experiment, arm)
-        assert n_rows == 10 or experiment != "false_consensus"
+def test_anchoring_digit_item_prompt_is_the_verbatim_estimate_only() -> None:
+    """The estimate call sees ONLY the estimate question, asked as a number.
+
+    The anchor question must NOT leak into the digit call's prompt — its
+    first token would then be the anchor letter, not a digit.
+    """
+    stimuli = _stimuli()
+    items = experiments.arm_items("anchoring_redwood", "low")
+    digit = next(item for item in items if item["kind"] == "digit")
+    anchor = stimuli["QID167"]
+    user = prompts.build_user_prompt(PERSONA, "anchoring_redwood", "low",
+                                     item=digit)
+    assert digit["question_text"] in user
+    assert anchor["question_text"] not in user, (
+        "the anchor choice question must not appear in the digit item's "
+        "prompt — the first-token digit scan would read the letter"
+    )
+    assert _last_paragraph(user) == prompts.NUMERIC_INSTRUCTION
+    assert "A." not in user
 
 
-def test_false_consensus_asks_for_exactly_ten_answers() -> None:
-    """The within-subject arm requests all 10 percentage answers."""
-    user = prompts.build_user_prompt(PERSONA, "false_consensus", "all")
-    assert "10" in _last_paragraph(user)
+def test_false_consensus_item_prompt_shows_one_policy_and_the_scale() -> None:
+    """One rating call sees ONE policy statement plus its 1–5 scale.
+
+    The columns render exactly as before ("1 = Strongly oppose" ...),
+    no other policy's statement leaks in, and the prompt asks for a
+    single number — never a numbered list.
+    """
+    items = experiments.arm_items("false_consensus", "all")
+    rows = _stimuli()["QID287"]["rows"]
+    columns = _stimuli()["QID287"]["columns"]
+    user = prompts.build_user_prompt(PERSONA, "false_consensus", "all",
+                                     item=items[2])
+    assert rows[2] in user
+    for number, label in enumerate(columns, start=1):
+        assert f"{number} = {label}" in user
+    for other in (rows[0], rows[1], rows[9]):
+        assert other not in user, other
+    assert _last_paragraph(user) == prompts.NUMERIC_INSTRUCTION
+
+
+def test_linda_item_prompt_shows_one_statement_and_the_six_point_scale() -> None:
+    """Linda's per-statement prompt maps its 6-point probability scale."""
+    items = experiments.arm_items("linda", "conjunction")
+    columns = _stimuli()["QID160"]["columns"]
+    user = prompts.build_user_prompt(PERSONA, "linda", "conjunction",
+                                     item=items[0])
+    assert items[0]["statement"] in user
+    for number, label in enumerate(columns, start=1):
+        assert f"{number} = {label}" in user
+    assert _last_paragraph(user) == prompts.NUMERIC_INSTRUCTION
+
+
+def test_no_prompt_ever_asks_for_a_numbered_list_of_answers() -> None:
+    """The sampling-era numbered-list instruction is banned everywhere.
+
+    Every item prompt of every arm asks for a letter or a single number
+    — never "a numbered list of exactly N numbers".
+    """
+    for experiment, spec in experiments.EXPERIMENTS.items():
+        for arm, _qids in spec.arms:
+            for item in experiments.arm_items(experiment, arm):
+                user = prompts.build_user_prompt(PERSONA, experiment, arm,
+                                                 item=item)
+                assert "numbered list" not in user, (experiment, arm)
+
+
+def test_whole_arm_prompt_refuses_arms_with_digit_items() -> None:
+    """A multi-item arm has no single prompt — asking for one is an error.
+
+    The pivot's arms with digit items are measured one item per call, so
+    a whole-arm render would silently rebuild the banned numbered-list
+    prompt; it must raise instead of rendering a made-up shape.
+    """
+    for experiment, arm in (("false_consensus", "all"),
+                            ("linda", "conjunction"),
+                            ("prob_matching", "problem1"),
+                            ("base_rate", "30_engineers"),
+                            ("anchoring_redwood", "low"),
+                            ("anchoring_african", "high")):
+        with pytest.raises(ValueError):
+            prompts.build_user_prompt(PERSONA, experiment, arm)
