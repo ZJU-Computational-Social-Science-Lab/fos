@@ -7,16 +7,21 @@
 # preflight.decide() verdict, writes PREFLIGHT_REPORT.md and the
 # skipped_models.json list, and — unless every model failed — continues
 # into the full grid for the surviving models, unloading each model when
-# its block is done. Every finished record is appended to its leg's
-# records file the moment it exists (flush per record, force-sync every
-# 50), so a killed run restarts with --run-dir <same folder> and skips
-# every cell already on disk — preflight cells included, so a full
-# launch after a preflight never duplicates a completed record. --dry-run
-# needs no server: it prints the cell counts and checks the rendered
-# prompts, writing nothing. --smoke runs the live pre-launch check
-# instead of the production grid: the smallest model answers one persona
-# on all 19 arms x 2 blinding arms, in its own T2K10-SMOKE-<stamp> run
-# folder, so production folders are never touched by a smoke run.
+# its block is done. --preflight-only stops right there: the persona-0
+# preflight cells run exactly as in a full launch (through the same
+# durable leg files, report and verdict written) and the process exits 0
+# BEFORE the grid — the owner's per-model live test
+# (`--models <one model> --preflight-only`). Every finished record is
+# appended to its leg's records file the moment it exists (flush per
+# record, force-sync every 50), so a killed run restarts with --run-dir
+# <same folder> and skips every cell already on disk — preflight cells
+# included, so a full launch after a preflight never duplicates a
+# completed record. --dry-run needs no server: it prints the cell counts
+# and checks the rendered per-item prompts, writing nothing. --smoke runs
+# the live pre-launch check instead of the production grid: the smallest
+# model answers one persona on all 19 arms x 2 blinding arms, in its own
+# T2K10-SMOKE-<stamp> run folder, so production folders are never touched
+# by a smoke run.
 
 from __future__ import annotations
 
@@ -45,22 +50,13 @@ from twin2k10 import (  # noqa: E402
     experiments,
     legexec,
     preflight,
-    prompts,
     registry,
     serving,
 )
+from twin2k10 import dryrun  # noqa: E402
 
 PREFLIGHT_PERSONA = 0
 VERDICT_FILE = "preflight_verdict.json"
-
-# A clearly-synthetic persona so --dry-run can render real prompts with no
-# model server and no pool on disk (never used for actual measurements).
-PLACEHOLDER_PERSONA = {
-    "age": 34, "gender": "woman", "education": "bachelor's degree",
-    "household_income": 50000, "occupation": "teacher", "ethnicity": "white",
-    "marital_status": "married", "household_size": 3, "number_of_children": 1,
-    "state": "CA", "home_ownership": "own",
-}
 
 
 def _now() -> str:
@@ -93,6 +89,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--resume", action=argparse.BooleanOptionalAction, default=True,
         help="skip cells already durable in the run dir (default: yes)",
+    )
+    parser.add_argument(
+        "--preflight-only", action="store_true",
+        help="run the auto-preflight (persona 0 on every arm, both "
+             "blinding arms, per requested model), write the preflight "
+             "report and verdict, then STOP with exit 0 before the grid",
     )
     parser.add_argument(
         "--dry-run", action="store_true",
@@ -353,6 +355,11 @@ def run_all(args: argparse.Namespace) -> int:
     else:
         skipped = preflight_phase(run_dir, models, personas, args.base_url,
                                   args.manager_url, args.port, progress)
+    if args.preflight_only:
+        write_progress(run_dir, progress)
+        log("preflight-only: preflight phase finished — stopping before "
+            "the grid as requested (--preflight-only)")
+        return 0
     if skipped:
         log(f"preflight skip list active — excluding: {sorted(skipped)}")
     running = [model for model in models if model not in skipped]
@@ -379,86 +386,15 @@ def skip_set(run_dir: Path) -> set[str]:
     return set(payload.get("skipped_models", []))
 
 
-def check_prompt_pair(system: str, user: str, arm_qids: tuple[str, ...],
-                      stimuli: dict[str, dict]) -> None:
-    """One rendered prompt pair's exactness checks (raises SystemExit)."""
-    if not system or not user:
-        raise SystemExit(f"error: empty prompt for {arm_qids}")
-    for qid in arm_qids:
-        if stimuli[qid]["question_text"] not in user:
-            raise SystemExit(
-                f"error: exact stimulus wording missing for {qid}"
-            )
-        for letter, text in (legexec.label_map(stimuli[qid]) or {}).items():
-            if f"{letter}. {text}" not in user:
-                raise SystemExit(
-                    f"error: option line missing for {letter} in {qid}"
-                )
-
-
-def log_smoke_coverage() -> None:
-    """The offline smoke-filter report: grid shape + item kinds covered.
-
-    Pure enumeration over the shipped stimuli — proves without a server
-    that the smoke grid is 1 model x 1 persona x 19 arms x 2 blindings
-    and that choice, numeric and multi-row questions all appear in it.
-    """
-    grid = cells.smoke_cells()
-    stimuli = experiments.load_stimuli()
-    kinds: set[str] = set()
-    for _model, _persona, experiment, arm, _blind in grid:
-        for qid in experiments.EXPERIMENTS[experiment].arm_qids(arm):
-            kinds.add(stimuli[qid]["response_kind"])
-    arms = {(cell[2], cell[3]) for cell in grid}
-    blindings = sorted({cell[4] for cell in grid})
-    models = sorted({cell[0] for cell in grid})
-    personas = sorted({cell[1] for cell in grid})
-    log(f"dry run (smoke): {len(grid)} cells = {len(models)} model "
-        f"({config.SMOKE_MODEL}) x {len(personas)} persona x "
-        f"{len(arms)} arms x {len(blindings)} blindings {blindings}")
-    log(f"dry run (smoke): item kinds covered: {sorted(kinds)}")
-
-
-def dry_run(models: list[str], smoke: bool = False) -> int:
-    """The offline rehearsal: cell counts + prompt exactness, no server.
-
-    Renders every (experiment, arm, blinding) prompt pair with a
-    clearly-synthetic placeholder persona, checks the exact stimulus
-    wording and every lettered option line, prints the cell counts, and
-    writes nothing anywhere. With smoke=True it reports the smoke
-    filter's grid instead of the production counts.
-    """
-    stimuli = experiments.load_stimuli()
-    if smoke:
-        log_smoke_coverage()
-    else:
-        total = len(cells.enumerate_cells())
-        log(f"dry run: {len(models)} models x "
-            f"{cells.EXPECTED_RECORDS_PER_MODEL} = {total} cells total")
-        for model in models:
-            count = len(cells.enumerate_cells(models=[model]))
-            log(f"dry run: model {model}: {count} cells")
-    checked = 0
-    for experiment, spec in experiments.EXPERIMENTS.items():
-        for arm, arm_qids in spec.arms:
-            for blinded in (True, False):
-                system = prompts.build_system_prompt(experiment, blinded)
-                user = prompts.build_user_prompt(PLACEHOLDER_PERSONA,
-                                                 experiment, arm)
-                check_prompt_pair(system, user, arm_qids, stimuli)
-                checked += 1
-    log(f"dry run: {checked} prompt pairs checked — exact stimuli and "
-        f"option lines present in all")
-    return 0
-
-
 def main(argv: list[str] | None = None) -> int:
     """The CLI entry point (module execution starts here)."""
     args = parse_args(argv)
     models = ([config.SMOKE_MODEL] if args.smoke
               else resolve_models(args.models))
     if args.dry_run:
-        return dry_run(models, smoke=args.smoke)
+        return dryrun.dry_run(models, smoke=args.smoke,
+                              preflight_only=args.preflight_only,
+                              preflight_persona=PREFLIGHT_PERSONA)
     return run_all(args)
 
 
