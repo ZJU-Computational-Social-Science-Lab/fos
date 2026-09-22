@@ -8,8 +8,10 @@
 #   - The grid knobs match twin2k6: two blinding arms, 100 personas, design
 #     seed 42, the R1 inference knobs, the 0.80 branch-mass flag, and the
 #     at-most-50-records fsync promise.
-#   - twin2k10's own knobs: 20 temperature samples per numeric answer, and
-#     run names that start with "T2K10-".
+#   - twin2k10's own knobs: the run-name prefixes, the smoke-test model,
+#     and (since the TASK-2182 design pivot) NO sampling knobs — every
+#     numeric answer is one deterministic first-token call, so the old
+#     K=20 temperature-sampling constants are deleted.
 #   - The 23 survey questions (10 experiments) are shipped inside this repo
 #     and are a verbatim copy of the authoritative research delivery.
 #
@@ -18,14 +20,12 @@ import json
 import sys
 from pathlib import Path
 
-import pytest
-
 # The launch scripts live in scripts/ and are not on pytest's pythonpath.
 _SCRIPTS = str(Path(__file__).resolve().parent.parent / "scripts")
 if _SCRIPTS not in sys.path:
     sys.path.insert(0, _SCRIPTS)
 
-from twin2k10 import config  # noqa: E402
+from twin2k10 import config, legexec, scoring  # noqa: E402
 
 _REPO = Path(__file__).resolve().parent.parent
 
@@ -81,9 +81,15 @@ def test_grid_constants_mirror_twin2k6() -> None:
     assert config.DEFAULT_MANAGER_URL == k6_config.DEFAULT_MANAGER_URL
 
 
-def test_numeric_answers_use_exactly_20_temperature_samples() -> None:
-    """NUMERIC_SAMPLES_K pins the K=20 sample count for numeric items."""
-    assert config.NUMERIC_SAMPLES_K == 20
+def test_numeric_answers_are_one_deterministic_first_token_call() -> None:
+    """TASK-2182 pivot: no multi-day K multiplier, no sampling knobs.
+
+    The K=20 temperature-sampling constants are DELETED, not deprecated:
+    every numeric answer is measured with one deterministic first-token
+    call, so there is nothing left to configure about sampling.
+    """
+    assert not hasattr(config, "NUMERIC_SAMPLES_K")
+    assert not hasattr(config, "NUMERIC_MAX_TOKENS")
 
 
 def test_run_names_start_with_the_T2K10_prefix() -> None:
@@ -120,16 +126,42 @@ def test_shipped_stimuli_cover_10_experiments_and_23_questions() -> None:
 
 
 # --------------------------------------------------------------------------
-# TASK-2150 RED tests — review blocker B1 (RESULT-2146): the numeric
-# generation window must fit a bare 10-row multi-row answer (~50 tokens
-# even with zero prose) with comfortable headroom, or every 10-row
-# sample is silently cut off before its last rows.
+# TASK-2182 RED tests — the design pivot DELETES the sampling machinery:
+# no sampler module, no multi-row free-text parser, no sampler wiring in
+# the executor, and no sampling knobs on the record inference stamp.
+# Every numeric record stores label/digit logprob distributions exactly
+# like a choice record.
 # --------------------------------------------------------------------------
 
 
-def test_numeric_max_tokens_fits_a_full_ten_row_answer_with_headroom() -> None:
-    """A bare 10-row answer is ~50 tokens; the window must be >= 128."""
-    assert config.NUMERIC_MAX_TOKENS >= 128, (
-        f"NUMERIC_MAX_TOKENS={config.NUMERIC_MAX_TOKENS} truncates a bare "
-        "10-row multi_numeric answer (~50 tokens) before its last rows"
+def test_the_sampler_module_is_deleted() -> None:
+    """twin2k10.numerics (the K-sample machinery) no longer exists."""
+    import importlib.util
+
+    assert importlib.util.find_spec("twin2k10.numerics") is None, (
+        "the temperature-sampling module must be deleted with the pivot"
     )
+
+
+def test_the_multi_row_free_text_parser_is_deleted() -> None:
+    """parse_multi_numeric parsed sampled text; there are no samples left."""
+    assert not hasattr(scoring, "parse_multi_numeric")
+
+
+def test_the_executor_has_no_sampler_parameter_left() -> None:
+    """execute_cell / make_transport never take (or build) a sampler."""
+    import inspect
+
+    assert "sampler" not in inspect.signature(legexec.execute_cell).parameters
+    assert "sampler" not in \
+        inspect.signature(legexec.make_transport).parameters
+    assert not hasattr(legexec, "numerics"), (
+        "the executor must no longer import the sampler module"
+    )
+
+
+def test_inference_stamp_has_no_sampling_knobs() -> None:
+    """The pinned inference settings on records carry no numeric knobs."""
+    settings = legexec.inference_settings("http://127.0.0.1:8080")
+    sampling_keys = [key for key in settings if "numeric" in key]
+    assert sampling_keys == []

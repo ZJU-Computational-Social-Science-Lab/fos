@@ -11,13 +11,14 @@
 #     arm), so the study holds 5,700 cells per model / 57,000 total.
 #   - Enumeration is deterministic (same order every call, seed 42) and
 #     every cell key is unique.
-#   - Resume: cells already present in records.jsonl (matched by key) are
-#     skipped — proven with a counting fake transport. Each finished
-#     record is appended with its 5 identity fields before the next cell
-#     starts, so a crash never loses finished work.
+#   - TASK-2182 pivot: the grid totals are unchanged (one record per
+#     arm), but every arm's items are now first-token items — a record
+#     stores label/digit logprob distributions (digit_items) exactly like
+#     its choice distributions, and NO sampling field exists anywhere.
 #
 # All offline: pure enumeration plus a temp file; no network, no models.
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -173,19 +174,47 @@ def test_records_on_disk_carry_their_cell_identity() -> None:
             assert cells.record_key(record) == cells.record_key(cell)
 
 
-# --------------------------------------------------------------------------
-# TASK-2150 RED tests — review blocker B1 (RESULT-2146): a multi-row
-# record must carry `expected_rows` (the answered item's own statement
-# count, read from the shipped stimuli) so the preflight can tell a
-# complete 10-row answer from a truncated one. The records here are
-# built through the real record builder with fake scorer/sampler calls
-# — no network, no models.
-# --------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# TASK-2182 design pivot — records store first-token digit distributions.
+# One record is still one (model, persona, experiment, arm, blind) cell
+# (57,000 unchanged), but a cell's numeric items are now measured with
+# one deterministic first-token call EACH, and the record stores their
+# label/digit logprob distributions exactly like its choice
+# distributions: record["digit_items"], one entry per digit item in
+# survey order. The K=20 sampling era — samples, parse failures,
+# expected_rows — is gone from the record schema entirely.
+# ---------------------------------------------------------------------------
 
 
-def _offline_multi_record(experiment: str, arm: str,
-                          answer_rows: int) -> dict:
-    """One real multi-row cell's record with every fake call healthy."""
+def _entry(token: str, prob: float) -> dict:
+    """Build one top-k entry {token, logprob} from a probability (helper)."""
+    return {"token": token, "logprob": math.log(prob)}
+
+
+def _arm_item_tokens(experiment: str, arm: str) -> list[str]:
+    """The answer token each first-token call of an arm returns (helper)."""
+    if experiment == "false_consensus":
+        return [str((i % 5) + 1) for i in range(10)]
+    if experiment == "linda":
+        return ["1", "2", "3"]
+    if experiment == "prob_matching":
+        rows = 10 if arm == "problem1" else 6
+        return [str((i % 2) + 1) for i in range(rows)]
+    if experiment == "base_rate":
+        return ["4"]
+    if experiment == "anchoring_redwood" and arm == "low":
+        return ["A", "7"]  # the anchor choice letter, then the digit
+    return ["A"]
+
+
+def _offline_first_token_record(experiment: str, arm: str,
+                                fail_call: int | None = None) -> tuple:
+    """One real cell's record with every fake call healthy (helper).
+
+    The fake scorer answers each call with the arm's next answer token,
+    so every stored distribution is attributable to exactly one item
+    call. Returns (record, messages_of_each_call_in_order).
+    """
     from twin2k10 import legexec
 
     context = legexec.LegContext(
@@ -196,37 +225,142 @@ def _offline_multi_record(experiment: str, arm: str,
         stimuli=experiments.load_stimuli(),
         inference=legexec.inference_settings("http://127.0.0.1:8080"),
     )
-    answer = "\n".join(
-        f"{row}. {row * 10}" for row in range(1, answer_rows + 1)
-    )
-
-    def fake_sampler(messages: list) -> dict:
-        return {"samples": [answer] * config.NUMERIC_SAMPLES_K,
-                "first_top_logprobs": [], "calls_failed": 0,
-                "errors": [], "elapsed_seconds": 0.0}
+    tokens = iter(_arm_item_tokens(experiment, arm))
+    calls: list[list] = []
 
     def fake_scorer(messages: list) -> dict:
-        return {"top_logprobs": [], "decision_position": 0,
-                "skipped_prefix": [], "skipped_len": 0, "succeeded": True}
+        calls.append(messages)
+        try:
+            token = next(tokens)
+        except StopIteration:
+            raise AssertionError(
+                f"unexpected extra scorer call #{len(calls)}"
+            ) from None
+        if fail_call is not None and len(calls) - 1 == fail_call:
+            raise OSError("server gone mid-arm")
+        return {"top_logprobs": [_entry(token, 0.9)],
+                "decision_position": 0, "skipped_prefix": [],
+                "skipped_len": 0, "succeeded": True}
 
     cell = (config.MODELS[0], 0, experiment, arm, "blinded")
-    return legexec.execute_cell(context, fake_scorer, fake_sampler, cell)
+    return legexec.execute_cell(context, fake_scorer, cell), calls
 
 
-def test_multi_numeric_records_carry_the_item_row_count_as_expected_rows() -> None:
-    """false_consensus answers a 10-row item, so its record says 10."""
-    record = _offline_multi_record("false_consensus", "all", answer_rows=10)
-    assert record.get("expected_rows") == 10, (
-        "a multi-row record must carry expected_rows (its item's row "
-        "count) so the preflight can catch truncated answers"
-    )
+def test_every_item_of_every_arm_is_first_token_scored() -> None:
+    """The grid's item mix is choice + digit only — nothing samples."""
+    for experiment, spec in experiments.EXPERIMENTS.items():
+        for arm, _qids in spec.arms:
+            items = experiments.arm_items(experiment, arm)
+            assert items and all(item["kind"] in ("choice", "digit")
+                                 for item in items), (experiment, arm)
 
 
-def test_expected_rows_reads_each_items_own_row_count() -> None:
-    """problem1's item has 10 rows and problem2's has 6 — no hardcoding."""
-    ten_rows = _offline_multi_record("prob_matching", "problem1",
-                                     answer_rows=10)
-    six_rows = _offline_multi_record("prob_matching", "problem2",
-                                     answer_rows=6)
-    assert ten_rows.get("expected_rows") == 10
-    assert six_rows.get("expected_rows") == 6
+def test_false_consensus_record_stores_one_distribution_per_policy() -> None:
+    """Ten single-policy calls land as ten 1–5 label distributions."""
+    rows = experiments.load_stimuli()["QID287"]["rows"]
+    record, calls = _offline_first_token_record("false_consensus", "all")
+    items = record["digit_items"]
+    assert len(items) == 10
+    assert len(calls) == 10
+    for number, item in enumerate(items, start=1):
+        assert item["row"] == number
+        assert item["qid"] == "QID287"
+        assert item["statement"] == rows[number - 1]
+        assert set(item["p_raw"]) == {"1", "2", "3", "4", "5"}
+        found = str((number - 1) % 5 + 1)
+        assert item["p_raw"][found] == pytest.approx(0.9), number
+        assert item["branch_mass"] == pytest.approx(0.9)
+
+
+def test_each_fc_call_sees_only_its_own_policy_statement() -> None:
+    """Every rating call is asked ONE policy — never the other nine."""
+    rows = experiments.load_stimuli()["QID287"]["rows"]
+    _record, calls = _offline_first_token_record("false_consensus", "all")
+    for number, messages in enumerate(calls):
+        user = messages[-1]["content"]
+        assert rows[number] in user, number
+        for other in rows[:number] + rows[number + 1:]:
+            assert other not in user, (number, other)
+
+
+def test_digit_items_carry_their_own_prompt_and_hash() -> None:
+    """Each digit item stamps its own prompt pair for audit parity."""
+    from twin2k10 import legexec, prompts
+
+    record, _calls = _offline_first_token_record("false_consensus", "all")
+    for item in record["digit_items"]:
+        assert item["user_prompt"]
+        assert item["prompt_sha256"] == legexec.prompt_sha256(
+            record["system_prompt"], item["user_prompt"]
+        )
+        assert prompts.NUMERIC_INSTRUCTION \
+            in item["user_prompt"].split("\n\n")[-1]
+
+
+def test_anchoring_record_stores_the_mc_item_plus_one_digit_item() -> None:
+    """An anchoring record: letter distribution + one 0-9 digit item."""
+    record, calls = _offline_first_token_record("anchoring_redwood", "low")
+    assert len(calls) == 2
+    assert set(record["p_raw"]) == {"A", "B"}          # the MC item
+    digit_items = record["digit_items"]
+    assert len(digit_items) == 1
+    entry = digit_items[0]
+    assert entry["qid"] == "QID168"
+    assert entry["row"] is None and entry["statement"] is None
+    assert set(entry["p_raw"]) == set("0123456789")
+    assert entry["p_raw"]["7"] == pytest.approx(0.9)
+    # The digit call's prompt is the estimate question alone.
+    digit_user = calls[1][-1]["content"]
+    assert "How tall do you think the tallest redwood tree" in digit_user
+    assert "more or less than 85 feet" not in digit_user
+
+
+def test_base_rate_record_uses_the_first_significant_digit_labels() -> None:
+    """A numeric question's record: one digit item, labels 0-9, no choice."""
+    record, calls = _offline_first_token_record("base_rate", "30_engineers")
+    assert len(calls) == 1
+    assert "choice_qid" not in record
+    entry = record["digit_items"][0]
+    assert set(entry["p_raw"]) == set("0123456789")
+    assert entry["p_raw"]["4"] == pytest.approx(0.9)
+
+
+def test_linda_record_stores_three_six_point_distributions() -> None:
+    """Linda's three statements land as three 1–6 label distributions."""
+    record, _calls = _offline_first_token_record("linda", "conjunction")
+    items = record["digit_items"]
+    assert len(items) == 3
+    for number, item in enumerate(items, start=1):
+        assert set(item["p_raw"]) == {"1", "2", "3", "4", "5", "6"}
+        assert item["p_raw"][str(number)] == pytest.approx(0.9)
+
+
+def test_records_carry_no_sampling_fields() -> None:
+    """The sampling-era record fields are gone from the schema entirely."""
+    record, _calls = _offline_first_token_record("false_consensus", "all")
+    banned = [key for key in record
+              if key.startswith("numeric_") or key.startswith("multi_numeric_")]
+    assert banned == []
+    for field in ("expected_rows", "parse_failures", "calls_failed"):
+        assert field not in record, field
+
+
+def test_choice_top_logprobs_win_the_record_audit_field() -> None:
+    """An anchoring record's canonical top-k is still the MC call's."""
+    record, _calls = _offline_first_token_record("anchoring_redwood", "low")
+    assert record["top_logprobs"] == [_entry("A", 0.9)]
+
+
+def test_record_top_logprobs_fall_back_to_the_first_digit_item() -> None:
+    """A digit-only arm audits its first item's top-k (GGUF check lives)."""
+    record, _calls = _offline_first_token_record("false_consensus", "all")
+    assert record["top_logprobs"] == record["digit_items"][0]["top_logprobs"]
+
+
+def test_a_failed_item_call_blocks_record_success() -> None:
+    """One failing first-token call fails the record — never a silent row."""
+    record, _calls = _offline_first_token_record("false_consensus", "all",
+                                                 fail_call=3)
+    assert record["succeeded"] is False
+    assert record["error"]
+    assert record["digit_items"][3]["succeeded"] is False
