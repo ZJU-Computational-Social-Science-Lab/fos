@@ -154,20 +154,47 @@ def _scale_lines(stimulus: dict) -> str | None:
     )
 
 
-def _item_user_prompt(persona: dict, item: dict,
-                      stimuli: dict[str, dict]) -> str:
+def _anchor_question_text(experiment: str, arm: str, item: dict,
+                          stimuli: dict[str, dict]) -> str | None:
+    """The arm's anchor question when a digit item must see it, else None.
+
+    An anchoring arm asks a choice anchor question FIRST and the numeric
+    estimate second; the estimate call must see that anchor (otherwise
+    the low/high contrast is never measured), so its verbatim question
+    text is returned for any digit item whose arm STARTS with a choice
+    question. Arms that begin with the digit item itself (base_rate,
+    false_consensus, ...) get None — their prompts stay unchanged.
+    Only the question text is used; the anchor's letter options never
+    render here (a digit item must be answered with a number).
+    """
+    if item["kind"] != "digit":
+        return None
+    items = experiments.arm_items(experiment, arm, stimuli)
+    if not items or items[0]["kind"] != "choice":
+        return None
+    return stimuli[items[0]["qid"]]["question_text"]
+
+
+def _item_user_prompt(persona: dict, experiment: str, arm: str,
+                      item: dict, stimuli: dict[str, dict]) -> str:
     """The full user prompt for ONE first-token item of an arm.
 
-    Shape: the EMBODY persona block, then the item itself — a choice
-    item shows its verbatim question plus its lettered option lines and
-    ends with the letter instruction; a digit item shows its verbatim
-    question (and, for a split row, that row's statement), then the
-    item's "N = label" answer scale when it has one, and ends with the
-    single-number instruction. Each call therefore sees exactly one
-    question — never another row's statement and never another question
-    of the arm.
+    Shape: the EMBODY persona block, then (for a digit item whose arm
+    starts with a choice anchor) that anchor's verbatim question as
+    context, then the item itself — a choice item shows its verbatim
+    question plus its lettered option lines and ends with the letter
+    instruction; a digit item shows its verbatim question (and, for a
+    split row, that row's statement), then the item's "N = label"
+    answer scale when it has one, and ends with the single-number
+    instruction. Each call therefore sees exactly one question to
+    ANSWER — never another row's statement and never another item's
+    option lines.
     """
-    parts = [render_persona_block(persona), item["question_text"]]
+    parts = [render_persona_block(persona)]
+    anchor = _anchor_question_text(experiment, arm, item, stimuli)
+    if anchor is not None:
+        parts.append(anchor)
+    parts.append(item["question_text"])
     if item["kind"] == "choice":
         parts.append(_option_lines(stimuli[item["qid"]]))
         parts.append(FINAL_INSTRUCTION)
@@ -196,7 +223,7 @@ def build_user_prompt(persona: dict, experiment: str, arm: str,
     """
     stimuli = experiments.load_stimuli()
     if item is not None:
-        return _item_user_prompt(persona, item, stimuli)
+        return _item_user_prompt(persona, experiment, arm, item, stimuli)
     items = experiments.arm_items(experiment, arm, stimuli)
     if any(one["kind"] == "digit" for one in items):
         raise ValueError(
