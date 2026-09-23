@@ -85,6 +85,11 @@ DIGIT_SCAN_TOKENS = 16
 # is at least this share (the digit dominates what the model writes there).
 DIGIT_MASS_PREFLIGHT_THRESHOLD = 0.5
 
+# A model PROCEEDs when at least this share of its digit items pass the
+# 0.5 dominance gate; below it the model STOPs. Sub-gate items at a
+# passing rate are WARN-flagged, not stopped.
+DIGIT_PASS_RATE_GATE = 0.90
+
 # A combined letter mass strictly below 0.80 is flagged "diffuse" — same
 # stricter-than-R1 threshold the twin2k6 study used.
 LOW_BRANCH_MASS_THRESHOLD = 0.80
