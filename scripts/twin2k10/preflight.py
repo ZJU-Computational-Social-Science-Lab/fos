@@ -4,8 +4,10 @@
 # network. It says STOP exactly on technical failure criteria: a record
 # whose top-logprobs came back empty (the known GGUF failure signature),
 # a choice record where no answer letter could be read, or a digit item
-# where no answer digit could be read (each digit item failing exactly
-# like a choice record: empty top-k, or an all-None distribution). It
+# whose pass/fail state drags the model's digit pass rate below the
+# 0.90 gate (empty top-k is the one absolute transport failure; an
+# all-None distribution with real top-k text is a rate-gated model
+# failure per owner policy 2026-09-22). It
 # never judges whether an answer is sensible, and sampling-era record
 # fields are simply never inspected. The file also writes the preflight
 # report and the skipped-models list the runner uses to leave broken
@@ -51,59 +53,73 @@ def _choice_reasons(record: dict) -> list[str]:
 def _digit_reasons(record: dict) -> tuple[list[str], list[tuple[dict, str]]]:
     """One record's digit-item verdict: absolute reasons + weak items.
 
-    Returns (reasons, dominance_failures): reasons are the absolute
-    technical failures that stop a model at any pass rate; each
-    dominance failure is a (item, reason) pair for an item whose digit
-    mass missed the 0.5 gate — those are rate-gated, not stopped.
-    "
+    Returns (reasons, outcomes): reasons are the absolute technical
+    failures that stop a model at any pass rate; each outcome is a
+    (item, passed, reason) triple for one rate-counted digit item —
+    passed items carry reason None, failing items carry the reason the
+    item failed (sub-gate mass, or no readable digit).
 
     Every digit_items entry is judged exactly like a choice record: its
-    top-logprobs must be non-empty (empty is the GGUF failure signature)
-    and at least one label digit must be readable from its p_raw (an
-    all-None distribution means no answer digit could be read at all — a
-    single weak digit next to found ones is normal, not a failure).
+    top-logprobs must be non-empty (empty is the GGUF failure signature
+    — an absolute STOP). An all-None p_raw with REAL top_logprobs text
+    is a MODEL-behavior failure (owner policy 2026-09-22): it is
+    rate-counted as a failure and flagged, never an absolute STOP. A
+    single weak digit next to found ones is normal, not a failure.
     Sampling-era record fields are never looked at.
     """
     reasons: list[str] = []
-    dominance_failures: list[tuple[dict, str]] = []
+    outcomes: list[tuple[dict, bool, str | None]] = []
     for item in record.get("digit_items") or []:
         where = _item_label(record, item)
+        if not item.get("top_logprobs"):
+            reasons.append(
+                f"{where}: empty top_logprobs at the decision "
+                "position (GGUF failure signature)"
+            )
+            if "digit_mass" in item:
+                outcomes.append(
+                    (item, False, _digit_mass_reason(item, where))
+                )
+            continue
         if "digit_mass" in item:
+            # Sub-gate mass: the all-None distribution is a symptom of
+            # the same weakness, not a separate failure — the mass
+            # reason (mass + position) is the item's failure reason.
             dominance_reason = _digit_mass_reason(item, where)
             if dominance_reason:
-                # Sub-gate mass: the all-None distribution is a symptom
-                # of the same weakness, not a separate failure — the
-                # item is rate-gated below, never p_raw-stopped. An
-                # empty top_logprobs window stays an absolute STOP.
-                dominance_failures.append((item, dominance_reason))
-                if not item.get("top_logprobs"):
-                    reasons.append(
-                        f"{where}: empty top_logprobs at the decision "
-                        "position (GGUF failure signature)"
+                outcomes.append((item, False, dominance_reason))
+            elif _p_raw_all_none(item):
+                outcomes.append(
+                    (
+                        item,
+                        False,
+                        f"{where}: no answer digit readable in the item's "
+                        "p_raw",
                     )
-                continue
-            reasons.extend(_absolute_digit_reasons(item, where))
+                )
+            else:
+                outcomes.append((item, True, None))
             continue
-        reasons.extend(_absolute_digit_reasons(item, where))
-    return reasons, dominance_failures
+        if _p_raw_all_none(item):
+            outcomes.append(
+                (
+                    item,
+                    False,
+                    f"{where}: no answer digit readable in the item's "
+                    "p_raw",
+                )
+            )
+            continue
+        # Legacy readable item: no mass gate to judge, counted as a
+        # passing digit item in the rate.
+        outcomes.append((item, True, None))
+    return reasons, outcomes
 
 
-def _absolute_digit_reasons(item: dict, where: str) -> list[str]:
-    """The never-rate-tolerated failures one digit item shows (may be []).
-
-    Empty top_logprobs is the GGUF failure signature; an all-None digit
-    distribution means no answer digit could be read at all.
-    """
-    reasons: list[str] = []
-    if not item.get("top_logprobs"):
-        reasons.append(
-            f"{where}: empty top_logprobs at the decision position "
-            "(GGUF failure signature)"
-        )
+def _p_raw_all_none(item: dict) -> bool:
+    """Whether one digit item's p_raw exists but holds no readable digit."""
     p_raw = item.get("p_raw")
-    if p_raw and all(value is None for value in p_raw.values()):
-        reasons.append(f"{where}: no answer digit readable in the item's p_raw")
-    return reasons
+    return bool(p_raw) and all(value is None for value in p_raw.values())
 
 
 def _digit_mass_reason(item: dict, where: str) -> str | None:
@@ -180,10 +196,13 @@ def decide(records: list[dict]) -> dict:
             {"passed": 0, "total": 0, "flagged": [], "dominance_reasons": []},
         )
         reasons.extend(_choice_reasons(record))
-        absolute, failures = _digit_reasons(record)
+        absolute, outcomes = _digit_reasons(record)
         reasons.extend(absolute)
-        for item, failure_reason in failures:
+        for item, passed, failure_reason in outcomes:
             tally["total"] += 1
+            if passed:
+                tally["passed"] += 1
+                continue
             tally["flagged"].append(
                 {
                     "qid": item.get("qid"),
@@ -192,13 +211,6 @@ def decide(records: list[dict]) -> dict:
                 }
             )
             tally["dominance_reasons"].append(failure_reason)
-        for item in record.get("digit_items") or []:
-            if "digit_mass" not in item:
-                continue
-            mass = item.get("digit_mass") or 0.0
-            if mass >= config.DIGIT_MASS_PREFLIGHT_THRESHOLD:
-                tally["passed"] += 1
-                tally["total"] += 1
     per_model = _digit_rate_verdict(stats, reasons)
     return {"stop": bool(reasons), "reasons": reasons, "per_model": per_model}
 
@@ -247,9 +259,11 @@ def build_report(
         for reason in reasons:
             lines.append(f"  - {reason}")
         for row in rates.get(model, {}).get("flagged", []):
+            mass = row.get("digit_mass")
+            mass_text = f"{mass:.2f}" if mass is not None else "n/a"
             lines.append(
                 f"  - WARN flagged: digit item {row.get('qid')} row "
-                f"{row.get('row')} (digit mass {row.get('digit_mass'):.2f})"
+                f"{row.get('row')} (digit mass {mass_text})"
             )
     lines += [
         "",
