@@ -48,8 +48,14 @@ def _choice_reasons(record: dict) -> list[str]:
     return reasons
 
 
-def _digit_reasons(record: dict) -> list[str]:
-    """The stop reasons one record's digit items give (may be []).
+def _digit_reasons(record: dict) -> tuple[list[str], list[tuple[dict, str]]]:
+    """One record's digit-item verdict: absolute reasons + weak items.
+
+    Returns (reasons, dominance_failures): reasons are the absolute
+    technical failures that stop a model at any pass rate; each
+    dominance failure is a (item, reason) pair for an item whose digit
+    mass missed the 0.5 gate — those are rate-gated, not stopped.
+    "
 
     Every digit_items entry is judged exactly like a choice record: its
     top-logprobs must be non-empty (empty is the GGUF failure signature)
@@ -59,45 +65,64 @@ def _digit_reasons(record: dict) -> list[str]:
     Sampling-era record fields are never looked at.
     """
     reasons: list[str] = []
+    dominance_failures: list[tuple[dict, str]] = []
     for item in record.get("digit_items") or []:
         where = _item_label(record, item)
         if "digit_mass" in item:
-            reasons.extend(_digit_mass_reasons(item, where))
+            dominance_reason = _digit_mass_reason(item, where)
+            if dominance_reason:
+                # Sub-gate mass: the all-None distribution is a symptom
+                # of the same weakness, not a separate failure — the
+                # item is rate-gated below, never p_raw-stopped. An
+                # empty top_logprobs window stays an absolute STOP.
+                dominance_failures.append((item, dominance_reason))
+                if not item.get("top_logprobs"):
+                    reasons.append(
+                        f"{where}: empty top_logprobs at the decision "
+                        "position (GGUF failure signature)"
+                    )
+                continue
+            reasons.extend(_absolute_digit_reasons(item, where))
             continue
-        if not item.get("top_logprobs"):
-            reasons.append(
-                f"{where}: empty top_logprobs at the decision position "
-                "(GGUF failure signature)"
-            )
-        p_raw = item.get("p_raw")
-        if p_raw and all(value is None for value in p_raw.values()):
-            reasons.append(f"{where}: no answer digit readable in the item's p_raw")
-    return reasons
+        reasons.extend(_absolute_digit_reasons(item, where))
+    return reasons, dominance_failures
 
 
-def _digit_mass_reasons(item: dict, where: str) -> list[str]:
-    """The stop reasons one scanned digit item gives (may be []).
+def _absolute_digit_reasons(item: dict, where: str) -> list[str]:
+    """The never-rate-tolerated failures one digit item shows (may be []).
 
-    Two independent checks: the item's digit_mass (the best position's
-    total digit probability) must reach the dominance gate — below it
-    the model never wrote a dominant digit anywhere in the scan window,
-    and the reason names the mass and position — AND its p_raw must have
-    found at least one digit (an all-None distribution means no answer
-    digit could be read at all, even when the mass looks healthy).
-    Items without a digit_mass field (legacy shape) are never gated.
+    Empty top_logprobs is the GGUF failure signature; an all-None digit
+    distribution means no answer digit could be read at all.
     """
-    mass = item.get("digit_mass") or 0.0
     reasons: list[str] = []
-    if mass < config.DIGIT_MASS_PREFLIGHT_THRESHOLD:
+    if not item.get("top_logprobs"):
         reasons.append(
-            f"{where}: digit mass {mass:.2f} at best position "
-            f"{item.get('decision_position')} is below the "
-            f"{config.DIGIT_MASS_PREFLIGHT_THRESHOLD} dominance gate"
+            f"{where}: empty top_logprobs at the decision position "
+            "(GGUF failure signature)"
         )
     p_raw = item.get("p_raw")
     if p_raw and all(value is None for value in p_raw.values()):
         reasons.append(f"{where}: no answer digit readable in the item's p_raw")
     return reasons
+
+
+def _digit_mass_reason(item: dict, where: str) -> str | None:
+    """The sub-gate message for one scanned digit item (None if it passes).
+
+    The item's digit_mass (the best position's total digit probability)
+    must reach the dominance gate — below it the model never wrote a
+    dominant digit anywhere in the scan window, and the message names
+    the mass and position. Items without a digit_mass field (legacy
+    shape) are never gated.
+    """
+    mass = item.get("digit_mass") or 0.0
+    if mass >= config.DIGIT_MASS_PREFLIGHT_THRESHOLD:
+        return None
+    return (
+        f"{where}: digit mass {mass:.2f} at best position "
+        f"{item.get('decision_position')} is below the "
+        f"{config.DIGIT_MASS_PREFLIGHT_THRESHOLD} dominance gate"
+    )
 
 
 def _item_label(record: dict, item: dict) -> str:
@@ -107,19 +132,85 @@ def _item_label(record: dict, item: dict) -> str:
     return f"{_record_label(record)}: digit item {item.get('qid')}{at}"
 
 
+def _digit_rate_verdict(
+    stats: dict, reasons: list[str]
+) -> dict[str, dict]:
+    """Turn per-model digit tallies into the per_model verdict block.
+
+    Each model gets its digit_pass_rate (dominant items over scanned
+    items) and its flagged rows. A model below the DIGIT_PASS_RATE_GATE
+    STOPs: its sub-gate items become stop reasons, and the rate-naming
+    reason is appended last so the item messages stay first.
+    """
+    per_model: dict[str, dict] = {}
+    for model, tally in stats.items():
+        passed, total = tally["passed"], tally["total"]
+        rate = passed / total if total else 1.0
+        per_model[model] = {
+            "digit_pass_rate": rate,
+            "flagged": tally["flagged"],
+        }
+        if total and rate < config.DIGIT_PASS_RATE_GATE:
+            reasons.extend(tally["dominance_reasons"])
+            reasons.append(
+                f"{model}: digit dominance pass rate {passed}/{total} = "
+                f"{rate:.3f} is below the {config.DIGIT_PASS_RATE_GATE} "
+                "gate (worst items named above)"
+            )
+    return per_model
+
+
 def decide(records: list[dict]) -> dict:
     """The pure stop-or-proceed verdict over a batch of preflight records.
 
-    Returns {"stop": bool, "reasons": list[str]} — stop is True exactly
-    when reasons is non-empty, and every reason names its record and what
-    failed technically. Reads its arguments only: the same records always
-    produce the same verdict, and calling it changes nothing.
+    Returns {"stop": bool, "reasons": list[str], "per_model": dict} —
+    stop is True exactly when reasons is non-empty. Absolute technical
+    failures stop at any rate; digit dominance is rate-gated per model:
+    at or above DIGIT_PASS_RATE_GATE the weak items only WARN-flag,
+    below it the model stops and the reason names the failing rate.
+    Reads its arguments only: the same records always produce the same
+    verdict, and calling it changes nothing.
     """
     reasons: list[str] = []
+    stats: dict[str, dict] = {}
     for record in records:
+        model = str(record.get("model"))
+        tally = stats.setdefault(
+            model,
+            {"passed": 0, "total": 0, "flagged": [], "dominance_reasons": []},
+        )
         reasons.extend(_choice_reasons(record))
-        reasons.extend(_digit_reasons(record))
-    return {"stop": bool(reasons), "reasons": reasons}
+        absolute, failures = _digit_reasons(record)
+        reasons.extend(absolute)
+        for item, failure_reason in failures:
+            tally["total"] += 1
+            tally["flagged"].append(
+                {
+                    "qid": item.get("qid"),
+                    "row": item.get("row"),
+                    "digit_mass": item.get("digit_mass"),
+                }
+            )
+            tally["dominance_reasons"].append(failure_reason)
+        for item in record.get("digit_items") or []:
+            if "digit_mass" not in item:
+                continue
+            mass = item.get("digit_mass") or 0.0
+            if mass >= config.DIGIT_MASS_PREFLIGHT_THRESHOLD:
+                tally["passed"] += 1
+                tally["total"] += 1
+    per_model = _digit_rate_verdict(stats, reasons)
+    return {"stop": bool(reasons), "reasons": reasons, "per_model": per_model}
+
+
+def _rate_block(records: list[dict]) -> dict[str, dict]:
+    """The per-model rate/flagged block decide() computes, re-derived.
+
+    The report writer and JSON writer receive plain reasons strings, so
+    they re-run the pure decide() over the same records to recover each
+    model's digit pass rate and flagged rows.
+    """
+    return decide(records)["per_model"]
 
 
 def build_report(
@@ -143,14 +234,23 @@ def build_report(
         "## Per-model verdicts",
         "",
     ]
+    rates = _rate_block([r for rs in per_model.values() for r in rs])
     for model, records in per_model.items():
         reasons = verdict.get(model, [])
+        rate = rates.get(model, {}).get("digit_pass_rate")
+        rate_text = f" (digit pass rate {rate:.3f})" if rate is not None else ""
         lines.append(
             f"- {model}: {len(records)} records — "
             + ("PROCEED" if not reasons else "STOP")
+            + rate_text
         )
         for reason in reasons:
             lines.append(f"  - {reason}")
+        for row in rates.get(model, {}).get("flagged", []):
+            lines.append(
+                f"  - WARN flagged: digit item {row.get('qid')} row "
+                f"{row.get('row')} (digit mass {row.get('digit_mass'):.2f})"
+            )
     lines += [
         "",
         "## Decision",
@@ -176,15 +276,20 @@ def write_outputs(
 ) -> dict:
     """Examine a finished preflight and write its report + skip list.
 
-    Writes PREFLIGHT_REPORT.md always and skipped_models.json when any
-    model is STOP-flagged, both into the run directory. Returns the
-    verdict payload (also handy for logs). Records are read from the
-    caller in memory — the leg files themselves were written by the
-    runner's durable record loop.
+    Writes PREFLIGHT_REPORT.md always, preflight_verdict.json with the
+    per-model machine-readable rates + flagged rows, and
+    skipped_models.json when any model is STOP-flagged, all into the
+    run directory. Returns the verdict payload (also handy for logs).
+    Records are read from the caller in memory — the leg files
+    themselves were written by the runner's durable record loop.
     """
     preflight_dir = Path(preflight_dir)
     report = build_report(preflight_dir, per_model, verdict)
     (preflight_dir / "PREFLIGHT_REPORT.md").write_text(report, encoding="utf-8")
+    rates = _rate_block([r for rs in per_model.values() for r in rs])
+    (preflight_dir / "preflight_verdict.json").write_text(
+        json.dumps({"per_model": rates}, indent=2) + "\n", encoding="utf-8"
+    )
     if verdict:
         (preflight_dir / "skipped_models.json").write_text(
             json.dumps(
