@@ -20,6 +20,8 @@ import math
 import sys
 from pathlib import Path
 
+import pytest
+
 # The launch scripts live in scripts/ and are not on pytest's pythonpath.
 _SCRIPTS = str(Path(__file__).resolve().parent.parent / "scripts")
 if _SCRIPTS not in sys.path:
@@ -100,23 +102,45 @@ def test_missing_labels_stop_the_run() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_digit_item_with_no_readable_digit_stops_the_run() -> None:
-    """A rating item whose distribution has no digit at all is a failure."""
+def test_digit_item_with_no_readable_digit_is_a_rate_failure_not_a_stop() -> None:
+    """An all-None digit p_raw with REAL top_logprobs text is a MODEL
+
+    failure: flagged and counted in the pass rate — not an absolute
+    STOP. AMENDED per owner policy (2026-09-22, "90% rate gate,
+    all 15"); the pre-amendment version of this test forced a STOP.
+    The blank item is the 11th digit item, all-None with readable text
+    top-k ("Support"), so the model's rate is 10/11 ≈ 0.909 >= 0.90:
+    PROCEED with QID287 flagged and counted as a failure.
+    """
     labels = tuple("12345")
     blank = _digit_item(labels, [_entry("Support", 0.9)],
                         p_raw={label: None for label in labels}, row=7)
     record = _good_digit_record()
+    record["digit_items"].extend(
+        _digit_item(labels, [_entry("1", 0.6), _entry("2", 0.3)],
+                    row=row) for row in range(2, 11)
+    )
     record["digit_items"].append(blank)
     verdict = preflight.decide([record])
-    assert verdict["stop"] is True, (
-        "a digit item with every label None must stop the run, exactly "
-        "like a choice record where no answer letter is readable"
+    assert verdict["stop"] is False, (
+        "an all-None digit p_raw with real top_logprobs text is a "
+        "model-behavior failure: rate-gated and flagged, never a STOP"
     )
-    assert verdict["reasons"], "a stop verdict must say why"
+    per_model = verdict["per_model"]["m"]
+    assert per_model["digit_pass_rate"] == pytest.approx(10 / 11), (
+        "the all-None item must be COUNTED as a failing digit item"
+    )
+    assert any(row["qid"] == "QID287" for row in per_model["flagged"]), (
+        "the all-None item must appear among the flagged rows"
+    )
 
 
 def test_digit_item_with_empty_top_logprobs_stops_the_run() -> None:
-    """The GGUF failure signature on a digit item stops the run too."""
+    """Empty top_logprobs at the decision token is a TRANSPORT failure:
+
+    an absolute STOP regardless of the pass rate (owner policy
+    2026-09-22); the all-None p_raw next to it is a model failure and
+    only rides along in the rate."""
     labels = tuple("12345")
     empty = _digit_item(labels, [], p_raw={label: None for label in labels},
                         row=3)

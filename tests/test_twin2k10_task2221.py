@@ -174,12 +174,16 @@ def test_rates_are_computed_per_model_not_per_batch() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_all_none_digit_distribution_stops_even_at_a_high_rate() -> None:
-    """An all-None p_raw stops the model at any dominance pass rate.
+def test_all_none_digit_distribution_with_real_text_is_a_rate_failure() -> None:
+    """An all-None digit p_raw with REAL top_logprobs text is a MODEL
 
-    The degenerate item even has healthy digit_mass 1.0, so it counts
-    as a PASS for the rate — 99 of 100 dominant, rate 0.99 — and still
-    the model must STOP: data integrity is not rate-tolerated.
+    failure, not a transport failure: it is flagged and counted as a
+    FAILING digit item in the pass rate. AMENDED per owner policy
+    (2026-09-22, "90% rate gate, all 15"): the pre-2026-09-22 version
+    of this test wrongly forced an absolute STOP. Here the degenerate
+    item (digit_mass 1.0, top_logprobs text present) makes 99 pass + 1
+    fail out of 100 — rate 0.99 >= the 0.90 gate — so the model must
+    PROCEED with QID168 flagged.
     """
     degenerate = {
         "qid": "QID168", "row": 1, "statement": None,
@@ -191,14 +195,56 @@ def test_all_none_digit_distribution_stops_even_at_a_high_rate() -> None:
     record = _rate_record(n_strong=99, n_weak=0)
     record["digit_items"].append(degenerate)
     verdict = preflight.decide([record])
-    assert verdict["stop"] is True, (
-        "an all-None digit p_raw is an absolute STOP at any pass rate"
+    assert verdict["stop"] is False, (
+        "an all-None digit p_raw with real top_logprobs text is a "
+        "model-behavior failure: rate-gated and flagged, never a STOP"
     )
-    assert any("QID168" in reason for reason in verdict["reasons"])
+    per_model = verdict["per_model"]["m"]
+    assert per_model["digit_pass_rate"] == pytest.approx(99 / 100), (
+        "the all-None item must be COUNTED as a failing digit item"
+    )
+    flagged_qids = [row["qid"] for row in per_model["flagged"]]
+    assert "QID168" in flagged_qids, (
+        "the all-None item must appear among the flagged rows"
+    )
+
+
+def test_enough_all_none_rows_drop_the_rate_below_the_gate_and_stop() -> None:
+    """All-None model failures CAN still stop the model — via the rate.
+
+    Fifteen all-None digit items (real top_logprobs text each) among
+    85 healthy items give a rate of 85/100 = 0.85 < 0.90: the model
+    STOPs because of the RATE, and the reason names it.
+    """
+    record = _rate_record(n_strong=85, n_weak=0)
+    for i in range(15):
+        record["digit_items"].append({
+            "qid": f"QID{500 + i}", "row": 200 + i, "statement": None,
+            "top_logprobs": [_entry("379", 0.6)],
+            "decision_position": 1,
+            "p_raw": {digit: None for digit in "0123456789"},
+            "digit_mass": 1.0,
+        })
+    verdict = preflight.decide([record])
+    assert verdict["stop"] is True, (
+        "a 0.85 rate driven by all-None model failures is below the gate"
+    )
+    reason = "\n".join(verdict["reasons"])
+    assert "0.85" in reason or "85/100" in reason, (
+        f"the stop reason must name the failing rate; got: {reason}"
+    )
+    assert "QID500" in reason, (
+        "the stop reason must name the failing all-None items"
+    )
 
 
 def test_empty_top_logprobs_on_digit_item_stops_even_at_a_high_rate() -> None:
-    """The GGUF signature on a digit item is an absolute STOP."""
+    """Empty top_logprobs at the decision token is a TRANSPORT failure:
+
+    an absolute STOP regardless of the pass rate (owner policy
+    2026-09-22). Unlike the all-None model failure, this is never
+    rate-tolerated.
+    """
     broken = {
         "qid": "QID170", "row": 2, "statement": None,
         "top_logprobs": [],
