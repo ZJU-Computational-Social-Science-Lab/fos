@@ -119,3 +119,26 @@ data/configs/balance_table.md
 data/populations/balance_table.md
 data/populations/leakage_screen.md
 /docs
+
+# One-off experiment scripts (kept on disk, untracked)
+scripts/april_2019_authors.py
+scripts/check_vision_model.py
+scripts/context_barrier_test.py
+scripts/dress_rehearsal_batching.py
+scripts/leak_audit.py
+scripts/r1_interim_analysis.py
+scripts/r1_interim_benchmark.py
+scripts/r1_interim_render.py
+scripts/r1_interim_report.py
+scripts/test_json_reliability.py
+scripts/test_lm_studio_model_switch.py
+scripts/test_one_persona.py
+scripts/test_one_persona_deepseek_baseline.py
+scripts/test_persona_conditions.py
+scripts/test_persona_conditions_31_40.py
+scripts/test_persona_conditions_inverted.py
+scripts/test_persona_reasoning_deepseek.py
+scripts/test_persona_reasoning_deepseek_nos5.py
+scripts/test_persona_reasoning_local.py
+scripts/test_persona_reasoning_openrouter_nos5.py
+scripts/test_template_propagation.py
