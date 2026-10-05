@@ -69,6 +69,7 @@ chroma_db/
 /persona_samples
 reddit_data/
 /multi_model_results.json
+/tests/fixtures/r1yesno_v2/qwen38_27b_unblinded_cells.csv
 /multi_model_table.txt
 
 # Temporary / scratch
