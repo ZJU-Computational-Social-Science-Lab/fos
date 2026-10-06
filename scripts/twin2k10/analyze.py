@@ -26,7 +26,7 @@ CONTRASTS: dict[str, dict[str, tuple[str, str]]] = {
     "anchoring_redwood": {"mean_high_minus_low": ("high", "low")},
     "anchoring_african": {"mean_high_minus_low": ("high", "low")},
     "outcome_bias": {"mean_success_minus_failure": ("success", "failure")},
-    "myside": {"mean_german_minus_ford": ("ford", "german")},
+    "myside": {"mean_german_minus_ford": ("german", "ford")},
     "prob_matching": {
         "mean_majority_share_problem1_minus_problem2": ("problem1", "problem2"),
     },
@@ -96,19 +96,64 @@ def _arm_statistics(records: list[dict]) -> dict[tuple, list[float]]:
     return grouped
 
 
+def _record_identity(record: dict) -> tuple:
+    """The key that identifies one logical record within a cell.
+
+    Two lines sharing (model, persona, experiment, arm, blinding, qid)
+    are the same cell's record split across lines (e.g. a resumed run
+    appending digit rows one at a time), so they merge into one record.
+    """
+    return (
+        record["model"],
+        record["persona_id"],
+        record["experiment"],
+        record["arm"],
+        record["blind"],
+        record["qid"],
+    )
+
+
+def _merge_records(lines: list[dict]) -> list[dict]:
+    """Fold split lines back together, concatenating their digit items.
+
+    The first line's fields win; later lines only contribute their
+    digit_items (and choice-side p_raw when the first had none).
+    """
+    merged: dict[tuple, dict] = {}
+    order: list[tuple] = []
+    for record in lines:
+        key = _record_identity(record)
+        if key not in merged:
+            merged[key] = record
+            order.append(key)
+            continue
+        kept = merged[key]
+        kept["digit_items"] = (kept.get("digit_items") or []) + (
+            record.get("digit_items") or []
+        )
+        if not (kept.get("p_raw") or {}) and record.get("p_raw"):
+            kept["p_raw"] = record["p_raw"]
+    return [merged[key] for key in order]
+
+
 def load_records(run_dir: Path) -> list[dict]:
     """Read every model cell's records.jsonl under the run directory.
 
     A "cell" is any sub-directory holding a records.jsonl file; folders
-    without one (pools, scratch) are skipped. Each line becomes one dict.
+    without one (pools, scratch) are skipped. Lines that belong to the
+    same cell record (same model, persona, experiment, arm, blinding and
+    qid — e.g. digit rows appended by a resumed run) are merged into one
+    record with their digit_items concatenated.
     """
     records: list[dict] = []
     for path in sorted(Path(run_dir).glob("*/*/records.jsonl")):
+        lines: list[dict] = []
         with open(path, encoding="utf-8") as handle:
             for line in handle:
                 line = line.strip()
                 if line:
-                    records.append(json.loads(line))
+                    lines.append(json.loads(line))
+        records.extend(_merge_records(lines))
     return records
 
 
@@ -131,9 +176,9 @@ def _distribution_rows(records: list[dict]) -> list[list]:
         ]
         for label, prob in (record.get("p_raw") or {}).items():
             rows.append(base + ["", label, prob])
-        for item in record.get("digit_items") or []:
+        for position, item in enumerate(record.get("digit_items") or []):
             for label, prob in item["p_raw"].items():
-                rows.append(base + [item["row"], label, prob])
+                rows.append(base + [position + 1, label, prob])
     return rows
 
 
@@ -153,9 +198,11 @@ def arm_distributions(records: list[dict]) -> dict[tuple, float]:
         )
         for label, prob in (record.get("p_raw") or {}).items():
             grouped.setdefault(base + ("", label), []).append(prob)
-        for item in record.get("digit_items") or []:
+        for position, item in enumerate(record.get("digit_items") or []):
             for label, prob in item["p_raw"].items():
-                grouped.setdefault(base + (item["row"], label), []).append(prob)
+                grouped.setdefault(base + (position + 1, label), []).append(
+                    prob
+                )
     return {key: fmean(probs) for key, probs in grouped.items()}
 
 
