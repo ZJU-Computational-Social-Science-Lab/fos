@@ -71,7 +71,7 @@ def _choice_record(model, persona_id, exp_name, arm, blind, qid,
         "p_raw": dict(p_raw),
         "p_norm": dict(p_raw),
         "label_map": label_map or {},
-        "branch_mass": sum(p_raw.values()),
+        "branch_mass": sum(v for v in p_raw.values() if v is not None),
         "low_branch_mass": False,
         "digit_items": [],
     }
@@ -79,13 +79,18 @@ def _choice_record(model, persona_id, exp_name, arm, blind, qid,
 
 def _digit_record(model, persona_id, exp_name, arm, blind, qid,
                   digit_p_raws, row=1):
-    """One synthetic digit record (digit_items shape); one item here."""
+    """One synthetic digit record (digit_items shape); one item here.
+
+    p_raw dicts may contain None values (production records store null
+    for digit labels absent from the model's top-k); the stored
+    branch_mass sums only the real numeric probs, matching production.
+    """
     items = [{
         "qid": qid,
         "row": row,
         "p_raw": dict(p),
         "p_norm": dict(p),
-        "branch_mass": sum(p.values()),
+        "branch_mass": sum(v for v in p.values() if v is not None),
         "low_branch_mass": False,
     } for p in digit_p_raws]
     return {
@@ -258,6 +263,69 @@ def test_arm_distributions_average_labels_over_personas(tmp_path):
     got = {(r["arm"], r["label"]): float(r["mean_prob"]) for r in rows}
     assert got[("form1", "A")] == pytest.approx(0.7)
     assert got[("form1", "B")] == pytest.approx(0.3)
+
+
+def test_long_csv_omits_none_prob_rows_from_digit_items(tmp_path):
+    """A digit label absent from top-k is stored as a null prob; that
+    label carries no information, so it must not become a CSV row."""
+    _write_run(tmp_path, "m1", "linda_blinded",
+               [_digit_record("m1", 0, "linda", "conjunction", "blinded",
+                              "QID160",
+                              [{"1": 0.6, "2": None, "3": 0.4}], row=1)])
+    out = tmp_path / "out"
+    analyze.write_analysis_outputs(tmp_path, _BENCHMARKS, out)
+    _header, rows = _read_csv(out / "distributions_long.csv")
+    assert len(rows) == 2  # labels "2" (None) is omitted
+    assert {r["label"] for r in rows} == {"1", "3"}
+    assert all(r["prob"] not in ("", "None") for r in rows)
+
+
+def test_arm_distributions_compute_over_real_probs_only(tmp_path):
+    """None probs never reach the mean: label "1" means 0.6 over two
+    personas even though both records also carry a null entry."""
+    records = [
+        _digit_record("m1", pid, "linda", "conjunction", "blinded",
+                      "QID160", [{"1": 0.6 + pid * 0.2, "2": None}],
+                      row=1)
+        for pid in range(2)
+    ]
+    _write_run(tmp_path, "m1", "linda_blinded", records)
+    out = tmp_path / "out"
+    analyze.write_analysis_outputs(tmp_path, _BENCHMARKS, out)
+    _header, rows = _read_csv(out / "arm_distributions.csv")
+    got = {(r["row"], r["label"]): float(r["mean_prob"]) for r in rows}
+    assert got[("1", "1")] == pytest.approx(0.7)
+    assert ("1", "2") not in got  # the None label has no mean at all
+
+
+def test_choice_records_with_none_probs_are_also_omitted(tmp_path):
+    """Choice p_raw dicts can carry nulls too (real-data shape); the
+    long CSV excludes them and arm means still compute."""
+    records = [
+        _choice_record("m1", pid, "allais", "form1", "blinded", "QID192",
+                       {"A": 0.5 + pid * 0.2, "B": 0.2, "C": None})
+        for pid in range(2)
+    ]
+    _write_run(tmp_path, "m1", "allais_blinded", records)
+    out = tmp_path / "out"
+    analyze.write_analysis_outputs(tmp_path, _BENCHMARKS, out)
+    _header, rows = _read_csv(out / "distributions_long.csv")
+    assert {r["label"] for r in rows} == {"A", "B"}
+    _header2, arm_rows = _read_csv(out / "arm_distributions.csv")
+    got = {r["label"]: float(r["mean_prob"]) for r in arm_rows}
+    assert got["A"] == pytest.approx(0.6)
+    assert "C" not in got
+
+
+def test_load_records_keeps_records_that_contain_none_probs(tmp_path):
+    """Filtering drops the None-prob ROWS, never the whole record: the
+    real probabilities in the same p_raw must survive the loader."""
+    _write_run(tmp_path, "m1", "linda_blinded",
+               [_digit_record("m1", 0, "linda", "conjunction", "blinded",
+                              "QID160", [{"1": 0.6, "2": None}], row=1)])
+    records = analyze.load_records(tmp_path)
+    assert len(records) == 1
+    assert records[0]["digit_items"][0]["p_raw"]["1"] == pytest.approx(0.6)
 
 
 def test_arm_distributions_group_by_blinding_and_experiment(tmp_path):
