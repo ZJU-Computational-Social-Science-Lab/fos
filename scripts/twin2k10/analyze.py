@@ -136,6 +136,28 @@ def _merge_records(lines: list[dict]) -> list[dict]:
     return [merged[key] for key in order]
 
 
+def _drop_none_probs(record: dict) -> dict:
+    """Remove answer options whose probability is None, keep the record.
+
+    Real runs leave a label out of the top-k, which gets stored as None
+    rather than a number. Those entries carry no information, so they are
+    dropped entry-by-entry (the record itself always survives) from both
+    the choice-side p_raw and every digit item's p_raw.
+    """
+    record["p_raw"] = {
+        label: prob
+        for label, prob in (record.get("p_raw") or {}).items()
+        if prob is not None
+    }
+    for item in record.get("digit_items") or []:
+        item["p_raw"] = {
+            label: prob
+            for label, prob in (item.get("p_raw") or {}).items()
+            if prob is not None
+        }
+    return record
+
+
 def load_records(run_dir: Path) -> list[dict]:
     """Read every model cell's records.jsonl under the run directory.
 
@@ -153,7 +175,7 @@ def load_records(run_dir: Path) -> list[dict]:
                 line = line.strip()
                 if line:
                     lines.append(json.loads(line))
-        records.extend(_merge_records(lines))
+        records.extend(_drop_none_probs(rec) for rec in _merge_records(lines))
     return records
 
 
@@ -200,9 +222,7 @@ def arm_distributions(records: list[dict]) -> dict[tuple, float]:
             grouped.setdefault(base + ("", label), []).append(prob)
         for position, item in enumerate(record.get("digit_items") or []):
             for label, prob in item["p_raw"].items():
-                grouped.setdefault(base + (position + 1, label), []).append(
-                    prob
-                )
+                grouped.setdefault(base + (position + 1, label), []).append(prob)
     return {key: fmean(probs) for key, probs in grouped.items()}
 
 
