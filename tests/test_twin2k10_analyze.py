@@ -146,7 +146,7 @@ def test_load_records_reads_every_model_cell_under_run_dir(tmp_path):
     _write_run(tmp_path, "m2", "linda_unblinded",
                [_choice_record("m2", 1, "linda", "conjunction", "unblinded",
                                "QID160", {"A": 0.1, "B": 0.9}),
-                _choice_record("m2", 2, "linda", "conjunction", "unblinded",
+               _choice_record("m2", 2, "linda", "conjunction", "unblinded",
                                "QID160", {"A": 0.3, "B": 0.7})])
     records = analyze.load_records(tmp_path)
     assert len(records) == 3
@@ -163,7 +163,7 @@ def test_load_records_handles_choice_and_digit_schemas(tmp_path):
                               "QID160",
                               [{"1": 0.1, "2": 0.2, "3": 0.3, "4": 0.2,
                                 "5": 0.1, "6": 0.1}], row=1),
-                _digit_record("m2", 0, "linda", "conjunction", "blinded",
+               _digit_record("m2", 0, "linda", "conjunction", "blinded",
                               "QID160",
                               [{"1": 0.2, "2": 0.2, "3": 0.2, "4": 0.2,
                                 "5": 0.1, "6": 0.1}], row=2)])
@@ -245,7 +245,7 @@ def test_distributions_long_digit_items_use_digit_labels_and_row(tmp_path):
 def test_arm_distributions_average_labels_over_personas(tmp_path):
     """Each label's mean prob is the average across the arm's personas."""
     records = [
-        _choice_record("m1", pid, "allais", "form1", "blinded", "QID192",
+       _choice_record("m1", pid, "allais", "form1", "blinded", "QID192",
                        {"A": 0.6 + pid * 0.2, "B": 0.4 - pid * 0.2})
         for pid in range(2)
     ]
@@ -263,10 +263,10 @@ def test_arm_distributions_average_labels_over_personas(tmp_path):
 def test_arm_distributions_group_by_blinding_and_experiment(tmp_path):
     """Blinded and unblinded cells stay separate rows."""
     records = (
-        _choice_record("m1", 0, "allais", "form1", "blinded", "QID192",
-                       {"A": 0.9, "B": 0.1})
-        + _choice_record("m1", 0, "allais", "form1", "unblinded", "QID192",
-                         {"A": 0.1, "B": 0.9})
+[        _choice_record("m1", 0, "allais", "form1", "blinded", "QID192",
+                       {"A": 0.9, "B": 0.1})]
+        + [_choice_record("m1", 0, "allais", "form1", "unblinded", "QID192",
+                         {"A": 0.1, "B": 0.9})]
     )
     _write_run(tmp_path, "m1", "allais_blinded", records)
     out = tmp_path / "out"
@@ -293,10 +293,10 @@ def test_contrast_directions_read_off_the_names():
     model = "m1"
     records = (
         # allais: form1 p(A)=0.8, form2 p(A)=0.3 -> +0.5
-        _choice_record(model, 0, "allais", "form1", "blinded", "QID192",
-                       {"A": 0.8, "B": 0.2})
-        + _choice_record(model, 0, "allais", "form2", "blinded", "QID193",
-                         {"A": 0.3, "B": 0.7})
+[        _choice_record(model, 0, "allais", "form1", "blinded", "QID192",
+                       {"A": 0.8, "B": 0.2})]
+        + [_choice_record(model, 0, "allais", "form2", "blinded", "QID193",
+                         {"A": 0.3, "B": 0.7})]
         # linda: critical statement (row 3) expected rating
         # conj: E=4.0 ; no_conj: E=2.0 -> +2.0
         + [_digit_record(model, 0, "linda", "conjunction", "blinded",
@@ -334,19 +334,19 @@ def test_choice_likert_expected_ratings_drive_myside_and_outcome_bias():
     model = "m1"
     # myside: ford E[A]=1.0 ; german E=2.0 -> mean_german_minus_ford = 1.0
     records = (
-        _choice_record(model, 0, "myside", "ford", "unblinded", "QID194",
-                       {"A": 1.0})
-        + _choice_record(model, 0, "myside", "german", "unblinded", "QID195",
-                         {"A": 0.0, "B": 1.0})
+[        _choice_record(model, 0, "myside", "ford", "unblinded", "QID194",
+                       {"A": 1.0})]
+        + [_choice_record(model, 0, "myside", "german", "unblinded", "QID195",
+                         {"A": 0.0, "B": 1.0})]
         # outcome_bias: success E=3.0 ; failure E=1.0 -> +2.0
-        + _choice_record(model, 0, "outcome_bias", "success", "unblinded",
+        + [_choice_record(model, 0, "outcome_bias", "success", "unblinded",
                          "QID161",
                          {"A": 0.0, "B": 0.0, "C": 1.0, "D": 0.0, "E": 0.0,
-                          "F": 0.0, "G": 0.0})
-        + _choice_record(model, 0, "outcome_bias", "failure", "unblinded",
+                          "F": 0.0, "G": 0.0})]
+        + [_choice_record(model, 0, "outcome_bias", "failure", "unblinded",
                          "QID162",
                          {"A": 1.0, "B": 0.0, "C": 0.0, "D": 0.0, "E": 0.0,
-                          "F": 0.0, "G": 0.0})
+                          "F": 0.0, "G": 0.0})]
     )
     contrasts = analyze.contrast_values(records)
     assert contrasts[(model, "myside", "unblinded")][
@@ -359,18 +359,18 @@ def test_base_rate_and_abs_relative_and_african_contrasts():
     """base_rate (expected digit), abs_relative (p_yes), anchoring_african."""
     model = "m1"
     records = (
-        _digit_record(model, 0, "base_rate", "30_engineers", "blinded",
-                      "QID154", [{"2": 0.5, "7": 0.5}])  # E = 4.5
-        + _digit_record(model, 0, "base_rate", "70_engineers", "blinded",
-                        "QID156", [{"7": 1.0}])            # E = 7.0
-        + _choice_record(model, 0, "abs_relative", "calculator", "blinded",
-                         "QID183", {"A": 0.2, "B": 0.8})
-        + _choice_record(model, 0, "abs_relative", "jacket", "blinded",
-                         "QID184", {"A": 0.7, "B": 0.3})
-        + _digit_record(model, 0, "anchoring_african", "high", "blinded",
-                        "QID166", [{"9": 1.0}])
-        + _digit_record(model, 0, "anchoring_african", "low", "blinded",
-                        "QID164", [{"4": 1.0}])
+[        _digit_record(model, 0, "base_rate", "30_engineers", "blinded",
+                      "QID154", [{"2": 0.5, "7": 0.5}])]  # E = 4.5
+        + [_digit_record(model, 0, "base_rate", "70_engineers", "blinded",
+                        "QID156", [{"7": 1.0}])]            # E = 7.0
+        + [_choice_record(model, 0, "abs_relative", "calculator", "blinded",
+                         "QID183", {"A": 0.2, "B": 0.8})]
+        + [_choice_record(model, 0, "abs_relative", "jacket", "blinded",
+                         "QID184", {"A": 0.7, "B": 0.3})]
+        + [_digit_record(model, 0, "anchoring_african", "high", "blinded",
+                        "QID166", [{"9": 1.0}])]
+        + [_digit_record(model, 0, "anchoring_african", "low", "blinded",
+                        "QID164", [{"4": 1.0}])]
     )
     contrasts = analyze.contrast_values(records)
     assert contrasts[(model, "base_rate", "blinded")][
@@ -389,10 +389,10 @@ def test_false_consensus_has_no_contrasts(tmp_path):
 def test_contrasts_csv_columns_are_pinned(tmp_path):
     """contrasts.csv header and one worked row."""
     records = (
-        _choice_record("m1", 0, "allais", "form1", "blinded", "QID192",
-                       {"A": 0.8, "B": 0.2})
-        + _choice_record("m1", 0, "allais", "form2", "blinded", "QID193",
-                         {"A": 0.3, "B": 0.7})
+[        _choice_record("m1", 0, "allais", "form1", "blinded", "QID192",
+                       {"A": 0.8, "B": 0.2})]
+        + [_choice_record("m1", 0, "allais", "form2", "blinded", "QID193",
+                         {"A": 0.3, "B": 0.7})]
     )
     _write_run(tmp_path, "m1", "allais_blinded", records)
     out = tmp_path / "out"
@@ -409,14 +409,14 @@ def test_unblinding_effect_is_unblinded_minus_blinded(tmp_path):
     """Worked example: blinded +0.5, unblinded -0.2 -> effect -0.7."""
     model = "m1"
     records = (
-        _choice_record(model, 0, "allais", "form1", "blinded", "QID192",
-                       {"A": 0.8, "B": 0.2})
-        + _choice_record(model, 0, "allais", "form2", "blinded", "QID193",
-                         {"A": 0.3, "B": 0.7})
-        + _choice_record(model, 0, "allais", "form1", "unblinded", "QID192",
-                         {"A": 0.3, "B": 0.7})
-        + _choice_record(model, 0, "allais", "form2", "unblinded", "QID193",
-                         {"A": 0.5, "B": 0.5})
+[        _choice_record(model, 0, "allais", "form1", "blinded", "QID192",
+                       {"A": 0.8, "B": 0.2})]
+        + [_choice_record(model, 0, "allais", "form2", "blinded", "QID193",
+                         {"A": 0.3, "B": 0.7})]
+        + [_choice_record(model, 0, "allais", "form1", "unblinded", "QID192",
+                         {"A": 0.3, "B": 0.7})]
+        + [_choice_record(model, 0, "allais", "form2", "unblinded", "QID193",
+                         {"A": 0.5, "B": 0.5})]
     )
     _write_run(tmp_path, "m1", "allais_blinded", records)
     effects = analyze.unblinding_effects(records)
@@ -428,17 +428,17 @@ def test_unblinding_effects_csv_has_bootstrap_ci_columns(tmp_path):
     """Columns pin the seeded 1000-resample percentile bootstrap."""
     model = "m1"
     records = (
-        _choice_record(model, pid, "allais", "form1", "blinded", "QID192",
-                       {"A": 0.8, "B": 0.2})
-        + _choice_record(model, pid, "allais", "form2", "blinded", "QID193",
-                         {"A": 0.3, "B": 0.7})
-        + _choice_record(model, pid, "allais", "form1", "unblinded",
-                         "QID192", {"A": 0.9, "B": 0.1})
-        + _choice_record(model, pid, "allais", "form2", "unblinded",
-                         "QID193", {"A": 0.1, "B": 0.9})
+[        _choice_record(model, pid, "allais", "form1", "blinded", "QID192",
+                       {"A": 0.8, "B": 0.2})]
+        + [_choice_record(model, pid, "allais", "form2", "blinded", "QID193",
+                         {"A": 0.3, "B": 0.7})]
+        + [_choice_record(model, pid, "allais", "form1", "unblinded",
+                         "QID192", {"A": 0.9, "B": 0.1})]
+        + [_choice_record(model, pid, "allais", "form2", "unblinded",
+                         "QID193", {"A": 0.1, "B": 0.9})]
         for pid in range(30)
     )
-    records = list(records)
+    records = [record for group in records for record in group]
     _write_run(tmp_path, "m1", "allais_blinded", records)
     out = tmp_path / "out"
     analyze.write_analysis_outputs(tmp_path, _BENCHMARKS, out)
@@ -458,18 +458,19 @@ def test_unblinding_effects_csv_has_bootstrap_ci_columns(tmp_path):
 def test_bootstrap_is_seeded_and_deterministic(tmp_path):
     """Same inputs -> byte-identical unblinding_effects.csv."""
     def build():
-        return [
-            _choice_record("m1", pid, "allais", "form1", "blinded",
-                           "QID192", {"A": 0.5 + (pid % 3) * 0.1, "B": 0.2})
-            + _choice_record("m1", pid, "allais", "form2", "blinded",
-                             "QID193", {"A": 0.3, "B": 0.4})
-            + _choice_record("m1", pid, "allais", "form1", "unblinded",
-                             "QID192", {"A": 0.9, "B": 0.05})
-            + _choice_record("m1", pid, "allais", "form2", "unblinded",
+        built = [
+[            _choice_record("m1", pid, "allais", "form1", "blinded",
+                           "QID192", {"A": 0.5 + (pid % 3) * 0.1, "B": 0.2})]
+            + [_choice_record("m1", pid, "allais", "form2", "blinded",
+                             "QID193", {"A": 0.3, "B": 0.4})]
+            + [_choice_record("m1", pid, "allais", "form1", "unblinded",
+                             "QID192", {"A": 0.9, "B": 0.05})]
+            + [_choice_record("m1", pid, "allais", "form2", "unblinded",
                              "QID193", {"A": 0.1 + (pid % 2) * 0.05,
-                                        "B": 0.4})
+                                        "B": 0.4})]
             for pid in range(25)
         ]
+        return [record for group in built for record in group]
 
     first, second = tmp_path / "a", tmp_path / "b"
     analyze.write_analysis_outputs(_write_run(
@@ -530,9 +531,9 @@ def test_human_comparison_digit_labels_are_their_own_codes(tmp_path):
 def test_summary_json_is_written_alongside_the_csvs(tmp_path):
     """summary.json exists with record count; all outputs go to --out."""
     records = [
-        _choice_record("m1", 0, "allais", "form1", "blinded", "QID192",
+       _choice_record("m1", 0, "allais", "form1", "blinded", "QID192",
                        {"A": 0.8, "B": 0.2}),
-        _digit_record("m1", 0, "linda", "conjunction", "blinded", "QID160",
+       _digit_record("m1", 0, "linda", "conjunction", "blinded", "QID160",
                       [{"1": 1.0}], row=1),
     ]
     _write_run(tmp_path, "m1", "allais_blinded", records)
