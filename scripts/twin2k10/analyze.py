@@ -239,7 +239,7 @@ def contrast_values(records: list[dict]) -> dict[tuple, dict[str, float]]:
         by_group.setdefault((model, experiment, blinding), {})[arm] = mean
     results: dict[tuple, dict[str, float]] = {}
     for key, by_arm in by_group.items():
-        for name, (arm_x, arm_y) in CONTRASTS[key[1]].items():
+        for name, (arm_x, arm_y) in CONTRASTS.get(key[1], {}).items():
             if arm_x in by_arm and arm_y in by_arm:
                 results.setdefault(key, {})[name] = by_arm[arm_x] - by_arm[arm_y]
     return results
@@ -296,7 +296,7 @@ def _collect_effects(
 
 def _contrast_arms(experiment: str) -> set[str]:
     """Every arm that appears in the experiment's pinned contrasts."""
-    return {arm for pair in CONTRASTS[experiment].values() for arm in pair}
+    return {arm for pair in CONTRASTS.get(experiment, {}).values() for arm in pair}
 
 
 def _contrast_pair_effects(
@@ -354,6 +354,12 @@ def _write_csv(path: Path, header: list[str], rows: list[list]) -> None:
         writer.writerows(rows)
 
 
+def _sortable_key(key: tuple) -> tuple[str, ...]:
+    """Turn a row key into a string tuple so mixed str/int parts sort
+    without comparing a number to text (which would crash Python)."""
+    return tuple(str(part) for part in key)
+
+
 def _human_code(label: str) -> str:
     """Translate an answer label to the human benchmark's code.
 
@@ -372,7 +378,7 @@ def human_comparison_rows(records: list[dict], benchmarks: dict) -> list[list]:
     dists = arm_distributions(records)
     rows: list[list] = []
     for (model, experiment, arm, blinding, _qid, _row, label), mean_prob in sorted(
-        dists.items()
+        dists.items(), key=lambda item: _sortable_key(item[0])
     ):
         code = _human_code(label)
         arm_entry = humans.get(experiment, {}).get("arms", {}).get(arm, {})
@@ -423,7 +429,11 @@ def write_analysis_outputs(run_dir_or_records, benchmarks_path, out_dir: Path) -
     )
 
     arm_rows = [
-        [*key, mean] for key, mean in sorted(arm_distributions(records).items())
+        [*key, mean]
+        for key, mean in sorted(
+            arm_distributions(records).items(),
+            key=lambda item: _sortable_key(item[0]),
+        )
     ]
     _write_csv(
         out_dir / "arm_distributions.csv",
@@ -433,7 +443,9 @@ def write_analysis_outputs(run_dir_or_records, benchmarks_path, out_dir: Path) -
 
     contrast_rows = [
         [*key, name, value]
-        for key, by_name in sorted(contrast_values(records).items())
+        for key, by_name in sorted(
+            contrast_values(records).items(), key=lambda item: _sortable_key(item[0])
+        )
         for name, value in by_name.items()
     ]
     _write_csv(
@@ -451,7 +463,9 @@ def write_analysis_outputs(run_dir_or_records, benchmarks_path, out_dir: Path) -
             stats["ci_low"],
             stats["ci_high"],
         ]
-        for key, stats in sorted(unblinding_effects(records).items())
+        for key, stats in sorted(
+            unblinding_effects(records).items(), key=lambda item: _sortable_key(item[0])
+        )
     ]
     _write_csv(
         out_dir / "unblinding_effects.csv",
