@@ -345,6 +345,36 @@ def test_arm_distributions_group_by_blinding_and_experiment(tmp_path):
     assert got[("unblinded", "A")] == pytest.approx(0.1)
 
 
+def test_record_with_choice_and_digit_items_writes_arm_distributions(tmp_path):
+    """Real anchoring records mix letter labels (choice p_raw) and digit
+    labels (digit_items) in one record; writing the outputs must sort
+    the mixed str/int keys deterministically, not crash with a
+    '<' not supported between int and str TypeError."""
+    record = _choice_record("m1", 0, "anchoring", "form1", "blinded",
+                            "QID100", {"A": 0.7, "B": 0.3})
+    record["digit_items"] = [{
+        "qid": "QID100",
+        "row": 1,
+        # real digit records store integer labels 0-9, not strings
+        "p_raw": {0: 0.5, 1: 0.3, 2: 0.2},
+        "p_norm": {0: 0.5, 1: 0.3, 2: 0.2},
+        "branch_mass": 1.0,
+        "low_branch_mass": False,
+    }]
+    _write_run(tmp_path, "m1", "anchoring_blinded", [record])
+    out = tmp_path / "out"
+    analyze.write_analysis_outputs(tmp_path, _BENCHMARKS, out)  # must not raise
+    header, rows = _read_csv(out / "arm_distributions.csv")
+    assert header == ["model", "experiment", "arm", "blinding", "qid",
+                      "row", "label", "mean_prob"]
+    got = {(r["row"], r["label"]): float(r["mean_prob"]) for r in rows}
+    assert got[("", "A")] == pytest.approx(0.7)
+    assert got[("1", "0")] == pytest.approx(0.5)
+    # deterministic order: rows sorted by str(key), letters before digits
+    labels_in_order = [(r["row"], r["label"]) for r in rows]
+    assert labels_in_order == sorted(labels_in_order)
+
+
 # -------------------------------------------------------------- contrasts
 
 def test_contrast_names_match_the_human_benchmarks_file():
