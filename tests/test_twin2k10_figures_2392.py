@@ -326,9 +326,9 @@ def test_test_retest_band_uses_wave1_3_vs_wave4_same_metrics():
     and contrast formulas applied between the two waves' human arms."""
     band = figures.human_test_retest_errors(_mini_registry())
     disease = band["disease"]
-    # wave1_3 vs wave4 gaps: |0.729811-0.718843| and |0.375355-0.363033|
-    # -> mean ~0.012 -> ~1.2.
-    assert disease["profile_error"] == pytest.approx(1.199999, abs=1e-3)
+    # wave1_3 vs wave4 gaps: |0.729811-0.718843| = 0.010968 and
+    # |0.375355-0.363033| = 0.012322 -> mean 0.011645 x100 = 1.1645.
+    assert disease["profile_error"] == pytest.approx(1.1645, abs=1e-3)
     assert disease["contrast_error"] == pytest.approx(0.1355, abs=1e-3)
 
 
@@ -362,7 +362,8 @@ def test_profile_contrast_correlation_is_per_model():
     rather than a meaningless number."""
     rows = figures.compute_error_rows(_mini_registry(), _fake_llm_means())
     corr = figures.profile_contrast_correlation(rows)
-    assert set(corr) == set(EXPECTED_MODEL_ORDER[:2])  # only models in data
+    # Only models present in the fixture data, per the contract.
+    assert set(corr) == {"gpt-oss-20b", "qwen3-32b"}
     for value in corr.values():
         assert value is None or -1.0 <= value <= 1.0
 
@@ -389,7 +390,7 @@ def _png_dpi(path):
         if ctype == b"pHYs":
             xppm = struct.unpack(">I", data[pos + 8:pos + 12])[0]
             return xppm * 0.0254
-        pos += 12 + length + 4
+        pos += 8 + length + 4
     return None
 
 
