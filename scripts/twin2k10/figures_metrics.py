@@ -72,15 +72,67 @@ def _is_anchor_arms(arms: Mapping) -> bool:
 
 
 def _arm_mean(value: object) -> float | None:
-    """The raw number carried by one arm value, in either accepted
-    shape: a plain float, or the builder's dict ({"mean": x} with an
-    optional "n") where the number lives under the "mean" key."""
+    """The raw number carried by one arm value, in any accepted shape:
+    a plain float, the builder's dict ({"mean": x} with an optional
+    "n"), or one of the human stat cards handled by _stat_card_value
+    (p_safe / p_yes / first-choice dist / per-statement / per-trial /
+    per-item). A None value (missing model cell) carries no number."""
+    if value is None:
+        return None
     if isinstance(value, Mapping):
         mean = value.get("mean")
         if mean is None:
-            return None
+            return _stat_card_value(value)
         return float(mean)
     return float(value)
+
+
+def _stat_card_value(card: Mapping) -> float | None:
+    """The raw number carried by one human stat card, keyed by the
+    stat name registered in the experiment's contrasts / normalization
+    rule (never invented): "p_safe" or "p_yes" proportions read
+    directly; a "dist" card contributes the share choosing option 1
+    (its "1" bucket pct / 100 = p_opt1); "per_statement" cards
+    contribute statement 3's mean (mean_statement3); a
+    "per_trial_pct_majority" card contributes the subject mean majority
+    share (mean of the per-trial pcts / 100); a "per_item" card
+    contributes the mean of the per-item means. None when the card
+    matches none of these shapes."""
+    for stat in ("p_safe", "p_yes"):
+        if isinstance(card.get(stat), (int, float)):
+            # The registry declares these proportions as "already 0-1";
+            # the real survey cards store some of them as percents
+            # (e.g. p_yes 73.7), so a value above 1 is a percent and is
+            # brought back onto the registered 0-1 scale.
+            value = float(card[stat])
+            return value / 100.0 if value > 1.0 else value
+    dist = card.get("dist")
+    if isinstance(dist, Mapping) and "1" in dist:
+        bucket = dist["1"]
+        if isinstance(bucket, Mapping) and "pct" in bucket:
+            return float(bucket["pct"]) / 100.0
+    per_statement = card.get("per_statement")
+    if isinstance(per_statement, Mapping):
+        third = [
+            v
+            for k, v in per_statement.items()
+            if k.endswith("_3") and isinstance(v, Mapping) and "mean" in v
+        ]
+        if third:
+            return float(third[0]["mean"])
+    per_trial = card.get("per_trial_pct_majority")
+    if isinstance(per_trial, Mapping) and per_trial:
+        return float(np.mean([float(v) for v in per_trial.values()])) / 100.0
+    per_item = card.get("per_item")
+    if isinstance(per_item, Mapping) and per_item:
+        means = [
+            float(v["mean"])
+            for v in per_item.values()
+            if isinstance(v, Mapping) and "mean" in v
+        ]
+        if means:
+            return float(np.mean(means))
+    return None
 
 
 def _arm_observable(value: object, spec: Mapping, anchor_mode: bool) -> float | None:
@@ -272,12 +324,19 @@ def _experiment_row(
         # the Profile Error nor an effect error is computable; the method
         # label documents the excluded variant.
         return ErrorRow(model, experiment, method, None, None, None)
-    human_raw: Mapping = human_wave.get("arms", {})
-    anchor_mode = _is_anchor_arms(human_raw)
-    human_obs = _observables(human_raw, spec, anchor_mode)
+    human_cards: Mapping = human_wave.get("arms", {})
+    anchor_mode = _is_anchor_arms(human_cards)
+    human_obs = _observables(human_cards, spec, anchor_mode)
     if human_obs is None:
         # No registered rule for the human observable (NEEDS-OWNER).
         return ErrorRow(model, experiment, method, None, None, None)
+    # The contrast pair search compares RAW numbers, so reduce the
+    # human stat cards to their numbers first (never subtract dicts).
+    human_raw = {
+        arm: value
+        for arm, value in ((a, _arm_mean(v)) for a, v in human_cards.items())
+        if value is not None
+    }
     profile: dict[str, float | None] = {}
     for label, arms in blinding_arms.items():
         model_obs = _observables(arms, spec, anchor_mode)
