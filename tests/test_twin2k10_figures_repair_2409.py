@@ -299,7 +299,8 @@ def test_complete_csvs_contain_every_computable_row():
     figures.write_outputs(_rows(), out, test_retest=figures.human_test_retest_errors(_repair_registry()))
     prof = (out / "profile_error_complete.csv").read_text().strip().splitlines()[1:]
     cont = (out / "contrast_error_complete.csv").read_text().strip().splitlines()[1:]
-    prof_models = {line.split(",")[0] for line in prof}
+    # model rows only — the HUMAN rows are verified by their own test below
+    prof_models = {line.split(",")[0] for line in prof if line.split(",")[0].upper() != "HUMAN"}
     prof_exps = {line.split(",")[1] for line in prof}
     assert prof_models == {"gpt-oss-20b", "qwen3-32b"}
     assert "anchoring_redwood" in prof_exps, "anchoring missing from complete Profile CSV"
