@@ -38,10 +38,36 @@ import json
 import re
 from pathlib import Path
 from statistics import fmean
+from string import ascii_uppercase
 
 # Experiments whose registry rule is NEEDS-OWNER: records still count
 # toward n, but the arm mean stays None (written as JSON null).
 NEEDS_OWNER_EXPERIMENTS = frozenset({"base_rate"})
+
+# Likert experiments: expected letter code on a 1..N scale (A=1).
+_LIKERT_EXPERIMENTS = {
+    "less_is_more": 5,
+    "fire_extinguisher": 5,
+    "seatbelt": 6,
+    "myside": 6,
+    "outcome_bias": 7,
+}
+
+# Ordinal experiments: expected letter code where the letters stand for
+# ordered amounts (sunk_cost A-U = 0-20 purchases; wta_wtp A-J = money
+# brackets 1-10; dollar means are NOT implied for the brackets).
+_ORDINAL_EXPERIMENTS = {
+    "sunk_cost": 21,
+    "wta_wtp": 10,
+}
+
+# Anchoring experiments: the registry-defined arm statistic is the anchor
+# choice itself, P(more) = p_norm["A"] (A=more, B=less/fewer). The numeric
+# estimate is NOT derivable (records carry only first-token digit mass).
+_ANCHOR_EXPERIMENTS = frozenset({"anchoring_redwood", "anchoring_african"})
+
+# Digits that carry a real answer for false_consensus items (1-5 scale).
+_CONSENSUS_DIGITS = ("1", "2", "3", "4", "5")
 
 # Matches each brace group in a leg path pattern, e.g. "{model}" or
 # "{allais_blinded,unblinded}".
@@ -105,16 +131,19 @@ def _read_records(path: Path) -> list[dict]:
     return records
 
 
-def _expected_digit_restricted(masses: dict[str, float]) -> float | None:
-    """Mass-weighted mean digit over digits 1-6, renormalised.
+def _expected_digit_restricted(
+    masses: dict[str, float],
+    digits: tuple[str, ...] = _ANSWER_DIGITS,
+) -> float | None:
+    """Mass-weighted mean digit over the in-scale digits, renormalised.
 
-    Digit "0" mass is off-scale noise and is dropped before averaging.
+    Off-scale mass (e.g. digit "0" noise) is dropped before averaging.
     Returns None when no in-scale mass remains.
     """
     in_scale = {
         digit: mass
         for digit, mass in masses.items()
-        if digit in _ANSWER_DIGITS and mass is not None and mass > 0.0
+        if digit in digits and mass is not None and mass > 0.0
     }
     total = sum(in_scale.values())
     if total <= 0.0:
@@ -143,6 +172,46 @@ def _prob_match_share(items: list[dict]) -> float | None:
     return fmean(shares)
 
 
+def _expected_letter_code(p_norm: dict, n_letters: int) -> float | None:
+    """Expected letter code on a 1..N scale (A=1, B=2, ...), mass-weighted.
+
+    Letters with no (or None) mass are skipped; returns None when no
+    in-range mass remains.
+    """
+    letters = ascii_uppercase[:n_letters]
+    total = sum(p_norm[letter] for letter in letters if p_norm.get(letter) is not None)
+    if total <= 0.0:
+        return None
+    return (
+        sum(
+            (position + 1) * p_norm[letter]
+            for position, letter in enumerate(letters)
+            if p_norm.get(letter) is not None
+        )
+        / total
+    )
+
+
+def _false_consensus_mean(items: list[dict]) -> float | None:
+    """Mean over the digit items of E[digit | 1-5] (the registry's rule:
+    per item 1-5, leg value = mean over the 10 items). Off-scale digit
+    mass is dropped per item; items with no in-scale mass are skipped.
+    Returns None when no item yields a number."""
+    item_means = [
+        mean
+        for item in items
+        if (
+            mean := _expected_digit_restricted(
+                item.get("p_norm") or {}, _CONSENSUS_DIGITS
+            )
+        )
+        is not None
+    ]
+    if not item_means:
+        return None
+    return fmean(item_means)
+
+
 def _record_outcome(record: dict, experiment: str) -> float | None:
     """The one raw-scale number this record contributes to its arm mean.
 
@@ -153,18 +222,50 @@ def _record_outcome(record: dict, experiment: str) -> float | None:
       linda         -> expected digit of the critical (row 3) statement's
                        first-token digit mass, restricted to digits 1-6.
       prob_matching -> mean over trials of the majority-deck share.
+      less_is_more, fire_extinguisher, seatbelt, outcome_bias, myside
+                    -> expected letter code on the experiment's Likert
+                       range (A=1).
+      sunk_cost     -> expected letter code, letters A-U = 0-20 purchases.
+      wta_wtp       -> expected letter code, letters A-J = bracket 1-10
+                       (ordinal; dollar means are not implied).
+      anchoring_*   -> anchor choice P(more) = p_norm["A"] (the estimate
+                       is not derivable from first-digit mass).
+      abs_relative  -> P(Yes) = p_norm["A"] (A=Yes, B=No).
+      false_consensus -> mean over the 10 items of E[digit | 1-5].
       base_rate     -> NEEDS-OWNER: no derivable number, always None.
     Returns None when the rule cannot produce a number for this record.
     """
     if experiment in NEEDS_OWNER_EXPERIMENTS:
         return None
-    if experiment == "disease":
-        value = record.get("p_safe_norm")
-        return float(value) if value is not None else None
-    if experiment == "allais":
+    if experiment in _LIKERT_EXPERIMENTS:
+        return _expected_letter_code(
+            record.get("p_norm") or {}, _LIKERT_EXPERIMENTS[experiment]
+        )
+    if experiment in _ORDINAL_EXPERIMENTS:
+        code = _expected_letter_code(
+            record.get("p_norm") or {}, _ORDINAL_EXPERIMENTS[experiment]
+        )
+        if code is None:
+            return None
+        # sunk_cost letters A-U carry codes 1-21 but stand for 0-20
+        # purchases; wta_wtp letters A-J already stand for brackets 1-10.
+        return code - 1 if experiment == "sunk_cost" else code
+    if experiment in _ANCHOR_EXPERIMENTS:
         p_norm = record.get("p_norm") or {}
         value = p_norm.get("A")
         return float(value) if value is not None else None
+    if experiment == "disease":
+        value = record.get("p_safe_norm")
+        return float(value) if value is not None else None
+    if experiment in ("allais", "abs_relative"):
+        p_norm = record.get("p_norm") or {}
+        value = p_norm.get("A")
+        return float(value) if value is not None else None
+    if experiment == "false_consensus":
+        items = record.get("digit_items") or []
+        if not items:
+            return None
+        return _false_consensus_mean(items)
     if experiment == "linda":
         items = record.get("digit_items") or []
         critical = [item for item in items if item.get("row") == 3]

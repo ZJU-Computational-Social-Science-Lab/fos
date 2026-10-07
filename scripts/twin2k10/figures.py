@@ -187,8 +187,23 @@ def _report_text(
     rows: list[ErrorRow], band: Mapping | None, correlations: Mapping
 ) -> str:
     """Compose the short report: method notes, the anchoring exclusion,
-    the base_rate variant, the omitted pricing marker, and the
-    test-retest band (never a split-half band)."""
+    the base_rate variant actually used, the omitted pricing marker, and
+    the test-retest band (never a split-half band)."""
+    base_rate_used_first_digit = any(
+        row.experiment == "base_rate" and row.method == "first_digit" for row in rows
+    )
+    if base_rate_used_first_digit:
+        base_rate_note = (
+            "- base_rate: the model side is a first-digit distribution, so "
+            "its\n  rows use the first_digit profile-error variant."
+        )
+    else:
+        base_rate_note = (
+            "- base_rate: no first_digit_profile flag in the registry and "
+            "the 0-100\n  estimate is unrecoverable from first-token digit "
+            "mass, so its rows\n  use the arm_mean method and stay blank "
+            "(NEEDS-OWNER)."
+        )
     lines = [
         "Twin2k10 figures report",
         "",
@@ -203,8 +218,7 @@ def _report_text(
         "- anchoring_redwood / anchoring_african: no registered 0-1",
         "  normalization rule (NEEDS-OWNER), so their profile errors are",
         "  excluded from figures and left blank in the CSVs.",
-        "- base_rate: the model side is a first-digit distribution, so its",
-        "  rows use the first_digit profile-error variant.",
+        base_rate_note,
         "- Pricing marker: no pricing experiment could be identified among",
         "  the 16 registry experiments, so no distinctive pricing marker is",
         "  drawn in the figures.",
