@@ -81,6 +81,11 @@ from twin2k10.figures_metrics import (  # noqa: F401 — re-exported
     profile_error_first_digit,
     variance_components,
 )
+from twin2k10.figures_repair import (  # noqa: F401 — re-exported
+    CONTRAST_ERROR_AXIS_LABEL,
+    PROFILE_ERROR_AXIS_LABEL,
+    write_repair_outputs,
+)
 
 # Dark = small error = close to humans; light = far away.
 HEATMAP_CMAP = plt.get_cmap("Greys_r")
@@ -340,3 +345,5 @@ def write_outputs(
     )
     report = _report_text(rows, test_retest, correlations)
     (out_dir / "report.txt").write_text(report)
+    # The TASK-2410 REPAIR outputs land next to the base eight.
+    write_repair_outputs(rows, out_dir, test_retest)
