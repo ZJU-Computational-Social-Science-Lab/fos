@@ -55,6 +55,52 @@ EXPERIMENT_ORDER: list[str] = [
 _TOL = 1e-3  # tolerance when matching a contrast value back to an arm pair
 
 
+def _anchor_share(value: object) -> float | None:
+    """Return the 'answered more' share (0-1) when an arm carries the
+    bounded anchor-choice observable, else None."""
+    if isinstance(value, Mapping):
+        mc = value.get("anchor_mc")
+        if isinstance(mc, Mapping) and "1" in mc:
+            return float(mc["1"]) / 100.0
+    return None
+
+
+def _is_anchor_arms(arms: Mapping) -> bool:
+    """True when at least one human arm carries an anchor-choice share
+    (the anchoring experiments' bounded observable)."""
+    return any(_anchor_share(v) is not None for v in arms.values())
+
+
+def _arm_observable(value: object, spec: Mapping, anchor_mode: bool) -> float | None:
+    """The single 0-1 number compared for one arm: the anchor-choice
+    share when the experiment is anchored (model arms are already 0-1
+    shares), otherwise the registry-normalized raw value."""
+    if anchor_mode:
+        share = _anchor_share(value)
+        if share is not None:
+            return share
+        if isinstance(value, Mapping):
+            return None
+        return float(value)
+    if isinstance(value, Mapping):
+        return None
+    return normalize(value, spec)
+
+
+def _observables(
+    arms: Mapping, spec: Mapping, anchor_mode: bool
+) -> dict[str, float] | None:
+    """Map every arm of one experiment onto its comparable 0-1 number;
+    None if any arm has no rule (or no share)."""
+    out: dict[str, float] = {}
+    for arm, value in arms.items():
+        obs = _arm_observable(value, spec, anchor_mode)
+        if obs is None:
+            return None
+        out[arm] = obs
+    return out
+
+
 def normalize(value: float, spec: Mapping) -> float | None:
     """Map one raw answer onto 0-1 with the experiment's registered
     min/max. Returns None when the registry has no rule (NEEDS-OWNER)."""
@@ -130,35 +176,58 @@ def _normalize_arms(
     return out
 
 
-def _model_contrasts(
-    model_arms: Mapping[str, float],
-    human_arms: Mapping[str, float],
-    human_contrasts: Mapping,
-) -> dict[str, float]:
-    """Recover the model's contrast values by finding, for each human
-    contrast, the arm pair whose difference reproduces it, then applying
-    the same pair to the model's (normalized) arms."""
-    out: dict[str, float] = {}
-    for name, info in human_contrasts.items():
-        if not info.get("computable"):
-            continue
-        target = info["value"]
-        pair = _find_arm_pair(human_arms, target)
-        if pair is None:
-            continue
-        a, b = pair
-        out[name] = model_arms[a] - model_arms[b]
-    return out
-
-
 def _find_arm_pair(arms: Mapping[str, float], target: float) -> tuple[str, str] | None:
-    """Find two arms whose difference equals the target contrast value."""
+    """Find two arms whose RAW difference equals the target RAW contrast
+    value. Matching happens on the RAW human arm means only, so the pair
+    is identified once and then applied to both sides' 0-1 numbers — the
+    value itself never gates computability (the TASK-2409 root cause)."""
     names = list(arms)
     for a in names:
         for b in names:
             if a != b and abs(arms[a] - arms[b] - target) < _TOL:
                 return (a, b)
     return None
+
+
+def _contrast_gap(
+    human_wave: Mapping,
+    human_raw: Mapping,
+    human_obs: Mapping[str, float],
+    blinding_arms: Mapping,
+    spec: Mapping,
+    anchor_mode: bool,
+) -> float | None:
+    """Mean |model effect - human effect| x100, both effects computed on
+    the 0-1 scale. Anchored experiments use the high-low anchor-choice
+    gap; others use each registered contrast's arm pair found on the RAW
+    human arms."""
+    if "blinded" not in blinding_arms:
+        return None
+    model_obs = _observables(blinding_arms["blinded"], spec, anchor_mode)
+    if model_obs is None:
+        return None
+    if anchor_mode:
+        if not {"low", "high"} <= set(human_obs):
+            return None
+        if not {"low", "high"} <= set(model_obs):
+            return None
+        human_delta = human_obs["high"] - human_obs["low"]
+        model_delta = model_obs["high"] - model_obs["low"]
+        return abs(model_delta - human_delta) * 100.0
+    gaps: list[float] = []
+    for name, info in human_wave.get("contrasts", {}).items():
+        if not info.get("computable"):
+            continue
+        pair = _find_arm_pair(human_raw, info["value"])
+        if pair is None or not all(arm in model_obs for arm in pair):
+            continue
+        a, b = pair
+        model_delta = model_obs[a] - model_obs[b]
+        human_delta = human_obs[a] - human_obs[b]
+        gaps.append(abs(model_delta - human_delta))
+    if not gaps:
+        return None
+    return float(np.mean(gaps) * 100.0)
 
 
 def _experiment_row(
@@ -169,34 +238,32 @@ def _experiment_row(
     blinding_arms: Mapping[str, Mapping],
     first_digit: bool,
 ) -> ErrorRow:
-    """Build one model-x-experiment row: normalize arms, compute both
+    """Build one model-x-experiment row: put every arm (human and
+    model) on its comparable 0-1 observable first, then compute both
     blinding conditions' profile errors and the contrast error."""
     method = "first_digit" if first_digit else "arm_mean"
+    if first_digit:
+        # base_rate: the model side is first-digit mass only, so neither
+        # the Profile Error nor an effect error is computable; the method
+        # label documents the excluded variant.
+        return ErrorRow(model, experiment, method, None, None, None)
+    human_raw: Mapping = human_wave.get("arms", {})
+    anchor_mode = _is_anchor_arms(human_raw)
+    human_obs = _observables(human_raw, spec, anchor_mode)
+    if human_obs is None:
+        # No registered rule for the human observable (NEEDS-OWNER).
+        return ErrorRow(model, experiment, method, None, None, None)
     profile: dict[str, float | None] = {}
+    for label, arms in blinding_arms.items():
+        model_obs = _observables(arms, spec, anchor_mode)
+        profile[label] = (
+            None if model_obs is None else profile_error(model_obs, human_obs)
+        )
     contrast: float | None = None
-    human_arms = _normalize_arms(human_wave["arms"], spec)
-    if method == "arm_mean" and human_arms is not None:
-        for label, arms in blinding_arms.items():
-            model_arms = _normalize_arms(arms, spec)
-            profile[label] = (
-                None if model_arms is None else profile_error(model_arms, human_arms)
-            )
-        if all(v is not None for v in profile.values()):
-            model_blinded = _normalize_arms(blinding_arms["blinded"], spec)
-            human_contrasts = human_wave.get("contrasts", {})
-            model_c = _model_contrasts(model_blinded or {}, human_arms, human_contrasts)
-            if model_c:
-                human_c = {
-                    name: info["value"]
-                    for name, info in human_contrasts.items()
-                    if info.get("computable")
-                }
-                contrast = contrast_error(model_c, human_c)
-    else:
-        # base_rate: no human first-digit distribution supplied by the
-        # caller -> the metrics stay None but the method label documents
-        # the variant. Anchoring: no normalization rule -> None.
-        profile = {label: None for label in blinding_arms}
+    if all(v is not None for v in profile.values()):
+        contrast = _contrast_gap(
+            human_wave, human_raw, human_obs, blinding_arms, spec, anchor_mode
+        )
     return ErrorRow(
         model=model,
         experiment=experiment,
@@ -235,29 +302,68 @@ def human_test_retest_errors(registry_subset: Mapping) -> dict:
     same humans drift between the two waves. Split-half is never used."""
     band: dict[str, dict] = {}
     for experiment, config in registry_subset.items():
-        spec = config["normalization_0_1"]
-        wave13 = config["human"]["wave1_3"]
-        wave4 = config["human"]["wave4"]
-        arms13 = _normalize_arms(wave13["arms"], spec)
-        arms4 = _normalize_arms(wave4["arms"], spec)
-        profile = (
-            None if arms13 is None or arms4 is None else profile_error(arms4, arms13)
-        )
-        contrast = None
-        c13 = {
-            n: i["value"]
-            for n, i in wave13.get("contrasts", {}).items()
-            if i.get("computable")
-        }
-        c4 = {
-            n: i["value"]
-            for n, i in wave4.get("contrasts", {}).items()
-            if i.get("computable")
-        }
-        if c13 and c4:
-            contrast = contrast_error(c4, c13)
-        band[experiment] = {"profile_error": profile, "contrast_error": contrast}
+        band[experiment] = _retest_experiment(config)
     return band
+
+
+def _retest_contrast(
+    wave13: Mapping, wave4: Mapping, spec: Mapping, anchor_mode: bool
+) -> float | None:
+    """The humans' wave1_3-vs-wave4 effect drift on the 0-1 scale:
+    registered raw contrasts are divided by the registry range; anchored
+    experiments use the high-low anchor-choice gap."""
+    if anchor_mode:
+        lo13, hi13 = wave13["arms"].get("low"), wave13["arms"].get("high")
+        lo4, hi4 = wave4["arms"].get("low"), wave4["arms"].get("high")
+        shares = [_anchor_share(v) for v in (lo13, hi13, lo4, hi4)]
+        if any(s is None for s in shares):
+            return None
+        delta13, delta4 = shares[1] - shares[0], shares[3] - shares[2]
+        return abs(delta4 - delta13) * 100.0
+    lo, hi = spec.get("min"), spec.get("max")
+    if lo is None or hi is None or hi == lo:
+        return None
+    c13 = {
+        n: i["value"]
+        for n, i in wave13.get("contrasts", {}).items()
+        if i.get("computable")
+    }
+    c4 = {
+        n: i["value"]
+        for n, i in wave4.get("contrasts", {}).items()
+        if i.get("computable")
+    }
+    shared = [n for n in c13 if n in c4]
+    if not shared:
+        return None
+    gaps = [abs(c4[n] / (hi - lo) - c13[n] / (hi - lo)) for n in shared]
+    return float(np.mean(gaps) * 100.0)
+
+
+def _retest_experiment(config: Mapping) -> dict:
+    """Test-retest numbers for one experiment: the profile drift (only
+    when at least two arms form a pattern) and the effect drift."""
+    spec = config["normalization_0_1"]
+    first_digit = bool(config.get("first_digit_profile"))
+    wave13 = config["human"]["wave1_3"]
+    wave4 = config["human"]["wave4"]
+    raw13: Mapping = wave13.get("arms", {})
+    raw4: Mapping = wave4.get("arms", {})
+    anchor_mode = _is_anchor_arms(raw13) or _is_anchor_arms(raw4)
+    obs13 = _observables(raw13, spec, anchor_mode)
+    obs4 = _observables(raw4, spec, anchor_mode)
+    profile: float | None = None
+    if not first_digit and obs13 is not None and obs4 is not None and len(obs13) >= 2:
+        profile = profile_error(obs4, obs13)
+    contrast: float | None = None
+    if not first_digit and obs13 is not None and obs4 is not None:
+        contrast = _retest_contrast(wave13, wave4, spec, anchor_mode)
+    return {
+        "profile_error": profile,
+        "contrast_error": contrast,
+        "n_arms": 0 if obs13 is None else len(obs13),
+        "anchor_choice": anchor_mode,
+    }
 
 
 def variance_components(rows: list[ErrorRow]) -> dict:

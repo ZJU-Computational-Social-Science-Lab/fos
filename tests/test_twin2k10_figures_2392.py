@@ -94,7 +94,8 @@ EXPECTED_EXPERIMENT_ORDER = [
     "myside", "prob_matching", "abs_relative", "false_consensus",
 ]
 
-# The exact output filenames the task pins.
+# The exact output filenames the task pins. TASK-2410 (owner-approved
+# amendment) adds the eight REPAIR outputs alongside the base eight.
 EXPECTED_OUTPUT_FILES = [
     "figure2_profile_error_distribution.png",
     "figure2_profile_error_heatmap.png",
@@ -104,6 +105,14 @@ EXPECTED_OUTPUT_FILES = [
     "contrast_error.csv",
     "error_summary.csv",
     "report.txt",
+    "profile_error_complete.csv",
+    "contrast_error_complete.csv",
+    "figure2_profile_error_distribution_FIXED.png",
+    "figure2_profile_error_heatmap_FIXED.png",
+    "figure3_contrast_error_distribution_FIXED.png",
+    "figure3_contrast_error_heatmap_FIXED.png",
+    "diagnostic_summary.csv",
+    "repair_report.txt",
 ]
 
 
@@ -412,10 +421,17 @@ def test_figures_are_written_at_300dpi():
 def test_distribution_points_cover_every_model_experiment_pair():
     """Every experiment is a point: the distribution figures show one dot
     per (model, experiment) pair with data — the CSV backing them has
-    exactly that many data rows, in fixed model order."""
+    exactly that many data rows, in fixed model order. (TASK-2410
+    owner-approved amendment: the complete CSVs legitimately gain one
+    HUMAN test-retest row per experiment on top of the model rows; the
+    pinned profile_error.csv keeps its model-rows-only contract.)"""
     out = Path(pytest.out_dir)
     rows = figures.compute_error_rows(_mini_registry(), _fake_llm_means())
-    figures.write_outputs(rows, out, test_retest=None)
+    figures.write_outputs(
+        rows,
+        out,
+        test_retest=figures.human_test_retest_errors(_mini_registry()),
+    )
     lines = (out / "profile_error.csv").read_text().strip().splitlines()
     data_rows = [line.split(",") for line in lines[1:]]
     models_in_order = [r[0] for r in data_rows]
@@ -425,6 +441,14 @@ def test_distribution_points_cover_every_model_experiment_pair():
     # gpt-oss-20b has 3 experiments with profile errors; qwen3-32b also 3.
     assert models_in_order.count("gpt-oss-20b") == 3
     assert models_in_order.count("qwen3-32b") == 3
+    # Complete CSV: same model rows, plus one HUMAN row per experiment
+    # where the humans' own drift is computable (here: disease and
+    # sunk_cost; base_rate is excluded, false_consensus has one arm).
+    complete = (out / "profile_error_complete.csv").read_text().strip().splitlines()
+    complete_rows = [line.split(",") for line in complete[1:]]
+    assert [r[0] for r in complete_rows].count("gpt-oss-20b") == 3
+    assert [r[0] for r in complete_rows].count("qwen3-32b") == 3
+    assert [r[0] for r in complete_rows].count("HUMAN") == 2
 
 
 def test_no_ranking_column_in_any_csv():
