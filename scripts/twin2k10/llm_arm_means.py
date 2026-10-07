@@ -114,7 +114,7 @@ def _expected_digit_restricted(masses: dict[str, float]) -> float | None:
     in_scale = {
         digit: mass
         for digit, mass in masses.items()
-        if digit in _ANSWER_DIGITS and mass > 0.0
+        if digit in _ANSWER_DIGITS and mass is not None and mass > 0.0
     }
     total = sum(in_scale.values())
     if total <= 0.0:
@@ -131,10 +131,13 @@ def _prob_match_share(items: list[dict]) -> float | None:
     shares: list[float] = []
     for item in items:
         masses = item.get("p_norm") or {}
-        total = sum(masses.values())
+        total = sum(mass for mass in masses.values() if mass is not None)
         if total <= 0.0:
             continue
-        shares.append(masses.get("1", 0.0) / total)
+        share = masses.get("1")
+        if share is None:
+            share = 0.0
+        shares.append(share / total)
     if not shares:
         return None
     return fmean(shares)
