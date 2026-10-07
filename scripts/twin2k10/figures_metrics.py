@@ -121,6 +121,8 @@ def _normalize_arms(
     """Normalize every arm of one experiment; None if any arm has no rule."""
     out: dict[str, float] = {}
     for arm, value in arms.items():
+        if value is None:
+            return None
         normed = normalize(value, spec)
         if normed is None:
             return None
