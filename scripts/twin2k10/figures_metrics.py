@@ -244,6 +244,17 @@ def _contrast_gap(
     return float(np.mean(gaps) * 100.0)
 
 
+def _unwrap_means(entry: Mapping) -> Mapping:
+    """Return one blinding condition's arms. When the entry wraps its
+    arms inside a "means" key (the production builder shape, with a
+    sibling "n" of sample counts), unwrap it; otherwise the entry is
+    already the arms mapping."""
+    means = entry.get("means")
+    if isinstance(means, Mapping):
+        return means
+    return entry
+
+
 def _experiment_row(
     model: str,
     experiment: str,
@@ -300,7 +311,10 @@ def compute_error_rows(registry_subset: Mapping, llm_means: Mapping) -> list[Err
                 continue
             spec = registry_subset[experiment]["normalization_0_1"]
             human_wave = registry_subset[experiment]["human"]["wave1_3"]
-            blinding = llm_means[model][experiment]
+            blinding = {
+                label: _unwrap_means(entry)
+                for label, entry in llm_means[model][experiment].items()
+            }
             first_digit = bool(registry_subset[experiment].get("first_digit_profile"))
             rows.append(
                 _experiment_row(
