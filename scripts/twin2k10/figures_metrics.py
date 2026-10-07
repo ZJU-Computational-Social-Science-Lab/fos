@@ -71,20 +71,32 @@ def _is_anchor_arms(arms: Mapping) -> bool:
     return any(_anchor_share(v) is not None for v in arms.values())
 
 
+def _arm_mean(value: object) -> float | None:
+    """The raw number carried by one arm value, in either accepted
+    shape: a plain float, or the builder's dict ({"mean": x} with an
+    optional "n") where the number lives under the "mean" key."""
+    if isinstance(value, Mapping):
+        mean = value.get("mean")
+        if mean is None:
+            return None
+        return float(mean)
+    return float(value)
+
+
 def _arm_observable(value: object, spec: Mapping, anchor_mode: bool) -> float | None:
     """The single 0-1 number compared for one arm: the anchor-choice
     share when the experiment is anchored (model arms are already 0-1
-    shares), otherwise the registry-normalized raw value."""
+    shares), otherwise the registry-normalized raw value. Arm values may
+    be floats or {"mean": x} dicts (with or without "n")."""
+    mean = _arm_mean(value)
     if anchor_mode:
         share = _anchor_share(value)
         if share is not None:
             return share
-        if isinstance(value, Mapping):
-            return None
-        return float(value)
-    if isinstance(value, Mapping):
+        return mean
+    if mean is None:
         return None
-    return normalize(value, spec)
+    return normalize(mean, spec)
 
 
 def _observables(
@@ -162,14 +174,16 @@ class ErrorRow:
 
 
 def _normalize_arms(
-    arms: Mapping[str, float], spec: Mapping
+    arms: Mapping[str, object], spec: Mapping
 ) -> dict[str, float] | None:
-    """Normalize every arm of one experiment; None if any arm has no rule."""
+    """Normalize every arm of one experiment; None if any arm has no
+    rule. Arm values may be floats or {"mean": x} dicts."""
     out: dict[str, float] = {}
     for arm, value in arms.items():
-        if value is None:
+        mean = _arm_mean(value)
+        if mean is None:
             return None
-        normed = normalize(value, spec)
+        normed = normalize(mean, spec)
         if normed is None:
             return None
         out[arm] = normed
