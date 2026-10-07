@@ -155,7 +155,7 @@ def env(tmp_path):
     _write_records(root10, MODEL, "prob_matching_blinded", "prob_matching",
                    [
                        _prob_record("problem1", [
-                           {"1": 0.8, "2": 0.2}, {"1": 0.4, "2": 0.6}]),
+                           {"1": 0.8, "2": 0.2}, {"1": 0.9, "2": 0.1}]),
                        _prob_record("problem2", [{"1": 1.0, "2": 0.0}]),
                    ])
 
@@ -275,11 +275,11 @@ def test_allais_outcome_is_mass_on_option_one_letter(env):
 
 def test_linda_expected_digit_is_mass_weighted_restricted_to_1_to_6(env):
     """linda: expected digit from row-3 mass, digit 0 dropped and the
-    1-6 mass renormalised: 3.2 / 0.9."""
+    1-6 mass renormalised (the 1-6 masses sum to 1.0): 3.2 / 1.0."""
     out = _build(env)
     linda = out[MODEL]["linda"]
     expected = (0.2 * 1 + 0.2 * 2 + 0.2 * 3 + 0.1 * 4
-                + 0.2 * 5 + 0.1 * 6) / 0.9
+                + 0.2 * 5 + 0.1 * 6) / 1.0
     assert math.isclose(linda["blinded"]["means"]["conjunction"], expected)
     assert math.isclose(linda["blinded"]["means"]["no_conjunction"], 1.0)
 
