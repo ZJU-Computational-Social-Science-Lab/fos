@@ -174,6 +174,8 @@ def _family_bootstrap(
         value = statistic(sampled)
         if np.isfinite(value):
             draws.append(value)
+    if not draws or not np.isfinite(point):
+        return float(point), float(point), float(point)
     low, high = np.percentile(draws, [2.5, 97.5])
     low = min(low, point)
     high = max(high, point)
