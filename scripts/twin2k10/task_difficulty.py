@@ -193,15 +193,17 @@ def _per_experiment_values(
         if "contrast" not in codebook.columns:
             # Experiment-level codebook: each experiment is its own contrast.
             codebook["contrast"] = codebook["experiment"]
-        codebook["contrast_d_e"] = codebook["contrast"].map(d_e)
-        per_experiment = codebook.groupby("experiment")["contrast_d_e"].mean()
-        codebook["d_e"] = codebook["experiment"].map(per_experiment)
-        codebook = codebook[["experiment", "d_e"]].drop_duplicates()
-        values = codebook.rename(columns={"experiment": "experiment_key"})
+        # Join errors to codebook rows on the contrast key; when the error
+        # table is experiment-level (its contrast keys are just experiment
+        # names), fall back to the experiment key so the join cannot
+        # silently produce all-NaN estimates.
+        codebook["d_e"] = codebook["contrast"].map(d_e).fillna(
+            codebook["experiment"].map(d_e))
+        values = codebook.rename(columns={"contrast": "experiment_key"})
+        values = values[["experiment", "experiment_key", "d_e"]]
         if outcome == "contrast":
-            values = values[
-                ~values["experiment_key"].isin(PROFILE_ONLY_EXPERIMENTS)]
-            values = values[values["experiment_key"] != "canonical_bias"]
+            values = values[~values["experiment"].isin(PROFILE_ONLY_EXPERIMENTS)]
+            values = values[values["experiment"] != "canonical_bias"]
         return values
     if outcome in ("profile", "excess"):
         values = errors.groupby("experiment")["error"].mean().rename("d_e").reset_index()
@@ -289,6 +291,9 @@ def feature_effects(
     codings = source[feature].groupby(level=0).first()
     values[feature] = values["experiment_key"].map(codings).map(_coding)
     values = values[values[feature] != "excluded"]
+    # Rows whose error could not be joined to a codebook entry carry no
+    # information; they must not poison the group means with NaN.
+    values = values[values["d_e"].notna()]
     on_n = int((values[feature] == "on").sum())
     off_n = int((values[feature] == "off").sum())
     if min(on_n, off_n) == 0:
@@ -325,7 +330,11 @@ def _coding_source(
 ) -> pd.DataFrame:
     """The table that maps each experiment (or contrast) to its codings."""
     if outcome == "contrast" and contrast_codebook is not None:
-        return _as_frame(contrast_codebook).set_index("experiment")
+        source = _as_frame(contrast_codebook)
+        # Real contrast-level codings are keyed by contrast; an
+        # experiment-level codebook is keyed by experiment.
+        key = "contrast" if "contrast" in source.columns else "experiment"
+        return source.set_index(key)
     if experiment_codebook is None:
         raise ValueError("a feature codebook is required")
     return _as_frame(experiment_codebook).set_index("experiment")
@@ -370,6 +379,8 @@ def _read_errors(path: Path, default_column: str) -> pd.DataFrame:
     frame = pd.read_csv(path)
     column = default_column if default_column in frame.columns else "error"
     keep = ["model", "experiment", column]
+    if "contrast" in frame.columns:
+        keep.append("contrast")
     frame = frame[keep].rename(columns={column: "error"})
     return frame
 
