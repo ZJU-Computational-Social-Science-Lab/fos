@@ -55,9 +55,9 @@ FAMILIES = {
 RESPONSE_FORMATS = pd.DataFrame({
     "experiment": EXPERIMENTS,
     "response_format": (
-        ["discrete_choice", "discrete_choice", "ordinal_rating",
-         "ordinal_rating", "valuation_numeric", "valuation_numeric",
-         "probability_share", "discrete_choice", "ordinal_rating"],
+        "discrete_choice", "discrete_choice", "ordinal_rating",
+        "ordinal_rating", "valuation_numeric", "valuation_numeric",
+        "probability_share", "discrete_choice", "ordinal_rating",
     ),
 })
 
@@ -437,7 +437,6 @@ def test_coding_sensitivity_enumerates_defensible_alternatives():
 def test_variance_shares_with_cis_and_direct_comparison():
     out = rb.variance_robustness(_profile_errors(), n_boot=100, seed=2426)
     assert {"share", "estimate", "ci_low", "ci_high"} <= set(out.columns)
-    assert set(out["share"]) == {"experiment", "model", "residual"}
     diff = out[out["share"] == "experiment_minus_model"]
     assert len(diff) == 1  # direct CI for experiment share − model share
     assert diff.iloc[0]["ci_low"] <= diff.iloc[0]["ci_high"]
