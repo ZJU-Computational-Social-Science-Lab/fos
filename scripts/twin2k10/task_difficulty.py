@@ -129,6 +129,7 @@ def experiment_difficulty(
     """Per-experiment difficulty: median/mean/IQR with bootstrap CIs, and
     the excess error over the human test-retest floor. Hardest first."""
     errors = _drop_human(errors)
+    floors = human_retest.set_index("experiment")["human_error"]
     # Calibrate every model to the strongest model's overall level, so a
     # uniformly stronger model does not make every experiment look hard.
     model_means = errors.groupby("model")["error"].transform("mean")
@@ -149,8 +150,9 @@ def experiment_difficulty(
             "experiment": experiment, "median": median, "mean": mean,
             "iqr": iqr, "mean_ci_low": mean_lo, "mean_ci_high": mean_hi,
             "median_ci_low": med_lo, "median_ci_high": med_hi,
-            "excess_error": median - float(human_retest.loc[
-                human_retest["experiment"] == experiment, "human_error"].iloc[0]),
+            # An experiment without a measured human test-retest row
+            # gets a zero floor (same fallback as _human_retest_from).
+            "excess_error": median - float(floors.get(experiment, 0.0)),
         })
     out = pd.DataFrame(rows).sort_values("median", ascending=False)
     return out.reset_index(drop=True)
@@ -258,7 +260,8 @@ def _loo_deltas(
             continue
         values = values.copy()
         source = _coding_source(outcome, experiment_codebook, contrast_codebook)
-        values[feature] = values["experiment_key"].map(source[feature]).map(_coding)
+        codings = source[feature].groupby(level=0).first()
+        values[feature] = values["experiment_key"].map(codings).map(_coding)
         values = values[values[feature] != "excluded"]
         on = values[values[feature] == "on"]["d_e"]
         off = values[values[feature] == "off"]["d_e"]
@@ -288,6 +291,15 @@ def feature_effects(
     values = values[values[feature] != "excluded"]
     on_n = int((values[feature] == "on").sum())
     off_n = int((values[feature] == "off").sum())
+    if min(on_n, off_n) == 0:
+        # A feature group is empty after exclusions: nothing is
+        # estimable, so emit a NaN row instead of crashing.
+        row = {"feature": feature, "outcome": outcome,
+               "d_e": float(values["d_e"].mean()), "delta": float("nan"), "ci_low": float("nan"),
+               "ci_high": float("nan"), "ci_method": "not estimable",
+               "loo_min_delta": float("nan"), "loo_max_delta": float("nan"),
+               "sign_stable": False, "estimate_status": "no_data"}
+        return pd.DataFrame([row], columns=_EFFECT_COLUMNS)
     delta, low, high = _bootstrap_delta(values, feature, n_boot, seed)
     loo = _loo_deltas(
         outcome, profile_errors, contrast_errors, experiment_codebook,
@@ -381,6 +393,10 @@ def run_analysis(input_dir: Path, output_dir: Path, n_boot: int, seed: int) -> N
     contrast = (_read_errors(contrast_path, "contrast_error")
                 if contrast_path.exists() else profile.assign(
                     contrast=profile["experiment"]))
+    if "contrast" not in contrast.columns:
+        # Experiment-level contrast file: each experiment is its own
+        # contrast key.
+        contrast = contrast.assign(contrast=contrast["experiment"])
     codebook_path = input_dir / "experiment_feature_codebook.csv"
     if not codebook_path.exists():
         codebook_path = input_dir / "experiment_codebook.csv"
