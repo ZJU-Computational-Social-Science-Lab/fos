@@ -39,10 +39,20 @@ def load_contrasts(run_dir: Path) -> pd.DataFrame:
 
 
 def load_humans(codebook: pd.DataFrame) -> dict[str, float]:
-    """The humans' benchmark effect per experiment: the main (not
-    ambiguous) wave 1-3 magnitude from the contrast codebook."""
-    main = codebook[codebook["ambiguous_flag"].fillna(0) == 0]
-    return dict(zip(main["experiment"], main["wave1_3_magnitude"].astype(float)))
+    """The humans' benchmark effect per experiment: the wave 1-3
+    magnitude from the contrast codebook. Rows flagged ambiguous still
+    carry a valid magnitude, so they are used when no unambiguous row
+    exists for the experiment (otherwise anchoring would vanish)."""
+    frame = codebook.copy()
+    frame["wave1_3_magnitude"] = pd.to_numeric(
+        frame["wave1_3_magnitude"], errors="coerce"
+    )
+    frame = frame[frame["wave1_3_magnitude"].notna()]
+    main = frame[frame["ambiguous_flag"].fillna(0) == 0]
+    humans = dict(zip(main["experiment"], main["wave1_3_magnitude"].astype(float)))
+    for _, row in frame.iterrows():
+        humans.setdefault(row["experiment"], float(row["wave1_3_magnitude"]))
+    return humans
 
 
 def build_strata(models: pd.DataFrame) -> dict[str, pd.DataFrame]:
@@ -55,15 +65,9 @@ def build_strata(models: pd.DataFrame) -> dict[str, pd.DataFrame]:
         strata[label] = pd.DataFrame(
             {
                 "model": names,
-                "stratum": [label] * len(names),
+                "stratum": [f"{label}_a"] * half + [f"{label}_b"] * (len(names) - half),
             }
         )
-    strata["older_vs_newer"] = pd.DataFrame(
-        {
-            "model": names,
-            "stratum": ["older"] * half + ["newer"] * (len(names) - half),
-        }
-    )
     return strata
 
 

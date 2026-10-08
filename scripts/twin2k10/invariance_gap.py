@@ -116,12 +116,22 @@ def build_signed_effects(
     table = blinded.merge(humans_frame, on="experiment", how="inner")
     features = codebook[
         [
+            "experiment",
             "contrast",
             "objective_equivalence",
             "reference_context",
         ]
-    ]
-    table = table.merge(features, on="contrast", how="inner")
+    ].copy()
+    # The codebook writes "ambiguous/NA" for unavailable labels, which
+    # makes pandas load the whole column as text; turn those into real
+    # missing values so the numeric rows keep working.
+    for column in ("objective_equivalence", "reference_context"):
+        features[column] = pd.to_numeric(features[column], errors="coerce")
+    # The contrast name alone is not unique across experiments (e.g. the
+    # two anchoring tasks share "mean_high_minus_low"), so join on the
+    # (experiment, contrast) pair.
+    features = features.drop_duplicates(subset=["experiment", "contrast"])
+    table = table.merge(features, on=["experiment", "contrast"], how="inner")
     table["paradigm_family"] = table["experiment"].map(
         lambda e: _FAMILY_OF.get(e, "other")
     )
@@ -545,6 +555,7 @@ def profile_vs_recovery(
         on=["model", "experiment"],
         how="inner",
     )
+
     def statistic(frame: pd.DataFrame, signed_: bool) -> float:
         p = frame["error"].to_numpy()
         r = frame["signed_recovery_error"].to_numpy()
