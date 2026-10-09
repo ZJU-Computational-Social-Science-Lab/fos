@@ -128,6 +128,15 @@ def _model_delta(
     return _delta(model_arms, spec, model)
 
 
+def _flag_value(value: object) -> int:
+    """Read a 0/1 codebook flag; ambiguous or missing entries count as 0
+    (the label simply doesn't apply) rather than crashing the build."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _effect_row(
     model: str, spec: pd.Series, delta_h: float, delta_m: float
 ) -> dict[str, object]:
@@ -140,7 +149,9 @@ def _effect_row(
         "model": model,
         "experiment": spec["experiment"],
         "contrast": spec["contrast"],
-        "paradigm_family": spec["paradigm_family"],
+        "paradigm_family": (
+            spec["paradigm_family"] if "paradigm_family" in spec else "unspecified"
+        ),
         "human_effect_normalized": delta_h,
         "model_effect_normalized": delta_m,
         "human_effect_pp": delta_h * 100.0,
@@ -149,8 +160,8 @@ def _effect_row(
         "model_effect_oriented_pp": oriented_m * 100.0,
         "signed_recovery_error_pp": (oriented_m - oriented_h) * 100.0,
         "absolute_recovery_error_pp": abs(delta_m - delta_h) * 100.0,
-        "objective_equivalence": int(spec["objective_equivalence"]),
-        "reference_context": int(spec["reference_context"]),
+        "objective_equivalence": _flag_value(spec["objective_equivalence"]),
+        "reference_context": _flag_value(spec["reference_context"]),
     }
 
 

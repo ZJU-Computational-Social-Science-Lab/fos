@@ -7,6 +7,7 @@
 # report if any sanity check fails.
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import matplotlib
@@ -297,3 +298,136 @@ def _write_figures(
     ax.bar(tax_tab["category"].astype(str), tax_tab["mae"])
     ax.set_ylabel("leave-one-out MAE (pp)")
     _save(fig, output_dir, "taxonomy_predictive_comparison")
+
+
+def _load_json(path: Path) -> dict:
+    """Read one JSON file (the run registry / the model arm means)."""
+    import json
+
+    with open(path) as handle:
+        return dict(json.load(handle))
+
+
+def _normalized_arms(
+    raw_arms: dict, spec: dict, anchor_mode: bool
+) -> dict[str, float] | None:
+    """Put every arm of one experiment on its comparable 0-1 number,
+    reusing the repaired figures pipeline's rules (including the bounded
+    anchoring choice share). None when an arm has no rule."""
+    from twin2k10 import figures_metrics as fm
+
+    return fm._observables(raw_arms, spec, anchor_mode)
+
+
+def _is_anchor_arms(raw_arms: dict) -> bool:
+    """True when an experiment's arms are the anchoring low/high pair."""
+    from twin2k10 import figures_metrics as fm
+
+    return fm._is_anchor_arms(raw_arms)
+
+
+def _arm_rows(
+    arms: dict[str, float],
+    who: str,
+    experiment: str,
+    contrast: str,
+) -> list[dict[str, object]]:
+    """Turn one experiment's arm means into the row shape the signed
+    table builder expects (one row per arm)."""
+    return [
+        {
+            "model": who,
+            "experiment": experiment,
+            "contrast": contrast,
+            "arm": arm,
+            "value": float(value),
+        }
+        for arm, value in sorted(arms.items())
+    ]
+
+
+def main(run_dir: Path, codebook_dir: Path) -> int:
+    """Run the repaired signed-effect analysis on the real study numbers:
+    load the run registry, the human benchmark, and the model arm means,
+    normalize everything onto 0-1, build the signed table, and hand it to
+    run() (which validates and writes the outputs, stopping on failure)."""
+    run_dir = Path(run_dir)
+    codebook_dir = Path(codebook_dir)
+    registry = _load_json(run_dir / "experiment_registry.json")["experiments"]
+    llm_means = _load_json(codebook_dir / "llm_arm_means.json")
+    codebook = pd.read_csv(codebook_dir / "contrast_feature_codebook.csv")
+    codebook = codebook[codebook["response_type"] != "free_estimate"]
+    human_rows: list[dict[str, object]] = []
+    model_rows: list[dict[str, object]] = []
+    for _, spec_row in codebook.iterrows():
+        experiment = str(spec_row["experiment"])
+        contrast = str(spec_row["contrast"])
+        entry = registry.get(experiment)
+        if entry is None:
+            continue
+        spec = entry["normalization_0_1"]
+        human_raw = entry["human"]["wave1_3"]["arms"]
+        anchor_mode = _is_anchor_arms(human_raw)
+        human_obs = _normalized_arms(human_raw, spec, anchor_mode)
+        if human_obs is None:
+            continue
+        treatment = str(spec_row["treatment_arm"])
+        comparison = str(spec_row["comparison_arm"])
+        if treatment not in human_obs or comparison not in human_obs:
+            continue
+        human_rows += _arm_rows(
+            {treatment: human_obs[treatment], comparison: human_obs[comparison]},
+            "humans",
+            experiment,
+            contrast,
+        )
+        for model, experiments in llm_means.items():
+            if experiment not in experiments:
+                continue
+            model_raw = dict(experiments[experiment]).get("blinded", {})
+            if "means" in model_raw:
+                model_raw = model_raw["means"]
+            model_raw = {
+                key: value.get("mean", value) if isinstance(value, dict) else value
+                for key, value in model_raw.items()
+            }
+            model_obs = _normalized_arms(model_raw, spec, anchor_mode)
+            if model_obs is None:
+                continue
+            if treatment not in model_obs or comparison not in model_obs:
+                continue
+            model_rows += _arm_rows(
+                {treatment: model_obs[treatment], comparison: model_obs[comparison]},
+                model,
+                experiment,
+                contrast,
+            )
+    effects = se.build_signed_effects(
+        pd.DataFrame(model_rows), pd.DataFrame(human_rows), codebook
+    )
+    error_table = pd.read_csv(codebook_dir / "contrast_error_complete.csv")
+    error_table = error_table[error_table["method"] == "arm_mean"][
+        ["model", "experiment", "contrast_error"]
+    ]
+    profile_raw = pd.read_csv(codebook_dir / "profile_error_complete.csv")
+    profile = profile_raw[
+        (profile_raw["method"] == "arm_mean")
+        & profile_raw["profile_error_blinded"].notna()
+    ][["model", "experiment"]].assign(
+        profile_error=profile_raw.loc[
+            (profile_raw["method"] == "arm_mean")
+            & profile_raw["profile_error_blinded"].notna(),
+            "profile_error_blinded",
+        ].to_numpy()
+    )
+    out_dir = run_dir / "signed_effects"
+    summary = run(effects, error_table, profile, out_dir, seed=20260923)
+    print(f"wrote signed-effects outputs to {out_dir}: {summary}")
+    return 0
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print(__doc__)
+        raise SystemExit(2)
+    raise SystemExit(main(Path(sys.argv[1]), Path(sys.argv[2])))
