@@ -309,6 +309,41 @@ def test_final_validation_flags_excluded_task():
     assert any("base_rate" in f for f in failures), failures
 
 
+# ------------------------------------------------------- TASK-2475 contract
+# The FINAL reference table: the gate must compare against a reference
+# built under the FINAL orientation (mean |R| per model x experiment,
+# regenerated from the FINAL table itself), not the stale legacy file.
+
+
+def test_final_reference_built_from_table_itself_passes_gate():
+    """Rebuilding the reference as mean |R| per model x experiment from
+    the FINAL table itself must give a table the validation gate
+    reproduces with ZERO mismatched cells."""
+    fx = _build_final()
+    ref = se.build_final_reference_table(fx)
+    failures = se.validate_effects_final(fx, ref, USABLE, ["m1", "m2"])
+    assert failures == [], failures
+
+
+def test_reference_loader_final_orientation_reads_final_reference_csv(tmp_path):
+    """With orientation="final" the loader must read the persisted FINAL
+    reference file, not the legacy contrast_error_complete.csv."""
+    legacy = pd.DataFrame({
+        "model": ["m1"], "experiment": ["disease"],
+        "method": ["arm_mean"], "contrast_error": [11.0],
+    })
+    final = pd.DataFrame({
+        "model": ["m1"], "experiment": ["disease"],
+        "contrast_error": [30.0],
+    })
+    legacy.to_csv(tmp_path / "contrast_error_complete.csv", index=False)
+    final.to_csv(
+        tmp_path / "contrast_error_complete_FINAL_reference.csv", index=False
+    )
+    loaded = runmod.load_contrast_error_table(tmp_path, orientation="final")
+    assert float(loaded["contrast_error"].iloc[0]) == pytest.approx(30.0)
+
+
 # ---------------------------------------------------------------- contract 3
 # The main result: D_A = E[A|context-only] - E[A|objective-change].
 # POSITIVE D_A = models under-recover more when only context changed.

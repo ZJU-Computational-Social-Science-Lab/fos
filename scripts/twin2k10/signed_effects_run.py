@@ -346,11 +346,34 @@ def _arm_rows(
     ]
 
 
-def main(run_dir: Path, codebook_dir: Path) -> int:
-    """Run the repaired signed-effect analysis on the real study numbers:
+def load_contrast_error_table(
+    codebook_dir: Path, orientation: str = "old"
+) -> pd.DataFrame:
+    """Load the standalone contrast-error table the reproduction gate
+    compares against. orientation="old" reads the legacy
+    contrast_error_complete.csv (pre-FINAL orientation, kept for
+    provenance); orientation="final" reads the regenerated
+    contrast_error_complete_FINAL_reference.csv (mean |R| per model x
+    experiment from the FINAL signed table). Both are reduced to the
+    three columns the gate merges on."""
+    filename = (
+        "contrast_error_complete_FINAL_reference.csv"
+        if orientation == "final"
+        else "contrast_error_complete.csv"
+    )
+    table = pd.read_csv(Path(codebook_dir) / filename)
+    if orientation == "old":
+        table = table[table["method"] == "arm_mean"]
+    return table[["model", "experiment", "contrast_error"]]
+
+
+def main(run_dir: Path, codebook_dir: Path, final: bool = False) -> int:
+    """Run the signed-effect analysis on the real study numbers:
     load the run registry, the human benchmark, and the model arm means,
     normalize everything onto 0-1, build the signed table, and hand it to
-    run() (which validates and writes the outputs, stopping on failure)."""
+    run() (which validates and writes the outputs, stopping on failure).
+    With final=True, build the FINAL table and run the FINAL pipeline
+    (run_final), with the gate pointed at the FINAL-orientation reference."""
     run_dir = Path(run_dir)
     codebook_dir = Path(codebook_dir)
     registry = _load_json(run_dir / "experiment_registry.json")["experiments"]
@@ -402,13 +425,13 @@ def main(run_dir: Path, codebook_dir: Path) -> int:
                 experiment,
                 contrast,
             )
-    effects = se.build_signed_effects(
+    build = se.build_signed_effects_final if final else se.build_signed_effects
+    effects = build(
         pd.DataFrame(model_rows), pd.DataFrame(human_rows), codebook
     )
-    error_table = pd.read_csv(codebook_dir / "contrast_error_complete.csv")
-    error_table = error_table[error_table["method"] == "arm_mean"][
-        ["model", "experiment", "contrast_error"]
-    ]
+    error_table = load_contrast_error_table(
+        codebook_dir, orientation="final" if final else "old"
+    )
     profile_raw = pd.read_csv(codebook_dir / "profile_error_complete.csv")
     profile = profile_raw[
         (profile_raw["method"] == "arm_mean")
@@ -420,7 +443,11 @@ def main(run_dir: Path, codebook_dir: Path) -> int:
             "profile_error_blinded",
         ].to_numpy()
     )
-    out_dir = run_dir / "signed_effects"
+    out_dir = run_dir / ("signed_effects_FINAL" if final else "signed_effects")
+    if final:
+        run_final(effects, error_table, profile, out_dir, seed=20260923)
+        print(f"wrote FINAL signed-effects outputs to {out_dir}")
+        return 0
     summary = run(effects, error_table, profile, out_dir, seed=20260923)
     print(f"wrote signed-effects outputs to {out_dir}: {summary}")
     return 0

@@ -637,6 +637,7 @@ def taxonomy_loo_comparison(
 from twin2k10.signed_effects_final import (  # noqa: E402,F401
     FINAL_CSV_COLUMNS,
     attenuation_gap,
+    build_final_reference_table,
     build_signed_effects_final,
     count_models_with_positive_penalty,
     model_penalties_final,

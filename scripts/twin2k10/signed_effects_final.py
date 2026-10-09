@@ -185,6 +185,18 @@ def _final_orientation_checks(effects: pd.DataFrame) -> list[str]:
     return failures
 
 
+def build_final_reference_table(effects: pd.DataFrame) -> pd.DataFrame:
+    """The FINAL-orientation contrast-error reference: one row per
+    model x experiment holding the mean absolute recovery error |R| (pp)
+    computed from this FINAL table itself. The validation gate must
+    reproduce this table; the older contrast_error_complete.csv stores
+    the pre-FINAL orientation and is kept only for provenance."""
+    reference = effects.groupby(["model", "experiment"], as_index=False)[
+        "absolute_recovery_error_pp"
+    ].mean()
+    return reference.rename(columns={"absolute_recovery_error_pp": "contrast_error"})
+
+
 def _final_reproduction(
     effects: pd.DataFrame, contrast_error_table: pd.DataFrame
 ) -> str:
