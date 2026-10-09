@@ -620,44 +620,33 @@ def _loo_mae(values: pd.Series, labels: pd.Series) -> float:
     return float(np.mean(errors))
 
 
-def taxonomy_loo_comparison(effects: pd.DataFrame) -> pd.DataFrame:
+def taxonomy_loo_comparison(
+    effects: pd.DataFrame, value_column: str = "signed_recovery_error_pp"
+) -> pd.DataFrame:
     """Score each way of labelling questions by how well it predicts the
     size of the miss (lower is better). Each label gets a bootstrap
-    interval so near-ties are visible."""
-    rng = np.random.default_rng(0)
-    rows: list[dict[str, object]] = []
-    for category in TAXONOMY_CATEGORIES:
-        labels = (
-            effects[category]
-            if category in effects.columns
-            else pd.Series(0, index=effects.index)
-        )
-        mae = _loo_mae(effects["signed_recovery_error_pp"], labels)
-        if len(effects) > 1:
-            boots = [
-                _loo_mae(
-                    effects["signed_recovery_error_pp"].iloc[
-                        rng.integers(0, len(effects), len(effects))
-                    ],
-                    labels.iloc[rng.integers(0, len(effects), len(effects))],
-                )
-                for _ in range(500)
-            ]
-            ci = (
-                float(np.nanpercentile(boots, 2.5)),
-                float(np.nanpercentile(boots, 97.5)),
-            )
-        else:
-            ci = (mae, mae)
-        rows.append(
-            {
-                "category": category,
-                "mae": mae,
-                "ci_low": ci[0],
-                "ci_high": ci[1],
-            }
-        )
-    return pd.DataFrame(rows)
+    interval so near-ties are visible. The FINAL analysis calls this with
+    value_column="attenuation_pp"; the default keeps the repaired
+    behaviour."""
+    return _final_taxonomy_loo_comparison(effects, value_column)
+
+
+# FINAL orientation repair (TASK-2460). These names live in
+# signed_effects_final.py; they are re-exported here so callers keep
+# using the single `signed_effects` module.
+from twin2k10.signed_effects_final import (  # noqa: E402,F401
+    FINAL_CSV_COLUMNS,
+    attenuation_gap,
+    build_signed_effects_final,
+    count_models_with_positive_penalty,
+    model_penalties_final,
+    profile_fidelity_correlations,
+    recovery_slopes_final,
+    response_regimes_final,
+    reversed_regime_gap,
+    taxonomy_loo_comparison as _final_taxonomy_loo_comparison,  # noqa: F401
+    validate_effects_final,  # noqa: F401
+)
 
 
 def taxonomy_pairwise_differences(tab: pd.DataFrame) -> pd.DataFrame:
