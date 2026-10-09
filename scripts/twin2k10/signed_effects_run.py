@@ -426,6 +426,13 @@ def main(run_dir: Path, codebook_dir: Path) -> int:
     return 0
 
 
+# FINAL runner (TASK-2460). `run_final` lives in
+# signed_effects_final_run.py; it reuses this module's ValidationFailure
+# so callers only ever catch one exception class. Imported at the bottom
+# because signed_effects_final_run imports ValidationFailure from here.
+from twin2k10.signed_effects_final_run import run_final  # noqa: E402,F401
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print(__doc__)
