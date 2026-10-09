@@ -222,14 +222,13 @@ def _dot_ci(
     horizontal error bar. Never uses bar patches."""
     fig, ax = plt.subplots(figsize=(8, 4))
     y = np.arange(len(labels))
-    ax.errorbar(
-        values.to_numpy(dtype=float), y,
-        xerr=np.vstack([
-            (values - lows).to_numpy(dtype=float),
-            (highs - values).to_numpy(dtype=float),
-        ]),
-        fmt="o", capsize=3, ls="none",
-    )
+    # Draw the dots and the intervals separately instead of via
+    # errorbar(): a bootstrap interval need not contain the point
+    # estimate, and errorbar rejects a negative half-width.
+    x = values.to_numpy(dtype=float)
+    ax.hlines(y, xmin=lows.to_numpy(dtype=float),
+              xmax=highs.to_numpy(dtype=float), color="C0")
+    ax.plot(x, y, "o", color="C0")
     ax.set_yticks(y)
     ax.set_yticklabels(labels)
     ax.set_xlabel(xlabel)
