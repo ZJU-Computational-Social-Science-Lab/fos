@@ -94,9 +94,7 @@ def repair_file(in_path: Path, out_path: Path) -> list[dict]:
             )
         fixed_lines.append(json.dumps(fixed, ensure_ascii=False))
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(
-        "\n".join(fixed_lines) + "\n", encoding="utf-8"
-    )
+    out_path.write_text("\n".join(fixed_lines) + "\n", encoding="utf-8")
     return entries
 
 
