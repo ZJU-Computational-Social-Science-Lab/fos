@@ -1,0 +1,466 @@
+"""Runner for the three-game experiment: plans, calls, saves, resumes.
+
+What this file does, in plain language:
+
+- ``build_plan`` turns a config (YAML file or CLI flags) into the exact
+  list of samples to collect: one entry per (game, variant, arm, model,
+  persona, draw), with a stable idempotency key so a restarted run never
+  duplicates a sample that already succeeded.
+- ``count_samples`` counts the plan without running anything
+  (``--print-counts`` prints per-cell and total counts).
+- ``run_plan`` walks the plan cell by cell, builds each prompt, rolls
+  the private die where needed, assigns matrix roles in a seed-fixed
+  balanced alternation, sends the request at temperature 1.0 through the
+  configured route (retries 429/5xx/timeouts with capped backoff),
+  parses the answer, detects truncated completions, records tokens and
+  cost, and appends every finished record to a per-cell JSONL file
+  immediately (a crash never loses finished records).
+- ``main`` is the command-line entry point.  No spending caps and no
+  cost-based stopping exist anywhere here: the run goes to the frozen
+  sample counts, nothing else.
+
+No paid API calls happen unless you run this file yourself with real
+credentials in the environment.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import sys
+from pathlib import Path
+from typing import Callable
+
+try:  # works both as a package module and run from the scripts directory
+    from sixgame.games import variant_spec
+    from sixgame.probes import probe_prompt
+    from sixgame.transport import (
+        TransportError,
+        TransportTimeout,
+        call_with_retry,
+        route_for,
+    )
+except ImportError:  # pragma: no cover - direct execution layout
+    from games import (
+        variant_spec,
+    )
+    from probes import probe_prompt
+    from transport import (
+        TransportError,
+        TransportTimeout,
+        call_with_retry,
+        route_for,
+    )
+
+TEMPERATURE = 1.0
+
+#: finish_reason values that mean the output was cut off (never done on
+#: purpose here — max_tokens is >= 32768 headroom; detection only).
+_TRUNCATED_FINISH = {"length", "incomplete", "MAX_TOKENS"}
+
+_MODELS = [
+    "deepseek-v4-flash",
+    "anthropic/claude-sonnet-5",
+    "openai/gpt-5.6-luna",
+]
+
+
+# Plan/config logic lives in plan.py; re-exported here so callers can
+# use runner.build_plan and friends unchanged.
+try:
+    from sixgame.plan import (  # noqa: F401
+        Sample,
+        assign_role,
+        build_plan,
+        cells,
+        default_config,
+        draw_true_roll,
+        load_config,
+        load_persona_names,
+        personas_for_cell,
+        print_counts,
+        probe_plan,
+    )
+except ImportError:  # pragma: no cover
+    from plan import (  # noqa: F401
+        Sample,
+        assign_role,
+        build_plan,
+        cells,
+        default_config,
+        draw_true_roll,
+        load_config,
+        load_persona_names,
+        personas_for_cell,
+        print_counts,
+        probe_plan,
+    )
+
+
+def build_decision_prompt(
+    sample: Sample, persona_text: str | None, roll: int | None, seed: int
+) -> str:
+    """Build the decision prompt for one sample."""
+    from games import die_roll_prompt, eleven_twenty_prompt, matrix_prompt
+
+    if sample.game == "1120":
+        return eleven_twenty_prompt(sample.variant, sample.persona_id, persona_text)
+    if sample.game == "dieroll":
+        return die_roll_prompt(
+            sample.variant, int(roll or 1), sample.persona_id, persona_text
+        )
+    base_game = "G4" if sample.variant == "G4" else "G1"
+    matrix_variant = "relabel" if sample.variant == "relabel" else "base"
+    return matrix_prompt(
+        base_game, matrix_variant, sample.role or "Row", sample.persona_id, persona_text
+    )
+
+
+def matrix_base_game(variant: str) -> str:
+    """The PMS base matrix a variant plays on ('relabel' mirrors G1)."""
+    return "G4" if variant == "G4" else "G1"
+
+
+def prompt_hash(prompt: str) -> str:
+    """A short hash of the prompt text, logged on every record."""
+    return hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:16]
+
+
+def parse_answer(
+    raw_content: str | None, parse_key: str, legal: tuple
+) -> tuple[object | None, str]:
+    """Extract (choice, reason) from a raw completion, or (None, ...).
+
+    Finds the first '{' to last '}' and parses that as JSON; the choice
+    must be inside the legal action set or it counts as a parse failure.
+    """
+    if not raw_content:
+        return None, ""
+    start = raw_content.find("{")
+    end = raw_content.rfind("}")
+    if start == -1 or end <= start:
+        return None, ""
+    try:
+        obj = json.loads(raw_content[start : end + 1])
+    except (json.JSONDecodeError, ValueError):
+        return None, ""
+    if not isinstance(obj, dict):
+        return None, ""
+    choice = obj.get(parse_key)
+    if isinstance(choice, str):
+        choice = choice.strip()
+        if parse_key == "action":
+            choice = choice.upper()
+        try:
+            choice = int(choice)
+        except (TypeError, ValueError):
+            pass
+    if isinstance(choice, str) is False and not isinstance(choice, int):
+        choice = None
+    if choice is not None and choice not in legal:
+        choice = None
+    reason = obj.get("reason")
+    return choice, (reason if isinstance(reason, str) else "")
+
+
+def truncated(finish_reason: str | None) -> bool:
+    """True when the finish reason says the output was cut off."""
+    return finish_reason in _TRUNCATED_FINISH
+
+
+def cost_usd(
+    model: str, prompt_tokens: int | None, completion_tokens: int | None, prices: dict
+) -> float | None:
+    """The recorded cost of one call from per-model price config (reporting
+    only — never used for stopping)."""
+    price = prices.get(model)
+    if price is None or prompt_tokens is None or completion_tokens is None:
+        return None
+    return prompt_tokens / 1e6 * price.get(
+        "prompt_per_mtok", 0.0
+    ) + completion_tokens / 1e6 * price.get("completion_per_mtok", 0.0)
+
+
+def record_for(
+    sample: Sample,
+    prompt: str,
+    response: dict | None,
+    error: str | None,
+    route: str,
+    elapsed: float,
+    prices: dict,
+) -> dict:
+    """Build one JSONL record from a finished (or failed) call."""
+    key = sample.idempotency_key(prompt_hash(prompt), route)
+    record = {
+        "game": sample.game,
+        "variant": sample.variant,
+        "arm": sample.arm,
+        "model": sample.model,
+        "route": route,
+        "persona_id": sample.persona_id,
+        "draw_id": sample.draw_id,
+        "role": sample.role,
+        "namespace": sample.namespace,
+        "choice": None,
+        "reason": "",
+        "raw_content": None,
+        "finish_reason": None,
+        "truncated": False,
+        "temperature": TEMPERATURE,
+        "prompt_hash": prompt_hash(prompt),
+        "idempotency_key": key,
+        "timestamp": "",
+        "cache_status": "MISS",
+        "model_dated": None,
+        "prompt_tokens": None,
+        "completion_tokens": None,
+        "reasoning_tokens": None,
+        "cost_usd": None,
+        "elapsed_seconds": round(elapsed, 3),
+        "succeeded": False,
+        "error": error,
+    }
+    if response is None:
+        return record
+    from datetime import datetime, timezone
+
+    record["timestamp"] = datetime.now(timezone.utc).isoformat()
+    try:
+        choice0 = response["choices"][0]
+        message = choice0["message"]
+        raw_content = message.get("content")
+        finish = choice0.get("finish_reason")
+        spec = variant_spec(sample.game, sample.variant)
+        legal = spec.actions
+        if sample.game == "pms":
+            legal = spec.actions
+        value, reason = parse_answer(raw_content, spec.parse_key, legal)
+        usage = response.get("usage", {})
+        details = usage.get("completion_tokens_details", {}) or {}
+        cache_status = "MISS"
+        if usage.get("prompt_cache_hit_tokens"):
+            cache_status = "HIT"
+        record.update(
+            {
+                "choice": value,
+                "reason": reason,
+                "raw_content": raw_content,
+                "finish_reason": finish,
+                "truncated": truncated(finish),
+                "cache_status": cache_status,
+                "model_dated": response.get("model"),
+                "prompt_tokens": usage.get("prompt_tokens"),
+                "completion_tokens": usage.get("completion_tokens"),
+                "reasoning_tokens": details.get("reasoning_tokens"),
+                "cost_usd": cost_usd(
+                    sample.model,
+                    usage.get("prompt_tokens"),
+                    usage.get("completion_tokens"),
+                    prices,
+                ),
+                "succeeded": value is not None and not truncated(finish),
+            }
+        )
+    except (KeyError, IndexError, TypeError, AttributeError) as exc:
+        record["error"] = str(exc)
+    return record
+
+
+def cell_path(out_dir: Path, sample: Sample) -> Path:
+    """The per-cell JSONL file for one sample's cell and namespace."""
+    slug = sample.model.replace("/", "_")
+    name = (
+        f"{sample.namespace}_{sample.game}_{sample.variant}_{sample.arm}_{slug}.jsonl"
+    )
+    return out_dir / name
+
+
+def read_idempotency_keys(path: Path) -> set[str]:
+    """All idempotency keys already in a JSONL file (empty if missing)."""
+    if not path.exists():
+        return set()
+    keys = set()
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            keys.add(json.loads(line).get("idempotency_key"))
+        except json.JSONDecodeError:
+            continue  # a torn last line after a crash is skipped, not fatal
+    keys.discard(None)
+    return keys
+
+
+def append_record(path: Path, record: dict) -> None:
+    """Append one record to the per-cell JSONL immediately (crash-safe)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def run_sample(
+    sample: Sample,
+    persona_text: str | None,
+    roll: int | None,
+    seed: int,
+    prices: dict,
+    route_map: dict[str, str] | None,
+    sleep: Callable[[float], None] = (lambda _s: None),
+) -> tuple[dict, str]:
+    """Run one API call and return (record, prompt). Never raises."""
+    prompt = build_decision_prompt(sample, persona_text, roll, seed)
+    if sample.namespace == "probes":
+        prompt = probe_prompt(
+            sample.game, sample.variant, sample.persona_id, persona_text
+        )
+    route = route_for(sample.model, route_map)
+    payload = {
+        "model": sample.model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": TEMPERATURE,
+    }
+    start = __import__("time").perf_counter()
+    try:
+        response = call_with_retry(payload, sample.model, route, sleep)
+        body = response.body
+        elapsed = __import__("time").perf_counter() - start
+        return record_for(sample, prompt, body, None, route, elapsed, prices), prompt
+    except (TransportError, TransportTimeout) as exc:
+        elapsed = __import__("time").perf_counter() - start
+        return record_for(
+            sample, prompt, None, str(exc), route, elapsed, prices
+        ), prompt
+
+
+def run_plan(
+    plan: list[Sample],
+    personas_dir: Path,
+    out_dir: Path,
+    prices: dict,
+    route_map: dict[str, str] | None = None,
+    seed: int = 0,
+    sleep: Callable[[float], None] = (lambda _s: None),
+    log: Callable[[str], None] = print,
+) -> dict:
+    """Run a whole plan, resuming without duplicating finished samples."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    done = 0
+    skipped = 0
+    failed = 0
+    for sample in plan:
+        path = cell_path(out_dir, sample)
+        existing = read_idempotency_keys(path)
+        route = route_for(sample.model, route_map)
+        roll = draw_true_roll(
+            seed,
+            sample.game,
+            sample.variant,
+            sample.arm,
+            sample.model,
+            sample.persona_id,
+            sample.draw_id,
+        )
+        persona_file = personas_dir / f"{sample.persona_id}.txt"
+        persona_text = (
+            persona_file.read_text(encoding="utf-8") if persona_file.exists() else None
+        )
+        prompt = build_decision_prompt(sample, persona_text, roll, seed)
+        if sample.namespace == "probes":
+            prompt = probe_prompt(
+                sample.game, sample.variant, sample.persona_id, persona_text
+            )
+        key = sample.idempotency_key(prompt_hash(prompt), route)
+        if key in existing:
+            skipped += 1
+            continue
+        record, _ = run_sample(
+            sample, persona_text, roll, seed, prices, route_map, sleep
+        )
+        append_record(path, record)
+        if record["succeeded"]:
+            done += 1
+        elif record["error"]:
+            failed += 1
+        log(
+            f"{sample.game}/{sample.variant}/{sample.arm} "
+            f"{sample.persona_id}#{sample.draw_id} -> "
+            f"{record['choice'] if record['succeeded'] else record['error']}"
+        )
+    return {"completed": done, "skipped": skipped, "failed": failed}
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry point (see module docstring). --print-counts makes no calls."""
+    parser = argparse.ArgumentParser(description="sixgame experiment runner")
+    parser.add_argument("--config", help="config YAML (else built-in scope)")
+    parser.add_argument(
+        "--scope", choices=["engineering", "full"], default="engineering"
+    )
+    parser.add_argument("--game")
+    parser.add_argument("--variant")
+    parser.add_argument("--arm")
+    parser.add_argument("--model")
+    parser.add_argument("--personas", type=int, default=5)
+    parser.add_argument("--draws", type=int, default=10)
+    parser.add_argument("--seed", type=int, default=20261016)
+    parser.add_argument("--out-dir", default="results/sixgame")
+    parser.add_argument("--personas-csv", default="final_200_personas.csv")
+    parser.add_argument("--print-counts", action="store_true")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="print the first prompt per cell, no calls",
+    )
+    args = parser.parse_args(argv)
+
+    config = (
+        load_config(Path(args.config)) if args.config else default_config(args.scope)
+    )
+    if args.personas != 5 or args.draws != 10:
+        config["personas"] = args.personas
+        config["draws_per_cell"] = args.draws
+    if args.game and args.variant:
+        config["games"] = {args.game: {"variants": [args.variant]}}
+
+    if args.print_counts:
+        print(print_counts(config))
+        return 0
+
+    persona_names = load_persona_names(Path(args.personas_csv), config["personas"])
+    if not persona_names:
+        print("no personas found", file=sys.stderr)
+        return 1
+    plan = build_plan(
+        config,
+        persona_names,
+        args.seed,
+        game_filter=args.game,
+        variant_filter=args.variant,
+        arm_filter=args.arm,
+        model_filter=args.model,
+    )
+    if args.dry_run:
+        sample = plan[0]
+        roll = draw_true_roll(
+            args.seed,
+            sample.game,
+            sample.variant,
+            sample.arm,
+            sample.model,
+            sample.persona_id,
+            sample.draw_id,
+        )
+        print(build_decision_prompt(sample, None, roll, args.seed))
+        return 0
+    prices = config.get("prices", {})
+    summary = run_plan(
+        plan, Path("."), Path(args.out_dir), prices, config.get("route_map"), args.seed
+    )
+    print(json.dumps(summary))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

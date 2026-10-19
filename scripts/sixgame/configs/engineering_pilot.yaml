@@ -1,0 +1,39 @@
+# Engineering-pilot config: the frozen Stage-1 sample plan (720 calls).
+# 540 decision calls: 3 games x 3 variants x 2 arms x 3 models x 10 draws.
+# 180 probe calls: 3 games x 2 rungs x 2 arms x 3 models x 5 personas x 1.
+# Sample-controlled only: no spending caps, no dollar-based stopping.
+scope: engineering
+models:
+  - deepseek-v4-flash
+  - anthropic/claude-sonnet-5
+  - openai/gpt-5.6-luna
+arms:
+  - persona
+  - no_persona
+draws_per_cell: 10
+personas: 5
+seed: 20261016
+games:
+  "1120":
+    variants: [basic, cycle, r31-40]
+  dieroll:
+    variants: [private, public, stake10]
+  pms:
+    variants: [G1, G4, relabel]
+probes:
+  enabled: true
+route_map:
+  deepseek-v4-flash: direct
+  anthropic/claude-sonnet-5: openrouter
+  openai/gpt-5.6-luna: openrouter
+# Prices are REPORTING ONLY (cost fields on records) — never a stopping rule.
+prices:
+  deepseek-v4-flash:
+    prompt_per_mtok: 0.28
+    completion_per_mtok: 0.42
+  anthropic/claude-sonnet-5:
+    prompt_per_mtok: 3.00
+    completion_per_mtok: 15.00
+  openai/gpt-5.6-luna:
+    prompt_per_mtok: 1.25
+    completion_per_mtok: 10.00
