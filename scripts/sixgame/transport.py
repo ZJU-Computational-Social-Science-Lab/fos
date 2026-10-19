@@ -25,6 +25,7 @@ from __future__ import annotations
 import json
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from typing import Callable
@@ -48,6 +49,35 @@ _MAX_ATTEMPTS = 4
 _BACKOFF_CAP_SECONDS = 30
 
 _TIMEOUT_SECONDS = 300
+
+#: Optional local proxy (e.g. "http://127.0.0.1:7688") used ONLY for
+#: Cloudflare-host requests when SIXGAME_CF_PROXY is set; every other
+#: host keeps the default direct path.
+_CF_PROXY_ENV = "SIXGAME_CF_PROXY"
+_CLOUDFLARE_HOST = "api.cloudflare.com"
+
+
+def _is_cloudflare_host(host: str) -> bool:
+    """True only for the exact Cloudflare API host (case-insensitive)."""
+    return host.lower() == _CLOUDFLARE_HOST
+
+
+def _opener_for(host: str) -> urllib.request.OpenerDirector | None:
+    """The opener to use for one host, or None for the default path.
+
+    When SIXGAME_CF_PROXY is set and the host is exactly the Cloudflare
+    API host, return a dedicated opener that sends the request through
+    that proxy.  Normal TLS verification is untouched.  Nothing is
+    installed globally and no environment proxy variables are used.
+    """
+    import os
+
+    proxy = os.environ.get(_CF_PROXY_ENV, "")
+    if not proxy or not _is_cloudflare_host(host):
+        return None
+    return urllib.request.build_opener(
+        urllib.request.ProxyHandler({"https": proxy, "http": proxy})
+    )
 
 
 class TransportError(Exception):
@@ -90,8 +120,15 @@ def _post_json(
         headers={"Content-Type": "application/json", **headers},
         method="POST",
     )
+    host = urllib.parse.urlsplit(url).hostname or ""
+    opener = _opener_for(host)
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        open_fn = (
+            opener.open
+            if opener is not None
+            else urllib.request.urlopen
+        )
+        with open_fn(request, timeout=timeout) as response:
             return RawResponse(response.status, json.loads(response.read()))
     except urllib.error.HTTPError as exc:
         try:
