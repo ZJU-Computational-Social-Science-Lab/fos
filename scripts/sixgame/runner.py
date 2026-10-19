@@ -441,6 +441,15 @@ def main(argv: list[str] | None = None) -> int:
         arm_filter=args.arm,
         model_filter=args.model,
     )
+    plan = plan + probe_plan(
+        config,
+        persona_names,
+        args.seed,
+        game_filter=args.game,
+        variant_filter=args.variant,
+        arm_filter=args.arm,
+        model_filter=args.model,
+    )
     if args.dry_run:
         sample = plan[0]
         roll = draw_true_roll(
