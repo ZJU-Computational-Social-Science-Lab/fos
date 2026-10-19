@@ -146,7 +146,13 @@ def paired_boot(d, err_a, err_b, clusters, seed_offset):
 
 
 def error_structure(d, pred, strategy, level):
-    """Decompose weighted MSE into systematic / structured / residual parts."""
+    """Split weighted MSE into systematic (bias²) and residual (MSE − bias²).
+
+    The three structured shares (by experiment, by model, by paradigm family)
+    are reported as DESCRIPTIVE NON-ADDITIVE OVERLAYS: the partitions overlap,
+    so their sum generally exceeds the structured variance and must not be
+    subtracted from MSE. Only systematic + residual are additive by design.
+    """
     m = np.sign(d["d_h"].to_numpy()) * pred.to_numpy()
     err = m - d["H"].to_numpy()
     w = d["w"].to_numpy()
@@ -164,11 +170,16 @@ def error_structure(d, pred, strategy, level):
         var_between = float(np.sum(p * (gmeans.to_numpy() - bias) ** 2))
         rows.append({"level": level, "strategy": strategy,
                      "component": f"structured_{grp}", "share_of_mse": var_between / mse,
-                     "value_pp": var_between, "detail": "weighted variance of group mean signed errors"})
-    residual = mse - bias ** 2 - sum(r["share_of_mse"] * mse for r in rows[1:])
+                     "value_pp": var_between,
+                     "detail": "weighted variance of group mean signed errors; "
+                               "DESCRIPTIVE NON-ADDITIVE OVERLAY (overlapping partitions, "
+                               "not subtracted from MSE)"})
+    # residual = MSE - bias^2 ONLY (overlapping structured overlays are NOT
+    # subtracted; see review M3 option a)
+    residual = mse - bias ** 2
     rows.append({"level": level, "strategy": strategy, "component": "residual",
                  "share_of_mse": residual / mse, "value_pp": residual,
-                 "detail": "remainder; NOT called random without a predictability test"})
+                 "detail": "MSE minus bias^2; NOT called random without a predictability test"})
     # held-out test of error predictability from |d_h|: slope of signed error on H
     h = d["H"].to_numpy()
     mh = wmean(h, w)
