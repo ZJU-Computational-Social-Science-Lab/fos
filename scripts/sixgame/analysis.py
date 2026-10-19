@@ -19,8 +19,16 @@ What it produces (each a printed section and, with --out-dir, a file):
 - exclusions and token/cost report (reporting only — no stopping rule).
 
 Exclusions (ANALYSIS_PLAN section 0, exhaustive): parse failure, choice
-outside the legal set, refusal/empty completion, cache_status != MISS,
-truncated completion (finish_reason = length).
+outside the legal set, refusal/empty completion, truncated completion
+(finish_reason = length), and gateway RESPONSE caches only.
+
+Rule change (task 2726, per ANALYSIS_PLAN): provider context/prompt-
+prefix caching (DeepSeek automatic context caching — records with
+``cache_kind == "context"``) is NOT an exclusion: the completion is
+still freshly sampled; only the prompt prefix is reused.  Only a
+gateway response cache (``cache_kind == "response"`` — a reused
+completion body) is excluded.  Legacy records without a ``cache_kind``
+field keep the old rule (any cache_status other than MISS is excluded).
 """
 
 from __future__ import annotations
@@ -150,11 +158,26 @@ def apply_exclusions(records: list[dict]) -> tuple[list[dict], dict]:
             counts["parse_failure"] += 1
         elif r.get("truncated") or r.get("finish_reason") == "length":
             counts["truncated"] += 1
-        elif r.get("cache_status", "MISS") != "MISS":
+        elif _is_response_cache(r):
             counts["cache_hit"] += 1
         else:
             kept.append(r)
     return kept, dict(counts)
+
+
+def _is_response_cache(r: dict) -> bool:
+    """True only for gateway response caches (see module docstring).
+
+    Context/prompt-prefix caching keeps the record.  Legacy records
+    with no cache_kind fall back to the old exclusion rule (see the
+    module docstring).
+    """
+    kind = r.get("cache_kind")
+    if kind is not None:
+        return kind == "response"
+    # Legacy records (no cache_kind): fall back to the old rule — any
+    # cache_status other than MISS counts as a cache hit and is excluded.
+    return r.get("cache_status", "MISS") != "MISS"
 
 
 def cell_key(r: dict) -> tuple:
@@ -201,6 +224,22 @@ def llm_effect(
     return bootstrap_ci([clusters_c, clusters_t], stat, n_boot=boot, seed=seed)
 
 
+def cell_records_for_arm(cell_records: dict, game: str, variant: str, arm: str) -> list:
+    """All kept records for a (game, variant, arm) across every model.
+
+    Bug B1 in RESULT-2723: cells are keyed by the 4-tuple
+    (game, variant, arm, model) but the tables looked up 3-tuples, so
+    every lookup missed.  Pooling across models matches how the
+    contrast/consistency benchmarks are prespecified (per design, not
+    per model).
+    """
+    pooled: list = []
+    for key, recs in cell_records.items():
+        if tuple(key)[:3] == (game, variant, arm):
+            pooled.extend(recs)
+    return pooled
+
+
 def contrast_table(cell_records: dict, boot: int, seed: int) -> list[dict]:
     """All prespecified replication contrasts with delta, CI, TOST."""
     rows = []
@@ -216,8 +255,8 @@ def contrast_table(cell_records: dict, boot: int, seed: int) -> list[dict]:
         for action in actions:
             row: dict = {"contrast": name, "action": action, "delta_pp": delta}
             for arm in ("persona", "no_persona"):
-                rec_c = cell_records.get((game, control, arm), [])
-                rec_t = cell_records.get((game, treatment, arm), [])
+                rec_c = cell_records_for_arm(cell_records, game, control, arm)
+                rec_t = cell_records_for_arm(cell_records, game, treatment, arm)
                 if not rec_c or not rec_t:
                     row[arm] = None
                     continue
@@ -263,8 +302,8 @@ def consistency_table(cell_records: dict, boot: int, seed: int) -> list[dict]:
     inv_table = level_k_inverted_table()
     for name, (game, canonical, transformed, kind) in TRANSFORMATIONS.items():
         for arm in ("persona", "no_persona"):
-            can = cell_records.get((game, canonical, arm), [])
-            tra = cell_records.get((game, transformed, arm), [])
+            can = cell_records_for_arm(cell_records, game, canonical, arm)
+            tra = cell_records_for_arm(cell_records, game, transformed, arm)
             if not can or not tra:
                 continue
             row = {"transformation": name, "arm": arm, "kind": kind}

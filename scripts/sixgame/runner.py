@@ -34,7 +34,7 @@ from typing import Callable
 
 try:  # works both as a package module and run from the scripts directory
     from sixgame.games import variant_spec
-    from sixgame.probes import probe_prompt
+    from sixgame.probes import code_recognition, probe_prompt
     from sixgame.transport import (
         TransportError,
         TransportTimeout,
@@ -45,7 +45,7 @@ except ImportError:  # pragma: no cover - direct execution layout
     from games import (
         variant_spec,
     )
-    from probes import probe_prompt
+    from probes import code_recognition, probe_prompt
     from transport import (
         TransportError,
         TransportTimeout,
@@ -96,6 +96,22 @@ except ImportError:  # pragma: no cover
         print_counts,
         probe_plan,
     )
+
+
+def persona_text_for(sample: Sample, personas_dir: Path) -> str | None:
+    """The persona text a sample's prompt should embed.
+
+    ONLY the persona arm gets the persona file's text.  The no_persona
+    arm always gets None (the name-only placebo) — bug A1 in
+    RESULT-2723 showed that loading the text regardless of arm broke
+    the arm contrast.
+    """
+    if sample.arm != "persona":
+        return None
+    persona_file = personas_dir / f"{sample.persona_id}.txt"
+    if not persona_file.exists():
+        return None
+    return persona_file.read_text(encoding="utf-8")
 
 
 def build_decision_prompt(
@@ -213,6 +229,7 @@ def record_for(
         "idempotency_key": key,
         "timestamp": "",
         "cache_status": "MISS",
+        "cache_kind": "none",  # "context" | "response" | "none"
         "model_dated": None,
         "prompt_tokens": None,
         "completion_tokens": None,
@@ -232,16 +249,16 @@ def record_for(
         message = choice0["message"]
         raw_content = message.get("content")
         finish = choice0.get("finish_reason")
-        spec = variant_spec(sample.game, sample.variant)
-        legal = spec.actions
-        if sample.game == "pms":
-            legal = spec.actions
-        value, reason = parse_answer(raw_content, spec.parse_key, legal)
+        if sample.namespace == "probes":
+            value, reason = parse_probe_answer(raw_content)
+            record["recognition"] = code_recognition(raw_content)
+        else:
+            spec = variant_spec(sample.game, sample.variant)
+            value, reason = parse_answer(raw_content, spec.parse_key, spec.actions)
         usage = response.get("usage", {})
         details = usage.get("completion_tokens_details", {}) or {}
-        cache_status = "MISS"
-        if usage.get("prompt_cache_hit_tokens"):
-            cache_status = "HIT"
+        cache_status, cache_kind = classify_cache(usage)
+        record["cache_kind"] = cache_kind
         record.update(
             {
                 "choice": value,
@@ -266,6 +283,49 @@ def record_for(
     except (KeyError, IndexError, TypeError, AttributeError) as exc:
         record["error"] = str(exc)
     return record
+
+
+def parse_probe_answer(raw_content: str | None) -> tuple[str | None, str]:
+    """Extract (answer_text, reason) from a probe's free-text JSON.
+
+    Probes answer {"recognised": ..., "answer": ...}; the answer is
+    free text, so the choice field carries the answer string itself
+    (bug A2 in RESULT-2723: probes previously recorded choice=None and
+    succeeded=False even for perfectly parseable answers).
+    """
+    if not raw_content:
+        return None, ""
+    start = raw_content.find("{")
+    end = raw_content.rfind("}")
+    if start == -1 or end <= start:
+        return None, ""
+    try:
+        obj = json.loads(raw_content[start : end + 1])
+    except (json.JSONDecodeError, ValueError):
+        return None, ""
+    if not isinstance(obj, dict):
+        return None, ""
+    answer = obj.get("answer")
+    if not isinstance(answer, str) or not answer.strip():
+        return None, ""
+    return answer, ("yes" if obj.get("recognised") else "no")
+
+
+def classify_cache(usage: dict) -> tuple[str, str]:
+    """Classify one response's caching as (cache_status, cache_kind).
+
+    Rule change per ANALYSIS_PLAN: provider context/prompt-prefix
+    caching (DeepSeek automatic context caching, reported as
+    prompt_cache_hit_tokens) means the completion was still freshly
+    sampled and is NOT an exclusion.  Only a gateway response cache —
+    a reused completion body — counts as a response cache and is
+    excluded downstream in analysis.apply_exclusions.
+    """
+    if usage.get("response_cache_hit") or usage.get("cached_completion"):
+        return "HIT", "response"
+    if usage.get("prompt_cache_hit_tokens"):
+        return "HIT", "context"
+    return "MISS", "none"
 
 
 def cell_path(out_dir: Path, sample: Sample) -> Path:
@@ -362,10 +422,7 @@ def run_plan(
             sample.persona_id,
             sample.draw_id,
         )
-        persona_file = personas_dir / f"{sample.persona_id}.txt"
-        persona_text = (
-            persona_file.read_text(encoding="utf-8") if persona_file.exists() else None
-        )
+        persona_text = persona_text_for(sample, personas_dir)
         prompt = build_decision_prompt(sample, persona_text, roll, seed)
         if sample.namespace == "probes":
             prompt = probe_prompt(
