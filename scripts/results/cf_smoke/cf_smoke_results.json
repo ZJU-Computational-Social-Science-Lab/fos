@@ -1,0 +1,146 @@
+[
+  {
+    "id": "S1",
+    "route": "ai/v1/responses",
+    "model": "openai/gpt-5.6-luna",
+    "sent_settings": {
+      "temperature": 1.0,
+      "reasoning": {
+        "enabled": false
+      }
+    },
+    "expect": null,
+    "http_status": 503,
+    "cf_aig_cache_status": null,
+    "response_body": {
+      "error": {
+        "code": "server_error",
+        "message": "Unified billing is temporarily unavailable for this provider; retry, or configure your own provider API key (BYOK)."
+      }
+    },
+    "finish_reason": null,
+    "usage": {},
+    "outcome": "rejected_503",
+    "error_verbatim": "{\"error\": {\"code\": \"server_error\", \"message\": \"Unified billing is temporarily unavailable for this provider; retry, or configure your own provider API key (BYOK).\"}}"
+  },
+  {
+    "id": "S2",
+    "route": "ai/v1/responses",
+    "model": "openai/gpt-5.6-luna",
+    "sent_settings": {
+      "temperature": 1.0
+    },
+    "expect": "400 (negative control)",
+    "http_status": 503,
+    "cf_aig_cache_status": null,
+    "response_body": {
+      "error": {
+        "code": "server_error",
+        "message": "Unified billing is temporarily unavailable for this provider; retry, or configure your own provider API key (BYOK)."
+      }
+    },
+    "finish_reason": null,
+    "usage": {},
+    "outcome": "rejected_503",
+    "error_verbatim": "{\"error\": {\"code\": \"server_error\", \"message\": \"Unified billing is temporarily unavailable for this provider; retry, or configure your own provider API key (BYOK).\"}}"
+  },
+  {
+    "id": "S3",
+    "route": "ai/v1/chat/completions",
+    "model": "openai/gpt-5.6-luna",
+    "sent_settings": {
+      "temperature": 1.0
+    },
+    "expect": null,
+    "http_status": 503,
+    "cf_aig_cache_status": null,
+    "response_body": {
+      "errors": [
+        {
+          "message": "Unified billing is temporarily unavailable for this provider; retry, or configure your own provider API key (BYOK).",
+          "code": 7005
+        }
+      ],
+      "success": false,
+      "result": {},
+      "messages": []
+    },
+    "finish_reason": null,
+    "usage": {},
+    "outcome": "rejected_503",
+    "error_verbatim": "{\"errors\": [{\"message\": \"Unified billing is temporarily unavailable for this provider; retry, or configure your own provider API key (BYOK).\", \"code\": 7005}], \"success\": false, \"result\": {}, \"messages\": []}"
+  },
+  {
+    "id": "S4",
+    "route": "ai/v1/chat/completions",
+    "model": "anthropic/claude-sonnet-5",
+    "sent_settings": {
+      "temperature": 1.0
+    },
+    "expect": null,
+    "http_status": 503,
+    "cf_aig_cache_status": null,
+    "response_body": {
+      "errors": [
+        {
+          "message": "Unified billing is temporarily unavailable for this provider; retry, or configure your own provider API key (BYOK).",
+          "code": 7005
+        }
+      ],
+      "success": false,
+      "result": {},
+      "messages": []
+    },
+    "finish_reason": null,
+    "usage": {},
+    "outcome": "rejected_503",
+    "error_verbatim": "{\"errors\": [{\"message\": \"Unified billing is temporarily unavailable for this provider; retry, or configure your own provider API key (BYOK).\", \"code\": 7005}], \"success\": false, \"result\": {}, \"messages\": []}"
+  },
+  {
+    "id": "S5",
+    "route": "ai/v1/messages",
+    "model": "anthropic/claude-sonnet-5",
+    "sent_settings": {
+      "temperature": 1.0
+    },
+    "expect": "400 (negative control)",
+    "http_status": 400,
+    "cf_aig_cache_status": null,
+    "response_body": {
+      "type": "error",
+      "error": {
+        "type": "invalid_request_error",
+        "message": "Model execution failed (User Input Error): Validation error at temperature: `temperature` is not supported on this model. Remove it from your request. See https://docs.anthropic.com/en/docs/about-claude/models/migration-guide for details."
+      }
+    },
+    "finish_reason": null,
+    "usage": {},
+    "outcome": "rejected_400",
+    "error_verbatim": "{\"type\": \"error\", \"error\": {\"type\": \"invalid_request_error\", \"message\": \"Model execution failed (User Input Error): Validation error at temperature: `temperature` is not supported on this model. Remove it from your request. See https://docs.anthropic.com/en/docs/about-claude/models/migration-guide for details.\"}}"
+  },
+  {
+    "id": "S6",
+    "route": "ai/v1/responses",
+    "model": "openai/gpt-5.6-luna",
+    "sent_settings": {
+      "temperature": 1.0,
+      "seed": 42,
+      "reasoning": {
+        "enabled": false
+      }
+    },
+    "expect": null,
+    "http_status": 503,
+    "cf_aig_cache_status": null,
+    "response_body": {
+      "error": {
+        "code": "server_error",
+        "message": "Unified billing is temporarily unavailable for this provider; retry, or configure your own provider API key (BYOK)."
+      }
+    },
+    "finish_reason": null,
+    "usage": {},
+    "outcome": "rejected_503",
+    "error_verbatim": "{\"error\": {\"code\": \"server_error\", \"message\": \"Unified billing is temporarily unavailable for this provider; retry, or configure your own provider API key (BYOK).\"}}"
+  }
+]
