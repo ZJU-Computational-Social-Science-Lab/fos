@@ -196,7 +196,15 @@ def build_plan(
     return plan
 
 
-def probe_plan(config: dict, persona_names: list[str], seed: int) -> list[Sample]:
+def probe_plan(
+    config: dict,
+    persona_names: list[str],
+    seed: int,
+    game_filter: str | None = None,
+    variant_filter: str | None = None,
+    arm_filter: str | None = None,
+    model_filter: str | None = None,
+) -> list[Sample]:
     """The recognition-probe plan: one draw per (rung, arm, model, persona).
 
     Probes live in their own namespace and never mix with decisions.
@@ -205,9 +213,17 @@ def probe_plan(config: dict, persona_names: list[str], seed: int) -> list[Sample
     from games import PROBE_RUNGS
 
     for game in sorted(str(g) for g in config["games"]):
+        if game_filter and game != game_filter:
+            continue
         for variant in PROBE_RUNGS[game]:
+            if variant_filter and variant != variant_filter:
+                continue
             for arm in config["arms"]:
+                if arm_filter and arm != arm_filter:
+                    continue
                 for model in config["models"]:
+                    if model_filter and model != model_filter:
+                        continue
                     for persona_id in persona_names[: config["personas"]]:
                         plan.append(
                             Sample(
