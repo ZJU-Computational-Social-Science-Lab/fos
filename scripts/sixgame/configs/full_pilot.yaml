@@ -1,0 +1,37 @@
+# Full-pilot config: all variants and rungs per SCIENTIFIC_DESIGN,
+# ~10 draws per cell, 20 personas (secondary-contrast size; the
+# confirmatory P of 50-100 is frozen from the pilot later).
+scope: full
+models:
+  - deepseek-v4-flash
+  - anthropic/claude-sonnet-5
+  - openai/gpt-5.6-luna
+arms:
+  - persona
+  - no_persona
+draws_per_cell: 10
+personas: 20
+seed: 20261016
+games:
+  "1120":
+    variants: [basic, costless, cycle, inverted, r21-30, r31-40, r41-50, r51-60]
+  dieroll:
+    variants: [private, public, neutral, stake10]
+  pms:
+    variants: [G1, G4, relabel]
+probes:
+  enabled: true
+route_map:
+  deepseek-v4-flash: direct
+  anthropic/claude-sonnet-5: openrouter
+  openai/gpt-5.6-luna: openrouter
+prices:
+  deepseek-v4-flash:
+    prompt_per_mtok: 0.28
+    completion_per_mtok: 0.42
+  anthropic/claude-sonnet-5:
+    prompt_per_mtok: 3.00
+    completion_per_mtok: 15.00
+  openai/gpt-5.6-luna:
+    prompt_per_mtok: 1.25
+    completion_per_mtok: 10.00
