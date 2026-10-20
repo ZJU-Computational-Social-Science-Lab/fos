@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Callable
 
 try:  # works both as a package module and run from the scripts directory
+    from sixgame.data_root import DataRootError, resolve_out_dir
     from sixgame.games import variant_spec
     from sixgame.preflight import run_preflight
     from sixgame.probes import code_recognition, probe_prompt
@@ -45,6 +46,7 @@ try:  # works both as a package module and run from the scripts directory
         route_for,
     )
 except ImportError:  # pragma: no cover - direct execution layout
+    from data_root import DataRootError, resolve_out_dir
     from games import (
         variant_spec,
     )
@@ -468,7 +470,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--personas", type=int, default=5)
     parser.add_argument("--draws", type=int, default=10)
     parser.add_argument("--seed", type=int, default=20261016)
-    parser.add_argument("--out-dir", default="results/sixgame")
+    parser.add_argument(
+        "--run-id",
+        default="engineering_pilot_corrective",
+        help="run folder name under the data root (default output location)",
+    )
+    parser.add_argument(
+        "--out-dir",
+        default=None,
+        help="output folder; must live under the data root unless "
+        "--allow-any-outdir is given (default: <data-root>/<run-id>)",
+    )
+    parser.add_argument(
+        "--allow-any-outdir",
+        action="store_true",
+        help="allow --out-dir outside the data root (tests only)",
+    )
     parser.add_argument("--personas-csv", default="final_200_personas.csv")
     parser.add_argument(
         "--personas-dir",
@@ -522,6 +539,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.print_counts:
         print(print_counts(config))
         return 0
+    try:
+        out_dir = resolve_out_dir(
+            args.out_dir, args.run_id, allow_any=args.allow_any_outdir
+        )
+    except DataRootError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
 
     persona_names = load_persona_names(Path(args.personas_csv), config["personas"])
     if not persona_names:
@@ -581,13 +605,13 @@ def main(argv: list[str] | None = None) -> int:
     summary = run_plan(
         plan,
         Path(args.personas_dir),
-        Path(args.out_dir),
+        out_dir,
         prices,
         route_map,
         args.seed,
     )
     if args.dry_transport:
-        captured_path = Path(args.out_dir) / "captured_requests.jsonl"
+        captured_path = out_dir / "captured_requests.jsonl"
         captured_path.parent.mkdir(parents=True, exist_ok=True)
         with captured_path.open("w", encoding="utf-8") as fh:
             for payload in DRY_CAPTURED:
@@ -612,7 +636,7 @@ def main(argv: list[str] | None = None) -> int:
     if LIVE_CAPTURED and not args.dry_transport:
         # Live-run evidence (task 2739): save the exact serialized request
         # bodies the direct DeepSeek route sent, for post-run verification.
-        captured_path = Path(args.out_dir) / "captured_requests.jsonl"
+        captured_path = out_dir / "captured_requests.jsonl"
         captured_path.parent.mkdir(parents=True, exist_ok=True)
         with captured_path.open("w", encoding="utf-8") as fh:
             for payload in LIVE_CAPTURED:

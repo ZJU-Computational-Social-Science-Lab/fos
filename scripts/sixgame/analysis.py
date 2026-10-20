@@ -535,6 +535,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--boot", type=int, default=10_000)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out-dir", default=None)
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help="write analysis.json to <data-root>/<run-id>/ when --out-dir is absent",
+    )
     args = parser.parse_args(argv)
     output = run_analysis(
         [Path(p) for p in args.manifest],
@@ -547,6 +552,15 @@ def main(argv: list[str] | None = None) -> int:
     print(text)
     if args.out_dir:
         out = Path(args.out_dir)
+    elif args.run_id:
+        try:
+            from sixgame.data_root import default_data_root
+        except ImportError:  # pragma: no cover
+            from data_root import default_data_root
+        out = default_data_root() / args.run_id
+    else:
+        out = None
+    if out is not None:
         out.mkdir(parents=True, exist_ok=True)
         (out / "analysis.json").write_text(text + "\n", encoding="utf-8")
     return 0
