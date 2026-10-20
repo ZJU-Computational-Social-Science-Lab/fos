@@ -56,6 +56,10 @@ CLOUDFLARE_ROUTES = {
     "anthropic": "ai/v1/messages",
     "openai": "ai/v1/responses",
 }
+#: The unified chat-completions route (verified live 2026-10-20): both
+#: model families accept standard chat bodies WITH temperature 1.0 —
+#: unlike the family routes above, which omit/reject temperature.
+CLOUDFLARE_CHAT_PATH = "ai/v1/chat/completions"
 
 #: The anthropic-style wire requirement (NOT an experiment cap): an
 #: anthropic /ai/v1/messages body hard-requires max_tokens, so a no-cap
@@ -155,6 +159,48 @@ def direct_deepseek(payload: dict) -> RawResponse:
         {"Authorization": f"Bearer {key}"},
         _TIMEOUT_SECONDS,
     )
+
+
+def build_cloudflare_chat_body(payload: dict) -> dict:
+    """The unified-route wire body: chat shape, temperature honoured."""
+    body = {
+        "model": payload["model"],
+        "messages": payload["messages"],
+        "temperature": payload.get("temperature", 1.0),
+    }
+    if "max_tokens" in payload:
+        body["max_tokens"] = payload["max_tokens"]
+    return body
+
+
+def normalize_cloudflare_chat(body: dict) -> dict:
+    """Check the unified route answered in chat-completions shape."""
+    if not isinstance(body.get("choices"), list) or not body["choices"]:
+        raise TransportError(
+            f"cloudflare_chat: unexpected response shape: {json.dumps(body)[:300]}"
+        )
+    return body
+
+
+def cloudflare_chat_transport(payload: dict) -> RawResponse:
+    """Send one chat-completions payload to Cloudflare's unified route.
+
+    Goes through ``_post_json``, so it uses the MESL proxy opener for
+    api.cloudflare.com (fail-closed, never direct).  Temperature is
+    honoured; no token cap is sent unless the payload carries one.
+    """
+    token = _require_env(CLOUDFLARE_API_TOKEN)
+    account = _require_env(CLOUDFLARE_ACCOUNT_ID)
+    body = build_cloudflare_chat_body(payload)
+    LIVE_CAPTURED.append(body)
+    response = _post_json(
+        f"{CLOUDFLARE_BASE}/{account}/{CLOUDFLARE_CHAT_PATH}",
+        body,
+        {"Authorization": f"Bearer {token}"},
+        _TIMEOUT_SECONDS,
+    )
+    response.body = normalize_cloudflare_chat(response.body)
+    return response
 
 
 def openrouter_transport(payload: dict) -> RawResponse:
@@ -445,5 +491,6 @@ _ROUTES = {
     "direct": direct_deepseek,
     "openrouter": openrouter_transport,
     "cloudflare": None,  # built per model id in call_with_retry
+    "cloudflare_chat": cloudflare_chat_transport,  # unified CF route
     "dry": dry_transport,  # offline mock: captures payloads, canned 200
 }
