@@ -733,6 +733,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="also write AUDIT_LOG.md (input hashes, cache reconciliation)",
     )
+    parser.add_argument(
+        "--lineage",
+        action="store_true",
+        help="also write DATA_LINEAGE.md (TASK-2760 include/exclude table)",
+    )
     args = parser.parse_args(argv)
     output = run_analysis(
         [Path(p) for p in args.manifest],
@@ -764,6 +769,15 @@ def main(argv: list[str] | None = None) -> int:
                 build_audit_log(args.manifest, args.probes, output["exclusions"])
                 + "\n",
                 encoding="utf-8",
+            )
+        if args.lineage:
+            try:
+                from sixgame.lineage import write_lineage_report
+            except ImportError:  # pragma: no cover
+                from lineage import write_lineage_report
+            write_lineage_report(
+                out,
+                [Path(p) for p in list(args.manifest) + list(args.probes)],
             )
     return 0
 

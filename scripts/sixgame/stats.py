@@ -94,6 +94,27 @@ def tvd(pmf_a: dict | Sequence[float], pmf_b: dict | Sequence[float]) -> float:
     return 0.5 * sum(abs(x - y) for x, y in zip(pmf_a, pmf_b))
 
 
+def finite_sample_tvd_slack(
+    n_a: int, n_b: int, n_categories: int, confidence: float = 0.90
+) -> float:
+    """The small-sample slack that must be added to an empirical TVD to
+    get a statistically defensible finite-sample upper bound (TASK-2760).
+
+    Uses a Hoeffding bound per category with a union correction across
+    the K categories, on the smaller of the two sample sizes.  With tiny
+    samples (e.g. 10 draws per cell) the slack exceeds 1, so no
+    equivalence claim can be supported — exactly the safeguard the
+    frozen margin requires.
+    """
+    import math
+
+    n = min(n_a, n_b)
+    if n <= 0 or n_categories <= 0:
+        return 1.0
+    eps = math.sqrt(math.log(2.0 * n_categories / (1.0 - confidence)) / (2.0 * n))
+    return min(1.0, n_categories * eps / 2.0)
+
+
 def require_ci_label(label: str, kind: str) -> None:
     """Structural CI-label hygiene (TASK-2755 SPEC §3): refuses any
     attempt to attach a CI under a label that does not name its kind, so

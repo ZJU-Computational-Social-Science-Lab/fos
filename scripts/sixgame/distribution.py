@@ -37,6 +37,7 @@ try:  # works both as a package module and run from the scripts directory
     from sixgame.games import variant_spec
     from sixgame.stats import (
         _kish_neff,
+        finite_sample_tvd_slack,
         js_divergence_bits,
         tvd,
         tvd_of_outcomes,
@@ -46,10 +47,15 @@ except ImportError:  # pragma: no cover - direct execution layout
     from games import variant_spec
     from stats import (
         _kish_neff,
+        finite_sample_tvd_slack,
         js_divergence_bits,
         tvd,
         tvd_of_outcomes,
     )
+
+#: Verdict for "the sample shows no difference, but the sample is too
+#: small to establish equivalence at the frozen margin" (TASK-2760).
+NO_DIFFERENCE_VERDICT = "NO_DIFFERENCE_OBSERVED_EQUIVALENCE_NOT_ESTABLISHED"
 
 #: Distributional-equivalence checks: name -> (game, canonical variant,
 #: transformed variant, roles to analyse separately, frozen margin in
@@ -113,16 +119,70 @@ def _share(outcomes: list, support: Sequence) -> dict:
     return {k: counts.get(k, 0) / n for k in support}
 
 
-def equivalence_verdict(margin_pp: float | None, tvd_ci90: list) -> str:
+def finite_sample_tvd_bound(
+    point: float, n_can: int, n_tra: int, n_categories: int,
+    confidence: float = 0.90,
+) -> float:
+    """A defensible finite-sample upper bound on the true TVD: the point
+    estimate plus the small-sample slack (TASK-2760), capped at 1."""
+    slack = finite_sample_tvd_slack(n_can, n_tra, n_categories, confidence)
+    return min(1.0, point + slack)
+
+
+def equivalence_note_for(verdict: str, margin_pp: float | None) -> str:
+    """The plain-language note attached to every distributional row, so
+    a verdict is never a bare label (TASK-2760 wording, pre-agreed)."""
+    if verdict == "EQUIVALENT":
+        return (
+            "equivalence established: a defensible finite-sample interval "
+            "supports the frozen margin"
+        )
+    if verdict == NO_DIFFERENCE_VERDICT:
+        return (
+            "no difference observed in sample; equivalence NOT established "
+            "— the sample is too small for any defensible finite-sample "
+            "interval to support the frozen margin"
+        )
+    if margin_pp is None:
+        return (
+            "no margin was ever pre-agreed for this transformation — "
+            "descriptive only, no equivalence claim possible"
+        )
+    return (
+        "the observed difference exceeds the pre-agreed margin (or the "
+        "interval is too wide to tell) — equivalence NOT established"
+    )
+
+
+def equivalence_verdict(
+    margin_pp: float | None,
+    tvd_ci90: list,
+    n_can: int | None = None,
+    n_tra: int | None = None,
+    n_categories: int | None = None,
+) -> str:
     """EQUIVALENT only when a pre-agreed margin exists AND the whole TVD
-    CI sits below margin/100 (every category then differs by less than
-    the margin); otherwise UNPOWERED-DESCRIPTIVE — never a post-hoc
+    CI sits below margin/100 AND a defensible finite-sample interval
+    (point + small-sample slack) also supports the frozen margin
+    (TASK-2760).  Without sample-size information the equivalence claim
+    is refused outright — a degenerate interval from tiny cells (e.g.
+    n=10 per cell) can never establish equivalence.  Everything else is
+    UNPOWERED-DESCRIPTIVE or NO_DIFFERENCE_VERDICT — never a post-hoc
     threshold."""
     if margin_pp is None:
         return "UNPOWERED-DESCRIPTIVE"
-    if tvd_ci90[1] < margin_pp / 100.0:
+    if tvd_ci90[1] >= margin_pp / 100.0:
+        return "UNPOWERED-DESCRIPTIVE"
+    # The CI is inside the margin — but equivalence additionally needs a
+    # defensible finite-sample interval.  No sample info: refuse.
+    if n_can is None or n_tra is None or n_categories is None:
+        return NO_DIFFERENCE_VERDICT
+    bound = finite_sample_tvd_bound(
+        tvd_ci90[0], n_can, n_tra, n_categories
+    )
+    if bound < margin_pp / 100.0:
         return "EQUIVALENT"
-    return "UNPOWERED-DESCRIPTIVE"
+    return NO_DIFFERENCE_VERDICT
 
 
 def _records_for(cells: dict, game: str, variant: str, arm: str,
@@ -162,14 +222,30 @@ def distribution_equivalence_table(
                 for r in tra:
                     tra_by[r["persona_id"]].append(r["choice"])
                 stats = paired_tvd_bootstrap(can_by, tra_by, boot, seed)
+                n_categories = len(spec.actions)
+                n_can = sum(len(v) for v in can_by.values())
+                n_tra = sum(len(v) for v in tra_by.values())
+                verdict = equivalence_verdict(
+                    margin, stats["tvd_ci90"],
+                    n_can=n_can, n_tra=n_tra, n_categories=n_categories,
+                )
                 rows.append(
                     {
                         "transformation": name,
                         "arm": arm,
                         "role": role,
                         "margin_pp": margin,
+                        "n_canonical": n_can,
+                        "n_transformed": n_tra,
+                        "finite_sample_tvd_bound": round(
+                            finite_sample_tvd_bound(
+                                stats["tvd"], n_can, n_tra, n_categories,
+                            ),
+                            4,
+                        ),
                         **stats,
-                        "verdict": equivalence_verdict(margin, stats["tvd_ci90"]),
+                        "verdict": verdict,
+                        "equivalence_note": equivalence_note_for(verdict, margin),
                     }
                 )
     return rows
