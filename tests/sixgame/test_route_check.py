@@ -67,8 +67,10 @@ def test_account_scope_verify_non_active_fails(monkeypatch: pytest.MonkeyPatch) 
     _mock_cf_get(
         {
             "/ai-gateways": {"status": 404, "body": {}},
-            "/ai-gateways": {"status": 404, "body": {}},
-            "/ai/models/search": {"status": 200, "body": {"success": True, "result": []}},
+            "/ai/models/search": {
+                "status": 200,
+                "body": {"success": True, "result": []},
+            },
             "/tokens/verify": {"status": 401, "body": {"success": False}},
             "/ai-gateway/run": {"status": 404, "body": {}},
         },
@@ -87,7 +89,10 @@ def test_unified_503_still_fails_when_token_active(
     _mock_cf_get(
         {
             "/ai-gateways": {"status": 404, "body": {}},
-            "/ai/models/search": {"status": 200, "body": {"success": True, "result": []}},
+            "/ai/models/search": {
+                "status": 200,
+                "body": {"success": True, "result": []},
+            },
             "/tokens/verify": {
                 "status": 200,
                 "body": {"success": True, "result": {"status": "active"}},
