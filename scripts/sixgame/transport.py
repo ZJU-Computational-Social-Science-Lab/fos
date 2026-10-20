@@ -50,6 +50,12 @@ _BACKOFF_CAP_SECONDS = 30
 
 _TIMEOUT_SECONDS = 300
 
+#: Live-request capture (task 2739): the direct DeepSeek route records
+#: each final serialized request body here before sending, so a live run
+#: can be verified against the exact bytes that went over the wire.
+#: Flushed by the runner to captured_requests.jsonl; never contains keys.
+LIVE_CAPTURED: list[dict] = []
+
 #: Optional local proxy (e.g. "http://127.0.0.1:7688") used ONLY for
 #: Cloudflare-host requests when SIXGAME_CF_PROXY is set; every other
 #: host keeps the default direct path.
@@ -152,6 +158,7 @@ def direct_deepseek(payload: dict) -> RawResponse:
     }
     if "max_tokens" in payload:
         body["max_tokens"] = payload["max_tokens"]
+    LIVE_CAPTURED.append(body)
     return _post_json(
         "https://api.deepseek.com/chat/completions",
         body,

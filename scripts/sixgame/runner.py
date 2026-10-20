@@ -38,6 +38,7 @@ try:  # works both as a package module and run from the scripts directory
     from sixgame.probes import code_recognition, probe_prompt
     from sixgame.transport import (
         DRY_CAPTURED,
+        LIVE_CAPTURED,
         TransportError,
         TransportTimeout,
         call_with_retry,
@@ -51,6 +52,7 @@ except ImportError:  # pragma: no cover - direct execution layout
     from probes import code_recognition, probe_prompt
     from transport import (
         DRY_CAPTURED,
+        LIVE_CAPTURED,
         TransportError,
         TransportTimeout,
         call_with_retry,
@@ -564,7 +566,9 @@ def main(argv: list[str] | None = None) -> int:
         # the captured request bodies double as the preflight evidence.
         route_map = {model: "dry" for model in config["models"]}
     if not args.skip_preflight:
-        failures = run_preflight(plan, Path(args.personas_dir), config, args.seed)
+        failures = run_preflight(
+            plan, Path(args.personas_dir), config, args.seed, plan_limit=args.limit
+        )
         if failures:
             for failure in failures:
                 print(f"PREFLIGHT FAIL: {failure}", file=sys.stderr)
@@ -595,6 +599,7 @@ def main(argv: list[str] | None = None) -> int:
                 config,
                 args.seed,
                 captured=DRY_CAPTURED,
+                plan_limit=args.limit,
             )
             if post:
                 for failure in post:
@@ -604,6 +609,14 @@ def main(argv: list[str] | None = None) -> int:
                 f"dry-run: {len(DRY_CAPTURED)} captured requests match the "
                 "planned prompts"
             )
+    if LIVE_CAPTURED and not args.dry_transport:
+        # Live-run evidence (task 2739): save the exact serialized request
+        # bodies the direct DeepSeek route sent, for post-run verification.
+        captured_path = Path(args.out_dir) / "captured_requests.jsonl"
+        captured_path.parent.mkdir(parents=True, exist_ok=True)
+        with captured_path.open("w", encoding="utf-8") as fh:
+            for payload in LIVE_CAPTURED:
+                fh.write(json.dumps(payload, ensure_ascii=False) + "\n")
     print(json.dumps(summary))
     return 0
 
