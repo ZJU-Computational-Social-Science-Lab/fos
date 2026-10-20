@@ -171,6 +171,7 @@ def openrouter_transport(payload: dict) -> RawResponse:
     }
     if "max_tokens" in payload:
         body["max_tokens"] = payload["max_tokens"]
+    LIVE_CAPTURED.append(body)
     return _post_json(
         "https://openrouter.ai/api/v1/chat/completions",
         body,
