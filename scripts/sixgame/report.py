@@ -169,7 +169,10 @@ def _distribution_equivalence_section(output: dict) -> list[str]:
         "90% paired cluster-bootstrap CIs (clusters = personas, B = 10,000, "
         "fixed seed). PMS relabeling is analysed SEPARATELY per role — "
         "never pooled. Equivalence is declared ONLY at the pre-agreed "
-        "margins; where no margin was ever agreed the row is labelled "
+        "margins AND only when a defensible finite-sample interval "
+        "supports the margin (TASK-2760: n=10-per-cell degenerate "
+        "bootstrap intervals can never establish equivalence); where no "
+        "margin was ever agreed the row is labelled "
         "UNPOWERED-DESCRIPTIVE.",
         "",
         "| transformation | arm | role | TVD | TVD CI90 | JS div (bits) | n_eff | margin (pp) | verdict |",
@@ -184,6 +187,14 @@ def _distribution_equivalence_section(output: dict) -> list[str]:
             f"| {row['js_divergence_bits']} | {row['n_eff']} "
             f"| {_fmt(margin)} | {row['verdict']} |"
         )
+    lines.append("")
+    for row in rows:
+        if row.get("equivalence_note"):
+            lines.append(
+                f"**{row['transformation']} / {row['arm']}"
+                + (f" / {row['role']}" if row.get("role") else "")
+                + f"**: {row['equivalence_note']}."
+            )
     lines.append("")
     return lines
 
