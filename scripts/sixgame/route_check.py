@@ -93,36 +93,50 @@ def check_cloudflare_auth(timeout: float = 15.0) -> dict[str, Any]:
     """
     gateways = _cf_get("/accounts/{account}/ai-gateway/ai-gateways", timeout)
     unified = _cf_get("/accounts/{account}/ai-gateway/run", timeout)
-    # Standard token-verify probe: separates "token invalid" from
-    # "token valid but path/permission problem".
-    verify = _cf_get("/user/tokens/verify", timeout)
-    token_valid = (
-        verify.get("status") == 200
-        and isinstance(verify.get("body"), dict)
-        and verify["body"].get("success") is True
+    # Authoritative probe: account-scoped verify. An account-scoped
+    # (``cfat_``) token is active even though the user-scope endpoint
+    # rejects it, so only THIS probe decides the verdict.
+    account_verify = _cf_get("/accounts/{account}/tokens/verify", timeout)
+    account_body = account_verify.get("body")
+    account_verify_active = (
+        account_verify.get("status") == 200
+        and isinstance(account_body, dict)
+        and account_body.get("success") is True
+        and isinstance(account_body.get("result"), dict)
+        and account_body["result"].get("status") == "active"
     )
+    # Informational only: user-scope verify (401 is expected for
+    # account-scoped tokens and never fails the verdict).
+    user_verify = _cf_get("/user/tokens/verify", timeout)
+    # Non-billable read probe: proves the token can read Workers AI.
+    workers_ai_read = _cf_get("/accounts/{account}/ai/models/search", timeout)
     unified_status = unified["status"]
     byok = (
         "not verifiable via this API endpoint — BYOK configuration "
         "cannot be confirmed or denied here"
     )
     verdict = {
-        "token_valid": token_valid,
-        "token_verify_status": verify.get("status"),
+        "account_scoped_verify_status": account_verify.get("status"),
+        "account_verify_active": account_verify_active,
+        "user_scoped_verify_status": user_verify.get("status"),
+        "workers_ai_read_status": workers_ai_read.get("status"),
         "gateway_list_status": gateways["status"],
         "unified_billing_status": unified_status,
         "unified_billing_503": unified_status == 503,
         "byok": byok,
-        "auth_ok": token_valid and unified_status != 503,
+        "auth_ok": account_verify_active and unified_status != 503,
         "note": (
             "MESL connectivity and model authentication are separate "
-            "verdicts; this verdict covers auth only."
+            "verdicts; this verdict covers auth only. The user-scope "
+            "verify is informational: a 401 there is expected for "
+            "account-scoped tokens."
         ),
     }
-    if not token_valid:
+    if not account_verify_active:
         verdict["reason"] = (
-            f"token verify returned {verify.get('status')} — token not "
-            "valid (gateway list status "
+            f"account-scope token verify returned "
+            f"{account_verify.get('status')} — token not active at "
+            "account scope (gateway list status "
             f"{gateways['status']} may also reflect the bad token or an "
             "endpoint-path mismatch)"
         )
