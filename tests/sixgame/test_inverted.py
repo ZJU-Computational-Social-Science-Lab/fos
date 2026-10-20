@@ -67,7 +67,8 @@ def test_inverted_payoff_through_mapping_equals_basic_payoff():
 
 def test_variant_spec_exposes_correct_mappings():
     assert games.variant_spec("1120", "inverted").mapping(19) == 12
-    assert games.variant_spec("1120", "r31-40").mapping(17) == 27
+    # Audited rule: r31-40 rung maps x ↦ x+20 (11–20 → 31–40).
+    assert games.variant_spec("1120", "r31-40").mapping(17) == 37
     assert games.variant_spec("1120", "basic").mapping(17) == 17
     die = games.variant_spec("dieroll", "public")
     assert die.mapping_kind == "distributional"
