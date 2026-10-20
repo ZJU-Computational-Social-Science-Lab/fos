@@ -30,6 +30,25 @@ import urllib.request
 from dataclasses import dataclass
 from typing import Callable
 
+try:  # works both as a package module and run from the scripts directory
+    from sixgame import mesl as _mesl
+
+    MeslUnavailableError = _mesl.MeslUnavailableError  # noqa: F401 (re-export)
+    RouteCheck = _mesl.RouteCheck  # noqa: F401 (re-export)
+    _opener_for = _mesl._opener_for  # noqa: F401 (re-export)
+    check_route = _mesl.check_route  # noqa: F401 (re-export)
+    ensure_route_for_route = _mesl.ensure_route_for_route
+    proxy_url = _mesl.proxy_url  # noqa: F401 (re-export)
+except ImportError:  # pragma: no cover - direct execution layout
+    from mesl import (  # type: ignore[no-redef]
+        MeslUnavailableError as MeslUnavailableError,
+        RouteCheck as RouteCheck,
+        _opener_for as _opener_for,
+        check_route as check_route,
+        ensure_route_for_route as ensure_route_for_route,
+        proxy_url as proxy_url,
+    )
+
 CLOUDFLARE_API_TOKEN = "CLOUDFLARE_API_TOKEN"
 CLOUDFLARE_ACCOUNT_ID = "CLOUDFLARE_ACCOUNT_ID"
 CLOUDFLARE_BASE = "https://api.cloudflare.com/client/v4/accounts"
@@ -55,35 +74,6 @@ _TIMEOUT_SECONDS = 300
 #: can be verified against the exact bytes that went over the wire.
 #: Flushed by the runner to captured_requests.jsonl; never contains keys.
 LIVE_CAPTURED: list[dict] = []
-
-#: Optional local proxy (e.g. "http://127.0.0.1:7688") used ONLY for
-#: Cloudflare-host requests when SIXGAME_CF_PROXY is set; every other
-#: host keeps the default direct path.
-_CF_PROXY_ENV = "SIXGAME_CF_PROXY"
-_CLOUDFLARE_HOST = "api.cloudflare.com"
-
-
-def _is_cloudflare_host(host: str) -> bool:
-    """True only for the exact Cloudflare API host (case-insensitive)."""
-    return host.lower() == _CLOUDFLARE_HOST
-
-
-def _opener_for(host: str) -> urllib.request.OpenerDirector | None:
-    """The opener to use for one host, or None for the default path.
-
-    When SIXGAME_CF_PROXY is set and the host is exactly the Cloudflare
-    API host, return a dedicated opener that sends the request through
-    that proxy.  Normal TLS verification is untouched.  Nothing is
-    installed globally and no environment proxy variables are used.
-    """
-    import os
-
-    proxy = os.environ.get(_CF_PROXY_ENV, "")
-    if not proxy or not _is_cloudflare_host(host):
-        return None
-    return urllib.request.build_opener(
-        urllib.request.ProxyHandler({"https": proxy, "http": proxy})
-    )
 
 
 class TransportError(Exception):
@@ -424,6 +414,11 @@ def call_with_retry(
     4xx failures raise immediately (recorded by the caller, never
     retried).  After the final attempt the last error propagates.
     """
+    # Fail-closed gate (task 2767): Claude/GPT routes must go through a
+    # verified MESL proxy before the first byte is sent. DeepSeek and
+    # dry routes pass through unchanged. The gate raises (never falls
+    # back to a direct connection) and is retried no further.
+    ensure_route_for_route(route)
     last_error: BaseException | None = None
     for attempt in range(_MAX_ATTEMPTS):
         try:
