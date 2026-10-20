@@ -668,10 +668,12 @@ def main(argv: list[str] | None = None) -> int:
             )
     if LIVE_CAPTURED and not args.dry_transport:
         # Live-run evidence (task 2739): save the exact serialized request
-        # bodies the direct DeepSeek route sent, for post-run verification.
+        # bodies the routes sent, for post-run verification.  Append mode:
+        # parallel per-model processes and resume passes must not clobber
+        # each other's evidence.
         captured_path = out_dir / "captured_requests.jsonl"
         captured_path.parent.mkdir(parents=True, exist_ok=True)
-        with captured_path.open("w", encoding="utf-8") as fh:
+        with captured_path.open("a", encoding="utf-8") as fh:
             for payload in LIVE_CAPTURED:
                 fh.write(json.dumps(payload, ensure_ascii=False) + "\n")
     print(json.dumps(summary))
