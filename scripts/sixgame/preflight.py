@@ -301,9 +301,14 @@ def _normalise_roll(tail: str) -> str:
     return re.sub(f"{_ROLL_MARKER}[1-6]\\.", f"{_ROLL_MARKER}R.", tail)
 
 
-def check_plan_shape(plan: list, config: dict) -> list[str]:
+def check_plan_shape(plan: list, config: dict, limit: int | None = None) -> list[str]:
     """Planned samples must match the frozen config exactly: counts per
-    cell, models, variants, persona ids, draw numbering, namespaces."""
+    cell, models, variants, persona ids, draw numbering, namespaces.
+
+    With a limit (validation slice) the expected counts are capped: at
+    most `limit` decisions, and probes only if the slice reaches past
+    the decision block.
+    """
     failures = []
     decisions = [s for s in plan if s.namespace == "decisions"]
     probes = [s for s in plan if s.namespace == "probes"]
@@ -312,10 +317,11 @@ def check_plan_shape(plan: list, config: dict) -> list[str]:
         * len(config["arms"])
         * len(config["models"])
     )
-    if len(decisions) != n_cells * config["draws_per_cell"]:
+    full_decisions = n_cells * config["draws_per_cell"]
+    expected_decisions = full_decisions if limit is None else min(full_decisions, limit)
+    if len(decisions) != expected_decisions:
         failures.append(
-            f"plan has {len(decisions)} decisions, expected "
-            f"{n_cells * config['draws_per_cell']}"
+            f"plan has {len(decisions)} decisions, expected {expected_decisions}"
         )
     n_probe_cells = (
         sum(len(PROBE_RUNGS[g]) for g in config["games"])
@@ -323,6 +329,10 @@ def check_plan_shape(plan: list, config: dict) -> list[str]:
         * len(config["models"])
     )
     expected_probes = n_probe_cells * config["personas"]
+    if limit is not None and limit < full_decisions:
+        expected_probes = 0
+    elif limit is not None:
+        expected_probes = min(expected_probes, limit - full_decisions)
     if len(probes) != expected_probes:
         failures.append(f"plan has {len(probes)} probes, expected {expected_probes}")
     for s in plan:
@@ -415,8 +425,16 @@ def run_preflight(
     config: dict,
     seed: int,
     captured: list[dict] | None = None,
+    plan_limit: int | None = None,
 ) -> list[str]:
-    """Run every preflight check; return the list of failures (empty=green)."""
+    """Run every preflight check; return the list of failures (empty=green).
+
+    plan_limit: for validation slices (--limit N) the frozen full-plan
+    counts are capped at N planned samples and probes past the slice are
+    not expected.  A single-arm slice (e.g. persona-only) skips the
+    arm-pair requirement — pairs only exist in the full two-arm plan.
+    Full runs (no limit, both arms) keep the unchanged frozen gate.
+    """
     texts = persona_texts_for_plan(plan, personas_dir)
     rolls = {
         i: draw_true_roll(
@@ -425,10 +443,12 @@ def run_preflight(
         for i, s in enumerate(plan)
     }
     failures = []
-    failures += check_plan_shape(plan, config)
+    failures += check_plan_shape(plan, config, plan_limit)
     failures += check_persona_arms(plan, texts)
     failures += check_prompt_bodies(plan, texts, rolls, personas_dir)
-    failures += check_arm_pairs(plan, rolls)
+    has_both_arms = {"persona", "no_persona"} <= {s.arm for s in plan}
+    if has_both_arms:
+        failures += check_arm_pairs(plan, rolls)
     failures += check_rolls_seeded(plan, seed)
     if captured is not None:
         failures += check_captured(plan, texts, rolls, captured)
@@ -450,6 +470,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--personas-dir", default=".")
     parser.add_argument("--personas-csv", default="final_200_personas.csv")
     parser.add_argument("--run-dir", help="dir holding captured_requests.jsonl")
+    parser.add_argument(
+        "--limit", type=int, help="validation slice size (caps expected counts)"
+    )
     args = parser.parse_args(argv)
 
     config = load_config(Path(args.config))
@@ -473,7 +496,9 @@ def main(argv: list[str] | None = None) -> int:
             for line in captured_file.read_text(encoding="utf-8").splitlines()
             if line.strip()
         ]
-    failures = run_preflight(plan, Path(args.personas_dir), config, args.seed, captured)
+    failures = run_preflight(
+        plan, Path(args.personas_dir), config, args.seed, captured, args.limit
+    )
     if failures:
         for f in failures:
             print(f"PREFLIGHT FAIL: {f}", file=sys.stderr)
