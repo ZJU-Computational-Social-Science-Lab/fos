@@ -1,0 +1,29 @@
+# Corrective no-persona re-run config (TASK-2727, USER-APPROVED billable:
+# exactly 90 decision + 30 probe DeepSeek calls).  Only the no_persona arm
+# is re-run under run ID engineering_pilot_corrective; the persona arm of
+# the original run is retained.  Frozen allocations, sample-controlled:
+# no spending caps, no dollar-based or adaptive stopping.
+scope: engineering
+models:
+  - deepseek-v4-flash
+arms:
+  - no_persona
+draws_per_cell: 10
+personas: 5
+seed: 20261016
+games:
+  "1120":
+    variants: [basic, cycle, r31-40]
+  dieroll:
+    variants: [private, public, stake10]
+  pms:
+    variants: [G1, G4, relabel]
+probes:
+  enabled: true
+route_map:
+  deepseek-v4-flash: direct
+# Prices are REPORTING ONLY (cost fields on records) — never a stopping rule.
+prices:
+  deepseek-v4-flash:
+    prompt_per_mtok: 0.28
+    completion_per_mtok: 0.42
