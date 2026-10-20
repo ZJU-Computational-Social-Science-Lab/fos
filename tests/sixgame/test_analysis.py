@@ -118,8 +118,12 @@ def test_consistency_r_t_is_one_when_choices_follow_mapping():
         seed=1,
     )
     row = rows[0]
+    # TASK-2755: r(T) is a support diagnostic only — no verdict is derived
+    # from it alone; the row must carry the diagnostic text instead.
     assert row["r_T"] == 1.0
-    assert row["verdict"] == "CONSISTENCY-SUCCESS"
+    assert "verdict" not in row
+    assert "support_diagnostic" in row
+    assert "support diagnostic" in row["support_diagnostic"].lower()
 
 
 def test_consistency_inverted_counts_mapped_level_k_answers():
