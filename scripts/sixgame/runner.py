@@ -36,10 +36,12 @@ try:  # works both as a package module and run from the scripts directory
     from sixgame.data_root import DataRootError, resolve_out_dir
     from sixgame.games import variant_spec
     from sixgame.preflight import run_preflight
+    from sixgame.route_check import write_route_report
     from sixgame.probes import code_recognition, probe_prompt
     from sixgame.transport import (
         DRY_CAPTURED,
         LIVE_CAPTURED,
+        MeslUnavailableError,
         TransportError,
         TransportTimeout,
         call_with_retry,
@@ -51,10 +53,12 @@ except ImportError:  # pragma: no cover - direct execution layout
         variant_spec,
     )
     from preflight import run_preflight
+    from route_check import write_route_report
     from probes import code_recognition, probe_prompt
     from transport import (
         DRY_CAPTURED,
         LIVE_CAPTURED,
+        MeslUnavailableError,
         TransportError,
         TransportTimeout,
         call_with_retry,
@@ -514,7 +518,30 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="print the first prompt per cell, no calls",
     )
+    parser.add_argument(
+        "--check-route",
+        action="store_true",
+        help="run the non-billable MESL route and Cloudflare auth "
+        "checks, save evidence under the data root, and exit (no "
+        "model calls). Re-runnable before a batch launch.",
+    )
     args = parser.parse_args(argv)
+
+    if args.check_route:
+        try:
+            from sixgame.data_root import default_data_root
+        except ImportError:
+            from data_root import default_data_root
+        report = write_route_report(default_data_root())
+        print(json.dumps(report, default=str))
+        if not report["mesl_ok"]:
+            print(
+                "ROUTE CHECK FAIL: MESL proxy unusable — Claude/GPT "
+                "calls are refused until this is fixed",
+                file=sys.stderr,
+            )
+            return 2
+        return 0
 
     config = (
         load_config(Path(args.config)) if args.config else default_config(args.scope)
@@ -602,14 +629,20 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 2
     prices = config.get("prices", {})
-    summary = run_plan(
-        plan,
-        Path(args.personas_dir),
-        out_dir,
-        prices,
-        route_map,
-        args.seed,
-    )
+    try:
+        summary = run_plan(
+            plan,
+            Path(args.personas_dir),
+            out_dir,
+            prices,
+            route_map,
+            args.seed,
+        )
+    except MeslUnavailableError as exc:
+        # Fail-closed refusal (task 2767): no Claude/GPT call was made,
+        # no direct fallback exists. Stop the whole run with a reason.
+        print(f"ROUTE REFUSED: {exc}", file=sys.stderr)
+        return 4
     if args.dry_transport:
         captured_path = out_dir / "captured_requests.jsonl"
         captured_path.parent.mkdir(parents=True, exist_ok=True)
