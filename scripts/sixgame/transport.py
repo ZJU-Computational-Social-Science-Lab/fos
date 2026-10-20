@@ -123,11 +123,7 @@ def _post_json(
     host = urllib.parse.urlsplit(url).hostname or ""
     opener = _opener_for(host)
     try:
-        open_fn = (
-            opener.open
-            if opener is not None
-            else urllib.request.urlopen
-        )
+        open_fn = opener.open if opener is not None else urllib.request.urlopen
         with open_fn(request, timeout=timeout) as response:
             return RawResponse(response.status, json.loads(response.read()))
     except urllib.error.HTTPError as exc:
@@ -355,11 +351,52 @@ DEFAULT_ROUTE_MAP: dict[str, str] = {
     "openai/gpt-5.6-luna": "openrouter",
 }
 
-_ROUTES = {
-    "direct": direct_deepseek,
-    "openrouter": openrouter_transport,
-    "cloudflare": None,  # built per model id in call_with_retry
-}
+#: Requests captured by the dry transport (module-level so the runner can
+#: flush them to captured_requests.jsonl after a dry run). No network.
+DRY_CAPTURED: list[dict] = []
+
+
+def _dry_content_for(payload: dict) -> str:
+    """A canned answer valid for the request's game: the amount is picked
+    inside the range the prompt itself states (11-20, 31-40, ...)."""
+    import re
+
+    prompt = payload["messages"][0]["content"]
+    match = re.search(r"Choose a value from (\d+) to (\d+)\.", prompt)
+    amount = int(match.group(1)) if match else 15
+    return json.dumps(
+        {
+            "reason": "dry-run canned answer",
+            "amount": amount,
+            "report": 4,
+            "action": "A1",
+            "recognised": True,
+            "answer": "I recognise the 11-20 game; people typically request 15.",
+        }
+    )
+
+
+def dry_transport(payload: dict) -> RawResponse:
+    """An offline stand-in for a real transport: captures the exact
+    serialized payload and returns a canned 200 chat-completions body.
+    Never touches the network and needs no credentials."""
+    DRY_CAPTURED.append(json.loads(json.dumps(payload)))
+    content = _dry_content_for(payload)
+    body = {
+        "model": payload["model"],
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": content},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": len(payload["messages"][0]["content"]) // 4,
+            "completion_tokens": 40,
+        },
+    }
+    return RawResponse(200, body)
 
 
 def route_for(model: str, route_map: dict[str, str] | None = None) -> str:
@@ -397,3 +434,13 @@ def call_with_retry(
                 raise
             sleep(min(2.0**attempt, _BACKOFF_CAP_SECONDS))
     raise last_error  # pragma: no cover - loop always returns or raises
+
+
+#: Final route table. Defined after dry_transport so the offline mock can
+#: be referenced by name (the dry route never touches the network).
+_ROUTES = {
+    "direct": direct_deepseek,
+    "openrouter": openrouter_transport,
+    "cloudflare": None,  # built per model id in call_with_retry
+    "dry": dry_transport,  # offline mock: captures payloads, canned 200
+}

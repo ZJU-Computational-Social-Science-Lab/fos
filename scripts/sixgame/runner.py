@@ -34,8 +34,10 @@ from typing import Callable
 
 try:  # works both as a package module and run from the scripts directory
     from sixgame.games import variant_spec
+    from sixgame.preflight import run_preflight
     from sixgame.probes import code_recognition, probe_prompt
     from sixgame.transport import (
+        DRY_CAPTURED,
         TransportError,
         TransportTimeout,
         call_with_retry,
@@ -45,8 +47,10 @@ except ImportError:  # pragma: no cover - direct execution layout
     from games import (
         variant_spec,
     )
+    from preflight import run_preflight
     from probes import code_recognition, probe_prompt
     from transport import (
+        DRY_CAPTURED,
         TransportError,
         TransportTimeout,
         call_with_retry,
@@ -464,6 +468,27 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=20261016)
     parser.add_argument("--out-dir", default="results/sixgame")
     parser.add_argument("--personas-csv", default="final_200_personas.csv")
+    parser.add_argument(
+        "--personas-dir",
+        default=".",
+        help="directory holding <persona_id>.txt files (default: cwd)",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        help="run only the first N planned samples (validation slices)",
+    )
+    parser.add_argument(
+        "--skip-preflight",
+        action="store_true",
+        help="skip the mandatory pre-execution validation gate (tests only)",
+    )
+    parser.add_argument(
+        "--dry-transport",
+        action="store_true",
+        help="run the full plan against an offline mock transport and "
+        "capture every serialized request body (no network, no cost)",
+    )
     parser.add_argument("--print-counts", action="store_true")
     parser.add_argument(
         "--dry-run",
@@ -480,6 +505,17 @@ def main(argv: list[str] | None = None) -> int:
         config["draws_per_cell"] = args.draws
     if args.game and args.variant:
         config["games"] = {args.game: {"variants": [args.variant]}}
+    # Narrow the config to the CLI filters so the preflight gate's
+    # expected counts match the filtered plan actually being run.
+    if args.model:
+        config["models"] = [m for m in config["models"] if m == args.model]
+    if args.game:
+        config["games"] = {g: v for g, v in config["games"].items() if g == args.game}
+    if args.variant:
+        for g, v in config["games"].items():
+            v["variants"] = [x for x in v["variants"] if x == args.variant]
+    if args.arm:
+        config["arms"] = [a for a in config["arms"] if a == args.arm]
 
     if args.print_counts:
         print(print_counts(config))
@@ -520,10 +556,54 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(build_decision_prompt(sample, None, roll, args.seed))
         return 0
+    if args.limit is not None:
+        plan = plan[: args.limit]
+    route_map = config.get("route_map")
+    if args.dry_transport:
+        # Offline validation run: every model goes through the mock, and
+        # the captured request bodies double as the preflight evidence.
+        route_map = {model: "dry" for model in config["models"]}
+    if not args.skip_preflight:
+        failures = run_preflight(plan, Path(args.personas_dir), config, args.seed)
+        if failures:
+            for failure in failures:
+                print(f"PREFLIGHT FAIL: {failure}", file=sys.stderr)
+            print(
+                f"preflight gate: {len(failures)} failure(s) — run refused",
+                file=sys.stderr,
+            )
+            return 2
     prices = config.get("prices", {})
     summary = run_plan(
-        plan, Path("."), Path(args.out_dir), prices, config.get("route_map"), args.seed
+        plan,
+        Path(args.personas_dir),
+        Path(args.out_dir),
+        prices,
+        route_map,
+        args.seed,
     )
+    if args.dry_transport:
+        captured_path = Path(args.out_dir) / "captured_requests.jsonl"
+        captured_path.parent.mkdir(parents=True, exist_ok=True)
+        with captured_path.open("w", encoding="utf-8") as fh:
+            for payload in DRY_CAPTURED:
+                fh.write(json.dumps(payload, ensure_ascii=False) + "\n")
+        if not args.skip_preflight:
+            post = run_preflight(
+                plan,
+                Path(args.personas_dir),
+                config,
+                args.seed,
+                captured=DRY_CAPTURED,
+            )
+            if post:
+                for failure in post:
+                    print(f"DRY-RUN MISMATCH: {failure}", file=sys.stderr)
+                return 3
+            print(
+                f"dry-run: {len(DRY_CAPTURED)} captured requests match the "
+                "planned prompts"
+            )
     print(json.dumps(summary))
     return 0
 
