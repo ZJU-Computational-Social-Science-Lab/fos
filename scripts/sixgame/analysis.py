@@ -41,6 +41,10 @@ from typing import Sequence
 
 try:  # works both as a package module and run from the scripts directory
     from sixgame import benchmarks
+    from sixgame.distribution import (
+        distribution_equivalence_table,
+        independent_tvd_confirmation,
+    )
     from sixgame.games import (
         level_k_inverted_table,
         variant_spec,
@@ -48,12 +52,18 @@ try:  # works both as a package module and run from the scripts directory
     from sixgame.probes import code_recognition
     from sixgame.stats import (
         bootstrap_ci,
+        js_divergence_bits,
+        require_ci_label,
         tost_equivalent,
         tvd,
     )
     from sixgame.report import build_audit_log, render_markdown
 except ImportError:  # pragma: no cover - direct execution layout
     import benchmarks
+    from distribution import (
+        distribution_equivalence_table,
+        independent_tvd_confirmation,
+    )
     from games import (
         level_k_inverted_table,
         variant_spec,
@@ -62,6 +72,8 @@ except ImportError:  # pragma: no cover - direct execution layout
     from report import build_audit_log, render_markdown
     from stats import (
         bootstrap_ci,
+        js_divergence_bits,
+        require_ci_label,
         tost_equivalent,
         tvd,
     )
@@ -325,13 +337,37 @@ def contrast_table(cell_records: dict, boot: int, seed: int) -> list[dict]:
                     seed,
                 )
                 delta_hat = (effect * 100.0) - human[action]
-                # propagate: widen the CI half-width by the human SE (pp)
+                # Each quantity carries ONLY its own CI, under a label
+                # that names it (TASK-2755 CI hygiene).  require_ci_label
+                # structurally refuses a mismatched kind/label pair, so a
+                # discrepancy CI can never be attached to a model effect
+                # or vice versa.
+                model_lo, model_hi = lo * 100.0, hi * 100.0
+                human_point = human[action]
+                human_lo = human_point - 1.645 * se_h
+                human_hi = human_point + 1.645 * se_h
+                # propagate: widen the discrepancy CI half-width by the
+                # human SE (pp)
                 half = (hi - lo) / 2 * 100.0
                 total_half = (half**2 + (1.645 * se_h) ** 2) ** 0.5
                 row[arm] = {
                     "effect_llm_pp": round(effect * 100.0, 2),
-                    "effect_human_pp": human[action],
+                    "model_effect_ci90": [
+                        round(model_lo, 2),
+                        round(model_hi, 2),
+                    ],
+                    "effect_human_pp": human_point,
+                    "human_effect_ci90": [
+                        round(human_lo, 2),
+                        round(human_hi, 2),
+                    ],
                     "delta_pp": round(delta_hat, 2),
+                    "discrepancy_ci90": [
+                        round(delta_hat - total_half, 2),
+                        round(delta_hat + total_half, 2),
+                    ],
+                    # Backwards-compatible alias: ci90 has always been the
+                    # discrepancy CI; the labelled keys are authoritative.
                     "ci90": [
                         round(delta_hat - total_half, 2),
                         round(delta_hat + total_half, 2),
@@ -340,6 +376,9 @@ def contrast_table(cell_records: dict, boot: int, seed: int) -> list[dict]:
                         delta_hat - total_half, delta_hat + total_half, delta
                     ),
                 }
+                require_ci_label("model_effect_ci90", "model_effect")
+                require_ci_label("human_effect_ci90", "human_effect")
+                require_ci_label("discrepancy_ci90", "discrepancy")
             rows.append(row)
     return rows
 
@@ -400,8 +439,18 @@ def consistency_table(cell_records: dict, boot: int, seed: int) -> list[dict]:
             stability = _stability(can, boot, seed)
             one_minus_r = 1.0 - point
             excess = one_minus_r - (1.0 - stability)
+            # TASK-2755 SPEC §1: r(T) is a SUPPORT DIAGNOSTIC only.  The
+            # old CONSISTENCY-SUCCESS/FAIL verdict derived from r(T)
+            # alone is removed; consistency verdicts come solely from the
+            # distributional-equivalence table (distribution.py).
             row.update(
                 {
+                    "support_diagnostic": (
+                        "r(T) is a support diagnostic only — it measures "
+                        "how much transformed mass lands on the mapped "
+                        "image of the canonical support. It is NOT a "
+                        "consistency verdict; see distribution_equivalence."
+                    ),
                     "image_set": sorted(image),
                     "js_divergence": round(
                         _js_divergence(game, can, tra, transformed), 4
@@ -410,13 +459,6 @@ def consistency_table(cell_records: dict, boot: int, seed: int) -> list[dict]:
                     "r_T_ci90": [round(lo, 4), round(hi, 4)],
                     "stability": round(stability, 4),
                     "excess_inconsistency": round(excess, 4),
-                    "verdict": (
-                        "CONSISTENCY-SUCCESS"
-                        if lo > 0.5 and excess <= 0
-                        else "CONSISTENCY-FAIL"
-                        if hi < 0.5 or excess > 0
-                        else "INCONCLUSIVE"
-                    ),
                 }
             )
             rows.append(row)
@@ -483,10 +525,9 @@ def recognition_stratification(probe_records: list[dict]) -> dict:
 def _js_divergence(
     game: str, can: list[dict], tra: list[dict], transformed: str
 ) -> float:
-    """JS divergence (base e) between the mapped canonical distribution and
-    the transformed distribution over the transformed action set."""
-    import math
-
+    """JS divergence (base 2, bounded by 1) between the mapped canonical
+    distribution and the transformed distribution over the transformed
+    action set."""
     spec_t = variant_spec(game, transformed)
     actions = list(spec_t.actions)
     mapping = spec_t.mapping
@@ -506,13 +547,55 @@ def _js_divergence(
         return {k: v / t for k, v in d.items()}
 
     p, q = normalise(p), normalise(q)
-    js = 0.0
-    for a in set(p) | set(q):
-        m = (p[a] + q[a]) / 2.0
-        for px in (p[a], q[a]):
-            if px > 0 and m > 0:
-                js += 0.5 * px * math.log(px / m)
-    return js
+    return js_divergence_bits(p, q)
+
+
+def _cost_totals(records: list[dict]) -> dict:
+    """Aggregate token/cost totals over a list of records."""
+    totals = {
+        "calls": len(records),
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cost_usd": 0.0,
+    }
+    for r in records:
+        totals["prompt_tokens"] += r.get("prompt_tokens") or 0
+        totals["completion_tokens"] += r.get("completion_tokens") or 0
+        totals["cost_usd"] += r.get("cost_usd") or 0.0
+    totals["cost_usd"] = round(totals["cost_usd"], 6)
+    return totals
+
+
+def cost_breakdown(
+    decision_records: list[dict], probe_records: list[dict]
+) -> dict:
+    """Full-run cost accounting (TASK-2755 SPEC §5).
+
+    Reports decision calls, probe calls, and the FULL run total
+    separately — each with tokens and cost — so an omission of one
+    record class (the 60 recognition probes missing from earlier 180-vs-
+    240 summaries) can never shrink the reported total again.  Each
+    block also carries a per-model split.
+    """
+    decision = _cost_totals(decision_records)
+    probe = _cost_totals(probe_records)
+    full = {
+        "calls": decision["calls"] + probe["calls"],
+        "prompt_tokens": decision["prompt_tokens"] + probe["prompt_tokens"],
+        "completion_tokens": decision["completion_tokens"]
+        + probe["completion_tokens"],
+        "cost_usd": round(decision["cost_usd"] + probe["cost_usd"], 6),
+    }
+    return {
+        "decision_calls": {
+            **decision,
+            "by_model": cost_report(decision_records),
+        },
+        "probe_calls": {**probe, "by_model": cost_report(probe_records)},
+        "full_run": {**full, "by_model": cost_report(
+            decision_records + probe_records
+        )},
+    }
 
 
 def cost_report(records: list[dict]) -> dict:
@@ -605,9 +688,13 @@ def run_analysis(
         },
         "contrasts": contrast_table(cell_records, boot, seed),
         "consistency": consistency_table(cell_records, boot, seed),
-        "cost_and_tokens": cost_report(records),
+        "distribution_equivalence": distribution_equivalence_table(
+            cell_records, boot, seed
+        ),
+        "tvd_confirmation": independent_tvd_confirmation(cell_records),
     }
     probe_records = load_records(probe_paths)
+    output["cost_and_tokens"] = cost_breakdown(records, probe_records)
     if probe_records:
         output["recognition"] = recognition_stratification(probe_records)
     if exploratory_paths:

@@ -83,15 +83,19 @@ def _pmfs_section(output: dict) -> list[str]:
 
 
 def _arm_cell(arm_row) -> str:
-    """One contrast arm rendered with the three explicit quantities."""
+    """One contrast arm rendered with the three explicitly labelled CIs."""
     if arm_row is None:
         return "—"
-    ci = arm_row.get("ci90", [None, None])
+    model_ci = arm_row.get("model_effect_ci90", [None, None])
+    human_ci = arm_row.get("human_effect_ci90", [None, None])
+    disc_ci = arm_row.get("discrepancy_ci90", arm_row.get("ci90", [None, None]))
     return (
         f"model {_fmt(arm_row['effect_llm_pp'])} pp "
-        f"[{ci[0]}, {ci[1]}]; human (frozen) "
-        f"{_fmt(arm_row['effect_human_pp'])} pp; discrepancy Δ "
-        f"{_fmt(arm_row['delta_pp'])} pp"
+        f"model_effect_CI [{model_ci[0]}, {model_ci[1]}]; "
+        f"human (frozen) {_fmt(arm_row['effect_human_pp'])} pp "
+        f"human_effect_CI [{human_ci[0]}, {human_ci[1]}]; "
+        f"discrepancy Δ {_fmt(arm_row['delta_pp'])} pp "
+        f"discrepancy_CI [{disc_ci[0]}, {disc_ci[1]}]"
     )
 
 
@@ -120,23 +124,25 @@ def _contrasts_section(output: dict) -> list[str]:
 
 
 def _consistency_section(output: dict) -> list[str]:
-    """Rule-preservation r(T) at the distribution level."""
+    """Rule-preservation r(T) as a SUPPORT DIAGNOSTIC (no verdict)."""
     lines = [
-        "## Consistency (distribution level)",
+        "## Support diagnostic (r(T), distribution level)",
         "",
         "r(T) = share of transformed **mass** on the mapped image of the "
-        "canonical support; no pointwise pairing of independent draws. "
-        "JS divergence compares the mapped canonical and transformed "
-        "distributions.",
+        "canonical support. **r(T) is a SUPPORT DIAGNOSTIC only — it is "
+        "not a consistency verdict** (the old CONSISTENCY-SUCCESS/FAIL "
+        "labels derived from r(T) alone were removed per SPEC §1). "
+        "Consistency verdicts come solely from the distributional "
+        "equivalence section below.",
         "",
-        "| transformation | arm | r(T) | CI90 | JS div | stability | excess | verdict |",
-        "|---|---|---|---|---|---|---|---|",
+        "| transformation | arm | r(T) | CI90 | JS div (base 2) | stability | excess |",
+        "|---|---|---|---|---|---|---|",
     ]
     for row in output.get("consistency", []):
         if "tvd" in row:
             lines.append(
                 f"| {row['transformation']} | {row['arm']} | (distributional: "
-                f"TVD {row['tvd']}) | — | — | — | — | — |"
+                f"TVD {row['tvd']}) | — | — | — | — |"
             )
             continue
         ci = row.get("r_T_ci90", [None, None])
@@ -144,8 +150,64 @@ def _consistency_section(output: dict) -> list[str]:
             f"| {row['transformation']} | {row['arm']} | {row['r_T']} "
             f"| [{ci[0]}, {ci[1]}] | {row.get('js_divergence', '—')} "
             f"| {row.get('stability', '—')} "
-            f"| {row.get('excess_inconsistency', '—')} "
-            f"| {row.get('verdict', '—')} |"
+            f"| {row.get('excess_inconsistency', '—')} |"
+        )
+    lines.append("")
+    return lines
+
+
+def _distribution_equivalence_section(output: dict) -> list[str]:
+    """Distributional equivalence per transformation x arm (x role)."""
+    rows = output.get("distribution_equivalence", [])
+    if not rows:
+        return []
+    lines = [
+        "## Distributional equivalence (TVD / JS per transformation)",
+        "",
+        "TVD and Jensen–Shannon divergence (base 2) between the mapped "
+        "canonical distribution and the transformed distribution, with "
+        "90% paired cluster-bootstrap CIs (clusters = personas, B = 10,000, "
+        "fixed seed). PMS relabeling is analysed SEPARATELY per role — "
+        "never pooled. Equivalence is declared ONLY at the pre-agreed "
+        "margins; where no margin was ever agreed the row is labelled "
+        "UNPOWERED-DESCRIPTIVE.",
+        "",
+        "| transformation | arm | role | TVD | TVD CI90 | JS div (bits) | n_eff | margin (pp) | verdict |",
+        "|---|---|---|---|---|---|---|---|---|",
+    ]
+    for row in rows:
+        ci = row["tvd_ci90"]
+        margin = row.get("margin_pp")
+        lines.append(
+            f"| {row['transformation']} | {row['arm']} | {_fmt(row.get('role'))} "
+            f"| {row['tvd']} | [{ci[0]}, {ci[1]}] "
+            f"| {row['js_divergence_bits']} | {row['n_eff']} "
+            f"| {_fmt(margin)} | {row['verdict']} |"
+        )
+    lines.append("")
+    return lines
+
+
+def _tvd_confirmation_section(output: dict) -> list[str]:
+    """The independent TVD confirmation (separate code path)."""
+    conf = output.get("tvd_confirmation", {})
+    if not conf:
+        return []
+    lines = [
+        "## Independent TVD confirmation (11-20 → 31-40)",
+        "",
+        "Recomputed by a separate code path (plain counters on the raw "
+        "records, mapping +20 applied by hand) against the pipeline value; "
+        "frozen expectations: persona 0.30, no-persona 0.20.",
+        "",
+        "| arm | independent | pipeline | agree | frozen expectation | matches frozen |",
+        "|---|---|---|---|---|---|",
+    ]
+    for arm, entry in conf.items():
+        lines.append(
+            f"| {arm} | {entry['independent']} | {entry['pipeline']} "
+            f"| {entry['agree']} | {entry['expected_frozen']} "
+            f"| {entry['matches_frozen']} |"
         )
     lines.append("")
     return lines
@@ -176,22 +238,41 @@ def _recognition_section(output: dict) -> list[str]:
 
 
 def _cost_section(output: dict) -> list[str]:
-    """Token/cost totals (reporting only)."""
+    """Decision / probe / full-run token and cost totals, separately."""
     cost = output.get("cost_and_tokens")
     if not cost:
         return []
     lines = [
         "## Tokens and cost (reporting only)",
         "",
-        "| model | calls | prompt tok | completion tok | cost USD |",
-        "|---|---|---|---|---|",
+        "Decision calls, probe calls, and the FULL-run total are reported "
+        "separately (SPEC §5): the earlier '180 calls' figure covered "
+        "decision records only and omitted the 60 recognition probes.",
+        "",
     ]
-    for model, entry in sorted(cost.items()):
-        lines.append(
-            f"| {model} | {entry['calls']} | {entry['prompt_tokens']} "
-            f"| {entry['completion_tokens']} | {entry['cost_usd']:.4f} |"
-        )
-    lines.append("")
+    for block, title in (
+        ("decision_calls", "Decision calls"),
+        ("probe_calls", "Recognition probe calls"),
+        ("full_run", "FULL run (decisions + probes)"),
+    ):
+        entry = cost.get(block, {})
+        lines += [
+            f"### {title}",
+            "",
+            f"calls: **{entry.get('calls', 0)}** · prompt tokens: "
+            f"{entry.get('prompt_tokens', 0)} · completion tokens: "
+            f"{entry.get('completion_tokens', 0)} · cost USD: "
+            f"{entry.get('cost_usd', 0.0):.4f}",
+            "",
+            "| model | calls | prompt tok | completion tok | cost USD |",
+            "|---|---|---|---|---|",
+        ]
+        for model, m in sorted((entry.get("by_model") or {}).items()):
+            lines.append(
+                f"| {model} | {m['calls']} | {m['prompt_tokens']} "
+                f"| {m['completion_tokens']} | {m['cost_usd']:.4f} |"
+            )
+        lines.append("")
     return lines
 
 
@@ -257,6 +338,15 @@ def build_audit_log(decision_paths, probe_paths, exclusions: dict) -> str:
         "carries a modern `cache_kind`. The legacy '24 exclusions' figure "
         "was an artifact of that legacy rule and is dropped.",
         "",
+        "## Cost reconciliation (SPEC §5, TASK-2755)",
+        "",
+        "The earlier '180 calls' figure counted DECISION records only "
+        "(18 files x 10). The 60 recognition-probe records (12 files x 5) "
+        "were omitted from that summary. Decision calls, probe calls and "
+        "the FULL-run total (decisions + probes) are now reported "
+        "separately, each with tokens and cost — see the cost section of "
+        "the report.",
+        "",
         "Run IDs are the input filenames; regeneration command:",
         "",
         "```",
@@ -286,6 +376,8 @@ def render_markdown(output: dict) -> str:
     parts += _pmfs_section(output)
     parts += _contrasts_section(output)
     parts += _consistency_section(output)
+    parts += _distribution_equivalence_section(output)
+    parts += _tvd_confirmation_section(output)
     parts += _recognition_section(output)
     parts += _cost_section(output)
     return "\n".join(parts)
