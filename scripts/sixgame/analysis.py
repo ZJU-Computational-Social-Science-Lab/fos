@@ -51,6 +51,7 @@ try:  # works both as a package module and run from the scripts directory
         tost_equivalent,
         tvd,
     )
+    from sixgame.report import build_audit_log, render_markdown
 except ImportError:  # pragma: no cover - direct execution layout
     import benchmarks
     from games import (
@@ -58,6 +59,7 @@ except ImportError:  # pragma: no cover - direct execution layout
         variant_spec,
     )
     from probes import code_recognition
+    from report import build_audit_log, render_markdown
     from stats import (
         bootstrap_ci,
         tost_equivalent,
@@ -67,7 +69,10 @@ except ImportError:  # pragma: no cover - direct execution layout
 ACTIONS_1120 = tuple(range(11, 21))
 
 #: Prespecified replication contrasts: name -> (game, control, treatment,
-#: actions, benchmark effect dict, delta margin pp, human SE pp).
+#: actions, benchmark effect dict, delta margin pp, human SE pp, role).
+#: role is the record-key role the contrast is computed within (H3 must
+#: never pool Row and Column players — RESULT-2749 defect 1); None pools
+#: all roles for the non-role games, whose records carry role=None.
 CONTRASTS = {
     "H1_basic_to_costless": (
         "1120",
@@ -96,25 +101,63 @@ CONTRASTS = {
         benchmarks.DELTA_DIE_PP,
         benchmarks.SE_HUMAN_DIE_PP,
     ),
+    # PMS actions are the string labels "A1" | "A2" | "J" (games.PMS_ACTIONS),
+    # matching the `choice` key of the raw records. Integer indices silently
+    # matched nothing, zeroing every H3 effect (RESULT-2749 defect 1).
     "H3_pms_G1_to_G4_row": (
         "pms",
         "G1",
         "G4",
-        (1, 2, 3),
-        {a: v for a, v in zip((1, 2, 3), benchmarks.EFFECT_PMS_PP["Row"])},
+        ("A1", "A2", "J"),
+        {a: v for a, v in zip(("A1", "A2", "J"), benchmarks.EFFECT_PMS_PP["Row"])},
         benchmarks.DELTA_PMS_PP,
         benchmarks.SE_HUMAN_PMS_PP,
+        "Row",
     ),
     "H3_pms_G1_to_G4_column": (
         "pms",
         "G1",
         "G4",
-        (1, 2, 3),
-        {a: v for a, v in zip((1, 2, 3), benchmarks.EFFECT_PMS_PP["Column"])},
+        ("A1", "A2", "J"),
+        {a: v for a, v in zip(("A1", "A2", "J"), benchmarks.EFFECT_PMS_PP["Column"])},
         benchmarks.DELTA_PMS_PP,
         benchmarks.SE_HUMAN_PMS_PP,
+        "Column",
     ),
 }
+
+# Non-role contrasts carry role=None: their records have role=None anyway
+# and pooling is the prespecified estimand for the 11-20 and die-roll games.
+CONTRASTS["H1_basic_to_costless"] = (
+    "1120",
+    "basic",
+    "costless",
+    (17, 18, 19, 20),
+    benchmarks.EFFECTS_1120["basic_to_costless"],
+    benchmarks.DELTA_1120_PP,
+    benchmarks.SE_HUMAN_1120_PP,
+    None,
+)
+CONTRASTS["H1_basic_to_cycle"] = (
+    "1120",
+    "basic",
+    "cycle",
+    (17, 18, 19, 20),
+    benchmarks.EFFECTS_1120["basic_to_cycle"],
+    benchmarks.DELTA_1120_PP,
+    benchmarks.SE_HUMAN_1120_PP,
+    None,
+)
+CONTRASTS["H2_private_to_public"] = (
+    "dieroll",
+    "private",
+    "public",
+    (6,),
+    {6: benchmarks.EFFECT_DIE_SHARE6_PP},
+    benchmarks.DELTA_DIE_PP,
+    benchmarks.SE_HUMAN_DIE_PP,
+    None,
+)
 
 #: Frozen consistency transformations: name -> (game, canonical, transformed,
 #: mapping kind).  Pointwise mappings come from games.variant_spec.
@@ -224,8 +267,13 @@ def llm_effect(
     return bootstrap_ci([clusters_c, clusters_t], stat, n_boot=boot, seed=seed)
 
 
-def cell_records_for_arm(cell_records: dict, game: str, variant: str, arm: str) -> list:
+def cell_records_for_arm(
+    cell_records: dict, game: str, variant: str, arm: str, role: str | None = None
+) -> list:
     """All kept records for a (game, variant, arm) across every model.
+
+    With role given, only records whose `role` key matches are returned
+    (H3 contrasts must never pool Row and Column players).
 
     Bug B1 in RESULT-2723: cells are keyed by the 4-tuple
     (game, variant, arm, model) but the tables looked up 3-tuples, so
@@ -235,8 +283,11 @@ def cell_records_for_arm(cell_records: dict, game: str, variant: str, arm: str) 
     """
     pooled: list = []
     for key, recs in cell_records.items():
-        if tuple(key)[:3] == (game, variant, arm):
-            pooled.extend(recs)
+        if tuple(key)[:3] != (game, variant, arm):
+            continue
+        if role is not None:
+            recs = [r for r in recs if r.get("role") == role]
+        pooled.extend(recs)
     return pooled
 
 
@@ -251,12 +302,18 @@ def contrast_table(cell_records: dict, boot: int, seed: int) -> list[dict]:
         human,
         delta,
         se_h,
+        role,
     ) in CONTRASTS.items():
         for action in actions:
-            row: dict = {"contrast": name, "action": action, "delta_pp": delta}
+            row: dict = {
+                "contrast": name,
+                "action": action,
+                "role": role,
+                "delta_margin_pp": delta,
+            }
             for arm in ("persona", "no_persona"):
-                rec_c = cell_records_for_arm(cell_records, game, control, arm)
-                rec_t = cell_records_for_arm(cell_records, game, treatment, arm)
+                rec_c = cell_records_for_arm(cell_records, game, control, arm, role)
+                rec_t = cell_records_for_arm(cell_records, game, treatment, arm, role)
                 if not rec_c or not rec_t:
                     row[arm] = None
                     continue
@@ -321,18 +378,14 @@ def consistency_table(cell_records: dict, boot: int, seed: int) -> list[dict]:
                 )
                 rows.append(row)
                 continue
-            # r(T): share of transformed draws that land on the image of
-            # ANY canonical observed choice under the frozen mapping —
-            # i.e. the choice is rule-preserving iff it equals the mapped
-            # level-k answer it corresponds to.
-            pres = []
-            for r in tra:
-                pres.append(
-                    1.0
-                    if r["choice"]
-                    in _rule_preserving_set(game, can, transformed, inv_table)
-                    else 0.0
-                )
+            # r(T), distribution level (RESULT-2749 defect 2 / SPEC §4):
+            # the share of transformed MASS on the image of the canonical
+            # support under the frozen mapping — never pointwise pairing
+            # of independent draws.  The JS divergence between the mapped
+            # canonical distribution and the transformed distribution is
+            # reported alongside.
+            image = _rule_preserving_set(game, can, transformed, inv_table)
+            pres = [1.0 if r["choice"] in image else 0.0 for r in tra]
             clusters = defaultdict(list)
             for r, hit in zip(tra, pres):
                 clusters[r["persona_id"]].append(hit)
@@ -349,6 +402,10 @@ def consistency_table(cell_records: dict, boot: int, seed: int) -> list[dict]:
             excess = one_minus_r - (1.0 - stability)
             row.update(
                 {
+                    "image_set": sorted(image),
+                    "js_divergence": round(
+                        _js_divergence(game, can, tra, transformed), 4
+                    ),
                     "r_T": round(point, 4),
                     "r_T_ci90": [round(lo, 4), round(hi, 4)],
                     "stability": round(stability, 4),
@@ -403,15 +460,59 @@ def _stability(can: list[dict], boot: int, seed: int) -> float:
 
 
 def recognition_stratification(probe_records: list[dict]) -> dict:
-    """Which (model, arm, persona) probes coded RECOGNISING, per rung."""
-    out: dict[str, dict[str, int]] = defaultdict(
-        lambda: {"RECOGNISING": 0, "NOT_RECOGNISING": 0, "UNKNOWN": 0}
+    """Recognition coding per (game, variant, ARM) — arms are never pooled
+    (RESULT-2749 defect 5).  Each cell reports the true denominator n
+    (5 probes per cell, 30 per arm) with counts and rates."""
+    out: dict[str, dict] = defaultdict(
+        lambda: {"n": 0, "RECOGNISING": 0, "NOT_RECOGNISING": 0, "UNKNOWN": 0}
     )
     for r in probe_records:
-        rung = f"{r['game']}/{r['variant']}"
+        key = f"{r['game']}/{r['variant']}/{r['arm']}"
         code = code_recognition(r.get("raw_content"))
-        out[rung][code] += 1
+        out[key]["n"] += 1
+        out[key][code] += 1
+    for entry in out.values():
+        n = entry["n"] or 1
+        entry["rates"] = {
+            code: round(entry[code] / n, 4)
+            for code in ("RECOGNISING", "NOT_RECOGNISING", "UNKNOWN")
+        }
     return dict(out)
+
+
+def _js_divergence(
+    game: str, can: list[dict], tra: list[dict], transformed: str
+) -> float:
+    """JS divergence (base e) between the mapped canonical distribution and
+    the transformed distribution over the transformed action set."""
+    import math
+
+    spec_t = variant_spec(game, transformed)
+    actions = list(spec_t.actions)
+    mapping = spec_t.mapping
+    p = {a: 0.0 for a in actions}
+    q = {a: 0.0 for a in actions}
+    for r in can:
+        image = mapping(r["choice"])
+        p[image if image in p else "_off_set"] = (
+            p.get(image if image in p else "_off_set", 0.0) + 1.0
+        )
+    for r in tra:
+        c = r["choice"]
+        q[c if c in q else "_off_set"] = q.get(c if c in q else "_off_set", 0.0) + 1.0
+
+    def normalise(d):
+        t = sum(d.values()) or 1.0
+        return {k: v / t for k, v in d.items()}
+
+    p, q = normalise(p), normalise(q)
+    js = 0.0
+    for a in set(p) | set(q):
+        m = (p[a] + q[a]) / 2.0
+        for px in (p[a], q[a]):
+            if px > 0 and m > 0:
+                js += 0.5 * px * math.log(px / m)
+    return js
 
 
 def cost_report(records: list[dict]) -> dict:
@@ -540,6 +641,11 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="write analysis.json to <data-root>/<run-id>/ when --out-dir is absent",
     )
+    parser.add_argument(
+        "--audit",
+        action="store_true",
+        help="also write AUDIT_LOG.md (input hashes, cache reconciliation)",
+    )
     args = parser.parse_args(argv)
     output = run_analysis(
         [Path(p) for p in args.manifest],
@@ -563,6 +669,15 @@ def main(argv: list[str] | None = None) -> int:
     if out is not None:
         out.mkdir(parents=True, exist_ok=True)
         (out / "analysis.json").write_text(text + "\n", encoding="utf-8")
+        # Single source of truth (RESULT-2749 defect 3): the Markdown is
+        # rendered from the SAME dict that was just dumped to JSON.
+        (out / "report.md").write_text(render_markdown(output) + "\n", encoding="utf-8")
+        if args.audit:
+            (out / "AUDIT_LOG.md").write_text(
+                build_audit_log(args.manifest, args.probes, output["exclusions"])
+                + "\n",
+                encoding="utf-8",
+            )
     return 0
 
 
