@@ -103,8 +103,11 @@ def test_consistency_r_t_is_one_when_choices_follow_mapping():
     canonical = [
         _rec("1120", "basic", "persona", f"p{i}", 20 - (i % 4)) for i in range(20)
     ]
+    # r31-40 maps x ↦ x+20 (audited rule), so the mapped image of
+    # {17..20} is {37..40}; consistency is distribution-level, so the
+    # transformed mass must sit on that image set, not pair pointwise.
     transformed = [
-        _rec("1120", "r31-40", "persona", f"p{i}", 30 - (i % 4)) for i in range(20)
+        _rec("1120", "r31-40", "persona", f"p{i}", 40 - (i % 4)) for i in range(20)
     ]
     rows = consistency_table(
         {
