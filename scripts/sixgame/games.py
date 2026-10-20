@@ -380,8 +380,17 @@ def variant_spec(game: str, variant: str) -> VariantSpec:
                 game, variant, _int_actions(lo, hi), "amount", map_inverted
             )
         if variant in RANGE_RUNGS:
+            # Rung-aware range shift (RESULT-2749 defect 2): the rule for
+            # rung (lo, hi) is the 11-20 ladder shifted by lo - 11, so
+            # r31-40 maps x -> x + 20 (NOT the flat +10 that made every
+            # 31-40 draw count as non-preserving).
+            offset = lo - 11
             return VariantSpec(
-                game, variant, _int_actions(lo, hi), "amount", map_range_shift
+                game,
+                variant,
+                _int_actions(lo, hi),
+                "amount",
+                (lambda off: lambda x: x + off)(offset),
             )
         return VariantSpec(game, variant, _int_actions(lo, hi), "amount", lambda x: x)
     if game == "dieroll":
