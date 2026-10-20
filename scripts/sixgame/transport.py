@@ -22,6 +22,7 @@ logged, printed, or put in any record.
 
 from __future__ import annotations
 
+import http.client
 import json
 import time
 import urllib.error
@@ -134,6 +135,10 @@ def _post_json(
         raise TransportError(
             f"HTTP {exc.code} from {url}: {json.dumps(body)[:300]}", exc.code
         ) from exc
+    except http.client.HTTPException as exc:
+        # Truncated/blank response bodies (e.g. IncompleteRead) are a
+        # network-level failure: retryable, never a run-ending crash.
+        raise TransportTimeout(f"connection to {url} broke: {exc}") from exc
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         raise TransportTimeout(f"request to {url} failed: {exc}") from exc
 

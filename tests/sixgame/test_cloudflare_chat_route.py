@@ -126,3 +126,32 @@ def test_call_with_retry_uses_cloudflare_chat_transport(monkeypatch):
     )
     assert response.status_code == 200
     assert sent["temperature"] == 1.0
+
+
+def test_truncated_response_body_is_retryable(monkeypatch):
+    """A response whose body is cut mid-read (http.client.IncompleteRead)
+    must surface as a retryable TransportTimeout, never crash the run."""
+    import http.client
+
+    class FakeOpener:
+        def __init__(self, result):
+            self._result = result
+
+        def open(self, request, timeout=None):
+            return self._result
+
+    class CutResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self):
+            raise http.client.IncompleteRead(b"", 506)
+
+    monkeypatch.setattr(t, "_opener_for", lambda host: FakeOpener(CutResponse()))
+    with pytest.raises(t.TransportTimeout):
+        t._post_json("https://api.cloudflare.com/client/v4/x", {}, {}, 5)
