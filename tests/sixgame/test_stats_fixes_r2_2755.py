@@ -155,11 +155,17 @@ def test_distribution_equivalence_labels_unpowered_when_no_margin():
 def test_distribution_equivalence_equivalent_when_ci_inside_margin():
     # Identical canonical and transformed distributions -> TVD point 0,
     # CI collapses near 0, inside the 5pp (0.05) Tier-A margin.
+    # TASK-2760: n=10 per cell is too small for a defensible
+    # finite-sample TVD bound, so equivalence is NOT established even
+    # with a degenerate CI at 0 — we report no difference observed.
     choices = [6] * 8 + [5, 4]
     cells = _cells("dieroll", "private", "neutral", choices, choices)
     rows = distribution_equivalence_table(cells, boot=2000, seed=0)
     row = [r for r in rows if r["transformation"] == "dieroll_neutral_tierA"][0]
-    assert row["verdict"] == "EQUIVALENT"
+    assert row["verdict"] == (
+        "NO_DIFFERENCE_OBSERVED_EQUIVALENCE_NOT_ESTABLISHED"
+    )
+    assert row["tvd"] == pytest.approx(0.0)
 
 
 def test_distribution_equivalence_not_equivalent_when_ci_exceeds_margin():
