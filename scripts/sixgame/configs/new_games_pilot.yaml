@@ -1,0 +1,42 @@
+# New-games pilot config (TASK-2776): 600 decision calls, no probes.
+# 10 conditions x 2 arms x 3 models x 10 draws = 600 decisions.
+# Conditions: traveler (td_low R=5 / td_high R=80 / td_shift180_300 R=5),
+# social (generous_prior / selfish_prior / plus1000 offset), allais
+# (base 3-vs-4@80% / base 3@25%-vs-4@20%, and both with prizes x10).
+# Probes are NOT included: no recognition-probe rungs exist for the
+# new games and the user excluded probe repetitions.
+run_id: new_games_pilot
+models:
+  - deepseek-v4-flash
+  - anthropic/claude-sonnet-5
+  - openai/gpt-5.6-luna
+arms:
+  - persona
+  - no_persona
+draws_per_cell: 10
+personas: 5
+seed: 20261021
+games:
+  traveler:
+    variants: [td_low, td_high, td_shift180_300]
+  social:
+    variants: [social_generous_prior, social_selfish_prior, social_plus1000]
+  allais:
+    variants: [allais_base_1, allais_base_2, allais_x10_1, allais_x10_2]
+probes:
+  enabled: false
+route_map:
+  deepseek-v4-flash: direct
+  anthropic/claude-sonnet-5: cloudflare_chat
+  openai/gpt-5.6-luna: cloudflare_chat
+# Prices are REPORTING ONLY (cost fields on records) — never a stopping rule.
+prices:
+  deepseek-v4-flash:
+    prompt_per_mtok: 0.28
+    completion_per_mtok: 0.42
+  anthropic/claude-sonnet-5:
+    prompt_per_mtok: 3.00
+    completion_per_mtok: 15.00
+  openai/gpt-5.6-luna:
+    prompt_per_mtok: 1.25
+    completion_per_mtok: 10.00
