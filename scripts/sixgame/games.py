@@ -373,6 +373,11 @@ DIE_ACTIONS = tuple(range(1, 7))
 
 def variant_spec(game: str, variant: str) -> VariantSpec:
     """The VariantSpec for one (game, variant) pair."""
+    if game in ("traveler", "social", "allais"):
+        # New games (TASK-2776) live in their own module; delegate.
+        from new_games import variant_spec_new
+
+        return variant_spec_new(game, variant)
     if game == "1120":
         lo, hi = eleven_twenty_range(variant)
         if variant == "inverted":

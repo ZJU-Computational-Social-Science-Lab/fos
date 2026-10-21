@@ -131,7 +131,12 @@ def build_decision_prompt(
 ) -> str:
     """Build the decision prompt for one sample."""
     from games import die_roll_prompt, eleven_twenty_prompt, matrix_prompt
+    from new_games import new_game_prompt
 
+    if sample.game in ("traveler", "social", "allais"):
+        return new_game_prompt(
+            sample.game, sample.variant, sample.persona_id, persona_text
+        )
     if sample.game == "1120":
         return eleven_twenty_prompt(sample.variant, sample.persona_id, persona_text)
     if sample.game == "dieroll":
