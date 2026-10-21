@@ -37,7 +37,9 @@ def backup(source: Path, destination: Path) -> dict[str, int]:
     for path in sorted(source.rglob("*")):
         if not path.is_file() or path.is_symlink():
             continue
-        if path.name == MANIFEST_NAME:
+        # skip the backup's own top-level manifest (it cannot hash itself),
+        # but DO copy per-run manifests written next to the data
+        if path.name == MANIFEST_NAME and path.parent == source:
             continue
         rel = path.relative_to(source)
         target = destination / rel
