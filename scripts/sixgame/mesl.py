@@ -11,9 +11,9 @@ What this file does, in plain language:
   set, answers TCP (raw socket evidence recorded), and can complete an
   HTTPS request to the target host; it also records which country the
   proxy exit is in (informational only).
-- ``ensure_route_for_route`` is the pre-send gate: Cloudflare and
-  OpenRouter model calls are REFUSED unless the route is proven —
-  there is never a direct fallback.
+- ``ensure_route_for_route`` is the pre-send gate: Cloudflare (family
+  or unified chat), and OpenRouter model calls are REFUSED unless the
+  route is proven — there is never a direct fallback.
 """
 
 from __future__ import annotations
@@ -212,7 +212,7 @@ def ensure_route_for_route(route: str) -> RouteCheck:
     MeslUnavailableError — never fall back to a direct connection.
     DeepSeek ("direct") and the offline "dry" route pass through.
     """
-    if route not in ("cloudflare", "openrouter"):
+    if route not in ("cloudflare", "cloudflare_chat", "openrouter"):
         return RouteCheck(
             "",
             True,
@@ -224,7 +224,7 @@ def ensure_route_for_route(route: str) -> RouteCheck:
             True,
             "route bypasses the gate (deepseek/dry)",
         )
-    host = "api.cloudflare.com" if route == "cloudflare" else "openrouter.ai"
+    host = "openrouter.ai" if route == "openrouter" else "api.cloudflare.com"
     verdict = _ROUTE_VERDICTS.get(host)
     if verdict is None:
         verdict = check_route(host)
