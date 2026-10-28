@@ -22,7 +22,7 @@ import figures_effects
 
 
 def main():
-    print("== Figure 02 (distributional distance ECDF, all 31, journal) ==")
+    print("== Figure 02 (distributional distance histogram, all 31, journal) ==")
     fig02_distributional_distance()
     print("== Figures 03–07 (effects, journal) ==")
     figures_effects.main()

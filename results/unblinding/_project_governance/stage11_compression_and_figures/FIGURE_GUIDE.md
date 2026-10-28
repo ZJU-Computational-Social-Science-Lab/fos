@@ -64,9 +64,9 @@ corrected signed table and refuses to plot on any mismatch.
 
 ## Figure 02 provenance and metric note
 
-Figure 02 was rebuilt (2026-10-28) as an all-31-experiment ECDF with a
-common distance metric, replacing the earlier 7-experiment TVD figure.
-Data provenance, per side:
+Figure 02 was rebuilt (2026-10-28) as an all-31-experiment overlaid
+histogram with a common distance metric, replacing the earlier
+7-experiment TVD figure. Data provenance, per side:
 
 - **Original 14 units** — human answer codes from the registered primary
   wave (`agreed_figure_code_package/data/wave1_3_response.csv`) and LLM
@@ -99,7 +99,7 @@ same eligibility the validated TVD analysis used).
 **Split-half reference:** per experiment and arm, 500 seeded splits
 (SEED=20261028 + experiment offset) of the human respondents into halves;
 the same Wasserstein distance is computed between the halves. The grey
-curve is the FULL reference distribution (one value per draw, aggregated
+histogram is the FULL reference distribution (one value per draw, aggregated
 equal-weight over the experiment's arms), not a percentile point.
 
 **Aggregation:** equal weight per experiment. Arm-level distances average
@@ -120,31 +120,43 @@ All 31 experiments are included (coverage table:
 Files: `fig02_distributional_distance.*`
 
 - **Purpose:** how far LLM answer distributions sit from the human ones,
-  blinded vs disclosed, across ALL 31 experiments; both LLM curves sit far
-  to the right of the human split-half distribution.
+  blinded vs disclosed, across ALL 31 experiments; both LLM histograms
+  sit far to the right of the human split-half distribution.
 - **Source:** recomputed end-to-end by `scripts/figures_distributions.py`
   + `run_fig02_all31.py` (+ `fig02_original14.py`, `fig02_expansion.py`,
   `fig02_tess.py`, `fig02_common.py`), seeded 20261028; provenance and
   metric above. Per-arm numbers: `analysis/fig02_dist_by_arm.csv`; plotted
-  numbers: `figures/fig02_distributional_distance.csv`; split-half draws:
-  `analysis/fig02_split_half_draws.csv`.
+  per-bin values: `figures/fig02_distributional_distance.csv` (raw
+  weighted points behind each histogram:
+  `figures/fig02_hist_points.csv`,
+  `figures/fig02_hist_splithalf_points.csv`);
+  split-half draws: `analysis/fig02_split_half_draws.csv`.
 - **Estimand:** normalized Wasserstein-1 distance between the human and
   LLM response distributions on the registered outcome space (0 =
   identical, 1 = completely different; = TVD for binary spaces),
   experiment-equal aggregated. Human–human distance is not zero because of
-  split-half sampling variability — hence the grey reference distribution.
+  split-half sampling variability — hence the grey reference histogram.
 - **Interval:** none plotted; no statistically justified clustered band —
   model×arm observations are not independent experiments, so no uncertainty
   band is drawn rather than an unjustified one.
+- **Display:** one panel, three overlaid step-outline histograms
+  (blinded blue, disclosed orange, human split-half grey), x-axis 0–1,
+  bin width exactly 0.01 (100 bins).
+- **Normalization:** experiment-equal weighted PROPORTION — each curve's
+  bin heights sum to 1, using the same per-experiment weights as the
+  aggregation above (each experiment carries total weight 1/31; the
+  split-half pool 1/(31·500) per draw). Not a density; the three curves
+  are directly comparable as shares of all scored distances.
 - **Exclusions:** none — all 31 experiments support a registered-space
   distributional comparison (`fig02_coverage_table.csv`, included=yes
   for all).
-- **Proposed caption:** "Cumulative distributions of the distance between
-  LLM and human response distributions, for all 31 experiments (each
-  experiment weighted equally). Blinded (blue) and disclosed (orange) LLM
-  distances against the human split-half reference distribution (grey),
-  computed with the same normalized Wasserstein metric on each
-  experiment's registered response scale."
+- **Proposed caption:** "Distributions of the distance between LLM and
+  human response distributions, for all 31 experiments (each experiment
+  weighted equally; bin width 0.01, proportions normalized to sum to one
+  per curve). Blinded (blue) and disclosed (orange) LLM distances against
+  the human split-half reference distribution (grey), computed with the
+  same normalized Wasserstein metric on each experiment's registered
+  response scale."
 
 ## Figures 03 + 04 — Effect recovery (blinded / disclosed)
 
