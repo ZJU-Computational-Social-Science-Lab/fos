@@ -1,0 +1,2 @@
+experiment_id,n_pairs,raw_delta,raw_se,pooled_mean,pooled_median,cri95_low,cri95_high,pr_change_gt0,pr_change_lt0,pr_improve_gt0,pr_improve_gt01,shrinkage_weight,model_heterogeneity_sd,pr_improve_gt0_pair_weighted,pr_improve_gt01_pair_weighted
+OVERALL,553,0.04305836802226136,0.03411357967608264,0.030095203,0.030294668,-0.115975425,0.17750737,0.65575,0.34425,0.929,0.0425,,0.043118004,0.8845,0.0155

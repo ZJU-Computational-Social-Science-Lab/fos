@@ -1,0 +1,16 @@
+model,wrong_blinded,wrong_disclosed,corrected,newly_wrong,wrong_both_legs
+gemma-4-12b-it-qat,3,2,C-16;C-30;C-37,C-03;C-09,
+gemma-4-26b-a4b,2,4,C-31,C-03;C-09;C-30,C-26
+gemma-4-31b-it-qat,5,0,C-16;C-26;C-30;C-31;C-37,,
+glm-4.7-flash,5,4,C-16;C-30,C-09,C-26;C-31;C-37
+gpt-oss-20b,5,3,C-09;C-16;C-31,C-30,C-26;C-37
+granite-4.1-30b,2,3,C-30,C-03;C-26,C-09
+granite-4.1-8b,5,5,C-31,C-03,C-09;C-16;C-26;C-37
+muse-glimmer,4,4,C-03,C-09,C-26;C-30;C-37
+nemotron-cascade-2-30b-a3b,4,5,C-03;C-37,C-26;C-30;C-31,C-09;C-16
+qwen3-32b,4,5,C-16,C-30;C-31,C-03;C-26;C-37
+qwen3-4b,6,7,,C-16,C-03;C-09;C-26;C-30;C-31;C-37
+qwen3.6-27b-dense,3,5,,C-03;C-16,C-26;C-30;C-31
+qwen3.6-35b-a3b,6,4,C-16;C-30;C-31,C-03,C-09;C-26;C-37
+qwen3.6-35b-a3b-uncensored,6,6,C-30,C-03,C-09;C-16;C-26;C-31;C-37
+qwen3.8-27b,4,5,C-09;C-16,C-03;C-26;C-31,C-30;C-37

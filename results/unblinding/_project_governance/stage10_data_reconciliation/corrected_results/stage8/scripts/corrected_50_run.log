@@ -1,0 +1,77 @@
+                     model  n_contrasts_confident  n_wrong_blinded  share_wrong_blinded  n_wrong_disclosed  share_wrong_disclosed  wrong_both_legs  wrong_blinded_only  wrong_disclosed_only  n_new_wrong_under_disclosure  n_corrected_under_disclosure                                                    wrong_contrasts_blinded
+                  qwen3-4b                     32               15               0.4688                  9                 0.3000                8                   7                     1                             1                             7 C-02;C-03;C-06;C-07;C-09;C-11;C-12;C-13;C-19;C-21;C-26;C-30;C-31;C-32;C-37
+               gpt-oss-20b                     32               14               0.4375                  6                 0.1875                3                  11                     3                             3                            11      C-02;C-04;C-05;C-06;C-07;C-08;C-09;C-11;C-16;C-24;C-26;C-31;C-35;C-37
+              muse-glimmer                     31               11               0.3548                  5                 0.1562                4                   7                     1                             1                             7                     C-02;C-03;C-04;C-05;C-06;C-07;C-10;C-26;C-30;C-35;C-37
+            granite-4.1-8b                     31               10               0.3226                 12                 0.3750                7                   3                     5                             5                             3                          C-04;C-05;C-08;C-09;C-14;C-16;C-25;C-26;C-31;C-37
+qwen3.6-35b-a3b-uncensored                     32                8               0.2500                  9                 0.2812                5                   3                     4                             4                             3                                    C-09;C-16;C-18;C-26;C-30;C-31;C-32;C-37
+           qwen3.6-35b-a3b                     32                8               0.2500                  9                 0.2812                3                   5                     6                             6                             5                                    C-09;C-16;C-18;C-26;C-30;C-31;C-32;C-37
+             glm-4.7-flash                     32                8               0.2500                  9                 0.2812                5                   3                     4                             4                             3                                    C-08;C-13;C-16;C-26;C-30;C-31;C-35;C-37
+                 qwen3-32b                     32                7               0.2188                  7                 0.2188                4                   3                     3                             3                             3                                         C-01;C-02;C-03;C-16;C-26;C-32;C-37
+           granite-4.1-30b                     32                7               0.2188                 11                 0.3667                5                   2                     6                             6                             2                                         C-04;C-05;C-08;C-09;C-21;C-30;C-38
+        gemma-4-12b-it-qat                     31                6               0.1935                  7                 0.2258                1                   5                     6                             6                             5                                              C-01;C-08;C-16;C-18;C-30;C-37
+nemotron-cascade-2-30b-a3b                     32                6               0.1875                 13                 0.4062                3                   3                    10                            10                             3                                              C-02;C-03;C-06;C-09;C-16;C-37
+               qwen3.8-27b                     32                5               0.1562                  9                 0.2812                3                   2                     6                             6                             2                                                   C-08;C-09;C-16;C-30;C-37
+        gemma-4-31b-it-qat                     30                5               0.1667                  4                 0.1333                0                   5                     4                             4                             5                                                   C-16;C-26;C-30;C-31;C-37
+           gemma-4-26b-a4b                     30                4               0.1333                  8                 0.2667                2                   2                     6                             6                             2                                                        C-20;C-26;C-31;C-38
+         qwen3.6-27b-dense                     32                4               0.1250                  8                 0.2500                4                   0                     4                             4                             0                                                        C-26;C-30;C-31;C-38
+--- top co-error overlaps ---
+           model_1                    model_2  n_co_wrong_blinded  jaccard_blinded
+   qwen3.6-35b-a3b qwen3.6-35b-a3b-uncensored                   8           1.0000
+gemma-4-31b-it-qat qwen3.6-35b-a3b-uncensored                   5           0.6250
+gemma-4-31b-it-qat              glm-4.7-flash                   5           0.6250
+gemma-4-31b-it-qat            qwen3.6-35b-a3b                   5           0.6250
+   gemma-4-26b-a4b          qwen3.6-27b-dense                   3           0.6000
+gemma-4-12b-it-qat                qwen3.8-27b                   4           0.5714
+gemma-4-31b-it-qat          qwen3.6-27b-dense                   3           0.5000
+       gpt-oss-20b             granite-4.1-8b                   8           0.5000
+       gpt-oss-20b               muse-glimmer                   8           0.4706
+     glm-4.7-flash            qwen3.6-35b-a3b                   5           0.4545
+     glm-4.7-flash qwen3.6-35b-a3b-uncensored                   5           0.4545
+     glm-4.7-flash                qwen3.8-27b                   4           0.4444
+--- family-block check (mean jaccard within vs across families) ---
+                 mean  count
+same_family                 
+False        0.269002     86
+True         0.317889     19
+--- both_legs_wrong: contrasts ['C-09', 'C-26', 'C-30', 'C-37'] ---
+                     model  wrong_blinded  wrong_disclosed      corrected newly_wrong     wrong_both_legs
+        gemma-4-12b-it-qat              2                1      C-30;C-37        C-09                    
+           gemma-4-26b-a4b              1                3                  C-09;C-30                C-26
+        gemma-4-31b-it-qat              3                0 C-26;C-30;C-37                                
+             glm-4.7-flash              3                3           C-30        C-09           C-26;C-37
+               gpt-oss-20b              3                3           C-09        C-30           C-26;C-37
+           granite-4.1-30b              2                2           C-30        C-26                C-09
+            granite-4.1-8b              3                3                                 C-09;C-26;C-37
+              muse-glimmer              3                4                       C-09      C-26;C-30;C-37
+nemotron-cascade-2-30b-a3b              2                3           C-37   C-26;C-30                C-09
+                 qwen3-32b              2                3                       C-30           C-26;C-37
+                  qwen3-4b              4                4                            C-09;C-26;C-30;C-37
+         qwen3.6-27b-dense              2                2                                      C-26;C-30
+           qwen3.6-35b-a3b              4                3           C-30                  C-09;C-26;C-37
+qwen3.6-35b-a3b-uncensored              4                3           C-30                  C-09;C-26;C-37
+               qwen3.8-27b              3                3           C-09        C-26           C-30;C-37
+--- disagreement7: contrasts ['C-03', 'C-09', 'C-16', 'C-26', 'C-30', 'C-31', 'C-37'] ---
+                     model  wrong_blinded  wrong_disclosed                corrected    newly_wrong               wrong_both_legs
+        gemma-4-12b-it-qat              3                2           C-16;C-30;C-37      C-03;C-09                              
+           gemma-4-26b-a4b              2                4                     C-31 C-03;C-09;C-30                          C-26
+        gemma-4-31b-it-qat              5                0 C-16;C-26;C-30;C-31;C-37                                             
+             glm-4.7-flash              5                4                C-16;C-30           C-09                C-26;C-31;C-37
+               gpt-oss-20b              5                3           C-09;C-16;C-31           C-30                     C-26;C-37
+           granite-4.1-30b              2                3                     C-30      C-03;C-26                          C-09
+            granite-4.1-8b              5                5                     C-31           C-03           C-09;C-16;C-26;C-37
+              muse-glimmer              4                4                     C-03           C-09                C-26;C-30;C-37
+nemotron-cascade-2-30b-a3b              4                5                C-03;C-37 C-26;C-30;C-31                     C-09;C-16
+                 qwen3-32b              4                5                     C-16      C-30;C-31                C-03;C-26;C-37
+                  qwen3-4b              6                7                                    C-16 C-03;C-09;C-26;C-30;C-31;C-37
+         qwen3.6-27b-dense              3                5                               C-03;C-16                C-26;C-30;C-31
+           qwen3.6-35b-a3b              6                4           C-16;C-30;C-31           C-03                C-09;C-26;C-37
+qwen3.6-35b-a3b-uncensored              6                6                     C-30           C-03      C-09;C-16;C-26;C-31;C-37
+               qwen3.8-27b              4                5                C-09;C-16 C-03;C-26;C-31                     C-30;C-37
+contrast_id collective_disagreement_class  human_abs_d_std  mean_abs_wrong_blinded  mean_abs_wrong_vs_human_d_blinded  mean_abs_wrong_disclosed  mean_abs_wrong_vs_human_d_disclosed
+       C-03      majority_wrong_disclosed         0.625024                0.656402                             1.0502                  0.519457                               0.8311
+       C-09           majority_wrong_both         1.424479                0.516135                             0.3623                  0.393342                               0.2761
+       C-16        majority_wrong_blinded         0.258436                0.112982                             0.4372                  0.294752                               1.1405
+       C-26           majority_wrong_both         0.180432                0.353137                             1.9572                  0.787125                               4.3625
+       C-30           majority_wrong_both         0.072053                0.335168                             4.6517                  0.503837                               6.9926
+       C-31        majority_wrong_blinded         0.121207                0.097387                             0.8035                  0.090054                               0.7430
+       C-37           majority_wrong_both         0.240418                1.021698                             4.2497                  0.850519                               3.5377

@@ -1,0 +1,10 @@
+stage6_candidate,contrast_id,corrected_class,verdict
+risen_tempt_fate,C-26,majority_wrong_both,KEEP
+rottenstreich_affect,C-30,majority_wrong_both,KEEP
+keusch433,C-36,human_direction_uncertain,DROP_human_direction_uncertain
+schwarz_order,C-27,human_direction_uncertain,DROP_human_direction_uncertain
+bauer_materialism,C-31,majority_wrong_blinded,KEEP
+less_is_more,C-02,none,DROP_no_contrast_level_disagreement
+less_is_more,C-03,majority_wrong_disclosed,KEEP
+myside,C-16,majority_wrong_blinded,KEEP
+prob_matching,C-17,human_direction_uncertain,DROP_human_direction_uncertain

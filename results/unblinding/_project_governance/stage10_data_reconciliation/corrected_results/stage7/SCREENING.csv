@@ -1,0 +1,39 @@
+contrast_id,experiment_id,candidate_class,selection_reason,human_abs_d_std,study_group
+C-01,disease,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.76337,original
+C-02,less_is_more,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.628377,original
+C-03,less_is_more,DISAGREEMENT_CANDIDATE,contrast-level majority_wrong_disclosed with confident human direction (Pr(d_h>0)=1.000); worst-leg agree=0.33,0.625024,original
+C-04,fire_extinguisher,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.231497,original
+C-05,fire_extinguisher,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.242707,original
+C-06,seatbelt,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.25025,original
+C-07,seatbelt,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.252884,original
+C-08,sunk_cost,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.714825,original
+C-09,wta_wtp,DISAGREEMENT_CANDIDATE,contrast-level majority_wrong_both with confident human direction (Pr(d_h>0)=1.000); worst-leg agree=0.33,1.424479,original
+C-10,wta_wtp,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.604051,original
+C-11,allais,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.551192,original
+C-12,linda,AGREEMENT_COMPARISON,"rule pick: worst-leg agree=0.93, |d_h|=0.830 (candidate median 0.240), group original",0.829965,original
+C-13,anchoring_redwood,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",1.553107,original
+C-14,anchoring_african,AGREEMENT_COMPARISON,"rule pick: worst-leg agree=0.91, |d_h|=1.300 (candidate median 0.240), group original",1.300446,original
+C-15,outcome_bias,AGREEMENT_COMPARISON,"rule pick: worst-leg agree=1.00, |d_h|=0.602 (candidate median 0.240), group original",0.601636,original
+C-16,myside,DISAGREEMENT_CANDIDATE,contrast-level majority_wrong_blinded with confident human direction (Pr(d_h>0)=1.000); worst-leg agree=0.33,0.258436,original
+C-17,prob_matching,AMBIGUOUS,"human direction uncertain (Pr(d_h>0)=0.049); reported separately, never classified for disagreement",0.072887,original
+C-18,abs_relative,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.858854,original
+C-19,T2KX-ml1_gamblers_fallacy,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.625946,expansion
+C-20,T2KX-ml1_category_scales,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.497776,expansion
+C-21,T2KX-ml1_reciprocity,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.296978,expansion
+C-22,T2KX-ml1_allowed_forbidden,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.469284,expansion
+C-23,T2KX-ml1_quote_attribution,AGREEMENT_COMPARISON,"rule pick: worst-leg agree=1.00, |d_h|=0.322 (candidate median 0.240), group expansion",0.321546,expansion
+C-24,T2KX-ml1_imagined_contact,AGREEMENT_COMPARISON,"rule pick: worst-leg agree=0.93, |d_h|=0.127 (candidate median 0.240), group expansion",0.126937,expansion
+C-25,T2KX-ml2_hauser_s1,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",1.424031,expansion
+C-26,T2KX-ml2_risen_tempt_fate,DISAGREEMENT_CANDIDATE,contrast-level majority_wrong_both with confident human direction (Pr(d_h>0)=0.000); worst-leg agree=0.13,0.180432,expansion
+C-27,T2KX-ml2_schwarz_order,AMBIGUOUS,"human direction uncertain (Pr(d_h>0)=0.627); reported separately, never classified for disagreement",0.007221,expansion
+C-28,T2KX-ml2_shafir_choose_reject,AMBIGUOUS,"human direction uncertain (Pr(d_h>0)=0.969); reported separately, never classified for disagreement",0.042103,expansion
+C-29,T2KX-ml2_miyamoto_correspondence,AGREEMENT_COMPARISON,"rule pick: worst-leg agree=1.00, |d_h|=1.814 (candidate median 0.240), group expansion",1.814047,expansion
+C-30,T2KX-ml2_rottenstreich_affect,DISAGREEMENT_CANDIDATE,contrast-level majority_wrong_both with confident human direction (Pr(d_h>0)=0.999); worst-leg agree=0.33,0.072053,expansion
+C-31,T2KX-ml2_bauer_materialism,DISAGREEMENT_CANDIDATE,contrast-level majority_wrong_blinded with confident human direction (Pr(d_h>0)=1.000); worst-leg agree=0.40,0.121207,expansion
+C-32,T2KX-howard823,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.156408,expansion
+C-33,T2KX-howard823,AMBIGUOUS,"human direction uncertain (Pr(d_h>0)=0.067); reported separately, never classified for disagreement",0.102197,expansion
+C-34,T2KX-budescu779,AMBIGUOUS,"human direction uncertain (Pr(d_h>0)=0.615); reported separately, never classified for disagreement",0.022605,expansion
+C-35,T2KX-budescu779,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.261182,expansion
+C-36,T2KX-keusch433,AMBIGUOUS,"human direction uncertain (Pr(d_h>0)=0.092); reported separately, never classified for disagreement",0.044914,expansion
+C-37,T2KX-reedBR32,DISAGREEMENT_CANDIDATE,contrast-level majority_wrong_both with confident human direction (Pr(d_h>0)=1.000); worst-leg agree=0.20,0.240418,expansion
+C-38,T2KX-reedBR32,NOT_SELECTED,"confident human direction, no collective disagreement; not selected as agreement comparison (rule rank below cutoff)",0.115057,expansion

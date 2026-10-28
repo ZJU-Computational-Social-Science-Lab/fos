@@ -1,0 +1,16 @@
+model,n_pairs_confident,n_wrong_blinded,share_wrong_blinded,n_wrong_disclosed,share_wrong_disclosed
+gemma-4-12b-it-qat,31,6,0.1935,7,0.2258
+gemma-4-26b-a4b,29,4,0.1379,8,0.2759
+gemma-4-31b-it-qat,29,5,0.1724,4,0.1379
+glm-4.7-flash,32,8,0.25,9,0.2812
+gpt-oss-20b,32,14,0.4375,6,0.1875
+granite-4.1-30b,30,7,0.2333,11,0.3667
+granite-4.1-8b,31,10,0.3226,12,0.3871
+muse-glimmer,31,11,0.3548,5,0.1613
+nemotron-cascade-2-30b-a3b,32,6,0.1875,13,0.4062
+qwen3-32b,32,7,0.2188,7,0.2188
+qwen3-4b,30,14,0.4667,9,0.3
+qwen3.6-27b-dense,32,4,0.125,8,0.25
+qwen3.6-35b-a3b,32,8,0.25,9,0.2812
+qwen3.6-35b-a3b-uncensored,32,8,0.25,9,0.2812
+qwen3.8-27b,32,5,0.1562,9,0.2812

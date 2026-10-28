@@ -1,0 +1,12 @@
+figure,depends_on_changed_values,action,summary_of_changed_values
+Figure1B_human_distributions_(v1-v9),no,not_regenerated,"Human-only response distributions; human data unchanged by the reconciliation, so every 1B variant is identical."
+Figure1C_all_model_distributions_disease_blinded,no,not_regenerated,"Disease experiment is run6; all 139 corrected cells are run10, so these panels are unchanged."
+Figure1C_all_model_distributions_disease_disclosed,no,not_regenerated,"Disease experiment is run6; unchanged."
+Figure2_final,yes,regenerated,"Rebuilt from corrected_signed_contrasts (262 cells): contrast-weighted bias/abs-error points and 95% CIs shift by the small run10 corrections; abs-error change U-B flips sign (+0.144 pp to -0.442 pp, CI still straddles 0)."
+Figure3_final,yes,regenerated,"Same corrected input as Figure 2: disclosed-leg abs error 8.498 -> 8.400 pp; blinded 13.114 -> 13.423 pp; recovery slopes 0.4935 -> 0.4762 (blinded) and 0.8978 -> 0.8842 (disclosed)."
+Figure4A_by_model_v2,yes,regenerated,"Per-model recovery/bias/abs-error bars rebuilt from corrected per_model_statistics; largest moves on run10-heavy models (e.g. qwen3-4b, gpt-oss-20b)."
+Figure4B_by_experiment_v2,yes,regenerated,"Per-experiment bars rebuilt from corrected per_experiment_statistics; run10 experiments (abs_relative, prob_matching, allais, anchoring_*, linda, myside, outcome_bias) shift; run6 experiments identical."
+S_all_model_heatmap_disease_blinded,no,not_regenerated,"Disease (run6) response distributions; unchanged."
+S_all_model_heatmap_disease_disclosed,no,not_regenerated,"Disease (run6); unchanged."
+S_all_model_heatmaps_all_experiments,flagged,not_regenerated,"Displays raw per-response category distributions for all experiments, not the corrected effect aggregates. Run10 experiments' underlying record state differs (2026-10-04 vs 10-05 re-run); regenerating requires re-running the distributional-error pipeline outside Stage 10 scope — flagged for owner decision."
+S_all_model_bars_all_experiments,flagged,not_regenerated,"Same caveat as S_all_model_heatmaps_all_experiments."

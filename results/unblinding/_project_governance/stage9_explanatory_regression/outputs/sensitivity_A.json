@@ -1,0 +1,51 @@
+{
+  "n_draws": 10,
+  "short_chain_settings": [
+    "--warmup",
+    "500",
+    "--samples",
+    "750"
+  ],
+  "coefficients": {
+    "disclosure": {
+      "mean_across_draws": -0.07168558835983277,
+      "sd_across_draws": 0.008683733670335947,
+      "range": [
+        -0.08684832602739334,
+        -0.060168176889419556
+      ]
+    },
+    "disclosure_x_role_change": {
+      "mean_across_draws": 0.04356181714683771,
+      "sd_across_draws": 0.023555698688151,
+      "range": [
+        0.01621066778898239,
+        0.08037819713354111
+      ]
+    },
+    "disclosure_x_manipulation_location": {
+      "mean_across_draws": -0.08977333754301071,
+      "sd_across_draws": 0.01595757684652758,
+      "range": [
+        -0.1217191144824028,
+        -0.06723766773939133
+      ]
+    },
+    "human_abs_d_std": {
+      "mean_across_draws": 0.42525377571582795,
+      "sd_across_draws": 0.014836436576022806,
+      "range": [
+        0.4010738432407379,
+        0.43966397643089294
+      ]
+    },
+    "log_se_y_std": {
+      "mean_across_draws": 0.08969656750559807,
+      "sd_across_draws": 0.007674955970357098,
+      "range": [
+        0.07961851358413696,
+        0.10483882576227188
+      ]
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "model_A_average_disclosure_effect": {
+    "outcome": "log absolute-error ratio (disclosure vs blinded)",
+    "mean": -0.08199926711302143,
+    "cri95": [
+      -0.18202312933028447,
+      0.01819637335658362
+    ]
+  },
+  "stage6_results": [
+    {
+      "measure": "accuracy_improvement_blinded_minus_disclosed",
+      "weighting": "equal_experiment_PRIMARY",
+      "estimate_sd": 0.0413851660733023,
+      "cri95_low": -0.0225380904831448,
+      "cri95_high": 0.1051466954453413,
+      "n_experiments": 31,
+      "note": "no 0.1 SD threshold applied anywhere; posterior probabilities are NOT Bayes factors and do NOT mean that this proportion of experiments improved"
+    },
+    {
+      "measure": "accuracy_improvement_blinded_minus_disclosed",
+      "weighting": "pair_weighted_SECONDARY",
+      "estimate_sd": 0.0328626265259941,
+      "cri95_low": -0.0289551909345264,
+      "cri95_high": 0.0936987504212033,
+      "n_experiments": 31,
+      "note": "SECONDARY diagnostic (553 pairs weighted equally); pairs within an experiment are not independent experiments"
+    }
+  ]
+}

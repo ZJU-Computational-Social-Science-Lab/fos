@@ -1,0 +1,258 @@
+{
+  "settings": [
+    "--warmup",
+    "500",
+    "--samples",
+    "750"
+  ],
+  "leave_one_out": [
+    {
+      "experiment_excluded": "T2KX-budescu779",
+      "disclosure": -0.04415438324213028,
+      "disclosure_x_role_change": 0.06601916253566742,
+      "disclosure_x_manipulation_location": -0.025057433173060417,
+      "human_abs_d_std": 0.422702431678772,
+      "log_se_y_std": 0.0934135913848877
+    },
+    {
+      "experiment_excluded": "T2KX-howard823",
+      "disclosure": -0.06919679045677185,
+      "disclosure_x_role_change": 0.019188109785318375,
+      "disclosure_x_manipulation_location": -0.10025816410779953,
+      "human_abs_d_std": 0.4178570806980133,
+      "log_se_y_std": 0.08748036623001099
+    },
+    {
+      "experiment_excluded": "T2KX-keusch433",
+      "disclosure": -0.0845513641834259,
+      "disclosure_x_role_change": 0.046895019710063934,
+      "disclosure_x_manipulation_location": -0.08917637169361115,
+      "human_abs_d_std": 0.42000094056129456,
+      "log_se_y_std": 0.092228002846241
+    },
+    {
+      "experiment_excluded": "T2KX-ml1_allowed_forbidden",
+      "disclosure": -0.06627243757247925,
+      "disclosure_x_role_change": 0.025349538773298264,
+      "disclosure_x_manipulation_location": -0.08816653490066528,
+      "human_abs_d_std": 0.44559863209724426,
+      "log_se_y_std": 0.1076570600271225
+    },
+    {
+      "experiment_excluded": "T2KX-ml1_category_scales",
+      "disclosure": -0.08021068572998047,
+      "disclosure_x_role_change": 0.03431079164147377,
+      "disclosure_x_manipulation_location": -0.09064234048128128,
+      "human_abs_d_std": 0.4254009425640106,
+      "log_se_y_std": 0.08729091286659241
+    },
+    {
+      "experiment_excluded": "T2KX-ml1_gamblers_fallacy",
+      "disclosure": -0.06159977242350578,
+      "disclosure_x_role_change": 0.01875424012541771,
+      "disclosure_x_manipulation_location": -0.09244030714035034,
+      "human_abs_d_std": 0.4300675392150879,
+      "log_se_y_std": 0.0977615937590599
+    },
+    {
+      "experiment_excluded": "T2KX-ml1_imagined_contact",
+      "disclosure": -0.06348445266485214,
+      "disclosure_x_role_change": 0.013633380644023418,
+      "disclosure_x_manipulation_location": -0.0980745404958725,
+      "human_abs_d_std": 0.4133603572845459,
+      "log_se_y_std": 0.0950980857014656
+    },
+    {
+      "experiment_excluded": "T2KX-ml1_quote_attribution",
+      "disclosure": -0.08314675092697144,
+      "disclosure_x_role_change": 0.04796300083398819,
+      "disclosure_x_manipulation_location": -0.08628054708242416,
+      "human_abs_d_std": 0.4577655792236328,
+      "log_se_y_std": 0.09439586102962494
+    },
+    {
+      "experiment_excluded": "T2KX-ml1_reciprocity",
+      "disclosure": -0.058052774518728256,
+      "disclosure_x_role_change": -0.0023332631681114435,
+      "disclosure_x_manipulation_location": -0.11590219289064407,
+      "human_abs_d_std": 0.4269670248031616,
+      "log_se_y_std": 0.0788789764046669
+    },
+    {
+      "experiment_excluded": "T2KX-ml2_bauer_materialism",
+      "disclosure": -0.07592139393091202,
+      "disclosure_x_role_change": 0.06398434191942215,
+      "disclosure_x_manipulation_location": -0.09229980409145355,
+      "human_abs_d_std": 0.3884519040584564,
+      "log_se_y_std": 0.08647019416093826
+    },
+    {
+      "experiment_excluded": "T2KX-ml2_hauser_s1",
+      "disclosure": -0.07780246436595917,
+      "disclosure_x_role_change": 0.029642149806022644,
+      "disclosure_x_manipulation_location": -0.09070619940757751,
+      "human_abs_d_std": 0.4588848054409027,
+      "log_se_y_std": 0.10874147713184357
+    },
+    {
+      "experiment_excluded": "T2KX-ml2_miyamoto_correspondence",
+      "disclosure": -0.07885894179344177,
+      "disclosure_x_role_change": 0.038602594286203384,
+      "disclosure_x_manipulation_location": -0.08968262374401093,
+      "human_abs_d_std": 0.37721240520477295,
+      "log_se_y_std": 0.10065957903862
+    },
+    {
+      "experiment_excluded": "T2KX-ml2_risen_tempt_fate",
+      "disclosure": -0.10128616541624069,
+      "disclosure_x_role_change": 0.04550744220614433,
+      "disclosure_x_manipulation_location": -0.10307027399539948,
+      "human_abs_d_std": 0.4254751205444336,
+      "log_se_y_std": 0.08770450949668884
+    },
+    {
+      "experiment_excluded": "T2KX-ml2_rottenstreich_affect",
+      "disclosure": -0.09044460207223892,
+      "disclosure_x_role_change": 0.049851998686790466,
+      "disclosure_x_manipulation_location": -0.08678539842367172,
+      "human_abs_d_std": 0.44320133328437805,
+      "log_se_y_std": 0.07510865479707718
+    },
+    {
+      "experiment_excluded": "T2KX-ml2_schwarz_order",
+      "disclosure": -0.05991561710834503,
+      "disclosure_x_role_change": 0.005216602701693773,
+      "disclosure_x_manipulation_location": -0.11281634122133255,
+      "human_abs_d_std": 0.4057301878929138,
+      "log_se_y_std": 0.06980171799659729
+    },
+    {
+      "experiment_excluded": "T2KX-ml2_shafir_choose_reject",
+      "disclosure": -0.071929931640625,
+      "disclosure_x_role_change": 0.033839959651231766,
+      "disclosure_x_manipulation_location": -0.08305052667856216,
+      "human_abs_d_std": 0.44193410873413086,
+      "log_se_y_std": 0.10548267513513565
+    },
+    {
+      "experiment_excluded": "T2KX-reedBR32",
+      "disclosure": -0.06266231089830399,
+      "disclosure_x_role_change": 0.020215725526213646,
+      "disclosure_x_manipulation_location": -0.09440253674983978,
+      "human_abs_d_std": 0.44498851895332336,
+      "log_se_y_std": 0.07463110238313675
+    },
+    {
+      "experiment_excluded": "abs_relative",
+      "disclosure": -0.08163101226091385,
+      "disclosure_x_role_change": 0.04221551492810249,
+      "disclosure_x_manipulation_location": -0.08904718607664108,
+      "human_abs_d_std": 0.4256282448768616,
+      "log_se_y_std": 0.09417218714952469
+    },
+    {
+      "experiment_excluded": "allais",
+      "disclosure": -0.0874708741903305,
+      "disclosure_x_role_change": 0.0497443750500679,
+      "disclosure_x_manipulation_location": -0.08444937318563461,
+      "human_abs_d_std": 0.4269671142101288,
+      "log_se_y_std": 0.08744250237941742
+    },
+    {
+      "experiment_excluded": "anchoring_african",
+      "disclosure": -0.07916122674942017,
+      "disclosure_x_role_change": 0.03742338344454765,
+      "disclosure_x_manipulation_location": -0.09123179316520691,
+      "human_abs_d_std": 0.4246995747089386,
+      "log_se_y_std": 0.09129853546619415
+    },
+    {
+      "experiment_excluded": "anchoring_redwood",
+      "disclosure": -0.07259076088666916,
+      "disclosure_x_role_change": 0.026107899844646454,
+      "disclosure_x_manipulation_location": -0.0924646183848381,
+      "human_abs_d_std": 0.43516138195991516,
+      "log_se_y_std": 0.09583528339862823
+    },
+    {
+      "experiment_excluded": "disease",
+      "disclosure": -0.07636363804340363,
+      "disclosure_x_role_change": 0.025819620117545128,
+      "disclosure_x_manipulation_location": -0.09438536316156387,
+      "human_abs_d_std": 0.4571989178657532,
+      "log_se_y_std": 0.10682903230190277
+    },
+    {
+      "experiment_excluded": "fire_extinguisher",
+      "disclosure": -0.10543538630008698,
+      "disclosure_x_role_change": 0.04099179059267044,
+      "disclosure_x_manipulation_location": -0.11380559951066971,
+      "human_abs_d_std": 0.4316820502281189,
+      "log_se_y_std": 0.088653564453125
+    },
+    {
+      "experiment_excluded": "less_is_more",
+      "disclosure": -0.08661521971225739,
+      "disclosure_x_role_change": 0.028906289488077164,
+      "disclosure_x_manipulation_location": -0.10517898201942444,
+      "human_abs_d_std": 0.42512622475624084,
+      "log_se_y_std": 0.0841347947716713
+    },
+    {
+      "experiment_excluded": "linda",
+      "disclosure": -0.06944896280765533,
+      "disclosure_x_role_change": 0.04391102120280266,
+      "disclosure_x_manipulation_location": -0.07181785255670547,
+      "human_abs_d_std": 0.42149990797042847,
+      "log_se_y_std": 0.08861608058214188
+    },
+    {
+      "experiment_excluded": "myside",
+      "disclosure": -0.07752987742424011,
+      "disclosure_x_role_change": -0.009465746581554413,
+      "disclosure_x_manipulation_location": -0.09277355670928955,
+      "human_abs_d_std": 0.4227762818336487,
+      "log_se_y_std": 0.09103597700595856
+    },
+    {
+      "experiment_excluded": "outcome_bias",
+      "disclosure": -0.08535414189100266,
+      "disclosure_x_role_change": 0.04012303799390793,
+      "disclosure_x_manipulation_location": -0.09595873206853867,
+      "human_abs_d_std": 0.41866323351860046,
+      "log_se_y_std": 0.07752621173858643
+    },
+    {
+      "experiment_excluded": "prob_matching",
+      "disclosure": -0.07893265038728714,
+      "disclosure_x_role_change": 0.03994305431842804,
+      "disclosure_x_manipulation_location": -0.09437575191259384,
+      "human_abs_d_std": 0.4089597463607788,
+      "log_se_y_std": 0.04409440606832504
+    },
+    {
+      "experiment_excluded": "seatbelt",
+      "disclosure": -0.06413926929235458,
+      "disclosure_x_role_change": 0.020526153966784477,
+      "disclosure_x_manipulation_location": -0.0960797518491745,
+      "human_abs_d_std": 0.43767908215522766,
+      "log_se_y_std": 0.0927639976143837
+    },
+    {
+      "experiment_excluded": "sunk_cost",
+      "disclosure": -0.0686642974615097,
+      "disclosure_x_role_change": 0.018062705174088478,
+      "disclosure_x_manipulation_location": -0.10079855471849442,
+      "human_abs_d_std": 0.4296039640903473,
+      "log_se_y_std": 0.08889147639274597
+    },
+    {
+      "experiment_excluded": "wta_wtp",
+      "disclosure": -0.08826246857643127,
+      "disclosure_x_role_change": 0.03529425337910652,
+      "disclosure_x_manipulation_location": -0.08712445944547653,
+      "human_abs_d_std": 0.33971643447875977,
+      "log_se_y_std": 0.0888901948928833
+    }
+  ]
+}

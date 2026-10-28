@@ -1,0 +1,341 @@
+== C-01 (gain vs loss)
+  tokens: 122 vs 119 (mean 120.5)
+  wording_difference: 0.1245
+  first change at token 0.418: ...are as follows if program a is adopted 200 people will be saved if program b is...
+  negations control: [no]
+  negations treatment: []
+  negation sets differ by: [no]
+  negations hit in BOTH arms (manual-check candidates): []
+
+== C-02 (A vs B)
+  tokens: 53 vs 54 (mean 53.5)
+  wording_difference: 0.0935
+  first change at token 0.566: ...of winning $9 and a 29/36 chance of winning nothing extremely attractive a disagree strongly b disagree...
+  negations control: [neither nor]
+  negations treatment: [neither nor]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [neither nor]
+
+== C-03 (A vs C)
+  tokens: 53 vs 54 (mean 53.5)
+  wording_difference: 0.0935
+  first change at token 0.566: ...of winning $9 and a 29/36 chance of winning nothing extremely attractive a disagree strongly b disagree...
+  negations control: [neither nor]
+  negations treatment: [neither nor]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [neither nor]
+
+== C-04 (all vs 98pct)
+  tokens: 87 vs 89 (mean 88.0)
+  wording_difference: 0.0227
+  first change at token 0.4598: ...in fire extinguisher estimated cost $300 would save the 150 people who would otherwise die every year...
+  negations control: [neither nor]
+  negations treatment: [neither nor]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [neither nor]
+
+== C-05 (all vs 95pct)
+  tokens: 87 vs 89 (mean 88.0)
+  wording_difference: 0.0227
+  first change at token 0.4598: ...in fire extinguisher estimated cost $300 would save the 150 people who would otherwise die every year...
+  negations control: [neither nor]
+  negations treatment: [neither nor]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [neither nor]
+
+== C-06 (all vs 98pct)
+  tokens: 116 vs 118 (mean 117.0)
+  wording_difference: 0.0171
+  first change at token 0.25: ...just become available that would save the lives of the 500 drivers a year who are involved...
+  negations control: [not unlikely]
+  negations treatment: [not unlikely]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [not unlikely]
+
+== C-07 (all vs 95pct)
+  tokens: 116 vs 118 (mean 117.0)
+  wording_difference: 0.0171
+  first change at token 0.25: ...just become available that would save the lives of the 500 drivers a year who are involved...
+  negations control: [not unlikely]
+  negations treatment: [not unlikely]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [not unlikely]
+
+== C-08 (no_card vs card)
+  tokens: 86 vs 122 (mean 104.0)
+  wording_difference: 0.4038
+  first change at token 0.0233: imagine that coffee connection sells coffee for $1 50 per cup...
+  negations control: []
+  negations treatment: []
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): []
+
+== C-09 (wtp_certainty vs wta_certainty)
+  tokens: 138 vs 114 (mean 126.0)
+  wording_difference: 0.8889
+  first change at token 0.0145: imagine that when you went to the movies last week you...
+  negations control: [no]
+  negations treatment: [no]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [no]
+
+== C-10 (wtp_certainty vs wtp_noncertainty)
+  tokens: 138 vs 133 (mean 135.5)
+  wording_difference: 0.1845
+  first change at token 0.2029: ...the possibility of actually contracting the disease is 1 in 1 000 but once you have the...
+  negations control: [no]
+  negations treatment: [no]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [no]
+
+== C-11 (form1 vs form2)
+  tokens: 25 vs 24 (mean 24.5)
+  wording_difference: 0.6122
+  first change at token 0.12: choose between a one million dollars for sure b 89% probability of...
+  negations control: []
+  negations treatment: []
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): []
+
+== C-12 (no_conjunction vs conjunction)
+  tokens: 92 vs 99 (mean 95.5)
+  wording_difference: 0.0733
+  first change at token 0.8043: ...is ___ that linda is a bank teller scale extremely improbable / very improbable / somewhat probable...
+  negations control: []
+  negations treatment: []
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): []
+
+== C-13 (low vs high)
+  tokens: 37 vs 37 (mean 37.0)
+  wording_difference: 0.0541
+  first change at token 0.3243: ...tree in the world more or less than 85 feet tall a more b less how tall...
+  negations control: []
+  negations treatment: []
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): []
+
+== C-14 (low vs high)
+  tokens: 32 vs 32 (mean 32.0)
+  wording_difference: 0.0625
+  first change at token 0.2812: ...you think there are more or fewer than 12 african countries in the united nations a more...
+  negations control: []
+  negations treatment: []
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): []
+
+== C-15 (failure vs success)
+  tokens: 148 vs 142 (mean 145.0)
+  wording_difference: 0.0828
+  first change at token 0.3986: ...his life expectancy from age 65 to age 75 however 2% of the people who have this...
+  negations control: [not]
+  negations treatment: [not]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [not]
+
+== C-16 (ford vs german)
+  tokens: 82 vs 84 (mean 83.0)
+  wording_difference: 0.3373
+  first change at token 0.1463: ...study by the u s department of transportation ford explorers are 8 times more likely than a...
+  negations control: [no]
+  negations treatment: [no]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [no]
+
+== C-17 (problem1 vs problem2)
+  tokens: 100 vs 56 (mean 78.0)
+  wording_difference: 1.5897
+  first change at token 0.03: consider the following hypothetical situation a deck with 10 cards is randomly...
+  negations control: []
+  negations treatment: []
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): []
+
+== C-18 (calculator vs jacket)
+  tokens: 52 vs 52 (mean 52.0)
+  wording_difference: 0.1923
+  first change at token 0.1346: imagine that you go to purchase a calculator for $30 the calculator salesperson informs you that...
+  negations control: [no]
+  negations treatment: [no]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [no]
+
+== C-19 (two_sixes vs three_sixes)
+  tokens: 78 vs 74 (mean 76.0)
+  wording_difference: 0.1053
+  first change at token 0.2949: ...dice you observe him roll three dice and one comes up 3 and two come up 6...
+  negations control: []
+  negations treatment: []
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): []
+
+== C-20 (low_scale vs high_scale)
+  tokens: 53 vs 56 (mean 54.5)
+  wording_difference: 0.4954
+  first change at token 0.2075: ...do you watch per day a up to a half hour b half an hour to an...
+  negations control: []
+  negations treatment: []
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): []
+
+== C-21 (us_first vs us_second)
+  tokens: 31 vs 55 (mean 43.0)
+  wording_difference: 0.5581
+  first change at token 0.0: do you think the uk should let newspaper reporters...
+  negations control: [no]
+  negations treatment: [no]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [no]
+
+== C-22 (allow_wording vs forbid_wording)
+  tokens: 15 vs 15 (mean 15.0)
+  wording_difference: 0.1333
+  first change at token 0.4: do you think the uk should allow public speeches against democracy a yes b no
+  negations control: [no]
+  negations treatment: [no]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [no]
+
+== C-23 (disliked_source vs liked_source)
+  tokens: 63 vs 62 (mean 62.5)
+  wording_difference: 0.08
+  first change at token 0.1587: ...similar to what follows was once spoken by osama bin laden i have sworn to only live...
+  negations control: [neither nor]
+  negations treatment: [neither nor]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [neither nor]
+
+== C-24 (control_walk vs imagined_contact)
+  tokens: 77 vs 69 (mean 73.0)
+  wording_difference: 0.7123
+  first change at token 0.1299: ...like you to take a minute to imagine you are walking in the outdoors try to imagine...
+  negations control: [not]
+  negations treatment: [not]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [not]
+
+== C-25 (side_effect vs greater_good)
+  tokens: 18 vs 14 (mean 16.0)
+  wording_difference: 0.625
+  first change at token 0.2778: is it morally permissible for denise to switch the train to the side track...
+  negations control: [no]
+  negations treatment: [no]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [no]
+
+== C-26 (unprepared vs prepared)
+  tokens: 129 vs 134 (mean 131.5)
+  wording_difference: 0.1445
+  first change at token 0.3953: ...his or her hand to answer you have not done the reading and feel confident that you...
+  negations control: [no not]
+  negations treatment: [no not]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [no not]
+
+== C-27 (life_first vs life_second)
+  tokens: 37 vs 56 (mean 46.5)
+  wording_difference: 0.4086
+  first change at token 0.0: how satisfied are you currently with your life as...
+  negations control: []
+  negations treatment: []
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): []
+
+== C-28 (award_framing vs deny_framing)
+  tokens: 104 vs 103 (mean 103.5)
+  wording_difference: 0.029
+  first change at token 0.8365: ...lots of work related travel minor health problems to which parent would you award sole custody of...
+  negations control: []
+  negations treatment: []
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): []
+
+== C-29 (essay_pro_death vs essay_pro_choice)
+  tokens: 155 vs 155 (mean 155.0)
+  wording_difference: 0.0129
+  first change at token 0.1742: ...carefully i think that capital punishment should be continued when we take the viewpoint of the victim...
+  negations control: [neither]
+  negations treatment: [neither]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [neither]
+
+== C-30 (certainty vs one_percent)
+  tokens: 41 vs 71 (mean 56.0)
+  wording_difference: 0.5357
+  first change at token 0.1707: imagine that you have the opportunity to either meet and kiss your favorite movie star or...
+  negations control: []
+  negations treatment: []
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): []
+
+== C-31 (consumer_prime vs individual_prime)
+  tokens: 114 vs 114 (mean 114.0)
+  wording_difference: 0.0877
+  first change at token 0.0175: you are consumer you and three other consumers live in and...
+  negations control: [not]
+  negations treatment: [not]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [not]
+
+== C-32 (control vs atypical)
+  tokens: 83 vs 158 (mean 120.5)
+  wording_difference: 0.6224
+  first change at token 0.0: please enter your total estimated expenses in dollars for...
+  negations control: []
+  negations treatment: []
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): []
+
+== C-33 (control vs typical)
+  tokens: 83 vs 158 (mean 120.5)
+  wording_difference: 0.6224
+  first change at token 0.0: please enter your total estimated expenses in dollars for...
+  negations control: []
+  negations treatment: []
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): []
+
+== C-34 (control vs verbal_numerical)
+  tokens: 209 vs 267 (mean 238.0)
+  wording_difference: 0.2437
+  first change at token 0.7033: ...you to provide probabilities between 0% and 100% it is very likely that hot extremes heat waves...
+  negations control: [no]
+  negations treatment: [no not unlikely]
+  negation sets differ by: [not unlikely]
+  negations hit in BOTH arms (manual-check candidates): [no]
+
+== C-35 (control vs verbal_numerical)
+  tokens: 216 vs 274 (mean 245.0)
+  wording_difference: 0.2367
+  first change at token 0.6806: ...you to provide probabilities between 0% and 100% it is very unlikely that climate changes of at...
+  negations control: [no unlikely]
+  negations treatment: [no not unlikely]
+  negation sets differ by: [not]
+  negations hit in BOTH arms (manual-check candidates): [no unlikely]
+
+== C-36 (high_to_low_vague vs low_to_high_vague)
+  tokens: 230 vs 230 (mean 230.0)
+  wording_difference: 0.9565
+  first change at token 0.1217: ...an average week how often do you feel worthless a all of the time b most of...
+  negations control: [never]
+  negations treatment: [never]
+  negation sets differ by: []
+  negations hit in BOTH arms (manual-check candidates): [never]
+
+== C-37 (risky_positive+routine_positive vs risky_negative+routine_negative)
+  tokens: 133 vs 133 (mean 133.0)
+  wording_difference: 0.1353
+  first change at token 0.2932: ...and answer the questions below dr jones is polite warm and competent the facilities are clean the...
+  negations control: [not]
+  negations treatment: [never not]
+  negation sets differ by: [never]
+  negations hit in BOTH arms (manual-check candidates): [not]
+
+== C-38 (risky_positive+routine_positive vs risky_negative+routine_negative)
+  tokens: 133 vs 133 (mean 133.0)
+  wording_difference: 0.1353
+  first change at token 0.2932: ...and answer the questions below dr jones is polite warm and competent the facilities are clean the...
+  negations control: [not]
+  negations treatment: [never not]
+  negation sets differ by: [never]
+  negations hit in BOTH arms (manual-check candidates): [not]

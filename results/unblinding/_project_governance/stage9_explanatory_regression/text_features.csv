@@ -1,0 +1,39 @@
+contrast_id,question_length,wording_difference,manipulation_location,negation_tokens_control,negation_tokens_treatment,negation_tokens_changed,negation_common_hits,first_diff_excerpt,n_tokens_control,n_tokens_treatment
+C-01,120.5,0.1245,0.418,no,,no,,...are as follows if program a is adopted 200 people will be saved if program b is...,122,119
+C-02,53.5,0.0935,0.566,neither nor,neither nor,,neither nor,...of winning $9 and a 29/36 chance of winning nothing extremely attractive a disagree strongly b disagree...,53,54
+C-03,53.5,0.0935,0.566,neither nor,neither nor,,neither nor,...of winning $9 and a 29/36 chance of winning nothing extremely attractive a disagree strongly b disagree...,53,54
+C-04,88.0,0.0227,0.4598,neither nor,neither nor,,neither nor,...in fire extinguisher estimated cost $300 would save the 150 people who would otherwise die every year...,87,89
+C-05,88.0,0.0227,0.4598,neither nor,neither nor,,neither nor,...in fire extinguisher estimated cost $300 would save the 150 people who would otherwise die every year...,87,89
+C-06,117.0,0.0171,0.25,not unlikely,not unlikely,,not unlikely,...just become available that would save the lives of the 500 drivers a year who are involved...,116,118
+C-07,117.0,0.0171,0.25,not unlikely,not unlikely,,not unlikely,...just become available that would save the lives of the 500 drivers a year who are involved...,116,118
+C-08,104.0,0.4038,0.0233,,,,,imagine that coffee connection sells coffee for $1 50 per cup...,86,122
+C-09,126.0,0.8889,0.0145,no,no,,no,imagine that when you went to the movies last week you...,138,114
+C-10,135.5,0.1845,0.2029,no,no,,no,...the possibility of actually contracting the disease is 1 in 1 000 but once you have the...,138,133
+C-11,24.5,0.6122,0.12,,,,,choose between a one million dollars for sure b 89% probability of...,25,24
+C-12,95.5,0.0733,0.8043,,,,,...is ___ that linda is a bank teller scale extremely improbable / very improbable / somewhat probable...,92,99
+C-13,37.0,0.0541,0.3243,,,,,...tree in the world more or less than 85 feet tall a more b less how tall...,37,37
+C-14,32.0,0.0625,0.2812,,,,,...you think there are more or fewer than 12 african countries in the united nations a more...,32,32
+C-15,145.0,0.0828,0.3986,not,not,,not,...his life expectancy from age 65 to age 75 however 2% of the people who have this...,148,142
+C-16,83.0,0.3373,0.1463,no,no,,no,...study by the u s department of transportation ford explorers are 8 times more likely than a...,82,84
+C-17,78.0,1.5897,0.03,,,,,consider the following hypothetical situation a deck with 10 cards is randomly...,100,56
+C-18,52.0,0.1923,0.1346,no,no,,no,imagine that you go to purchase a calculator for $30 the calculator salesperson informs you that...,52,52
+C-19,76.0,0.1053,0.2949,,,,,...dice you observe him roll three dice and one comes up 3 and two come up 6...,78,74
+C-20,54.5,0.4954,0.2075,,,,,...do you watch per day a up to a half hour b half an hour to an...,53,56
+C-21,43.0,0.5581,0.0,no,no,,no,do you think the uk should let newspaper reporters...,31,55
+C-22,15.0,0.1333,0.4,no,no,,no,do you think the uk should allow public speeches against democracy a yes b no,15,15
+C-23,62.5,0.08,0.1587,neither nor,neither nor,,neither nor,...similar to what follows was once spoken by osama bin laden i have sworn to only live...,63,62
+C-24,73.0,0.7123,0.1299,not,not,,not,...like you to take a minute to imagine you are walking in the outdoors try to imagine...,77,69
+C-25,16.0,0.625,0.2778,no,no,,no,is it morally permissible for denise to switch the train to the side track...,18,14
+C-26,131.5,0.1445,0.3953,no not,no not,,no not,...his or her hand to answer you have not done the reading and feel confident that you...,129,134
+C-27,46.5,0.4086,0.0,,,,,how satisfied are you currently with your life as...,37,56
+C-28,103.5,0.029,0.8365,,,,,...lots of work related travel minor health problems to which parent would you award sole custody of...,104,103
+C-29,155.0,0.0129,0.1742,neither,neither,,neither,...carefully i think that capital punishment should be continued when we take the viewpoint of the victim...,155,155
+C-30,56.0,0.5357,0.1707,,,,,imagine that you have the opportunity to either meet and kiss your favorite movie star or...,41,71
+C-31,114.0,0.0877,0.0175,not,not,,not,you are consumer you and three other consumers live in and...,114,114
+C-32,120.5,0.6224,0.0,,,,,please enter your total estimated expenses in dollars for...,83,158
+C-33,120.5,0.6224,0.0,,,,,please enter your total estimated expenses in dollars for...,83,158
+C-34,238.0,0.2437,0.7033,no,no not unlikely,not unlikely,no,...you to provide probabilities between 0% and 100% it is very likely that hot extremes heat waves...,209,267
+C-35,245.0,0.2367,0.6806,no unlikely,no not unlikely,not,no unlikely,...you to provide probabilities between 0% and 100% it is very unlikely that climate changes of at...,216,274
+C-36,230.0,0.9565,0.1217,never,never,,never,...an average week how often do you feel worthless a all of the time b most of...,230,230
+C-37,133.0,0.1353,0.2932,not,never not,never,not,...and answer the questions below dr jones is polite warm and competent the facilities are clean the...,133,133
+C-38,133.0,0.1353,0.2932,not,never not,never,not,...and answer the questions below dr jones is polite warm and competent the facilities are clean the...,133,133

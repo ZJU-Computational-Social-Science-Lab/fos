@@ -1,0 +1,14 @@
+[sign check] pure compression never flips (4 betas, n=10000); with unit noise flips=4094 (expected >0)
+[data] reconciled_v1 verified: registry approved + all 4 manifest hashes match
+[convention] OK: signed t-minus-c standardized scale shared by 553 paired cells, max deviation 0.00e+00
+[stage11A] data: 1119 cells, 553 paired, 38 contrasts (32 confident)
+[stage11A] A1 fit b=blinded variant=intercept n=560
+[stage11A] A1 fit b=blinded variant=zero_intercept n=560
+[stage11A] A1 fit b=disclosed variant=intercept n=559
+[stage11A] A1 fit b=disclosed variant=zero_intercept n=559
+[stage11A] A2 done: overall confident acc=0.742
+[stage11A] A3 fit: null benchmark
+[stage11A] A3 fit: shared-contrast-residual comparison
+[stage11A] A3 posterior-predictive simulation (1000 draws)
+[stage11A] A3 recorded
+[stage11A] done; 85 result rows written

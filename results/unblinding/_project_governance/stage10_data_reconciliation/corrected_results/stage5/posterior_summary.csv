@@ -1,0 +1,9 @@
+parameter,mean
+b_disc,0.029841278
+g_blind,0.5088955
+g_disc,0.6468613
+a0_a1,-0.020380499
+sig_resid_a1,0.70273846
+sig_model_slope,0.043118004
+sig_exp_slope,0.33929664
+sig_slope_het,0.19743192

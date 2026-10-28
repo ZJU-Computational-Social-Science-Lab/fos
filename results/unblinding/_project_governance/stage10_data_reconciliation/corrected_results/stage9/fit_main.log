@@ -1,0 +1,6 @@
+Model A: 1106 rows, 25 predictors, 553 pairs; warmup=1000 samples=2000
+divergences: 0 | max r_hat (fixed): 1.0022339820861816 | flags: 0
+wrote outputs/posterior_mainA.npz and outputs/diag_mainA.json
+Model B: 934 rows, 25 predictors, 467 pairs; warmup=1000 samples=2000
+divergences: 3 | max r_hat (fixed): 1.0005189180374146 | flags: 0
+wrote outputs/posterior_mainB.npz and outputs/diag_mainB.json

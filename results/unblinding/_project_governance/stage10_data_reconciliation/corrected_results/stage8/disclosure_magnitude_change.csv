@@ -1,0 +1,8 @@
+contrast_id,collective_disagreement_class,human_abs_d_std,mean_abs_wrong_blinded,mean_abs_wrong_vs_human_d_blinded,mean_abs_wrong_disclosed,mean_abs_wrong_vs_human_d_disclosed
+C-03,majority_wrong_disclosed,0.625024,0.656402,1.0502,0.519457,0.8311
+C-09,majority_wrong_both,1.424479,0.516135,0.3623,0.393342,0.2761
+C-16,majority_wrong_blinded,0.258436,0.112982,0.4372,0.294752,1.1405
+C-26,majority_wrong_both,0.180432,0.353137,1.9572,0.787125,4.3625
+C-30,majority_wrong_both,0.072053,0.335168,4.6517,0.503837,6.9926
+C-31,majority_wrong_blinded,0.121207,0.097387,0.8035,0.090054,0.743
+C-37,majority_wrong_both,0.240418,1.021698,4.2497,0.850519,3.5377

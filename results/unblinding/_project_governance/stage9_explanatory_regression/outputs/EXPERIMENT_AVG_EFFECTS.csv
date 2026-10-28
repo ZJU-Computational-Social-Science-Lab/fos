@@ -1,0 +1,31 @@
+outcome,predictor,contrast,n_experiments,exp_averaged_estimate,exp_averaged_cri95_low,exp_averaged_cri95_high
+A_abs_error,gain_loss_framing,present vs absent,31,0.311549574136734,-0.261784067004919,1.1490084677934638
+A_abs_error,numerical_manipulation,present vs absent,31,-0.26503661274909973,-0.5484110251069069,0.13137906342744815
+A_abs_error,explicit_probability,present vs absent,31,0.08778548985719681,-0.3405869409441948,0.6912009745836257
+A_abs_error,negation_change,present vs absent,31,0.684727668762207,-0.11170749347656964,1.8201122105121592
+A_abs_error,role_change,present vs absent,31,-0.21714240312576294,-0.583604347705841,0.3563193008303637
+A_abs_error,question_order,present vs absent,31,-0.020016497001051903,-0.48113591223955154,0.6998362272977828
+A_abs_error,response_options_change,present vs absent,31,0.30100217461586,-0.3531504020094871,1.3680445700883859
+A_abs_error,question_length,+100 words,31,-0.1814706176519394,-0.5093575194478035,0.3079431734979144
+A_abs_error,wording_difference,+0.10 wording difference (10pp),31,-0.010886146686971188,-0.07511152476072311,0.05849382635205984
+A_abs_error,manipulation_location,0 -> 1 manipulation location,31,0.26794323325157166,-0.656993818283081,2.3819116055965424
+A_abs_error,n_response_options,+1 response option,31,-0.03938785195350647,-0.11505954284220934,0.04377846512943499
+A_abs_error,human_abs_d_std,+0.5 SD human effect size,31,0.612846314907074,0.2695850946009159,0.9908191427588461
+A_abs_error,manipulation_location_na,imputed (missing) vs observed,31,0.3698142170906067,-0.4582974098622799,1.869952470064163
+A_abs_error,n_response_options_na,imputed (missing) vs observed,31,0.25831708312034607,-0.42836170643568033,1.4052622526884073
+A_abs_error,disclosure,disclosed vs blinded,31,-0.07229670882225037,-0.16369967050850392,0.02886214526370161
+B_direction_correct,gain_loss_framing,present vs absent,27,-7.0269061185000075,-21.509862867220434,5.017128871913288
+B_direction_correct,numerical_manipulation,present vs absent,27,0.802128323423241,-10.509274329975106,9.859544299951082
+B_direction_correct,explicit_probability,present vs absent,27,-2.3707135358875475,-14.918788231992295,8.02162904308433
+B_direction_correct,negation_change,present vs absent,27,-5.716884930192764,-20.805540250807045,6.791887709812861
+B_direction_correct,role_change,present vs absent,27,-9.579238236312598,-25.327673615993568,3.8573864104685587
+B_direction_correct,question_order,present vs absent,27,-0.32846877591005164,-15.411747515575577,11.26408741824526
+B_direction_correct,response_options_change,present vs absent,27,0.5944115566173246,-13.317291235438402,11.328281994272531
+B_direction_correct,question_length,+100 words,27,-11.279682996066484,-31.59553097001447,6.017223830286533
+B_direction_correct,wording_difference,+0.10 wording difference (10pp),27,-1.957482284357292,-4.842260630410893,0.8204152326106674
+B_direction_correct,manipulation_location,0 -> 1 manipulation location,27,2.0974340434053302,-36.14068625255092,21.17875099510869
+B_direction_correct,n_response_options,+1 response option,27,1.252862041809295,-1.1898494731303078,3.690773181830334
+B_direction_correct,human_abs_d_std,+0.5 SD human effect size,27,6.898482918024804,0.4180606852466553,12.913904392106362
+B_direction_correct,manipulation_location_na,imputed (missing) vs observed,27,-0.6957285909383943,-17.12610429529834,11.341310957541543
+B_direction_correct,n_response_options_na,imputed (missing) vs observed,27,-2.5149447869175403,-17.892884977716726,9.253790323563397
+B_direction_correct,disclosure,disclosed vs blinded,27,-1.7295173288039631,-7.393258055030778,3.228043209393863

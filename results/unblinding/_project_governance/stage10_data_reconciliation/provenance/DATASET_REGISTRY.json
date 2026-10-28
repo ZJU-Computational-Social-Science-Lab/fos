@@ -1,0 +1,17 @@
+{
+  "approved": "reconciled_v1",
+  "versions": {
+    "reconciled_v1": {
+      "version": "reconciled_v1",
+      "status": "approved",
+      "manifest": "provenance/CANONICAL_DATA_MANIFEST.json",
+      "manifest_sha256": "6ba93eef7efd881949df036fc27e26710b0d092046b4a1ac4738ed44ebf8165f",
+      "tables": [
+        "data/CANONICAL_ARM_OUTCOMES.csv",
+        "data/CANONICAL_MODEL_EFFECTS.csv",
+        "data/MODEL_EFFECT_UNCERTAINTY_CORRECTED.csv",
+        "data/CANONICAL_PAIRED_ANALYSIS.csv"
+      ]
+    }
+  }
+}

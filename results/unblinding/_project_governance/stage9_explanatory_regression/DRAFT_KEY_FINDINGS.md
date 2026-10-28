@@ -1,0 +1,14 @@
+# Draft key findings — Stage 9 explanatory regressions
+
+- **What we tested.** Whether blind-coded features of how experiments were reworded for AI models explain (i) how far the AI landed from the human result and (ii) whether it pointed the same direction, across 553 model-by-contrast pairs.
+- **The single strongest correlate of AI error is the size of the human effect itself**: experiments with larger human effects show much larger AI absolute errors (+61.3 (95% CrI +27.0 to +99.1)% per +0.5 SD human effect, credible). AI disagreement concentrates where the human signal is strong.
+- **Noisier model estimates sit further from humans**: doubling a model-cell's bootstrap SE raises absolute error +2.7 (95% CrI +0.6 to +4.7)% (credible). Part of the "AI discrepancy" is sampling noise in the AI arm, not systematic bias.
+- **Negation changes are the largest feature association with error** (+68.5 (95% CrI -11.2 to +182.0)% when a negation was changed, not credible at 95%) — suggestive, not established.
+- **Numerical manipulation is associated with smaller AI error** (-26.5 (95% CrI -54.8 to +13.1)%, not credible) but is 68% overlapping with explicit-probability wording; the two cannot be separated with this design.
+- **Disclosure does not clearly change error**: disclosed runs show -7.2 (95% CrI -16.4 to +2.9)% absolute error vs blinded (not credible), consistent with the Stage 6 finding that disclosure's average effect is small and uncertain.
+- **Direction agreement is mostly not explained by the coded features**: on the 32 confident contrasts the model is direction-correct 73.7% of the time, but feature effects are small with wide intervals; disclosure shifts direction agreement by -1.8 (95% CrI -7.9 to +3.2) pp (not credible).
+- **Most characteristics we coded show no credible association with either outcome** — question order, response-option changes, role changes (3/38 contrasts each) and wording-difference size are all null here; these are genuinely inconclusive, not confirmed-absent.
+- **The unexplained part is big**: between-experiment heterogeneity is the largest grouping effect in Model A (spread 0.41 log-units, rivaling the biggest feature association); which experiment a contrast belongs to matters as much as any coded property of the manipulation.
+- **Human benchmark uncertainty matters**: refitting with redrawn human benchmarks moves coefficients by less than their credible widths, so conclusions are not an artifact of human-side noise (Sensitivity A).
+- **Excluding the Qwen family does not change the major effects** (Sensitivity B), and no single experiment drives them (Sensitivity C).
+- **Data caveat**: 145 of 530 original cells inherit the documented run10 stale-value lineage; Stage 9 treats the frozen values as given and flags, not fixes, them.

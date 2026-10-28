@@ -1,0 +1,56 @@
+Model A: 1106 rows, 25 predictors, 553 pairs; warmup=1000 samples=2000
+divergences: 0 | max r_hat (fixed): 1.0027871131896973 | flags: 0
+wrote outputs/posterior_mainA.npz and outputs/diag_mainA.json
+Model B: 934 rows, 25 predictors, 467 pairs; warmup=1000 samples=2000
+divergences: 13 | max r_hat (fixed): 1.0009313821792603 | flags: 0
+wrote outputs/posterior_mainB.npz and outputs/diag_mainB.json
+REGRESSION_EFFECTS.csv: 50 rows (25 + 25 features x 1 outcome each)
+wrote EXPERIMENT_AVG_EFFECTS.csv, EXPERIMENT_EXAMPLES.md
+>> /home/justin/Documents/ZJU work/fos/venv/bin/python /home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage9_explanatory_regression/scripts/fit_models.py --model a --tag sensA01 --warmup 500 --samples 750 --human-seed 1
+>> /home/justin/Documents/ZJU work/fos/venv/bin/python /home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage9_explanatory_regression/scripts/fit_models.py --model a --tag sensA02 --warmup 500 --samples 750 --human-seed 2
+>> /home/justin/Documents/ZJU work/fos/venv/bin/python /home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage9_explanatory_regression/scripts/fit_models.py --model a --tag sensA03 --warmup 500 --samples 750 --human-seed 3
+>> /home/justin/Documents/ZJU work/fos/venv/bin/python /home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage9_explanatory_regression/scripts/fit_models.py --model a --tag sensA04 --warmup 500 --samples 750 --human-seed 4
+>> /home/justin/Documents/ZJU work/fos/venv/bin/python /home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage9_explanatory_regression/scripts/fit_models.py --model a --tag sensA05 --warmup 500 --samples 750 --human-seed 5
+>> /home/justin/Documents/ZJU work/fos/venv/bin/python /home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage9_explanatory_regression/scripts/fit_models.py --model a --tag sensA06 --warmup 500 --samples 750 --human-seed 6
+>> /home/justin/Documents/ZJU work/fos/venv/bin/python /home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage9_explanatory_regression/scripts/fit_models.py --model a --tag sensA07 --warmup 500 --samples 750 --human-seed 7
+>> /home/justin/Documents/ZJU work/fos/venv/bin/python /home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage9_explanatory_regression/scripts/fit_models.py --model a --tag sensA08 --warmup 500 --samples 750 --human-seed 8
+>> /home/justin/Documents/ZJU work/fos/venv/bin/python /home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage9_explanatory_regression/scripts/fit_models.py --model a --tag sensA09 --warmup 500 --samples 750 --human-seed 9
+>> /home/justin/Documents/ZJU work/fos/venv/bin/python /home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage9_explanatory_regression/scripts/fit_models.py --model a --tag sensA10 --warmup 500 --samples 750 --human-seed 10
+wrote outputs/sensitivity_A.json
+>> /home/justin/Documents/ZJU work/fos/venv/bin/python /home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage9_explanatory_regression/scripts/fit_models.py --model a --tag sensB_A --warmup 500 --samples 750 --drop-qwen
+>> /home/justin/Documents/ZJU work/fos/venv/bin/python /home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage9_explanatory_regression/scripts/fit_models.py --model b --tag sensB_B --warmup 500 --samples 750 --drop-qwen
+wrote outputs/sensitivity_B.json
+Traceback (most recent call last):
+  File "/home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage9_explanatory_regression/scripts/run_sensitivities.py", line 129, in <module>
+    main()
+    ~~~~^^
+  File "/home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage9_explanatory_regression/scripts/run_sensitivities.py", line 119, in main
+    sensitivity_d()
+    ~~~~~~~~~~~~~^^
+  File "/home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage9_explanatory_regression/scripts/run_sensitivities.py", line 98, in sensitivity_d
+    s6 = pd.read_csv(STAGE9.parent / "stage6_direction_and_disclosure" /
+                     "DISCLOSURE_ACCURACY_SUMMARY.csv")
+  File "/home/justin/Documents/ZJU work/fos/venv/lib64/python3.14/site-packages/pandas/io/parsers/readers.py", line 1026, in read_csv
+    return _read(filepath_or_buffer, kwds)
+  File "/home/justin/Documents/ZJU work/fos/venv/lib64/python3.14/site-packages/pandas/io/parsers/readers.py", line 620, in _read
+    parser = TextFileReader(filepath_or_buffer, **kwds)
+  File "/home/justin/Documents/ZJU work/fos/venv/lib64/python3.14/site-packages/pandas/io/parsers/readers.py", line 1620, in __init__
+    self._engine = self._make_engine(f, self.engine)
+                   ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/home/justin/Documents/ZJU work/fos/venv/lib64/python3.14/site-packages/pandas/io/parsers/readers.py", line 1880, in _make_engine
+    self.handles = get_handle(
+                   ~~~~~~~~~~^
+        f,
+        ^^
+    ...<6 lines>...
+        storage_options=self.options.get("storage_options", None),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/justin/Documents/ZJU work/fos/venv/lib64/python3.14/site-packages/pandas/io/common.py", line 873, in get_handle
+    handle = open(
+        handle,
+    ...<3 lines>...
+        newline="",
+    )
+FileNotFoundError: [Errno 2] No such file or directory: '/home/justin/work/worktrees/implement-3002/results/unblinding/_project_governance/stage6_direction_and_disclosure/DISCLOSURE_ACCURACY_SUMMARY.csv'

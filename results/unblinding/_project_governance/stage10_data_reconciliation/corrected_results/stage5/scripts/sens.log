@@ -1,0 +1,83 @@
+sensitivity seeds = 20261027 (A1 prior/tier/split), 20261028 (A2 prior), 20261029 (LOEO)
+prior sensitivity (A1)...
+[fit_nuts] seed=20261027 chains=2 warmup=500 samples=750
+  A1_prior_halved: b_disc +0.0262 [-0.111, +0.164] ok=True
+[fit_nuts] seed=20261027 chains=2 warmup=500 samples=750
+  A1_prior_doubled: b_disc +0.0279 [-0.137, +0.180] ok=True
+prior sensitivity (A2)...
+[fit_nuts] seed=20261028 chains=2 warmup=500 samples=750
+  A2_prior_halved: g_blind +0.3795 g_disc +0.5120 ok=True
+[fit_nuts] seed=20261028 chains=2 warmup=500 samples=750
+  A2_prior_doubled: g_blind +0.5799 g_disc +0.7202 ok=False
+leave-one-experiment-out (A1 headline b_disc)...
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-budescu779: b_disc +0.0241 [-0.129, +0.185] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-howard823: b_disc +0.0311 [-0.120, +0.183] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-keusch433: b_disc +0.0233 [-0.129, +0.169] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-ml1_allowed_forbidden: b_disc +0.0005 [-0.144, +0.141] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-ml1_category_scales: b_disc +0.0249 [-0.126, +0.175] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-ml1_gamblers_fallacy: b_disc +0.0231 [-0.131, +0.171] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-ml1_imagined_contact: b_disc +0.0345 [-0.114, +0.178] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-ml1_quote_attribution: b_disc +0.0227 [-0.121, +0.171] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-ml1_reciprocity: b_disc +0.0167 [-0.142, +0.159] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-ml2_bauer_materialism: b_disc +0.0272 [-0.132, +0.178] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-ml2_hauser_s1: b_disc +0.0186 [-0.131, +0.164] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-ml2_miyamoto_correspondence: b_disc +0.0332 [-0.116, +0.188] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-ml2_risen_tempt_fate: b_disc +0.0188 [-0.133, +0.168] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-ml2_rottenstreich_affect: b_disc +0.0279 [-0.124, +0.187] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-ml2_schwarz_order: b_disc +0.0333 [-0.111, +0.183] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-ml2_shafir_choose_reject: b_disc +0.0435 [-0.106, +0.200] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_T2KX-reedBR32: b_disc +0.0150 [-0.137, +0.166] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_abs_relative: b_disc +0.0550 [-0.091, +0.203] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_allais: b_disc +0.0204 [-0.131, +0.171] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_anchoring_african: b_disc +0.0601 [-0.080, +0.198] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_anchoring_redwood: b_disc +0.0445 [-0.103, +0.196] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_disease: b_disc +0.0546 [-0.088, +0.193] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_fire_extinguisher: b_disc +0.0305 [-0.121, +0.194] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_less_is_more: b_disc +0.0487 [-0.102, +0.203] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_linda: b_disc +0.0373 [-0.119, +0.189] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_myside: b_disc +0.0297 [-0.124, +0.178] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_outcome_bias: b_disc +0.0227 [-0.129, +0.179] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_prob_matching: b_disc +0.0520 [-0.089, +0.205] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_seatbelt: b_disc +0.0252 [-0.127, +0.186] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_sunk_cost: b_disc +0.0388 [-0.109, +0.188] ok=True
+[fit_nuts] seed=20261029 chains=2 warmup=500 samples=750
+  A1_LOEO_wta_wtp: b_disc +0.0367 [-0.122, +0.183] ok=True
+tier sensitivity: percentage-points refit (A1)...
+[fit_nuts] seed=20261030 chains=2 warmup=500 samples=750
+  A1_pp_tier_units_of_10pp_budescu_excluded: b_disc -0.2561 [-0.835, +0.311] ok=True
+secondary split: original vs expansion (A1)...
+[fit_nuts] seed=20261031 chains=2 warmup=500 samples=750
+  A1_group_original: b_disc -0.2336 [-0.477, -0.010] ok=True
+[fit_nuts] seed=20261031 chains=2 warmup=500 samples=750
+  A1_group_expansion: b_disc +0.2593 [+0.100, +0.404] ok=True
+appended sensitivity results to MODEL_VALIDATION.md

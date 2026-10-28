@@ -1,0 +1,55 @@
+wrote /home/justin/work/worktrees/implement-3014/_project_governance/stage10_data_reconciliation/corrected_results/stage6/DIRECTION_RESULTS.csv (553 rows)
+pairs=553; confident-human pairs=467 (84.4%); direction-uncertain=86
+wrote /home/justin/work/worktrees/implement-3014/_project_governance/stage10_data_reconciliation/corrected_results/stage6/DIRECTION_TRANSITIONS.csv (43 rows)
+wrote /home/justin/work/worktrees/implement-3014/_project_governance/stage10_data_reconciliation/corrected_results/stage6/DIRECTION_MAJORITY_WRONG.csv (62 rows)
+                experiment_id       leg  n_pairs  n_same_wrong_direction  share_same_wrong  majority_same_wrong
+               T2KX-keusch433   blinded       15                       8          0.533333                 True
+               T2KX-keusch433 disclosed       15                      12          0.800000                 True
+   T2KX-ml2_bauer_materialism   blinded       15                       9          0.600000                 True
+    T2KX-ml2_risen_tempt_fate   blinded       15                      11          0.733333                 True
+    T2KX-ml2_risen_tempt_fate disclosed       15                      13          0.866667                 True
+T2KX-ml2_rottenstreich_affect   blinded       15                      10          0.666667                 True
+T2KX-ml2_rottenstreich_affect disclosed       15                       8          0.533333                 True
+       T2KX-ml2_schwarz_order   blinded       15                      10          0.666667                 True
+       T2KX-ml2_schwarz_order disclosed       15                       8          0.533333                 True
+                 less_is_more disclosed       30                      17          0.566667                 True
+                       myside   blinded       15                      10          0.666667                 True
+                prob_matching   blinded       15                       8          0.533333                 True
+      leg          abs_human_effect_bin  n_pairs  agree_rate
+  blinded               (0.0711, 0.243]      130    0.553846
+  blinded                (0.243, 0.469]      105    0.790476
+  blinded                (0.469, 0.715]      120    0.833333
+  blinded                (0.715, 1.814]      112    0.848214
+  blinded                           ALL      467    0.749465
+  blinded spearman_rho=0.241_p=1.41e-07      467         NaN
+disclosed               (0.0711, 0.243]      130    0.561538
+disclosed                (0.243, 0.469]      105    0.771429
+disclosed                (0.469, 0.715]      120    0.741667
+disclosed                (0.715, 1.814]      112    0.875000
+disclosed                           ALL      467    0.730193
+disclosed spearman_rho=0.207_p=6.38e-06      467         NaN
+wrote /home/justin/work/worktrees/implement-3014/_project_governance/stage10_data_reconciliation/corrected_results/stage6/DIRECTION_OVERALL_TRANSITIONS.csv (2 rows)
+                          scope  rate_wrong_right  rate_right_wrong  net_wr_minus_rw  ci_low_wrong_right  ci_high_wrong_right  ci_low_right_wrong  ci_high_right_wrong  ci_low_net  ci_high_net  n_clusters cluster_dimension  n_pairs
+overall_equal_experiment_weight          0.130191          0.136700        -0.006510            0.086639             0.180247            0.091358             0.184848   -0.058361     0.044108          27        experiment      467
+ sensitivity_equal_model_weight          0.128628          0.147684        -0.019056            0.090120             0.173308            0.113440             0.183866   -0.082595     0.049744          15             model      467
+pairs=553; registered fit seed=20261027; human-draw seed=20261028
+Traceback (most recent call last):
+  File "/home/justin/work/worktrees/implement-3014/_project_governance/stage10_data_reconciliation/corrected_results/stage6/scripts/corrected_stage6.py", line 74, in <module>
+    main()
+    ~~~~^^
+  File "/home/justin/work/worktrees/implement-3014/_project_governance/stage10_data_reconciliation/corrected_results/stage6/scripts/corrected_stage6.py", line 70, in main
+    _run("20_accuracy_refit.py")
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/justin/work/worktrees/implement-3014/_project_governance/stage10_data_reconciliation/corrected_results/stage6/scripts/corrected_stage6.py", line 61, in _run
+    mod.main()
+    ~~~~~~~~^^
+  File "/home/justin/Documents/ZJU work/fos/results/unblinding/_project_governance/stage6_direction_and_disclosure/scripts/20_accuracy_refit.py", line 150, in main
+    idata = sc5.fit_nuts(sc5.a1_model, a1_inputs(w, ix),
+                                       ~~~~~~~~~^^^^^^^
+  File "/home/justin/Documents/ZJU work/fos/results/unblinding/_project_governance/stage6_direction_and_disclosure/scripts/20_accuracy_refit.py", line 44, in a1_inputs
+    se0=jnp.array(w.se0.values), se1=jnp.array(w.se1.values),
+                  ^^^^^
+  File "/home/justin/.local/lib/python3.14/site-packages/pandas/core/generic.py", line 6321, in __getattr__
+    return object.__getattribute__(self, name)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+AttributeError: 'DataFrame' object has no attribute 'se0'. Did you mean: 'sem'?

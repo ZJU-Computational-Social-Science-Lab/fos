@@ -1,0 +1,44 @@
+{
+  "seed": 20261028,
+  "continuous_scaling": {
+    "question_length": {
+      "mean": 98.3490054249548,
+      "sd": 56.010479869837916
+    },
+    "wording_difference": {
+      "mean": 0.3078137432188065,
+      "sd": 0.33678562070527357
+    },
+    "manipulation_location": {
+      "mean": 0.28674773960217,
+      "sd": 0.22623307581461155
+    },
+    "n_response_options": {
+      "mean": 6.6075949367088604,
+      "sd": 3.378436058474989
+    },
+    "human_abs_d_std": {
+      "mean": 0.4846110216998192,
+      "sd": 0.4550457852651136
+    },
+    "log_se_y_std": {
+      "mean": -4.776539832531855,
+      "sd": 1.9890700276150377
+    }
+  },
+  "imputation": {
+    "manipulation_location": {
+      "median": 0.25,
+      "n_imputed": 30
+    },
+    "n_response_options": {
+      "median": 6.0,
+      "n_imputed": 74
+    }
+  },
+  "reference_categories": {
+    "response_format": "fmt_rating_mean",
+    "self_other": "selfother_self"
+  },
+  "note": "continuous predictors standardized (z-scores); binary features kept 0/1"
+}

@@ -1,0 +1,45 @@
+result_id,stage,metric,unit,previous_estimate,previous_interval,corrected_estimate,corrected_interval,interval_type,changed,interpretation_changed,source_file
+R01,stage3,recovery_slope_blinded,ratio,0.4935,,0.4762,"0.302-0.648",family-cluster bootstrap 95% CI,yes,no,corrected_results/stage3/recovery_slopes_signed_bias_figure3.csv
+R02,stage3,recovery_slope_disclosed,ratio,0.8978,,0.8842,"0.568-1.041",family-cluster bootstrap 95% CI,yes,no,corrected_results/stage3/recovery_slopes_signed_bias_figure3.csv
+R03,stage3,disclosure_slope_difference,ratio,0.4043,,0.4080,"0.059-0.592",family-cluster bootstrap 95% CI,yes,no,corrected_results/stage3/recovery_slopes_signed_bias_figure3.csv
+R04,stage3,signed_bias_blinded,pp,-12.097,,-12.447,"-20.009 to -5.449",family-cluster bootstrap 95% CI,yes,no,corrected_results/stage3/recovery_slopes_signed_bias_figure3.csv
+R05,stage3,signed_bias_disclosed,pp,-3.803,,-4.102,"-7.906 to 0.518",family-cluster bootstrap 95% CI,yes,no,corrected_results/stage3/recovery_slopes_signed_bias_figure3.csv
+R06,stage3,signed_bias_change_U_minus_B,pp,8.294,,8.345,"1.802-18.104",family-cluster bootstrap 95% CI,yes,no,corrected_results/stage3/recovery_slopes_signed_bias_figure3.csv
+R07,stage3,fig3_abs_error_blinded,pp,13.114,,13.423,"8.411-18.944",spec A.2 experiment-cluster 95% CI,yes,no,corrected_results/stage3/bootstrap_cis_spec_A2_experiment_cluster.csv
+R08,stage3,fig3_abs_error_disclosed,pp,8.498,,8.400,"4.901-12.569",spec A.2 experiment-cluster 95% CI,yes,no,corrected_results/stage3/bootstrap_cis_spec_A2_experiment_cluster.csv
+R09,stage3,contrast_cell_abs_error_blinded,pp,21.113,,20.861,"12.112-28.715",family-cluster bootstrap 95% CI,yes,no,corrected_results/stage3/bootstrap_cis_frozen_method.csv
+R10,stage3,contrast_cell_abs_error_disclosed,pp,21.257,,20.419,"12.621-27.384",family-cluster bootstrap 95% CI,yes,no,corrected_results/stage3/bootstrap_cis_frozen_method.csv
+R11,stage3,contrast_cell_abs_error_change_U_minus_B,pp,0.144,,-0.442,"-1.663-1.326",family-cluster bootstrap 95% CI,yes,yes_(sign_flip;_nonsignificant_both),corrected_results/stage3/bootstrap_cis_frozen_method.csv
+R12,stage5,A1_disclosure_effect_b_disc,sd,0.0390,,"0.0298","-0.116-0.178",95% CrI,yes,no,corrected_results/stage5/posterior_summary.csv
+R13,stage5,A2_recovery_slope_blinded,ratio,0.5192,,"0.5089","0.263-0.787",95% CrI,yes,no,corrected_results/stage5/compression_analysis.csv
+R14,stage5,A2_recovery_slope_disclosed,ratio,0.6630,,"0.6469","0.390-0.917",95% CrI,yes,no,corrected_results/stage5/compression_analysis.csv
+R15,stage5,A2_slope_difference,ratio,0.1438,,"0.1380","0.009-0.267",95% CrI,yes,no,corrected_results/stage5/compression_analysis.csv
+R16,stage5,pr_accuracy_improves_gt0_equal_weight,prob,0.900,,0.929,,posterior probability,yes,no,corrected_results/stage5/overall_summary.csv
+R17,stage5,group_split_original_only_b_disc,sd,-0.209,"-0.449 to 0.045","-0.234","-0.477 to -0.010",95% CrI,yes,yes_(now_excludes_zero),corrected_results/stage5/sensitivity_results.csv
+R18,stage6,accuracy_improvement_blinded_minus_disclosed_equal_experiment,sd,0.0414,"-0.0225-0.1051","0.0414","-0.0225-0.1051",95% CrI (pr>0=0.895),no,no,corrected_results/stage6/DISCLOSURE_ACCURACY_SUMMARY.csv
+R19,stage6,direction_transition_wrong_right_rate,rate,0.1327,,0.1302,,equal-experiment bootstrap 95% CI,yes,no,corrected_results/stage6/DIRECTION_OVERALL_TRANSITIONS.csv
+R20,stage6,direction_transition_right_wrong_rate,rate,0.1416,,0.1367,,equal-experiment bootstrap 95% CI,yes,no,corrected_results/stage6/DIRECTION_OVERALL_TRANSITIONS.csv
+R21,stage6,direction_agreement_blinded_all,rate,0.7473,,0.7495,,descriptive,yes,no,corrected_results/stage6/DIRECTION_ABS_EFFECT_TREND.csv
+R22,stage6,direction_agreement_disclosed_all,rate,0.7259,,0.7302,,descriptive,yes,no,corrected_results/stage6/DIRECTION_ABS_EFFECT_TREND.csv
+R23,stage7,pooled_direction_agreement_blinded,rate,0.747_(349/467),,0.749_(350/467),,descriptive,yes,no,corrected_results/stage7/DISAGREEMENT_AUDIT.csv
+R24,stage7,pooled_direction_agreement_disclosed,rate,0.726_(339/467),,0.730_(341/467),,descriptive,yes,no,corrected_results/stage7/DISAGREEMENT_AUDIT.csv
+R25,stage7,majority_wrong_contrasts,count_7,"C-03_disc;_C-09,C-26,C-30,C-37_both;_C-16,C-31_blinded",,same_7_contrasts_same_classes,,classification,no,no,corrected_results/stage7/DISAGREEMENT_AUDIT.csv
+R26,stage7,C16_agree_blinded,count,7_of_15,,5_of_15,,classification,yes,no,corrected_results/stage7/DISAGREEMENT_AUDIT.csv
+R27,stage8,C16_blinded_wrong_magnitude_ratio,ratio_of_human_d,0.6152_(intermediate),,0.4372_(near_zero),,pattern_flag,yes,yes_(shrinkage_not_reversal),corrected_results/stage8/ALL_CONTRAST_PATTERNS.csv
+R28,stage8,C11_blinded_wrong_magnitude_ratio,ratio_of_human_d,0.5909_(intermediate),,1.6305_(reversal),,pattern_flag,yes,yes,corrected_results/stage8/ALL_CONTRAST_PATTERNS.csv
+R29,stage8,mean_pairwise_co_error_blinded,count,3.18,,3.30,,descriptive,yes,no,corrected_results/stage8/CO_ERROR_OVERLAP.csv
+R30,stage8,mean_jaccard_blinded_overlap,jaccard,0.266,,0.278,,descriptive,yes,no,corrected_results/stage8/CO_ERROR_OVERLAP.csv
+R31,stage8,shared_failure_beta_z_absd,logit,−0.55,"89% HDI -1.00 to -0.10","-0.558","-1.00 to -0.10",89% HDI,yes,no,corrected_results/stage8/scripts/corrected_40_run.log
+R32,stage8,lomo_qwen_excluded_beta,logit,-0.418,"-0.84 to 0.00","-0.516","-0.98 to -0.04",89% HDI,yes,no,corrected_results/stage8/scripts/lomo_sensitivity.csv
+R33,stage9,A_human_abs_d_std_effect_per_0.5SD,pct_abs_error,61.3,"27.0-99.1","59.0","25.9-97.1",95% CrI (translated),yes,no,corrected_results/stage9/REGRESSION_EFFECTS.csv
+R34,stage9,A_disclosure_main_effect,pct_abs_error,-7.2,"-16.4-2.9","-7.9","-17.1-2.1",95% CrI (translated),yes,no,corrected_results/stage9/REGRESSION_EFFECTS.csv
+R35,stage9,A_disclosure_x_manipulation_location,log,-0.094,"-0.194-0.005_(p+=0.031)","-0.069","-0.171-0.032_(p+=0.090)",95% CrI,yes,yes_(loses_borderline_significance),corrected_results/stage9/REGRESSION_EFFECTS.csv
+R36,stage9,A_log_se_y_std,log,0.090,"0.020-0.158","0.077","0.019-0.133",95% CrI,yes,no,corrected_results/stage9/REGRESSION_EFFECTS.csv
+R37,stage9,B_human_abs_d_std_effect_per_0.5SD,pp_direction_correct,6.5,"0.4-12.1","6.1","0.04-11.7",95% CrI (translated),yes,borderline_(barely_excludes_zero),corrected_results/stage9/REGRESSION_EFFECTS.csv
+R38,stage9,B_disclosure_main_effect,pp_direction_correct,-1.8,"-7.9-3.2","-2.0","-8.0-2.9",95% CrI (translated),yes,no,corrected_results/stage9/REGRESSION_EFFECTS.csv
+R39,stage9,B_disclosure_x_manipulation_location,log,-0.276,"-0.630-0.073_(p+=0.065)","-0.347","-0.696-0.005_(p+=0.026)",95% CrI,yes,yes_(moves_toward_significance),corrected_results/stage9/REGRESSION_EFFECTS.csv
+R40,stage9,sensA_disclosure_stability,log,-,-,"-0.079_pm_0.008_across_10_human_draws",,across-draws SD,yes,no,corrected_results/stage9/outputs/sensitivity_A.json
+R41,stage9,sensD_average_disclosure_effect,log_abs_error_ratio,-,-,"-0.082","-0.182-0.018",95% CrI,yes,no,corrected_results/stage9/outputs/sensitivity_D.json
+R42,data,verified_exact_cells,count,1119_frozen_total,,974_exact_of_1119,,reconciliation audit,no,no,data/OLD_VS_CORRECTED_EFFECTS.csv
+R43,data,corrected_cells,count,,,139_(13_direction_flips),,reconciliation audit,yes,no,data/OLD_VS_CORRECTED_EFFECTS.csv
+R44,data,new_only_coverage_cells,count,,,6_(anchoring;_excluded_from_paired_553),,reconciliation audit,yes,no,data/OLD_VS_CORRECTED_EFFECTS.csv

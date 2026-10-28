@@ -1,0 +1,63 @@
+/home/justin/.config/matplotlib is not a writable directory
+Matplotlib created a temporary cache directory at /tmp/matplotlib-9_9jhqud because there was an issue with the default path (/home/justin/.config/matplotlib); it is highly recommended to set the MPLCONFIGDIR environment variable to a writable directory, in particular to speed up the import of Matplotlib and to better support multiprocessing.
+/home/justin/work/worktrees/implement-3019/results/unblinding/_project_governance/stage10_data_reconciliation/corrected_results/stage8/scripts/40_phase2_model.py:69: UserWarning: There are not enough devices to run parallel chains: expected 4 but got 1. Chains will be drawn sequentially. If you are running MCMC in CPU, consider using `numpyro.set_host_device_count(4)` at the beginning of your program. You can double-check how many devices are available in your system using `jax.local_device_count()`.
+  mcmc = MCMC(
+/home/justin/work/worktrees/implement-3019/results/unblinding/_project_governance/stage10_data_reconciliation/corrected_results/stage8/scripts/40_phase2_model.py:69: UserWarning: There are not enough devices to run parallel chains: expected 4 but got 1. Chains will be drawn sequentially. If you are running MCMC in CPU, consider using `numpyro.set_host_device_count(4)` at the beginning of your program. You can double-check how many devices are available in your system using `jax.local_device_count()`.
+  mcmc = MCMC(
+/home/justin/work/worktrees/implement-3019/results/unblinding/_project_governance/stage10_data_reconciliation/corrected_results/stage8/scripts/40_phase2_model.py:69: UserWarning: There are not enough devices to run parallel chains: expected 4 but got 1. Chains will be drawn sequentially. If you are running MCMC in CPU, consider using `numpyro.set_host_device_count(4)` at the beginning of your program. You can double-check how many devices are available in your system using `jax.local_device_count()`.
+  mcmc = MCMC(
+/home/justin/work/worktrees/implement-3019/results/unblinding/_project_governance/stage10_data_reconciliation/corrected_results/stage8/scripts/40_phase2_model.py:69: UserWarning: There are not enough devices to run parallel chains: expected 4 but got 1. Chains will be drawn sequentially. If you are running MCMC in CPU, consider using `numpyro.set_host_device_count(4)` at the beginning of your program. You can double-check how many devices are available in your system using `jax.local_device_count()`.
+  mcmc = MCMC(
+/home/justin/work/worktrees/implement-3019/results/unblinding/_project_governance/stage10_data_reconciliation/corrected_results/stage8/scripts/40_phase2_model.py:69: UserWarning: There are not enough devices to run parallel chains: expected 4 but got 1. Chains will be drawn sequentially. If you are running MCMC in CPU, consider using `numpyro.set_host_device_count(4)` at the beginning of your program. You can double-check how many devices are available in your system using `jax.local_device_count()`.
+  mcmc = MCMC(
+/home/justin/work/worktrees/implement-3019/results/unblinding/_project_governance/stage10_data_reconciliation/corrected_results/stage8/scripts/40_phase2_model.py:69: UserWarning: There are not enough devices to run parallel chains: expected 4 but got 1. Chains will be drawn sequentially. If you are running MCMC in CPU, consider using `numpyro.set_host_device_count(4)` at the beginning of your program. You can double-check how many devices are available in your system using `jax.local_device_count()`.
+  mcmc = MCMC(
+/home/justin/work/worktrees/implement-3019/results/unblinding/_project_governance/stage10_data_reconciliation/corrected_results/stage8/scripts/40_phase2_model.py:69: UserWarning: There are not enough devices to run parallel chains: expected 4 but got 1. Chains will be drawn sequentially. If you are running MCMC in CPU, consider using `numpyro.set_host_device_count(4)` at the beginning of your program. You can double-check how many devices are available in your system using `jax.local_device_count()`.
+  mcmc = MCMC(
+/home/justin/work/worktrees/implement-3019/results/unblinding/_project_governance/stage10_data_reconciliation/corrected_results/stage8/scripts/40_phase2_model.py:69: UserWarning: There are not enough devices to run parallel chains: expected 4 but got 1. Chains will be drawn sequentially. If you are running MCMC in CPU, consider using `numpyro.set_host_device_count(4)` at the beginning of your program. You can double-check how many devices are available in your system using `jax.local_device_count()`.
+  mcmc = MCMC(
+n_obs=473 n_contrasts=32 n_experiments=27 n_models=15 share_wrong=0.2495 seed=20261027
+                 mean     sd eti89_lb eti89_ub  ess_bulk  ess_tail     r_hat mcse_mean mcse_sd
+alpha           -1.53  0.325     -2.1       -1      3888      4349  1.006589    0.0052  0.0039
+beta           -0.558  0.289       -1   -0.099      4223      4951  1.006589    0.0044  0.0033
+sd_model        0.609  0.212      0.3     0.97      2844      3255  1.006589    0.0038  0.0032
+sd_experiment    0.49   0.35    0.042      1.1       978      1715  1.006589     0.011  0.0088
+sd_contrast      1.22  0.266     0.82      1.7      2467      2632  1.006589    0.0053  0.0043
+rhat_ok=True headline_ess_ok=True min_ess_bulk=978
+                   experiment_id    u_mean      u_lo     u_hi
+      T2KX-ml1_quote_attribution -0.337045 -1.820078 0.519096
+      T2KX-ml1_allowed_forbidden -0.309137 -1.820770 0.532701
+                    outcome_bias -0.297019 -1.833657 0.587833
+       T2KX-ml1_imagined_contact -0.233125 -1.606337 0.634210
+T2KX-ml2_miyamoto_correspondence -0.187663 -1.551423 0.766060
+        T2KX-ml1_category_scales -0.186076 -1.459642 0.714279
+       T2KX-ml1_gamblers_fallacy -0.158316 -1.385470 0.721611
+                           linda -0.139110 -1.437084 0.839567
+            T2KX-ml1_reciprocity -0.115953 -1.257925 0.789795
+                          allais -0.084649 -1.207109 0.871794
+              T2KX-ml2_hauser_s1 -0.067048 -1.248328 0.932776
+               anchoring_african -0.065966 -1.207729 0.921446
+                         disease -0.052882 -1.146528 0.911140
+                 T2KX-budescu779 -0.045378 -1.082589 0.913248
+                        seatbelt -0.035422 -0.964549 0.826932
+               fire_extinguisher  0.005445 -0.894147 0.899361
+                    abs_relative  0.034606 -0.960787 1.115123
+                  T2KX-howard823  0.065741 -0.890544 1.150409
+               anchoring_redwood  0.071036 -0.920961 1.237689
+                    less_is_more  0.146510 -0.643899 1.196944
+                       sunk_cost  0.186334 -0.656287 1.389097
+                         wta_wtp  0.208275 -0.594848 1.357913
+      T2KX-ml2_bauer_materialism  0.224288 -0.604344 1.597628
+                   T2KX-reedBR32  0.260573 -0.528839 1.475390
+   T2KX-ml2_rottenstreich_affect  0.279884 -0.542232 1.694149
+                          myside  0.292106 -0.564474 1.737559
+       T2KX-ml2_risen_tempt_fate  0.334860 -0.511280 1.817777
+--- leave-one-model-family-out ---
+excluded_family  n_models  beta_mean      beta_hdi  sd_experiment_mean  rhat_max  ess_min
+          gemma        12     -0.512 [-0.99,-0.04]                0.49  1.002173   1387.0
+            glm        14     -0.573 [-1.00,-0.11]                0.48  1.003029   1081.0
+        gpt-oss        14     -0.470  [-0.95,0.01]                0.57  1.003013   1268.0
+        granite        13     -0.690 [-1.20,-0.17]                0.54  1.005190   1262.0
+           muse        14     -0.500 [-0.99,-0.02]                0.47  1.003845   1337.0
+       nemotron        14     -0.572 [-1.00,-0.12]                0.51  1.002474   1349.0
+           qwen         9     -0.516 [-0.98,-0.04]                0.58  1.003708   1285.0

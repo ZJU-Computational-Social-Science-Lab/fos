@@ -1,0 +1,12 @@
+statistic,value
+recovery_blinded,0.4762307693730433
+signed_bias_blinded,-12.447140033666773
+figure3_absolute_error_blinded,13.423297110765391
+recovery_disclosed,0.8841959096634219
+signed_bias_disclosed,-4.101883173367502
+figure3_absolute_error_disclosed,8.399669119077886
+recovery_paired_difference,0.40796514029037856
+signed_bias_change_U_minus_B,8.345256860299273
+abs_error_contrast_cell_blinded,20.8613693698474
+abs_error_contrast_cell_unblinded,20.41887715553469
+abs_error_change_U_minus_B,-0.4424922143127077

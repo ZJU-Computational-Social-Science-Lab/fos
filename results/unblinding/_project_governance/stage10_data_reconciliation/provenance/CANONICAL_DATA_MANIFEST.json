@@ -1,0 +1,35 @@
+{
+  "accounting_rows": 2220,
+  "bootstrap_draws": 2000,
+  "coverage": {
+    "expected_original_rows": 524,
+    "frozen_coverage_rows": 2,
+    "note": "originals: frozen 262-row grid x 2 legs; anchoring C-13/C-14 have an 11-model structure; expansion: unestimable cells (howard823 C-32/C-33) are absent, never imputed",
+    "rows_by_group": {
+      "expansion": 589,
+      "original": 530
+    },
+    "rows_total": 1119
+  },
+  "created": "2026-10-28T07:37:53.367189+00:00",
+  "experiment_registry": "/home/justin/Documents/ZJU work/fos/results/unblinding/_project_governance/stage3_methodology/CONTRAST_REGISTER.csv",
+  "inputs": {
+    "/home/justin/Documents/ZJU work/fos/results/unblinding/_project_governance/stage3_methodology/CONTRAST_REGISTER.csv": "153b8b8166a57be27408167a9abed0b334e5808a36d03ad69e80c68585e84544",
+    "/home/justin/Documents/ZJU work/fos/results/unblinding/_project_governance/stage3_results/combined31/coverage_subsets.csv": "5bd10bdea97b340567eff57a2351bdd92b2ba5659f7fea28c0fb6fd70d941b85",
+    "/home/justin/Documents/ZJU work/fos/results/unblinding/_project_governance/stage3_results/combined31/original_human_sd_verification.csv": "22057bbcdb1468ce4c758bc4f781b40146e3af520973d97c1f3a981da578e77e",
+    "/home/justin/Documents/ZJU work/fos/results/unblinding/_project_governance/stage3_results/expansion17/contrast_level_results.csv": "d575ddbdf6dd30da523f292876dd0da00e2609ae28a84880dbe85e8a4ce9b830",
+    "/home/justin/Documents/ZJU work/fos/results/unblinding/_project_governance/stage5_exploratory/data/stage5_dataset.csv": "0cdebf9bcba832cc2f0966a1d925623530727b9be5654df1d968da1066b2e548",
+    "/home/justin/Documents/ZJU work/fos/results/unblinding/agreed_figure_code_package/data/blinding_signed_contrasts.csv": "c2fdb506c03768c2a181a253943a4dcf0c59f185478a1f164bf5868fcae5e431",
+    "/home/justin/work/research/T2K10-FIGURES/experiment_registry.json": "6f4366e9c0e12342102afa2461d15d0bcaba5accd76d1a510f2dca4db4aba9d8",
+    "/home/justin/work/worktrees/implement-3009/_project_governance/stage10_data_reconciliation/scripts/rebuild_model_effects.py": "39ed2518fc3c93d5e2055d0fb0234824a222e0802900a739b658c46ce5f12ef2"
+  },
+  "outputs": {
+    "CANONICAL_ARM_OUTCOMES.csv": "261ac76de861d853c921714506f00071b2f116e66494652c00982d2ff049fd13",
+    "CANONICAL_MODEL_EFFECTS.csv": "69ea2adc91d6270e8d2bc94ba5c278bf780100faf90f1d2f70e03197c36b1faf",
+    "CANONICAL_PAIRED_ANALYSIS.csv": "d7ef0d960bd60a316911834fbe699cbfc2fbd1954a14ffea42a624b5f4103dfc",
+    "MODEL_EFFECT_UNCERTAINTY_CORRECTED.csv": "13d88a5a3d7d053997a57baf894d1f5c5e961f67fab05b6cbdcd1c814e4844ef"
+  },
+  "scoring_code_version": "39ed2518fc3c93d5e2055d0fb0234824a222e0802900a739b658c46ce5f12ef2",
+  "seed": 20261028,
+  "version": "reconciled_v1"
+}
