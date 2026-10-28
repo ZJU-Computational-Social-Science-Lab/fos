@@ -17,13 +17,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from figures_distributions import fig02_tvd_mismatch
+from figures_distributions import fig02_distributional_distance
 import figures_effects
 
 
 def main():
-    print("== Figure 02 (TVD, journal) ==")
-    fig02_tvd_mismatch()
+    print("== Figure 02 (distributional distance ECDF, all 31, journal) ==")
+    fig02_distributional_distance()
     print("== Figures 03–07 (effects, journal) ==")
     figures_effects.main()
     print("done: journal figures written to",

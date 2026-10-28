@@ -1,107 +1,83 @@
-# figures_distributions.py — final journal Figure 02 (TVD mismatch).
+# figures_distributions.py — final journal Figure 02 (distributional
+# distance ECDF, all 31 experiments).
 #
-# What this file does:
-#   Only Figure 02 remains in this module: the validated total-variation
-#   distance (TVD) results for the 7 eligible experiments — how far each
-#   LLM's answer distribution sits from the human one, blinded and
-#   disclosed. The TVD numbers themselves are read from the
-#   already-validated table (T1_tvd.csv, seeded 20261010) and only
-#   re-plotted. Provenance: that table was built from the complete
-#   canonical records tree (Documents/ZJU work/fos/...), NOT the stale
-#   fos-data mid-run mirror (see FIGURE_GUIDE.md, TVD provenance note).
-#
-#   The exploratory fig01 distribution-example figures were removed from
-#   the pipeline; the git/project history holds the old code.
+# What this file does: one ECDF comparing blinded LLM-human, disclosed
+# LLM-human, and the human split-half reference distributional distances
+# across all 31 experiments. Distances are normalized 1-D Wasserstein
+# distances on each experiment's registered outcome space (equal to TVD
+# for two-point/binary spaces), computed by run_fig02_all31 (seeded,
+# deterministic); aggregation weights every experiment equally. The
+# human split-half curve is the full reference DISTRIBUTION (500 seeded
+# splits per experiment), not a percentile point.
 #
 # Functions:
-#   fig02_tvd_mismatch() -> builds the TVD journal figure
+#   fig02_distributional_distance() -> builds the Figure 02 ECDF
 
 import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fig_common import (C_BLINDED, C_DISCLOSED, FIG_DIR, UNBLINDING,
-                        save_figure)
+from fig_common import C_BLINDED, C_DISCLOSED, save_figure  # noqa: E402
+from fig02_common import ecdf_points as _ecdf_impl  # noqa: E402
+import run_fig02_all31 as ra  # noqa: E402
 
-# The validated distributional analysis (Task 2724/2732, seeded 20261010).
-DIST_RESULTS = UNBLINDING / ("publication_audit/"
-                             "distributional_error_explanation_20261019")
-
-
-# The 7 eligible experiments of the final journal set, with readable
-# names. The two anchoring units share ONE "Anchoring" category on the x
-# axis (their points and reference line are pooled there).
-JOURNAL_EXPERIMENTS = [
-    ("disease", "Disease framing"),
-    ("sunk_cost", "Sunk cost"),
-    ("wta_wtp", "WTA/WTP"),
-    ("outcome_bias", "Outcome bias"),
-    ("myside", "Myside bias"),
-    ("anchoring_african", "Anchoring"),
-    ("anchoring_redwood", "Anchoring"),
-    ("prob_matching", "Probability matching"),
-]
+# the worktree stage11 figures directory (script-relative, so runs write
+# next to this code and get synced, never into the read-only live tree)
+FIG_DIR_WT = Path(__file__).resolve().parent.parent / "figures"
 
 
-def fig02_tvd_mismatch():
-    """Plot the validated TVD values for the 7 eligible experiments.
+def fig02_distributional_distance():
+    """Pooled weighted ECDF of distributional distances, all 31 exps."""
+    units = ra.canonical_experiments()
+    by_arm = ra.compute_arm_dists(units)
+    splits = ra.split_half_reference(units)
+    ra.write_tables(units, by_arm, splits)
 
-    One jittered point per model x arm; blinded/disclosed differ in both
-    colour and marker shape; per-experiment human split-half reference
-    (95th percentile of split-half TVD, averaged over arms and contrasts)
-    as a short grey horizontal line. Journal rules: no title, no notes.
-    """
-    tvd = pd.read_csv(DIST_RESULTS / "T1_tvd.csv")
-    # keep first-appearance order, so the two anchoring units collapse
-    # into one category automatically
-    exp_order = list(dict.fromkeys(label for _, label in JOURNAL_EXPERIMENTS))
-    labels = dict(JOURNAL_EXPERIMENTS)
-    missing = {name for name, _ in JOURNAL_EXPERIMENTS}
-    missing -= set(tvd.experiment.unique())
-    if missing:
-        raise ValueError(f"TVD table missing eligible experiments: {missing}")
-    long = tvd.melt(
-        id_vars=["experiment", "contrast", "model", "condition",
-                 "ref_tvd_control_p95", "ref_tvd_treat_p95"],
-        value_vars=["TVD_control", "TVD_treat"],
-        var_name="arm", value_name="TVD")
-    long["arm"] = long["arm"].map({"TVD_control": "control",
-                                   "TVD_treat": "treatment"})
-    long["category"] = long.experiment.map(labels)
-    fig, ax = plt.subplots(figsize=(8.6, 4.4))
-    rng = np.random.default_rng(20261028)
-    for x_i, cat in enumerate(exp_order):
-        sub = long[long.category == cat]
-        for cond, color, marker in (("blinded", C_BLINDED, "o"),
-                                    ("unblinded", C_DISCLOSED, "^")):
-            vals = sub[sub.condition == cond].TVD.to_numpy()
-            jitter = rng.uniform(-0.18, 0.18, size=len(vals))
-            ax.plot(x_i + jitter, vals, marker, color=color, markersize=3.5,
-                    alpha=0.55, linestyle="none",
-                    label=("blinded" if x_i == 0 and cond == "blinded"
-                           else ("disclosed" if x_i == 0 else None)))
-        # human split-half noise reference (95th percentile), this
-        # experiment only — averaged over its contrasts, units and arms
-        ref = sub[["ref_tvd_control_p95", "ref_tvd_treat_p95"]].mean(axis=1)
-        ax.plot([x_i - 0.28, x_i + 0.28], [ref.mean()] * 2, "-", color="0.45",
-                linewidth=1.4,
-                label=("human split-half noise (95th pct)" if x_i == 0
-                       else None))
-    ax.set_xticks(range(len(exp_order)))
-    ax.set_xticklabels(exp_order, rotation=40, ha="right", fontsize=8.5)
-    ax.set_ylabel("total variation distance")
-    ax.set_ylim(0.0, 1.0)
-    ax.legend(frameon=False, fontsize=8)
+    agg = by_arm.groupby(["experiment", "model", "blinding"],
+                         as_index=False)["distance"].mean()
+    fig, ax = plt.subplots(figsize=(6.4, 4.6))
+    n_exp = len(units)
+    for cond, color, label in ((("blinded"), C_BLINDED, "LLM–human, blinded"),
+                               (("disclosed"), C_DISCLOSED,
+                                "LLM–human, disclosed")):
+        sub = agg[agg.blinding == cond]
+        w = [1.0 / (n_exp * len(sub[sub.experiment == e]))
+             for e in sub.experiment]
+        x, y = _ecdf(sub.distance.to_numpy(), w)
+        ax.step(x, y, where="post", color=color, linewidth=1.6, label=label)
+    w_sh = [1.0 / (n_exp * ra.N_SPLITS)] * len(splits)
+    x, y = _ecdf(splits.distance.to_numpy(), w_sh)
+    ax.step(x, y, where="post", color="0.45", linewidth=1.6,
+            label="human split-half")
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.set_xlabel("distributional distance (0 = identical)")
+    ax.set_ylabel("cumulative proportion")
+    ax.legend(frameon=False, fontsize=8.5, loc="lower right")
     fig.tight_layout()
-    keep = long[["experiment", "contrast", "model", "condition", "arm",
-                 "TVD", "ref_tvd_control_p95", "ref_tvd_treat_p95"]]
-    keep.to_csv(FIG_DIR / "fig02_tvd_mismatch.csv", index=False)
-    save_figure(fig, "fig02_tvd_mismatch")
+    keep = agg.rename(columns={"distance": "dist"})
+    keep["weight"] = [1.0 / (n_exp * len(agg[agg.experiment == e]))
+                      for e in keep.experiment]
+    sh = splits.assign(model="human split-half", blinding="human split-half",
+                       weight=1.0 / (n_exp * ra.N_SPLITS)
+                       ).rename(columns={"distance": "dist"})
+    plot_table = keep[["experiment", "model", "blinding", "dist",
+                       "weight"]]
+    plot_table = pd.concat([
+        plot_table,
+        sh[["experiment", "model", "blinding", "dist", "weight"]]])
+    plot_table.to_csv(
+        FIG_DIR_WT / "fig02_distributional_distance.csv", index=False)
+    save_figure(fig, "fig02_distributional_distance", out_dir=FIG_DIR_WT)
+
+
+def _ecdf(samples, weights):
+    """Sorted x / cumulative-share y for one blinding curve."""
+    return _ecdf_impl(list(samples), list(weights))
 
 
 if __name__ == "__main__":
-    fig02_tvd_mismatch()
+    fig02_distributional_distance()

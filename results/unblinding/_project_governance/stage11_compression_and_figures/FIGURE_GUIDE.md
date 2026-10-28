@@ -27,9 +27,9 @@ lines, bands), disclosed = orange/muted red, human references = grey/black.
   `stage10_data_reconciliation/data/CANONICAL_MODEL_EFFECTS.csv` and
   `CANONICAL_PAIRED_ANALYSIS.csv` (see `fig_common.load_effects()` /
   `contrast_table()`). Frozen Stage 3/5/9 effect estimates are never used.
-- **Figure 02** re-plots the validated TVD table `T1_tvd.csv` from
-  `publication_audit/distributional_error_explanation_20261019/` (seeded
-  20261010) — see the TVD provenance note below.
+- **Figure 02** recomputes distributional distances for all 31
+  experiments from the complete authoritative response records (see the
+  Figure 02 provenance note below).
 - **Direction figures (07)** use only the 32 contrasts whose human direction
   is confident (two-sided 95% interval excluding zero, same rule as Stage 6).
   The 6 uncertain contrasts are excluded from direction scoring and are never
@@ -62,46 +62,89 @@ so the pp-scale Stage 10 values apply directly to the standardized axes;
 `fig_common.stage10_slope_ci()` recomputes the point estimate from the
 corrected signed table and refuses to plot on any mismatch.
 
-## TVD provenance verdict (fig02)
+## Figure 02 provenance and metric note
 
-The TVD table `T1_tvd.csv` was **already built from the authoritative,
-complete records** and is reused without recalculation. Verified: its
-pipeline (RUN_LOG.md, scripts/exp_config.py) reads run10/run6 records from
-`/home/justin/Documents/ZJU work/fos/results/unblinding/T2K10-…/` and
-`TWIN2K_…/` — the canonical tree holding the full 200 records per leg. The
-stale fos-data mid-run mirror (`/home/justin/work/fos-data/...`, frozen
-2026-09-23 ~12:03, 1–2 records per arm for 9 models; see Stage 10
-ROOT_CAUSE_ANALYSIS.md) appears nowhere in that package. No stale inputs, no
-recalculation needed.
+Figure 02 was rebuilt (2026-10-28) as an all-31-experiment ECDF with a
+common distance metric, replacing the earlier 7-experiment TVD figure.
+Data provenance, per side:
 
-The grey reference is the **95th percentile of split-half human TVD**
-(sampling variability), averaged over the experiment's contrasts and arms —
-it is a descriptive reference, NOT a confidence interval and NOT a mean TVD.
+- **Original 14 units** — human answer codes from the registered primary
+  wave (`agreed_figure_code_package/data/wave1_3_response.csv`) and LLM
+  persona distributions from the run-10/run-6 unblinding logprob records
+  (`T2K10-…/`, `TWIN2K_…/`), reusing the validated
+  `publication_audit/distributional_error_explanation_20261019` loaders
+  (seeded 20261010). Verified: these are the complete canonical records;
+  the stale fos-data mid-run mirror (Stage 10 ROOT_CAUSE_ANALYSIS.md)
+  appears nowhere in the path.
+- **Expansion 17 experiments** — human respondents from the cleaned ML1/ML2
+  tidy files and the archived TESS `.sav` studies, coded with each
+  experiment's registered outcome coding; LLM persona values streamed from
+  the complete production records of the expansion run
+  (`expansion/work/T2KX-20261022T222604/`, the Stage 10-verified
+  authoritative source), retained at the registered primary cut
+  (`branch_mass >= 0.80`); excluded records are missing, never zero.
 
-## Figure 02 — Distributional mismatch (TVD)
+**Metric:** normalized 1-D Wasserstein distance. Each experiment's
+registered outcome space (the registered answer coding's value range, read
+from the frozen pipeline codings) is scaled to [0, 1]; the distance between
+the human and LLM response distributions is the Wasserstein-1 distance on
+that scale. For two-point (binary) spaces this equals the total variation
+distance (verified: the binary original-14 values reproduce the old TVD
+table exactly, e.g. allais control 0.2706). No bins, no invented orderings,
+no mean substitutes. The metric is therefore a generalization, not TVD —
+the figure and files are renamed `fig02_distributional_distance.*`.
+Anchoring units are scored on the registered anchor more/less item (the
+same eligibility the validated TVD analysis used).
 
-Files: `fig02_tvd_mismatch.*`
+**Split-half reference:** per experiment and arm, 500 seeded splits
+(SEED=20261028 + experiment offset) of the human respondents into halves;
+the same Wasserstein distance is computed between the halves. The grey
+curve is the FULL reference distribution (one value per draw, aggregated
+equal-weight over the experiment's arms), not a percentile point.
 
-- **Purpose:** how far each LLM's answer distribution sits from the human
-  one per experiment, blinded vs disclosed; LLMs sit far above the human
-  split-half noise line.
-- **Source:** validated `T1_tvd.csv` (provenance above), reconciled-era
-  records, seeded 20261010. n: 7 eligible experiments (Anchoring pools the
-  african+redwood units); 15 models per experiment except Anchoring (11);
-  one point per model × arm × condition.
-- **Estimand:** TVD between the human answer distribution and the
-  persona-averaged LLM distribution, per model, arm, condition (0 = identical
-  distributions, 1 = completely different). TVD ≠ 0 for humans themselves
-  because of split-half sampling variability — hence the grey reference.
-- **Interval:** none plotted; the grey line is the 95th percentile of
-  split-half human TVD (descriptive reference, see above).
-- **Exclusions:** experiments without a registered common category set
-  (e.g. base_rate, false_consensus); anchoring numeric estimates.
-- **Proposed caption:** "Total variation distance (TVD) between each LLM's
-  answer distribution and the human distribution, per model and arm, for the
-  seven eligible experiments. Blinded: circles; disclosed: triangles. Grey
-  lines mark the 95th percentile of human split-half TVD, the distance
-  attributable to sampling variation alone."
+**Aggregation:** equal weight per experiment. Arm-level distances average
+within experiment x model x blinding (a shared control arm counts once),
+models average equally within experiment, and each experiment carries
+total weight 1/31 in every curve; the split-half pool is
+experiment-equal-weighted the same way. Raw responses are never pooled
+across experiments.
+
+**Validation:** distances all within [0, 1] (observed 0.002–0.935), no
+missing cell scored as zero, human and LLM sides scored on the identical
+registered coding, and the plotted CSV holds the exact plotted numbers.
+All 31 experiments are included (coverage table:
+`analysis/fig02_coverage_table.csv`); none excluded.
+
+## Figure 02 — Distributional mismatch (all 31 experiments)
+
+Files: `fig02_distributional_distance.*`
+
+- **Purpose:** how far LLM answer distributions sit from the human ones,
+  blinded vs disclosed, across ALL 31 experiments; both LLM curves sit far
+  to the right of the human split-half distribution.
+- **Source:** recomputed end-to-end by `scripts/figures_distributions.py`
+  + `run_fig02_all31.py` (+ `fig02_original14.py`, `fig02_expansion.py`,
+  `fig02_tess.py`, `fig02_common.py`), seeded 20261028; provenance and
+  metric above. Per-arm numbers: `analysis/fig02_dist_by_arm.csv`; plotted
+  numbers: `figures/fig02_distributional_distance.csv`; split-half draws:
+  `analysis/fig02_split_half_draws.csv`.
+- **Estimand:** normalized Wasserstein-1 distance between the human and
+  LLM response distributions on the registered outcome space (0 =
+  identical, 1 = completely different; = TVD for binary spaces),
+  experiment-equal aggregated. Human–human distance is not zero because of
+  split-half sampling variability — hence the grey reference distribution.
+- **Interval:** none plotted; no statistically justified clustered band —
+  model×arm observations are not independent experiments, so no uncertainty
+  band is drawn rather than an unjustified one.
+- **Exclusions:** none — all 31 experiments support a registered-space
+  distributional comparison (`fig02_coverage_table.csv`, included=yes
+  for all).
+- **Proposed caption:** "Cumulative distributions of the distance between
+  LLM and human response distributions, for all 31 experiments (each
+  experiment weighted equally). Blinded (blue) and disclosed (orange) LLM
+  distances against the human split-half reference distribution (grey),
+  computed with the same normalized Wasserstein metric on each
+  experiment's registered response scale."
 
 ## Figures 03 + 04 — Effect recovery (blinded / disclosed)
 

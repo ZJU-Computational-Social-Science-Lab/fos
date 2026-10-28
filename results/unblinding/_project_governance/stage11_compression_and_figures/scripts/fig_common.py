@@ -214,10 +214,19 @@ def boot_mean_ci(values: pd.Series, groups: pd.Series, seed: int = SEED,
     return point, float(lo), float(hi)
 
 
-def save_figure(fig: plt.Figure, name: str) -> None:
-    """Write the figure as PNG (300 dpi) and vector PDF into figures/."""
-    FIG_DIR.mkdir(parents=True, exist_ok=True)
-    fig.savefig(FIG_DIR / f"{name}.png", dpi=300, bbox_inches="tight")
-    fig.savefig(FIG_DIR / f"{name}.pdf", bbox_inches="tight")
+def save_figure(fig: plt.Figure, name: str,
+                out_dir: Path | None = None) -> None:
+    """Write the figure as PNG (300 dpi) and vector PDF into figures/.
+
+    out_dir overrides the default (used by the worktree-relative Figure 02
+    pipeline so runs write next to the code that produced them).
+    """
+    target = out_dir or FIG_DIR
+    if not os.access(target, os.W_OK):
+        # read-only live tree (sandboxed run): write next to this code
+        target = Path(__file__).resolve().parent.parent / "figures"
+    target.mkdir(parents=True, exist_ok=True)
+    fig.savefig(target / f"{name}.png", dpi=300, bbox_inches="tight")
+    fig.savefig(target / f"{name}.pdf", bbox_inches="tight")
     plt.close(fig)
     print(f"saved: figures/{name}.png + .pdf")
