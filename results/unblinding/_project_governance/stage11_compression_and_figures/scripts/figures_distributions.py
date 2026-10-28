@@ -41,7 +41,7 @@ def fig02_distributional_distance():
 
     agg = by_arm.groupby(["experiment", "model", "blinding"],
                          as_index=False)["distance"].mean()
-    fig, ax = plt.subplots(figsize=(6.4, 4.6))
+    fig, ax = plt.subplots(figsize=(10, 5))
     n_exp = len(units)
     bin_rows = []
     series = []
@@ -64,11 +64,17 @@ def fig02_distributional_distance():
                 bin_rows.append({"series": label, "bin_left": round(left, 2),
                                  "bin_right": round(left + 0.01, 2),
                                  "proportion": h})
-    ax.set_xlim(0, 1)
+    # x-limit: data-driven, next 0.05 above the largest observed distance
+    # across all three groups (nothing excluded; 0 kept as lower limit)
+    all_dists = np.concatenate([s[2] for s in series])
+    x_max = float(np.ceil(all_dists.max() / 0.05) * 0.05)
+    assert all_dists.max() <= x_max, "x-limit excludes observations"
+    ax.set_xlim(0, x_max)
+    ax.set_xticks(np.arange(0.0, x_max + 0.001, 0.1))
     ax.set_xlabel("distributional distance (0 = identical)")
     ax.set_ylabel("proportion (experiment-equal weighted)")
-    ax.legend(frameon=False, fontsize=8.5, loc="upper center",
-              bbox_to_anchor=(0.5, -0.16), ncol=3)
+    ax.legend(frameon=True, framealpha=0.8, edgecolor="0.8",
+              fontsize=8.5, loc="upper right")
     fig.tight_layout()
     # plotted values: the exact per-bin histogram heights; the raw weighted
     # points behind each histogram are kept alongside for provenance

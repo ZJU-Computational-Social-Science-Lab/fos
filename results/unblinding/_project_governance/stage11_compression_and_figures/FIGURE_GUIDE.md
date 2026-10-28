@@ -140,7 +140,8 @@ Files: `fig02_distributional_distance.*`
   model×arm observations are not independent experiments, so no uncertainty
   band is drawn rather than an unjustified one.
 - **Display:** one panel, three overlaid step-outline histograms
-  (blinded blue, disclosed orange, human split-half grey), x-axis 0–1,
+  (blinded blue, disclosed orange, human split-half grey), x-axis 0–0.8
+  (data-driven: next 0.05 above the largest observed distance),
   bin width exactly 0.01 (100 bins).
 - **Normalization:** experiment-equal weighted PROPORTION — each curve's
   bin heights sum to 1, using the same per-experiment weights as the
