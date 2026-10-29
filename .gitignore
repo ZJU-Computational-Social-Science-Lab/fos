@@ -142,3 +142,26 @@ scripts/test_persona_reasoning_deepseek_nos5.py
 scripts/test_persona_reasoning_local.py
 scripts/test_persona_reasoning_openrouter_nos5.py
 scripts/test_template_propagation.py
+
+# Task 3042: TeX Live shim files fetched only to compile on this machine's
+# minimal install. Not part of the scaffold.
+*.ldf
+ext*.cls
+size*.clo
+lettrine.sty
+lineno.sty
+needspace.sty
+mdframed.sty
+md-frame-*.mdf
+authblk.sty
+alg*.sty
+algorithmicx.sty
+lastpage*.sty
+sidecap.sty
+stfloats.sty
+draftwatermark*.sty
+main.aux
+main.bbl
+main.blg
+main.log
+main.out

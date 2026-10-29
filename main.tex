@@ -1,0 +1,91 @@
+% main.tex — top-level file of the PNAS research-report scaffold. It sets the
+% document class and journal metadata, pulls in the four section files, and
+% attaches the bibliography. All text content lives in sections/*.tex.
+\documentclass[9pt,twocolumn,twoside,lineno]{pnas-new}
+
+\templatetype{pnasresearcharticle}
+
+\title{Do LLMs Replicate Human Behavioural Treatment Effects? Direction, Magnitude, and the Limits of Language-Model Simulacra}
+
+% TODO: replace placeholder authors and affiliations
+\author[a]{Author One}
+\author[b]{Author Two}
+
+\affil[a]{Affiliation One}
+\affil[b]{Affiliation Two}
+
+% TODO: set the running-footer lead author surname
+\leadauthor{Author One}
+
+% TODO: write the significance statement (120 words max)
+\significancestatement{TODO: Significance statement.}
+
+% TODO: fill in author contributions, declaration, and corresponding author
+\authorcontributions{TODO: Author contributions.}
+\authordeclaration{TODO: Declaration of interests.}
+\correspondingauthor{TODO: Corresponding author e-mail.}
+
+% TODO: two to five keywords separated by the pipe symbol
+\keywords{TODO: Keyword 1 $|$ TODO: Keyword 2}
+
+\begin{abstract}
+% TODO: abstract, 250 words max, single paragraph, no citations
+TODO: Abstract.
+\end{abstract}
+
+\dates{This manuscript was compiled on \today}
+\doi{\url{www.pnas.org/cgi/wiki?}}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{firststyle}
+\ifthenelse{\boolean{shortarticle}}{\ifthenelse{\boolean{singlecolumn}}{\abscontentformatted}{\abscontent}}{}
+
+\input{sections/introduction}
+\input{sections/results}
+\input{sections/discussion}
+\input{sections/methods}
+
+% TODO: replace the placeholder figure and caption
+\begin{figure}[tbhp]
+       \begin{small}
+              \begin{center}
+                     \fbox{\parbox[c][6cm][c]{0.9\linewidth}{\centering TODO: placeholder figure}}
+              \end{center}
+              \caption{TODO: Figure caption.}
+              \label{fig:placeholder}
+       \end{small}
+\end{figure}
+
+% TODO: replace the placeholder table and caption
+\begin{table}[tbhp]
+       \centering
+       \caption{TODO: Table caption.}
+       \label{table:placeholder}
+       \begin{tabular}{ll}
+              \toprule
+              Column A & Column B \\
+              \midrule
+              TODO & TODO \\
+              \bottomrule
+       \end{tabular}
+\end{table}
+
+% TODO: add materials and methods blurb shown after the main text
+\matmethods{TODO: Materials and methods.}
+\showmatmethods{}
+
+\acknow{TODO: Acknowledgments.}
+\showacknow{}
+
+\bibliographystyle{pnas-new}
+\bibliography{references}
+
+% Force a page to ship out before the final \clearpage. Without this, when the
+% document is short enough to fit one page, the class's afterpage-deferred
+% Significance-Statement float is emitted inside the output routine and dies
+% with "Not in outer par mode". Remove once real prose fills the pages.
+\newpage\null\newpage
+
+\end{document}
