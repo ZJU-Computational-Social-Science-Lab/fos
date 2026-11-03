@@ -1,0 +1,31 @@
+{
+  "run_id": "extended_run-SMOKE-20261103T144353",
+  "twin": {
+    "disease_blinded": {
+      "written": 4,
+      "total": 4
+    },
+    "disease_unblinded": {
+      "written": 4,
+      "total": 4
+    },
+    "sunk_cost_blinded": {
+      "written": 4,
+      "total": 4
+    },
+    "sunk_cost_unblinded": {
+      "written": 4,
+      "total": 4
+    }
+  },
+  "expansion": {
+    "T2KX-ml1_gamblers_fallacy_blinded": {
+      "written": 4,
+      "total": 4
+    },
+    "T2KX-ml1_gamblers_fallacy_unblinded": {
+      "written": 4,
+      "total": 4
+    }
+  }
+}
