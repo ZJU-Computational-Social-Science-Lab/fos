@@ -1,0 +1,14 @@
+{
+  "source_sha256": "bdc842334a71aa61f20797f778d77cad1eefd772dec08e4498d4e357f447eea1",
+  "adapted_sha256": "f7cd21db1771b90de2e192dcb3e7b986783a0967841d334415d99566ef702ce2",
+  "n": 100,
+  "renames": {
+    "age_bracket": "age",
+    "household_income_bracket": "household_income",
+    "household_size_bracket": "household_size"
+  },
+  "dropped_keys": [
+    "pid",
+    "pool_id"
+  ]
+}

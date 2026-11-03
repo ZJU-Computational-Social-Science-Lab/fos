@@ -1,0 +1,64 @@
+{
+  "run_id": "extended_run-SMOKE-20261103T144353",
+  "study": "twin2k10r-extended-production",
+  "config": "A",
+  "models": [
+    {
+      "record_id": "qwen3-4b",
+      "server_id": "qwen/qwen3-4b-2507",
+      "flagged": false
+    }
+  ],
+  "model_order": [
+    "qwen3-4b"
+  ],
+  "grid": {
+    "twin_experiments": [
+      "allais",
+      "linda",
+      "anchoring_redwood",
+      "anchoring_african",
+      "outcome_bias",
+      "myside",
+      "prob_matching",
+      "abs_relative",
+      "disease",
+      "less_is_more",
+      "fire_extinguisher",
+      "seatbelt",
+      "sunk_cost",
+      "wta_wtp"
+    ],
+    "expansion_experiments": [
+      "T2KX-ml1_gamblers_fallacy",
+      "T2KX-ml1_category_scales",
+      "T2KX-ml1_reciprocity",
+      "T2KX-ml1_allowed_forbidden",
+      "T2KX-ml1_quote_attribution",
+      "T2KX-ml1_imagined_contact",
+      "T2KX-ml2_hauser_s1",
+      "T2KX-ml2_risen_tempt_fate",
+      "T2KX-ml2_schwarz_order",
+      "T2KX-ml2_shafir_choose_reject",
+      "T2KX-ml2_miyamoto_correspondence",
+      "T2KX-ml2_rottenstreich_affect",
+      "T2KX-ml2_bauer_materialism",
+      "T2KX-howard823",
+      "T2KX-budescu779",
+      "T2KX-keusch433",
+      "T2KX-reedBR32"
+    ]
+  },
+  "inference": {
+    "temperature": 1.0,
+    "top_k": 100,
+    "seed": 42,
+    "logprob_mode": "first_token",
+    "base_url": "http://127.0.0.1:8080"
+  },
+  "disclosure": "design+versions only",
+  "dataset_sha256": "8f7d6adddb0b3d993968fbcc8106efcc170c2c10ade899cd890dd7a76ebd6414",
+  "stimuli_sha256": "8f7d6adddb0b3d993968fbcc8106efcc170c2c10ade899cd890dd7a76ebd6414",
+  "restored_stimuli_sha256": "8003b46176e68634cf44fd2ee815532c0b77bae38a25ac7c0b1c49a8b1a92738",
+  "started": "2026-11-03T14:43:53.959619+00:00"
+}
