@@ -1,0 +1,1411 @@
+family,model,experiment,condition,leg,expected,observed,retained,excluded,reason
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_allowed_forbidden,disclosure,allow_wording,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_allowed_forbidden,disclosure,forbid_wording,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_allowed_forbidden,uninformed,allow_wording,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_allowed_forbidden,uninformed,forbid_wording,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_allowed_forbidden,disclosure,allow_wording,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_allowed_forbidden,disclosure,forbid_wording,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_allowed_forbidden,uninformed,allow_wording,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_allowed_forbidden,uninformed,forbid_wording,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_allowed_forbidden,disclosure,allow_wording,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_allowed_forbidden,disclosure,forbid_wording,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_allowed_forbidden,uninformed,allow_wording,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_allowed_forbidden,uninformed,forbid_wording,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_allowed_forbidden,disclosure,allow_wording,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_allowed_forbidden,disclosure,forbid_wording,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_allowed_forbidden,uninformed,allow_wording,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_allowed_forbidden,uninformed,forbid_wording,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_allowed_forbidden,disclosure,allow_wording,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_allowed_forbidden,disclosure,forbid_wording,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_allowed_forbidden,uninformed,allow_wording,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_allowed_forbidden,uninformed,forbid_wording,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_allowed_forbidden,disclosure,allow_wording,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_allowed_forbidden,disclosure,forbid_wording,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_allowed_forbidden,uninformed,allow_wording,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_allowed_forbidden,uninformed,forbid_wording,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_allowed_forbidden,disclosure,allow_wording,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_allowed_forbidden,disclosure,forbid_wording,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_allowed_forbidden,uninformed,allow_wording,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_allowed_forbidden,uninformed,forbid_wording,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_allowed_forbidden,disclosure,allow_wording,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_allowed_forbidden,disclosure,forbid_wording,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_allowed_forbidden,uninformed,allow_wording,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_allowed_forbidden,uninformed,forbid_wording,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_allowed_forbidden,disclosure,allow_wording,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_allowed_forbidden,disclosure,forbid_wording,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_allowed_forbidden,uninformed,allow_wording,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_allowed_forbidden,uninformed,forbid_wording,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_allowed_forbidden,disclosure,allow_wording,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_allowed_forbidden,disclosure,forbid_wording,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_allowed_forbidden,uninformed,allow_wording,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_allowed_forbidden,uninformed,forbid_wording,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_allowed_forbidden,disclosure,allow_wording,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_allowed_forbidden,disclosure,forbid_wording,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_allowed_forbidden,uninformed,allow_wording,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_allowed_forbidden,uninformed,forbid_wording,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_allowed_forbidden,disclosure,allow_wording,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_allowed_forbidden,disclosure,forbid_wording,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_allowed_forbidden,uninformed,allow_wording,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_allowed_forbidden,uninformed,forbid_wording,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_allowed_forbidden,disclosure,allow_wording,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_allowed_forbidden,disclosure,forbid_wording,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_allowed_forbidden,uninformed,allow_wording,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_allowed_forbidden,uninformed,forbid_wording,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_allowed_forbidden,disclosure,allow_wording,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_allowed_forbidden,disclosure,forbid_wording,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_allowed_forbidden,uninformed,allow_wording,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_allowed_forbidden,uninformed,forbid_wording,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_allowed_forbidden,disclosure,allow_wording,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_allowed_forbidden,disclosure,forbid_wording,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_allowed_forbidden,uninformed,allow_wording,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_allowed_forbidden,uninformed,forbid_wording,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_category_scales,disclosure,high_scale,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_category_scales,disclosure,low_scale,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_category_scales,uninformed,high_scale,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_category_scales,uninformed,low_scale,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_category_scales,disclosure,high_scale,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_category_scales,disclosure,low_scale,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_category_scales,uninformed,high_scale,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_category_scales,uninformed,low_scale,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_category_scales,disclosure,high_scale,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_category_scales,disclosure,low_scale,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_category_scales,uninformed,high_scale,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_category_scales,uninformed,low_scale,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_category_scales,disclosure,high_scale,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_category_scales,disclosure,low_scale,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_category_scales,uninformed,high_scale,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_category_scales,uninformed,low_scale,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_category_scales,disclosure,high_scale,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_category_scales,disclosure,low_scale,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_category_scales,uninformed,high_scale,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_category_scales,uninformed,low_scale,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_category_scales,disclosure,high_scale,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_category_scales,disclosure,low_scale,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_category_scales,uninformed,high_scale,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_category_scales,uninformed,low_scale,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_category_scales,disclosure,high_scale,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_category_scales,disclosure,low_scale,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_category_scales,uninformed,high_scale,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_category_scales,uninformed,low_scale,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_category_scales,disclosure,high_scale,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_category_scales,disclosure,low_scale,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_category_scales,uninformed,high_scale,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_category_scales,uninformed,low_scale,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_category_scales,disclosure,high_scale,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_category_scales,disclosure,low_scale,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_category_scales,uninformed,high_scale,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_category_scales,uninformed,low_scale,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_category_scales,disclosure,high_scale,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_category_scales,disclosure,low_scale,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_category_scales,uninformed,high_scale,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_category_scales,uninformed,low_scale,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_category_scales,disclosure,high_scale,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_category_scales,disclosure,low_scale,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_category_scales,uninformed,high_scale,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_category_scales,uninformed,low_scale,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_category_scales,disclosure,high_scale,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_category_scales,disclosure,low_scale,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_category_scales,uninformed,high_scale,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_category_scales,uninformed,low_scale,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_category_scales,disclosure,high_scale,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_category_scales,disclosure,low_scale,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_category_scales,uninformed,high_scale,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_category_scales,uninformed,low_scale,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_category_scales,disclosure,high_scale,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_category_scales,disclosure,low_scale,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_category_scales,uninformed,high_scale,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_category_scales,uninformed,low_scale,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_category_scales,disclosure,high_scale,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_category_scales,disclosure,low_scale,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_category_scales,uninformed,high_scale,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_category_scales,uninformed,low_scale,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_quote_attribution,disclosure,disliked_source,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_quote_attribution,disclosure,liked_source,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_quote_attribution,uninformed,disliked_source,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_quote_attribution,uninformed,liked_source,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_quote_attribution,disclosure,disliked_source,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_quote_attribution,disclosure,liked_source,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_quote_attribution,uninformed,disliked_source,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_quote_attribution,uninformed,liked_source,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_quote_attribution,disclosure,disliked_source,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_quote_attribution,disclosure,liked_source,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_quote_attribution,uninformed,disliked_source,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_quote_attribution,uninformed,liked_source,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_quote_attribution,disclosure,disliked_source,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_quote_attribution,disclosure,liked_source,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_quote_attribution,uninformed,disliked_source,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_quote_attribution,uninformed,liked_source,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_quote_attribution,disclosure,disliked_source,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_quote_attribution,disclosure,liked_source,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_quote_attribution,uninformed,disliked_source,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_quote_attribution,uninformed,liked_source,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_quote_attribution,disclosure,disliked_source,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_quote_attribution,disclosure,liked_source,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_quote_attribution,uninformed,disliked_source,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_quote_attribution,uninformed,liked_source,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_quote_attribution,disclosure,disliked_source,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_quote_attribution,disclosure,liked_source,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_quote_attribution,uninformed,disliked_source,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_quote_attribution,uninformed,liked_source,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_quote_attribution,disclosure,disliked_source,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_quote_attribution,disclosure,liked_source,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_quote_attribution,uninformed,disliked_source,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_quote_attribution,uninformed,liked_source,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_quote_attribution,disclosure,disliked_source,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_quote_attribution,disclosure,liked_source,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_quote_attribution,uninformed,disliked_source,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_quote_attribution,uninformed,liked_source,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_quote_attribution,disclosure,disliked_source,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_quote_attribution,disclosure,liked_source,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_quote_attribution,uninformed,disliked_source,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_quote_attribution,uninformed,liked_source,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_quote_attribution,disclosure,disliked_source,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_quote_attribution,disclosure,liked_source,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_quote_attribution,uninformed,disliked_source,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_quote_attribution,uninformed,liked_source,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_quote_attribution,disclosure,disliked_source,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_quote_attribution,disclosure,liked_source,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_quote_attribution,uninformed,disliked_source,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_quote_attribution,uninformed,liked_source,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_quote_attribution,disclosure,disliked_source,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_quote_attribution,disclosure,liked_source,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_quote_attribution,uninformed,disliked_source,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_quote_attribution,uninformed,liked_source,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_quote_attribution,disclosure,disliked_source,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_quote_attribution,disclosure,liked_source,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_quote_attribution,uninformed,disliked_source,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_quote_attribution,uninformed,liked_source,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_quote_attribution,disclosure,disliked_source,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_quote_attribution,disclosure,liked_source,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_quote_attribution,uninformed,disliked_source,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_quote_attribution,uninformed,liked_source,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_reciprocity,disclosure,us_first,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_reciprocity,disclosure,us_second,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_reciprocity,uninformed,us_first,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml1_reciprocity,uninformed,us_second,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_reciprocity,disclosure,us_first,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_reciprocity,disclosure,us_second,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_reciprocity,uninformed,us_first,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml1_reciprocity,uninformed,us_second,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_reciprocity,disclosure,us_first,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_reciprocity,disclosure,us_second,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_reciprocity,uninformed,us_first,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml1_reciprocity,uninformed,us_second,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_reciprocity,disclosure,us_first,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_reciprocity,disclosure,us_second,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_reciprocity,uninformed,us_first,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml1_reciprocity,uninformed,us_second,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_reciprocity,disclosure,us_first,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_reciprocity,disclosure,us_second,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_reciprocity,uninformed,us_first,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml1_reciprocity,uninformed,us_second,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_reciprocity,disclosure,us_first,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_reciprocity,disclosure,us_second,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_reciprocity,uninformed,us_first,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml1_reciprocity,uninformed,us_second,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_reciprocity,disclosure,us_first,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_reciprocity,disclosure,us_second,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_reciprocity,uninformed,us_first,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml1_reciprocity,uninformed,us_second,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_reciprocity,disclosure,us_first,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_reciprocity,disclosure,us_second,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_reciprocity,uninformed,us_first,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml1_reciprocity,uninformed,us_second,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_reciprocity,disclosure,us_first,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_reciprocity,disclosure,us_second,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_reciprocity,uninformed,us_first,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml1_reciprocity,uninformed,us_second,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_reciprocity,disclosure,us_first,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_reciprocity,disclosure,us_second,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_reciprocity,uninformed,us_first,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml1_reciprocity,uninformed,us_second,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_reciprocity,disclosure,us_first,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_reciprocity,disclosure,us_second,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_reciprocity,uninformed,us_first,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml1_reciprocity,uninformed,us_second,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_reciprocity,disclosure,us_first,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_reciprocity,disclosure,us_second,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_reciprocity,uninformed,us_first,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml1_reciprocity,uninformed,us_second,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_reciprocity,disclosure,us_first,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_reciprocity,disclosure,us_second,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_reciprocity,uninformed,us_first,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml1_reciprocity,uninformed,us_second,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_reciprocity,disclosure,us_first,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_reciprocity,disclosure,us_second,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_reciprocity,uninformed,us_first,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml1_reciprocity,uninformed,us_second,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_reciprocity,disclosure,us_first,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_reciprocity,disclosure,us_second,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_reciprocity,uninformed,us_first,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml1_reciprocity,uninformed,us_second,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_bauer_materialism,disclosure,consumer_prime,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_bauer_materialism,disclosure,individual_prime,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_bauer_materialism,uninformed,consumer_prime,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_bauer_materialism,uninformed,individual_prime,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_bauer_materialism,disclosure,consumer_prime,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_bauer_materialism,disclosure,individual_prime,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_bauer_materialism,uninformed,consumer_prime,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_bauer_materialism,uninformed,individual_prime,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_bauer_materialism,disclosure,consumer_prime,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_bauer_materialism,disclosure,individual_prime,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_bauer_materialism,uninformed,consumer_prime,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_bauer_materialism,uninformed,individual_prime,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_bauer_materialism,disclosure,consumer_prime,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_bauer_materialism,disclosure,individual_prime,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_bauer_materialism,uninformed,consumer_prime,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_bauer_materialism,uninformed,individual_prime,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_bauer_materialism,disclosure,consumer_prime,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_bauer_materialism,disclosure,individual_prime,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_bauer_materialism,uninformed,consumer_prime,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_bauer_materialism,uninformed,individual_prime,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_bauer_materialism,disclosure,consumer_prime,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_bauer_materialism,disclosure,individual_prime,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_bauer_materialism,uninformed,consumer_prime,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_bauer_materialism,uninformed,individual_prime,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_bauer_materialism,disclosure,consumer_prime,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_bauer_materialism,disclosure,individual_prime,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_bauer_materialism,uninformed,consumer_prime,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_bauer_materialism,uninformed,individual_prime,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_bauer_materialism,disclosure,consumer_prime,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_bauer_materialism,disclosure,individual_prime,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_bauer_materialism,uninformed,consumer_prime,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_bauer_materialism,uninformed,individual_prime,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_bauer_materialism,disclosure,consumer_prime,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_bauer_materialism,disclosure,individual_prime,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_bauer_materialism,uninformed,consumer_prime,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_bauer_materialism,uninformed,individual_prime,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_bauer_materialism,disclosure,consumer_prime,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_bauer_materialism,disclosure,individual_prime,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_bauer_materialism,uninformed,consumer_prime,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_bauer_materialism,uninformed,individual_prime,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_bauer_materialism,disclosure,consumer_prime,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_bauer_materialism,disclosure,individual_prime,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_bauer_materialism,uninformed,consumer_prime,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_bauer_materialism,uninformed,individual_prime,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_bauer_materialism,disclosure,consumer_prime,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_bauer_materialism,disclosure,individual_prime,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_bauer_materialism,uninformed,consumer_prime,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_bauer_materialism,uninformed,individual_prime,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_bauer_materialism,disclosure,consumer_prime,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_bauer_materialism,disclosure,individual_prime,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_bauer_materialism,uninformed,consumer_prime,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_bauer_materialism,uninformed,individual_prime,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_bauer_materialism,disclosure,consumer_prime,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_bauer_materialism,disclosure,individual_prime,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_bauer_materialism,uninformed,consumer_prime,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_bauer_materialism,uninformed,individual_prime,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_bauer_materialism,disclosure,consumer_prime,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_bauer_materialism,disclosure,individual_prime,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_bauer_materialism,uninformed,consumer_prime,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_bauer_materialism,uninformed,individual_prime,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_hauser_s1,disclosure,greater_good,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_hauser_s1,disclosure,side_effect,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_hauser_s1,uninformed,greater_good,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_hauser_s1,uninformed,side_effect,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_hauser_s1,disclosure,greater_good,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_hauser_s1,disclosure,side_effect,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_hauser_s1,uninformed,greater_good,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_hauser_s1,uninformed,side_effect,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_hauser_s1,disclosure,greater_good,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_hauser_s1,disclosure,side_effect,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_hauser_s1,uninformed,greater_good,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_hauser_s1,uninformed,side_effect,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_hauser_s1,disclosure,greater_good,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_hauser_s1,disclosure,side_effect,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_hauser_s1,uninformed,greater_good,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_hauser_s1,uninformed,side_effect,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_hauser_s1,disclosure,greater_good,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_hauser_s1,disclosure,side_effect,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_hauser_s1,uninformed,greater_good,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_hauser_s1,uninformed,side_effect,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_hauser_s1,disclosure,greater_good,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_hauser_s1,disclosure,side_effect,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_hauser_s1,uninformed,greater_good,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_hauser_s1,uninformed,side_effect,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_hauser_s1,disclosure,greater_good,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_hauser_s1,disclosure,side_effect,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_hauser_s1,uninformed,greater_good,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_hauser_s1,uninformed,side_effect,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_hauser_s1,disclosure,greater_good,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_hauser_s1,disclosure,side_effect,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_hauser_s1,uninformed,greater_good,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_hauser_s1,uninformed,side_effect,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_hauser_s1,disclosure,greater_good,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_hauser_s1,disclosure,side_effect,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_hauser_s1,uninformed,greater_good,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_hauser_s1,uninformed,side_effect,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_hauser_s1,disclosure,greater_good,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_hauser_s1,disclosure,side_effect,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_hauser_s1,uninformed,greater_good,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_hauser_s1,uninformed,side_effect,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_hauser_s1,disclosure,greater_good,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_hauser_s1,disclosure,side_effect,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_hauser_s1,uninformed,greater_good,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_hauser_s1,uninformed,side_effect,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_hauser_s1,disclosure,greater_good,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_hauser_s1,disclosure,side_effect,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_hauser_s1,uninformed,greater_good,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_hauser_s1,uninformed,side_effect,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_hauser_s1,disclosure,greater_good,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_hauser_s1,disclosure,side_effect,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_hauser_s1,uninformed,greater_good,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_hauser_s1,uninformed,side_effect,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_hauser_s1,disclosure,greater_good,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_hauser_s1,disclosure,side_effect,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_hauser_s1,uninformed,greater_good,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_hauser_s1,uninformed,side_effect,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_hauser_s1,disclosure,greater_good,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_hauser_s1,disclosure,side_effect,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_hauser_s1,uninformed,greater_good,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_hauser_s1,uninformed,side_effect,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_choice,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_death,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_choice,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_death,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_choice,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_death,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_choice,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_death,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_choice,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_death,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_choice,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_death,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_choice,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_death,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_choice,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_death,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_choice,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_death,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_choice,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_death,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_choice,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_death,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_choice,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_death,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_choice,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_death,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_choice,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_death,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_choice,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_death,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_choice,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_death,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_choice,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_death,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_choice,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_death,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_choice,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_death,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_choice,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_death,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_choice,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_death,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_choice,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_death,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_choice,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_death,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_choice,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_death,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_choice,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_death,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_choice,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_death,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_choice,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_death,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_choice,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_death,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_choice,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_miyamoto_correspondence,disclosure,essay_pro_death,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_choice,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_miyamoto_correspondence,uninformed,essay_pro_death,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_risen_tempt_fate,disclosure,prepared,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_risen_tempt_fate,disclosure,unprepared,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_risen_tempt_fate,uninformed,prepared,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_risen_tempt_fate,uninformed,unprepared,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_risen_tempt_fate,disclosure,prepared,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_risen_tempt_fate,disclosure,unprepared,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_risen_tempt_fate,uninformed,prepared,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_risen_tempt_fate,uninformed,unprepared,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_risen_tempt_fate,disclosure,prepared,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_risen_tempt_fate,disclosure,unprepared,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_risen_tempt_fate,uninformed,prepared,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_risen_tempt_fate,uninformed,unprepared,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_risen_tempt_fate,disclosure,prepared,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_risen_tempt_fate,disclosure,unprepared,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_risen_tempt_fate,uninformed,prepared,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_risen_tempt_fate,uninformed,unprepared,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_risen_tempt_fate,disclosure,prepared,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_risen_tempt_fate,disclosure,unprepared,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_risen_tempt_fate,uninformed,prepared,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_risen_tempt_fate,uninformed,unprepared,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_risen_tempt_fate,disclosure,prepared,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_risen_tempt_fate,disclosure,unprepared,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_risen_tempt_fate,uninformed,prepared,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_risen_tempt_fate,uninformed,unprepared,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_risen_tempt_fate,disclosure,prepared,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_risen_tempt_fate,disclosure,unprepared,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_risen_tempt_fate,uninformed,prepared,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_risen_tempt_fate,uninformed,unprepared,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_risen_tempt_fate,disclosure,prepared,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_risen_tempt_fate,disclosure,unprepared,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_risen_tempt_fate,uninformed,prepared,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_risen_tempt_fate,uninformed,unprepared,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_risen_tempt_fate,disclosure,prepared,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_risen_tempt_fate,disclosure,unprepared,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_risen_tempt_fate,uninformed,prepared,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_risen_tempt_fate,uninformed,unprepared,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_risen_tempt_fate,disclosure,prepared,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_risen_tempt_fate,disclosure,unprepared,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_risen_tempt_fate,uninformed,prepared,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_risen_tempt_fate,uninformed,unprepared,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_risen_tempt_fate,disclosure,prepared,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_risen_tempt_fate,disclosure,unprepared,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_risen_tempt_fate,uninformed,prepared,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_risen_tempt_fate,uninformed,unprepared,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_risen_tempt_fate,disclosure,prepared,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_risen_tempt_fate,disclosure,unprepared,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_risen_tempt_fate,uninformed,prepared,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_risen_tempt_fate,uninformed,unprepared,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_risen_tempt_fate,disclosure,prepared,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_risen_tempt_fate,disclosure,unprepared,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_risen_tempt_fate,uninformed,prepared,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_risen_tempt_fate,uninformed,unprepared,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_risen_tempt_fate,disclosure,prepared,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_risen_tempt_fate,disclosure,unprepared,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_risen_tempt_fate,uninformed,prepared,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_risen_tempt_fate,uninformed,unprepared,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_risen_tempt_fate,disclosure,prepared,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_risen_tempt_fate,disclosure,unprepared,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_risen_tempt_fate,uninformed,prepared,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_risen_tempt_fate,uninformed,unprepared,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_rottenstreich_affect,disclosure,certainty,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_rottenstreich_affect,disclosure,one_percent,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_rottenstreich_affect,uninformed,certainty,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_rottenstreich_affect,uninformed,one_percent,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_rottenstreich_affect,disclosure,certainty,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_rottenstreich_affect,disclosure,one_percent,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_rottenstreich_affect,uninformed,certainty,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_rottenstreich_affect,uninformed,one_percent,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_rottenstreich_affect,disclosure,certainty,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_rottenstreich_affect,disclosure,one_percent,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_rottenstreich_affect,uninformed,certainty,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_rottenstreich_affect,uninformed,one_percent,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_rottenstreich_affect,disclosure,certainty,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_rottenstreich_affect,disclosure,one_percent,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_rottenstreich_affect,uninformed,certainty,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_rottenstreich_affect,uninformed,one_percent,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_rottenstreich_affect,disclosure,certainty,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_rottenstreich_affect,disclosure,one_percent,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_rottenstreich_affect,uninformed,certainty,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_rottenstreich_affect,uninformed,one_percent,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_rottenstreich_affect,disclosure,certainty,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_rottenstreich_affect,disclosure,one_percent,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_rottenstreich_affect,uninformed,certainty,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_rottenstreich_affect,uninformed,one_percent,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_rottenstreich_affect,disclosure,certainty,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_rottenstreich_affect,disclosure,one_percent,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_rottenstreich_affect,uninformed,certainty,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_rottenstreich_affect,uninformed,one_percent,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_rottenstreich_affect,disclosure,certainty,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_rottenstreich_affect,disclosure,one_percent,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_rottenstreich_affect,uninformed,certainty,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_rottenstreich_affect,uninformed,one_percent,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_rottenstreich_affect,disclosure,certainty,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_rottenstreich_affect,disclosure,one_percent,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_rottenstreich_affect,uninformed,certainty,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_rottenstreich_affect,uninformed,one_percent,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_rottenstreich_affect,disclosure,certainty,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_rottenstreich_affect,disclosure,one_percent,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_rottenstreich_affect,uninformed,certainty,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_rottenstreich_affect,uninformed,one_percent,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_rottenstreich_affect,disclosure,certainty,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_rottenstreich_affect,disclosure,one_percent,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_rottenstreich_affect,uninformed,certainty,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_rottenstreich_affect,uninformed,one_percent,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_rottenstreich_affect,disclosure,certainty,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_rottenstreich_affect,disclosure,one_percent,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_rottenstreich_affect,uninformed,certainty,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_rottenstreich_affect,uninformed,one_percent,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_rottenstreich_affect,disclosure,certainty,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_rottenstreich_affect,disclosure,one_percent,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_rottenstreich_affect,uninformed,certainty,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_rottenstreich_affect,uninformed,one_percent,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_rottenstreich_affect,disclosure,certainty,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_rottenstreich_affect,disclosure,one_percent,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_rottenstreich_affect,uninformed,certainty,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_rottenstreich_affect,uninformed,one_percent,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_rottenstreich_affect,disclosure,certainty,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_rottenstreich_affect,disclosure,one_percent,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_rottenstreich_affect,uninformed,certainty,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_rottenstreich_affect,uninformed,one_percent,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_schwarz_order,disclosure,life_first,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_schwarz_order,disclosure,life_second,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_schwarz_order,uninformed,life_first,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_schwarz_order,uninformed,life_second,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_schwarz_order,disclosure,life_first,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_schwarz_order,disclosure,life_second,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_schwarz_order,uninformed,life_first,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_schwarz_order,uninformed,life_second,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_schwarz_order,disclosure,life_first,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_schwarz_order,disclosure,life_second,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_schwarz_order,uninformed,life_first,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_schwarz_order,uninformed,life_second,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_schwarz_order,disclosure,life_first,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_schwarz_order,disclosure,life_second,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_schwarz_order,uninformed,life_first,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_schwarz_order,uninformed,life_second,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_schwarz_order,disclosure,life_first,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_schwarz_order,disclosure,life_second,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_schwarz_order,uninformed,life_first,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_schwarz_order,uninformed,life_second,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_schwarz_order,disclosure,life_first,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_schwarz_order,disclosure,life_second,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_schwarz_order,uninformed,life_first,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_schwarz_order,uninformed,life_second,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_schwarz_order,disclosure,life_first,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_schwarz_order,disclosure,life_second,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_schwarz_order,uninformed,life_first,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_schwarz_order,uninformed,life_second,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_schwarz_order,disclosure,life_first,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_schwarz_order,disclosure,life_second,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_schwarz_order,uninformed,life_first,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_schwarz_order,uninformed,life_second,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_schwarz_order,disclosure,life_first,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_schwarz_order,disclosure,life_second,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_schwarz_order,uninformed,life_first,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_schwarz_order,uninformed,life_second,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_schwarz_order,disclosure,life_first,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_schwarz_order,disclosure,life_second,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_schwarz_order,uninformed,life_first,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_schwarz_order,uninformed,life_second,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_schwarz_order,disclosure,life_first,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_schwarz_order,disclosure,life_second,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_schwarz_order,uninformed,life_first,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_schwarz_order,uninformed,life_second,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_schwarz_order,disclosure,life_first,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_schwarz_order,disclosure,life_second,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_schwarz_order,uninformed,life_first,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_schwarz_order,uninformed,life_second,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_schwarz_order,disclosure,life_first,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_schwarz_order,disclosure,life_second,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_schwarz_order,uninformed,life_first,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_schwarz_order,uninformed,life_second,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_schwarz_order,disclosure,life_first,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_schwarz_order,disclosure,life_second,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_schwarz_order,uninformed,life_first,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_schwarz_order,uninformed,life_second,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_schwarz_order,disclosure,life_first,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_schwarz_order,disclosure,life_second,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_schwarz_order,uninformed,life_first,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_schwarz_order,uninformed,life_second,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_shafir_choose_reject,disclosure,award_framing,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_shafir_choose_reject,disclosure,deny_framing,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_shafir_choose_reject,uninformed,award_framing,1,1,1,0,
+t2kx,gemma-4-12b-it-qat,T2KX-ml2_shafir_choose_reject,uninformed,deny_framing,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_shafir_choose_reject,disclosure,award_framing,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_shafir_choose_reject,disclosure,deny_framing,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_shafir_choose_reject,uninformed,award_framing,1,1,1,0,
+t2kx,gemma-4-26b-a4b,T2KX-ml2_shafir_choose_reject,uninformed,deny_framing,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_shafir_choose_reject,disclosure,award_framing,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_shafir_choose_reject,disclosure,deny_framing,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_shafir_choose_reject,uninformed,award_framing,1,1,1,0,
+t2kx,gemma-4-31b-it-qat,T2KX-ml2_shafir_choose_reject,uninformed,deny_framing,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_shafir_choose_reject,disclosure,award_framing,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_shafir_choose_reject,disclosure,deny_framing,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_shafir_choose_reject,uninformed,award_framing,1,1,1,0,
+t2kx,glm-4.7-flash,T2KX-ml2_shafir_choose_reject,uninformed,deny_framing,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_shafir_choose_reject,disclosure,award_framing,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_shafir_choose_reject,disclosure,deny_framing,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_shafir_choose_reject,uninformed,award_framing,1,1,1,0,
+t2kx,gpt-oss-20b,T2KX-ml2_shafir_choose_reject,uninformed,deny_framing,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_shafir_choose_reject,disclosure,award_framing,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_shafir_choose_reject,disclosure,deny_framing,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_shafir_choose_reject,uninformed,award_framing,1,1,1,0,
+t2kx,granite-4.1-30b,T2KX-ml2_shafir_choose_reject,uninformed,deny_framing,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_shafir_choose_reject,disclosure,award_framing,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_shafir_choose_reject,disclosure,deny_framing,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_shafir_choose_reject,uninformed,award_framing,1,1,1,0,
+t2kx,granite-4.1-8b,T2KX-ml2_shafir_choose_reject,uninformed,deny_framing,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_shafir_choose_reject,disclosure,award_framing,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_shafir_choose_reject,disclosure,deny_framing,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_shafir_choose_reject,uninformed,award_framing,1,1,1,0,
+t2kx,muse-glimmer,T2KX-ml2_shafir_choose_reject,uninformed,deny_framing,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_shafir_choose_reject,disclosure,award_framing,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_shafir_choose_reject,disclosure,deny_framing,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_shafir_choose_reject,uninformed,award_framing,1,1,1,0,
+t2kx,nemotron-cascade-2-30b-a3b,T2KX-ml2_shafir_choose_reject,uninformed,deny_framing,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_shafir_choose_reject,disclosure,award_framing,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_shafir_choose_reject,disclosure,deny_framing,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_shafir_choose_reject,uninformed,award_framing,1,1,1,0,
+t2kx,qwen3-32b,T2KX-ml2_shafir_choose_reject,uninformed,deny_framing,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_shafir_choose_reject,disclosure,award_framing,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_shafir_choose_reject,disclosure,deny_framing,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_shafir_choose_reject,uninformed,award_framing,1,1,1,0,
+t2kx,qwen3-4b,T2KX-ml2_shafir_choose_reject,uninformed,deny_framing,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_shafir_choose_reject,disclosure,award_framing,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_shafir_choose_reject,disclosure,deny_framing,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_shafir_choose_reject,uninformed,award_framing,1,1,1,0,
+t2kx,qwen3.6-27b-dense,T2KX-ml2_shafir_choose_reject,uninformed,deny_framing,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_shafir_choose_reject,disclosure,award_framing,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_shafir_choose_reject,disclosure,deny_framing,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_shafir_choose_reject,uninformed,award_framing,1,1,1,0,
+t2kx,qwen3.6-35b-a3b,T2KX-ml2_shafir_choose_reject,uninformed,deny_framing,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_shafir_choose_reject,disclosure,award_framing,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_shafir_choose_reject,disclosure,deny_framing,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_shafir_choose_reject,uninformed,award_framing,1,1,1,0,
+t2kx,qwen3.6-35b-a3b-uncensored,T2KX-ml2_shafir_choose_reject,uninformed,deny_framing,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_shafir_choose_reject,disclosure,award_framing,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_shafir_choose_reject,disclosure,deny_framing,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_shafir_choose_reject,uninformed,award_framing,1,1,1,0,
+t2kx,qwen3.8-27b,T2KX-ml2_shafir_choose_reject,uninformed,deny_framing,1,1,1,0,
+twin,gemma-4-12b-it-qat,abs_relative,disclosure,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,abs_relative,disclosure,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,abs_relative,uninformed,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,abs_relative,uninformed,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,abs_relative,disclosure,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,abs_relative,disclosure,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,abs_relative,uninformed,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,abs_relative,uninformed,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,abs_relative,disclosure,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,abs_relative,disclosure,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,abs_relative,uninformed,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,abs_relative,uninformed,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,abs_relative,disclosure,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,abs_relative,disclosure,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,abs_relative,uninformed,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,abs_relative,uninformed,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,abs_relative,disclosure,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,abs_relative,disclosure,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,abs_relative,uninformed,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,abs_relative,uninformed,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,abs_relative,disclosure,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,abs_relative,disclosure,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,abs_relative,uninformed,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,abs_relative,uninformed,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,abs_relative,disclosure,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,abs_relative,disclosure,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,abs_relative,uninformed,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,abs_relative,uninformed,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,abs_relative,disclosure,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,abs_relative,disclosure,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,abs_relative,uninformed,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,abs_relative,uninformed,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,abs_relative,disclosure,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,abs_relative,disclosure,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,abs_relative,uninformed,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,abs_relative,uninformed,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,abs_relative,disclosure,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,abs_relative,disclosure,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,abs_relative,uninformed,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,abs_relative,uninformed,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,abs_relative,disclosure,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,abs_relative,disclosure,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,abs_relative,uninformed,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,abs_relative,uninformed,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,abs_relative,disclosure,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,abs_relative,disclosure,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,abs_relative,uninformed,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,abs_relative,uninformed,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,abs_relative,disclosure,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,abs_relative,disclosure,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,abs_relative,uninformed,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,abs_relative,uninformed,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,abs_relative,disclosure,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,abs_relative,disclosure,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,abs_relative,uninformed,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,abs_relative,uninformed,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,abs_relative,disclosure,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,abs_relative,disclosure,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,abs_relative,uninformed,calculator,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,abs_relative,uninformed,jacket,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,allais,disclosure,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,allais,disclosure,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,allais,uninformed,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,allais,uninformed,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,allais,disclosure,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,allais,disclosure,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,allais,uninformed,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,allais,uninformed,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,allais,disclosure,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,allais,disclosure,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,allais,uninformed,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,allais,uninformed,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,allais,disclosure,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,allais,disclosure,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,allais,uninformed,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,allais,uninformed,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,allais,disclosure,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,allais,disclosure,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,allais,uninformed,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,allais,uninformed,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,allais,disclosure,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,allais,disclosure,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,allais,uninformed,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,allais,uninformed,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,allais,disclosure,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,allais,disclosure,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,allais,uninformed,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,allais,uninformed,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,allais,disclosure,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,allais,disclosure,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,allais,uninformed,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,allais,uninformed,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,allais,disclosure,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,allais,disclosure,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,allais,uninformed,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,allais,uninformed,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,allais,disclosure,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,allais,disclosure,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,allais,uninformed,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,allais,uninformed,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,allais,disclosure,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,allais,disclosure,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,allais,uninformed,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,allais,uninformed,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,allais,disclosure,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,allais,disclosure,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,allais,uninformed,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,allais,uninformed,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,allais,disclosure,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,allais,disclosure,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,allais,uninformed,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,allais,uninformed,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,allais,disclosure,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,allais,disclosure,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,allais,uninformed,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,allais,uninformed,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,allais,disclosure,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,allais,disclosure,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,allais,uninformed,form1,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,allais,uninformed,form2,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,anchoring_african,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,anchoring_african,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,anchoring_african,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,anchoring_african,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,anchoring_african,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,anchoring_african,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,anchoring_african,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,anchoring_african,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,anchoring_african,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,anchoring_african,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,anchoring_african,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,anchoring_african,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,anchoring_african,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,anchoring_african,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,anchoring_african,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,anchoring_african,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,anchoring_african,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,anchoring_african,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,anchoring_african,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,anchoring_african,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,anchoring_african,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,anchoring_african,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,anchoring_african,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,anchoring_african,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,anchoring_african,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,anchoring_african,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,anchoring_african,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,anchoring_african,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,anchoring_african,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,anchoring_african,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,anchoring_african,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,anchoring_african,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,anchoring_african,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,anchoring_african,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,anchoring_african,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,anchoring_african,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,anchoring_african,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,anchoring_african,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,anchoring_african,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,anchoring_african,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,anchoring_african,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,anchoring_african,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,anchoring_african,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,anchoring_african,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,anchoring_african,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,anchoring_african,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,anchoring_african,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,anchoring_african,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,anchoring_african,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,anchoring_african,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,anchoring_african,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,anchoring_african,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,anchoring_african,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,anchoring_african,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,anchoring_african,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,anchoring_african,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,anchoring_african,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,anchoring_african,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,anchoring_african,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,anchoring_african,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,anchoring_redwood,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,anchoring_redwood,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,anchoring_redwood,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,anchoring_redwood,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,anchoring_redwood,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,anchoring_redwood,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,anchoring_redwood,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,anchoring_redwood,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,anchoring_redwood,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,anchoring_redwood,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,anchoring_redwood,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,anchoring_redwood,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,anchoring_redwood,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,anchoring_redwood,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,anchoring_redwood,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,anchoring_redwood,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,anchoring_redwood,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,anchoring_redwood,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,anchoring_redwood,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,anchoring_redwood,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,anchoring_redwood,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,anchoring_redwood,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,anchoring_redwood,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,anchoring_redwood,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,anchoring_redwood,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,anchoring_redwood,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,anchoring_redwood,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,anchoring_redwood,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,anchoring_redwood,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,anchoring_redwood,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,anchoring_redwood,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,anchoring_redwood,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,anchoring_redwood,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,anchoring_redwood,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,anchoring_redwood,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,anchoring_redwood,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,anchoring_redwood,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,anchoring_redwood,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,anchoring_redwood,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,anchoring_redwood,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,anchoring_redwood,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,anchoring_redwood,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,anchoring_redwood,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,anchoring_redwood,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,anchoring_redwood,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,anchoring_redwood,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,anchoring_redwood,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,anchoring_redwood,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,anchoring_redwood,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,anchoring_redwood,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,anchoring_redwood,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,anchoring_redwood,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,anchoring_redwood,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,anchoring_redwood,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,anchoring_redwood,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,anchoring_redwood,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,anchoring_redwood,disclosure,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,anchoring_redwood,disclosure,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,anchoring_redwood,uninformed,high,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,anchoring_redwood,uninformed,low,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,disease,disclosure,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,disease,disclosure,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,disease,uninformed,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,disease,uninformed,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,disease,disclosure,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,disease,disclosure,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,disease,uninformed,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,disease,uninformed,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,disease,disclosure,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,disease,disclosure,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,disease,uninformed,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,disease,uninformed,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,disease,disclosure,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,disease,disclosure,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,disease,uninformed,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,disease,uninformed,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,disease,disclosure,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,disease,disclosure,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,disease,uninformed,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,disease,uninformed,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,disease,disclosure,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,disease,disclosure,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,disease,uninformed,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,disease,uninformed,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,disease,disclosure,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,disease,disclosure,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,disease,uninformed,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,disease,uninformed,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,disease,disclosure,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,disease,disclosure,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,disease,uninformed,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,disease,uninformed,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,disease,disclosure,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,disease,disclosure,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,disease,uninformed,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,disease,uninformed,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,disease,disclosure,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,disease,disclosure,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,disease,uninformed,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,disease,uninformed,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,disease,disclosure,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,disease,disclosure,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,disease,uninformed,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,disease,uninformed,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,disease,disclosure,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,disease,disclosure,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,disease,uninformed,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,disease,uninformed,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,disease,disclosure,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,disease,disclosure,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,disease,uninformed,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,disease,uninformed,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,disease,disclosure,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,disease,disclosure,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,disease,uninformed,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,disease,uninformed,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,disease,disclosure,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,disease,disclosure,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,disease,uninformed,gain,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,disease,uninformed,loss,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,fire_extinguisher,disclosure,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,fire_extinguisher,disclosure,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,fire_extinguisher,disclosure,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,fire_extinguisher,uninformed,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,fire_extinguisher,uninformed,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,fire_extinguisher,uninformed,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,fire_extinguisher,disclosure,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,fire_extinguisher,disclosure,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,fire_extinguisher,disclosure,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,fire_extinguisher,uninformed,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,fire_extinguisher,uninformed,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,fire_extinguisher,uninformed,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,fire_extinguisher,disclosure,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,fire_extinguisher,disclosure,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,fire_extinguisher,disclosure,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,fire_extinguisher,uninformed,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,fire_extinguisher,uninformed,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,fire_extinguisher,uninformed,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,fire_extinguisher,disclosure,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,fire_extinguisher,disclosure,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,fire_extinguisher,disclosure,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,fire_extinguisher,uninformed,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,fire_extinguisher,uninformed,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,fire_extinguisher,uninformed,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,fire_extinguisher,disclosure,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,fire_extinguisher,disclosure,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,fire_extinguisher,disclosure,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,fire_extinguisher,uninformed,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,fire_extinguisher,uninformed,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,fire_extinguisher,uninformed,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,fire_extinguisher,disclosure,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,fire_extinguisher,disclosure,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,fire_extinguisher,disclosure,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,fire_extinguisher,uninformed,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,fire_extinguisher,uninformed,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,fire_extinguisher,uninformed,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,fire_extinguisher,disclosure,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,fire_extinguisher,disclosure,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,fire_extinguisher,disclosure,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,fire_extinguisher,uninformed,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,fire_extinguisher,uninformed,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,fire_extinguisher,uninformed,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,fire_extinguisher,disclosure,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,fire_extinguisher,disclosure,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,fire_extinguisher,disclosure,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,fire_extinguisher,uninformed,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,fire_extinguisher,uninformed,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,fire_extinguisher,uninformed,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,fire_extinguisher,disclosure,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,fire_extinguisher,disclosure,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,fire_extinguisher,disclosure,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,fire_extinguisher,uninformed,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,fire_extinguisher,uninformed,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,fire_extinguisher,uninformed,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,fire_extinguisher,disclosure,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,fire_extinguisher,disclosure,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,fire_extinguisher,disclosure,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,fire_extinguisher,uninformed,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,fire_extinguisher,uninformed,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,fire_extinguisher,uninformed,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,fire_extinguisher,disclosure,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,fire_extinguisher,disclosure,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,fire_extinguisher,disclosure,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,fire_extinguisher,uninformed,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,fire_extinguisher,uninformed,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,fire_extinguisher,uninformed,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,fire_extinguisher,disclosure,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,fire_extinguisher,disclosure,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,fire_extinguisher,disclosure,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,fire_extinguisher,uninformed,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,fire_extinguisher,uninformed,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,fire_extinguisher,uninformed,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,fire_extinguisher,disclosure,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,fire_extinguisher,disclosure,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,fire_extinguisher,disclosure,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,fire_extinguisher,uninformed,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,fire_extinguisher,uninformed,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,fire_extinguisher,uninformed,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,fire_extinguisher,disclosure,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,fire_extinguisher,disclosure,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,fire_extinguisher,disclosure,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,fire_extinguisher,uninformed,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,fire_extinguisher,uninformed,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,fire_extinguisher,uninformed,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,fire_extinguisher,disclosure,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,fire_extinguisher,disclosure,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,fire_extinguisher,disclosure,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,fire_extinguisher,uninformed,95pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,fire_extinguisher,uninformed,98pct,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,fire_extinguisher,uninformed,all,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,less_is_more,disclosure,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,less_is_more,disclosure,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,less_is_more,disclosure,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,less_is_more,uninformed,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,less_is_more,uninformed,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,less_is_more,uninformed,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,less_is_more,disclosure,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,less_is_more,disclosure,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,less_is_more,disclosure,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,less_is_more,uninformed,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,less_is_more,uninformed,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,less_is_more,uninformed,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,less_is_more,disclosure,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,less_is_more,disclosure,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,less_is_more,disclosure,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,less_is_more,uninformed,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,less_is_more,uninformed,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,less_is_more,uninformed,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,less_is_more,disclosure,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,less_is_more,disclosure,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,less_is_more,disclosure,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,less_is_more,uninformed,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,less_is_more,uninformed,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,less_is_more,uninformed,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,less_is_more,disclosure,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,less_is_more,disclosure,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,less_is_more,disclosure,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,less_is_more,uninformed,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,less_is_more,uninformed,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,less_is_more,uninformed,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,less_is_more,disclosure,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,less_is_more,disclosure,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,less_is_more,disclosure,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,less_is_more,uninformed,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,less_is_more,uninformed,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,less_is_more,uninformed,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,less_is_more,disclosure,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,less_is_more,disclosure,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,less_is_more,disclosure,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,less_is_more,uninformed,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,less_is_more,uninformed,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,less_is_more,uninformed,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,less_is_more,disclosure,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,less_is_more,disclosure,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,less_is_more,disclosure,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,less_is_more,uninformed,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,less_is_more,uninformed,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,less_is_more,uninformed,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,less_is_more,disclosure,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,less_is_more,disclosure,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,less_is_more,disclosure,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,less_is_more,uninformed,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,less_is_more,uninformed,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,less_is_more,uninformed,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,less_is_more,disclosure,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,less_is_more,disclosure,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,less_is_more,disclosure,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,less_is_more,uninformed,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,less_is_more,uninformed,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,less_is_more,uninformed,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,less_is_more,disclosure,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,less_is_more,disclosure,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,less_is_more,disclosure,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,less_is_more,uninformed,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,less_is_more,uninformed,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,less_is_more,uninformed,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,less_is_more,disclosure,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,less_is_more,disclosure,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,less_is_more,disclosure,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,less_is_more,uninformed,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,less_is_more,uninformed,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,less_is_more,uninformed,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,less_is_more,disclosure,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,less_is_more,disclosure,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,less_is_more,disclosure,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,less_is_more,uninformed,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,less_is_more,uninformed,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,less_is_more,uninformed,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,less_is_more,disclosure,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,less_is_more,disclosure,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,less_is_more,disclosure,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,less_is_more,uninformed,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,less_is_more,uninformed,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,less_is_more,uninformed,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,less_is_more,disclosure,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,less_is_more,disclosure,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,less_is_more,disclosure,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,less_is_more,uninformed,A,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,less_is_more,uninformed,B,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,less_is_more,uninformed,C,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,linda,disclosure,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,linda,disclosure,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,linda,uninformed,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,linda,uninformed,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,linda,disclosure,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,linda,disclosure,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,linda,uninformed,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,linda,uninformed,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,linda,disclosure,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,linda,disclosure,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,linda,uninformed,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,linda,uninformed,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,linda,disclosure,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,linda,disclosure,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,linda,uninformed,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,linda,uninformed,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,linda,disclosure,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,linda,disclosure,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,linda,uninformed,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,linda,uninformed,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,linda,disclosure,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,linda,disclosure,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,linda,uninformed,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,linda,uninformed,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,linda,disclosure,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,linda,disclosure,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,linda,uninformed,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,linda,uninformed,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,linda,disclosure,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,linda,disclosure,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,linda,uninformed,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,linda,uninformed,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,linda,disclosure,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,linda,disclosure,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,linda,uninformed,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,linda,uninformed,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,linda,disclosure,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,linda,disclosure,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,linda,uninformed,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,linda,uninformed,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,linda,disclosure,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,linda,disclosure,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,linda,uninformed,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,linda,uninformed,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,linda,disclosure,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,linda,disclosure,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,linda,uninformed,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,linda,uninformed,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,linda,disclosure,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,linda,disclosure,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,linda,uninformed,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,linda,uninformed,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,linda,disclosure,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,linda,disclosure,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,linda,uninformed,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,linda,uninformed,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,linda,disclosure,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,linda,disclosure,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,linda,uninformed,conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,linda,uninformed,no_conjunction,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,myside,disclosure,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,myside,disclosure,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,myside,uninformed,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,myside,uninformed,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,myside,disclosure,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,myside,disclosure,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,myside,uninformed,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,myside,uninformed,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,myside,disclosure,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,myside,disclosure,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,myside,uninformed,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,myside,uninformed,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,myside,disclosure,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,myside,disclosure,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,myside,uninformed,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,myside,uninformed,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,myside,disclosure,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,myside,disclosure,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,myside,uninformed,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,myside,uninformed,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,myside,disclosure,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,myside,disclosure,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,myside,uninformed,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,myside,uninformed,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,myside,disclosure,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,myside,disclosure,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,myside,uninformed,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,myside,uninformed,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,myside,disclosure,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,myside,disclosure,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,myside,uninformed,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,myside,uninformed,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,myside,disclosure,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,myside,disclosure,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,myside,uninformed,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,myside,uninformed,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,myside,disclosure,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,myside,disclosure,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,myside,uninformed,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,myside,uninformed,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,myside,disclosure,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,myside,disclosure,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,myside,uninformed,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,myside,uninformed,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,myside,disclosure,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,myside,disclosure,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,myside,uninformed,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,myside,uninformed,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,myside,disclosure,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,myside,disclosure,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,myside,uninformed,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,myside,uninformed,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,myside,disclosure,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,myside,disclosure,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,myside,uninformed,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,myside,uninformed,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,myside,disclosure,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,myside,disclosure,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,myside,uninformed,ford,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,myside,uninformed,german,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,outcome_bias,disclosure,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,outcome_bias,disclosure,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,outcome_bias,uninformed,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,outcome_bias,uninformed,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,outcome_bias,disclosure,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,outcome_bias,disclosure,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,outcome_bias,uninformed,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-26b-a4b,outcome_bias,uninformed,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,outcome_bias,disclosure,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,outcome_bias,disclosure,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,outcome_bias,uninformed,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-31b-it-qat,outcome_bias,uninformed,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,outcome_bias,disclosure,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,outcome_bias,disclosure,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,outcome_bias,uninformed,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,glm-4.7-flash,outcome_bias,uninformed,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,outcome_bias,disclosure,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,outcome_bias,disclosure,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,outcome_bias,uninformed,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gpt-oss-20b,outcome_bias,uninformed,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,outcome_bias,disclosure,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,outcome_bias,disclosure,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,outcome_bias,uninformed,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-30b,outcome_bias,uninformed,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,outcome_bias,disclosure,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,outcome_bias,disclosure,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,outcome_bias,uninformed,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,granite-4.1-8b,outcome_bias,uninformed,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,outcome_bias,disclosure,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,outcome_bias,disclosure,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,outcome_bias,uninformed,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,muse-glimmer,outcome_bias,uninformed,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,outcome_bias,disclosure,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,outcome_bias,disclosure,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,outcome_bias,uninformed,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,nemotron-cascade-2-30b-a3b,outcome_bias,uninformed,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,outcome_bias,disclosure,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,outcome_bias,disclosure,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,outcome_bias,uninformed,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-32b,outcome_bias,uninformed,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,outcome_bias,disclosure,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,outcome_bias,disclosure,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,outcome_bias,uninformed,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3-4b,outcome_bias,uninformed,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,outcome_bias,disclosure,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,outcome_bias,disclosure,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,outcome_bias,uninformed,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-27b-dense,outcome_bias,uninformed,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,outcome_bias,disclosure,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,outcome_bias,disclosure,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,outcome_bias,uninformed,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b,outcome_bias,uninformed,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,outcome_bias,disclosure,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,outcome_bias,disclosure,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,outcome_bias,uninformed,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.6-35b-a3b-uncensored,outcome_bias,uninformed,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,outcome_bias,disclosure,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,outcome_bias,disclosure,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,outcome_bias,uninformed,failure,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,qwen3.8-27b,outcome_bias,uninformed,success,1,1,1,0,outside headline likelihood (twin family; aggregate registry cards)
+twin,gemma-4-12b-it-qat,seatbelt,disclosure,95pct,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-12b-it-qat,seatbelt,disclosure,98pct,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-12b-it-qat,seatbelt,disclosure,all,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-12b-it-qat,seatbelt,uninformed,95pct,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-12b-it-qat,seatbelt,uninformed,98pct,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-12b-it-qat,seatbelt,uninformed,all,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-26b-a4b,seatbelt,disclosure,95pct,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-26b-a4b,seatbelt,disclosure,98pct,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-26b-a4b,seatbelt,disclosure,all,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-26b-a4b,seatbelt,uninformed,95pct,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-26b-a4b,seatbelt,uninformed,98pct,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-26b-a4b,seatbelt,uninformed,all,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-31b-it-qat,seatbelt,disclosure,95pct,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-31b-it-qat,seatbelt,disclosure,98pct,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-31b-it-qat,seatbelt,disclosure,all,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-31b-it-qat,seatbelt,uninformed,95pct,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-31b-it-qat,seatbelt,uninformed,98pct,1,1,0,1,human label coding fails validation gate
+twin,gemma-4-31b-it-qat,seatbelt,uninformed,all,1,1,0,1,human label coding fails validation gate
+twin,glm-4.7-flash,seatbelt,disclosure,95pct,1,1,0,1,human label coding fails validation gate
+twin,glm-4.7-flash,seatbelt,disclosure,98pct,1,1,0,1,human label coding fails validation gate
+twin,glm-4.7-flash,seatbelt,disclosure,all,1,1,0,1,human label coding fails validation gate
+twin,glm-4.7-flash,seatbelt,uninformed,95pct,1,1,0,1,human label coding fails validation gate
+twin,glm-4.7-flash,seatbelt,uninformed,98pct,1,1,0,1,human label coding fails validation gate
+twin,glm-4.7-flash,seatbelt,uninformed,all,1,1,0,1,human label coding fails validation gate
+twin,gpt-oss-20b,seatbelt,disclosure,95pct,1,1,0,1,human label coding fails validation gate
+twin,gpt-oss-20b,seatbelt,disclosure,98pct,1,1,0,1,human label coding fails validation gate
+twin,gpt-oss-20b,seatbelt,disclosure,all,1,1,0,1,human label coding fails validation gate
+twin,gpt-oss-20b,seatbelt,uninformed,95pct,1,1,0,1,human label coding fails validation gate
+twin,gpt-oss-20b,seatbelt,uninformed,98pct,1,1,0,1,human label coding fails validation gate
+twin,gpt-oss-20b,seatbelt,uninformed,all,1,1,0,1,human label coding fails validation gate
+twin,granite-4.1-30b,seatbelt,disclosure,95pct,1,1,0,1,human label coding fails validation gate
+twin,granite-4.1-30b,seatbelt,disclosure,98pct,1,1,0,1,human label coding fails validation gate
+twin,granite-4.1-30b,seatbelt,disclosure,all,1,1,0,1,human label coding fails validation gate
+twin,granite-4.1-30b,seatbelt,uninformed,95pct,1,1,0,1,human label coding fails validation gate
+twin,granite-4.1-30b,seatbelt,uninformed,98pct,1,1,0,1,human label coding fails validation gate
+twin,granite-4.1-30b,seatbelt,uninformed,all,1,1,0,1,human label coding fails validation gate
+twin,granite-4.1-8b,seatbelt,disclosure,95pct,1,1,0,1,human label coding fails validation gate
+twin,granite-4.1-8b,seatbelt,disclosure,98pct,1,1,0,1,human label coding fails validation gate
+twin,granite-4.1-8b,seatbelt,disclosure,all,1,1,0,1,human label coding fails validation gate
+twin,granite-4.1-8b,seatbelt,uninformed,95pct,1,1,0,1,human label coding fails validation gate
+twin,granite-4.1-8b,seatbelt,uninformed,98pct,1,1,0,1,human label coding fails validation gate
+twin,granite-4.1-8b,seatbelt,uninformed,all,1,1,0,1,human label coding fails validation gate
+twin,muse-glimmer,seatbelt,disclosure,95pct,1,1,0,1,human label coding fails validation gate
+twin,muse-glimmer,seatbelt,disclosure,98pct,1,1,0,1,human label coding fails validation gate
+twin,muse-glimmer,seatbelt,disclosure,all,1,1,0,1,human label coding fails validation gate
+twin,muse-glimmer,seatbelt,uninformed,95pct,1,1,0,1,human label coding fails validation gate
+twin,muse-glimmer,seatbelt,uninformed,98pct,1,1,0,1,human label coding fails validation gate
+twin,muse-glimmer,seatbelt,uninformed,all,1,1,0,1,human label coding fails validation gate
+twin,nemotron-cascade-2-30b-a3b,seatbelt,disclosure,95pct,1,1,0,1,human label coding fails validation gate
+twin,nemotron-cascade-2-30b-a3b,seatbelt,disclosure,98pct,1,1,0,1,human label coding fails validation gate
+twin,nemotron-cascade-2-30b-a3b,seatbelt,disclosure,all,1,1,0,1,human label coding fails validation gate
+twin,nemotron-cascade-2-30b-a3b,seatbelt,uninformed,95pct,1,1,0,1,human label coding fails validation gate
+twin,nemotron-cascade-2-30b-a3b,seatbelt,uninformed,98pct,1,1,0,1,human label coding fails validation gate
+twin,nemotron-cascade-2-30b-a3b,seatbelt,uninformed,all,1,1,0,1,human label coding fails validation gate
+twin,qwen3-32b,seatbelt,disclosure,95pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3-32b,seatbelt,disclosure,98pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3-32b,seatbelt,disclosure,all,1,1,0,1,human label coding fails validation gate
+twin,qwen3-32b,seatbelt,uninformed,95pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3-32b,seatbelt,uninformed,98pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3-32b,seatbelt,uninformed,all,1,1,0,1,human label coding fails validation gate
+twin,qwen3-4b,seatbelt,disclosure,95pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3-4b,seatbelt,disclosure,98pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3-4b,seatbelt,disclosure,all,1,1,0,1,human label coding fails validation gate
+twin,qwen3-4b,seatbelt,uninformed,95pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3-4b,seatbelt,uninformed,98pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3-4b,seatbelt,uninformed,all,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-27b-dense,seatbelt,disclosure,95pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-27b-dense,seatbelt,disclosure,98pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-27b-dense,seatbelt,disclosure,all,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-27b-dense,seatbelt,uninformed,95pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-27b-dense,seatbelt,uninformed,98pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-27b-dense,seatbelt,uninformed,all,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-35b-a3b,seatbelt,disclosure,95pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-35b-a3b,seatbelt,disclosure,98pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-35b-a3b,seatbelt,disclosure,all,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-35b-a3b,seatbelt,uninformed,95pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-35b-a3b,seatbelt,uninformed,98pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-35b-a3b,seatbelt,uninformed,all,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-35b-a3b-uncensored,seatbelt,disclosure,95pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-35b-a3b-uncensored,seatbelt,disclosure,98pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-35b-a3b-uncensored,seatbelt,disclosure,all,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-35b-a3b-uncensored,seatbelt,uninformed,95pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-35b-a3b-uncensored,seatbelt,uninformed,98pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.6-35b-a3b-uncensored,seatbelt,uninformed,all,1,1,0,1,human label coding fails validation gate
+twin,qwen3.8-27b,seatbelt,disclosure,95pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.8-27b,seatbelt,disclosure,98pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.8-27b,seatbelt,disclosure,all,1,1,0,1,human label coding fails validation gate
+twin,qwen3.8-27b,seatbelt,uninformed,95pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.8-27b,seatbelt,uninformed,98pct,1,1,0,1,human label coding fails validation gate
+twin,qwen3.8-27b,seatbelt,uninformed,all,1,1,0,1,human label coding fails validation gate
